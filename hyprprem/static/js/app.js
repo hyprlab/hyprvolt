@@ -365,6 +365,14 @@
     });
   });
 
+  document.querySelectorAll('input[name="default_role"]').forEach(function (radio) {
+    radio.addEventListener("change", function () {
+      api("/admin/instance", { default_role: radio.value })
+        .then(function () { toast("New accounts start as " + radio.value + "s"); })
+        .catch(toastError);
+    });
+  });
+
   var adduserForm = document.getElementById("admin-adduser");
   if (adduserForm) {
     adduserForm.addEventListener("submit", function (e) {
@@ -375,7 +383,7 @@
         name: document.getElementById("au-name").value.trim(),
         username: document.getElementById("au-email").value.trim(),
         password: document.getElementById("au-password").value,
-        is_admin: document.getElementById("au-admin").checked
+        role: document.getElementById("au-role").value
       }).then(function () {
         reloadWith("User created");
       }).catch(function (err) {
@@ -388,7 +396,6 @@
     var userId = item.getAttribute("data-user");
     var username = item.getAttribute("data-username");
     var pwBtn = item.querySelector("[data-admin-password]");
-    var toggleBtn = item.querySelector("[data-admin-toggle]");
     var deleteBtn = item.querySelector("[data-admin-delete]");
     if (pwBtn) {
       pwBtn.addEventListener("click", function () {
@@ -399,16 +406,24 @@
           .catch(toastError);
       });
     }
-    if (toggleBtn) {
-      toggleBtn.addEventListener("click", function () {
-        api("/admin/users/" + userId + "/toggle-admin").then(function (data) {
-          reloadWith(username + (data.is_admin ? " is now an admin" : " is no longer an admin"));
-        }).catch(toastError);
+    item.querySelectorAll("[data-admin-role]").forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        api("/admin/users/" + userId + "/role", { role: radio.value }).then(function (data) {
+          toast(username + " is now " + (data.role === "admin" ? "an admin" : "a" + (data.role === "editor" ? "n editor" : " viewer")));
+        }).catch(function (err) {
+          // Roll back to the role the server still has.
+          var was = item.getAttribute("data-role");
+          item.querySelectorAll("[data-admin-role]").forEach(function (r) { r.checked = r.value === was; });
+          toastError(err);
+        }).then(function () {
+          var now = item.querySelector("[data-admin-role]:checked");
+          if (now) item.setAttribute("data-role", now.value);
+        });
       });
-    }
+    });
     if (deleteBtn) {
       deleteBtn.addEventListener("click", function () {
-        if (!confirm('Delete "' + username + '" and everything they own? This cannot be undone.')) return;
+        if (!confirm('Delete the account "' + username + '"? The documentation they wrote stays. This cannot be undone.')) return;
         api("/admin/users/" + userId + "/delete")
           .then(function () { reloadWith("Deleted " + username); })
           .catch(toastError);

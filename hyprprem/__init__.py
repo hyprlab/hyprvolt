@@ -181,6 +181,9 @@ def create_app(config_class=Config) -> Flask:
             return dt.strftime("%b %-d")
         return dt.strftime("%b %-d, %Y")
 
+    from .permissions import check_routes
+    check_routes(app)
+
     with app.app_context():
         db.create_all()
         _migrate(app)

@@ -252,7 +252,7 @@
         <p class="form-error" id="pw-error" hidden></p>
         <button class="btn btn--primary" type="submit">Update password</button>
       </form>
-      <p class="hint account-meta">Signed in as <strong>{{ current_user.username }}</strong>{% if current_user.is_admin %} <span class="chip">admin</span>{% endif %} · member since {{ current_user.created_at.strftime('%B %Y') }}</p>
+      <p class="hint account-meta">Signed in as <strong>{{ current_user.username }}</strong> <span class="chip {{ '' if current_user.is_admin else 'chip--muted' }}">{{ current_user.role }}</span> · member since {{ current_user.created_at.strftime('%B %Y') }}</p>
     </section>
 
     {% if current_user.is_admin %}
@@ -273,6 +273,13 @@
         </label>
       </div>
       <p class="hint">0 minutes pauses the background worker. A change takes effect after the current wait.</p>
+      <p class="setting-label setting-label--spaced">New accounts start as</p>
+      <div class="seg" id="inst-default-role">
+        {% for r in ('viewer', 'editor') %}
+        <label><input type="radio" name="default_role" value="{{ r }}" {{ 'checked' if inst_default_role == r }}><span>{{ r|capitalize }}</span></label>
+        {% endfor %}
+      </div>
+      <p class="hint">Viewers read everything; editors also change the documentation; admins also manage users, modules and these settings.</p>
       <p class="hint admin-stats">{{ admin_stats.users }} {{ 'user' if admin_stats.users == 1 else 'users' }} · {{ admin_stats.records }} {{ 'record' if admin_stats.records == 1 else 'records' }}</p>
 
       <p class="setting-label">Users</p>
@@ -281,30 +288,36 @@
         <input type="email" id="au-email" placeholder="user@example.com" autocomplete="off" spellcheck="false" maxlength="80" required>
         <input type="password" id="au-password" placeholder="Temporary password" autocomplete="new-password" minlength="8" required>
         <span class="adduser-actions">
-          <label class="check"><input type="checkbox" id="au-admin"><span>Admin</span></label>
+          <label class="field adduser-role"><select id="au-role" aria-label="Role">
+            {% for r in ('viewer', 'editor', 'admin') %}<option value="{{ r }}" {{ 'selected' if inst_default_role == r }}>{{ r|capitalize }}</option>{% endfor %}
+          </select></label>
           <button class="btn btn--primary" type="submit">Add user</button>
         </span>
       </form>
       <p class="form-error" id="au-error" hidden></p>
       <ul class="manage-list">
         {% for u in admin_users %}
-        {% set n = admin_item_counts.get(u.id, 0) %}
-        <li class="manage-item" data-user="{{ u.id }}" data-username="{{ u.username }}">
+        <li class="manage-item" data-user="{{ u.id }}" data-username="{{ u.username }}" data-role="{{ u.role }}">
           <span class="avatar">{{ u.display_name[0]|upper }}</span>
           <div class="manage-meta">
             <span class="manage-title">{{ u.display_name }}
-              {% if u.is_admin %}<span class="chip">admin</span>{% endif %}
               {% if u.id == current_user.id %}<span class="chip chip--muted">you</span>{% endif %}
             </span>
-            <span class="manage-sub">{{ u.username }} · joined {{ u.created_at.strftime('%b %-d, %Y') }} · {{ n }} {{ 'record' if n == 1 else 'records' }}</span>
+            <span class="manage-sub">{{ u.username }} · joined {{ u.created_at.strftime('%b %-d, %Y') }}</span>
           </div>
+          {% if u.id != current_user.id %}
+          <div class="seg seg--xs" role="radiogroup" aria-label="Role of {{ u.display_name }}">
+            {% for r in ('viewer', 'editor', 'admin') %}
+            <label><input type="radio" name="role-{{ u.id }}" value="{{ r }}" data-admin-role {{ 'checked' if u.role == r }}><span>{{ r|capitalize }}</span></label>
+            {% endfor %}
+          </div>
+          {% else %}
+          <span class="chip">{{ u.role }}</span>
+          {% endif %}
           <button class="iconbtn iconbtn--sm" data-admin-password aria-label="Reset password" title="Reset password">
             <svg viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="4"/><path d="M10.3 12.7 21 2M15 5l3 3M18 2l3 3"/></svg>
           </button>
           {% if u.id != current_user.id %}
-          <button class="iconbtn iconbtn--sm" data-admin-toggle aria-label="{{ 'Remove admin' if u.is_admin else 'Make admin' }}" title="{{ 'Remove admin' if u.is_admin else 'Make admin' }}">
-            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5.5L12 2.5 4 5.5V12c0 6 8 10 8 10Z"/>{% if not u.is_admin %}<path d="m8.8 12 2.2 2.2 4.2-4.4"/>{% endif %}</svg>
-          </button>
           <button class="iconbtn iconbtn--sm iconbtn--danger" data-admin-delete aria-label="Delete user" title="Delete user">
             <svg viewBox="0 0 24 24"><path d="M5.5 7.5h13M9.5 7V5h5v2M7 7.5l.8 12a1 1 0 0 0 1 .9h6.4a1 1 0 0 0 1-.9l.8-12M10.2 11v6M13.8 11v6"/></svg>
           </button>

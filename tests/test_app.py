@@ -1,9 +1,10 @@
 """What the template guarantees.
 
 These cover what is easy to break while reshaping the app and expensive to
-notice later: the setup gate, CSRF, record ownership, the admin guard, and the
+notice later: the setup gate, CSRF, roles, the admin guard, and the
 error shapes the client depends on. Add to them rather than replacing them.
 """
+from .conftest import token_for
 
 
 def test_fresh_install_steers_to_setup(client):
@@ -52,13 +53,42 @@ def test_item_needs_a_title(client, csrf, admin):
     assert "title" in resp.get_json()["error"].lower()
 
 
-def test_records_belong_to_their_owner(client, csrf, admin, second_user):
-    mine = client.post("/items", json={"title": "Private"}, headers={"X-CSRF": csrf}).get_json()["item"]
+def test_records_belong_to_the_instance(client, csrf, admin, second_user):
+    """Everyone signed in reads everything; a viewer can't change it."""
+    shared = client.post("/items", json={"title": "Shared"}, headers={"X-CSRF": csrf}).get_json()["item"]
     other, token = second_user
-    assert other.get(f"/items/{mine['id']}", headers={"X-CSRF": token}).status_code == 404
-    assert other.post(f"/items/{mine['id']}", json={"title": "Stolen"},
-                      headers={"X-CSRF": token}).status_code == 404
-    assert other.get("/search?q=priv").get_json()["results"] == []
+    assert other.get(f"/items/{shared['id']}", headers={"X-CSRF": token}).status_code == 200
+    assert len(other.get("/search?q=shar").get_json()["results"]) == 1
+    refused = other.post(f"/items/{shared['id']}", json={"title": "Changed"}, headers={"X-CSRF": token})
+    assert refused.status_code == 403 and "editor" in refused.get_json()["error"]
+    assert other.post("/items", json={"title": "New"}, headers={"X-CSRF": token}).status_code == 403
+
+
+def test_an_editor_can_write(client, csrf, admin, second_user):
+    other, token = second_user
+    assert client.post("/admin/users/2/role", json={"role": "editor"},
+                       headers={"X-CSRF": csrf}).get_json()["role"] == "editor"
+    assert other.post("/items", json={"title": "Mine"}, headers={"X-CSRF": token}).status_code == 200
+    assert other.post("/admin/registration", json={"open": False},
+                      headers={"X-CSRF": token}).status_code == 403
+
+
+def test_sign_ups_get_the_default_role(client, csrf, admin, app):
+    client.post("/admin/instance", json={"default_role": "editor"}, headers={"X-CSRF": csrf})
+    assert client.post("/admin/instance", json={"default_role": "admin"},
+                       headers={"X-CSRF": csrf}).status_code == 400
+    stranger = app.test_client()
+    token = token_for(stranger)
+    stranger.post("/register", data={"_csrf": token, "username": "new@example.com",
+                                     "password": "password1", "confirm": "password1"})
+    from hyprprem.models import User
+    with app.app_context():
+        assert User.query.filter_by(username="new@example.com").one().role == "editor"
+
+
+def test_every_route_declares_a_role(app):
+    from hyprprem.permissions import undeclared_routes
+    assert undeclared_routes(app) == []
 
 
 def test_search(client, csrf, admin):
@@ -96,16 +126,17 @@ def test_admin_cannot_delete_or_demote_itself(client, csrf, admin):
     assert client.post("/admin/users", json={"username": "b@example.com", "password": "password1"},
                        headers=h).status_code == 200
     assert client.post("/admin/users/1/delete", headers=h).status_code == 400
-    assert client.post("/admin/users/1/toggle-admin", headers=h).status_code == 400
+    assert client.post("/admin/users/1/role", json={"role": "viewer"}, headers=h).status_code == 400
 
 
-def test_deleting_a_user_deletes_their_records(client, csrf, admin, second_user):
+def test_deleting_a_user_keeps_what_they_wrote(client, csrf, admin, second_user):
+    client.post("/admin/users/2/role", json={"role": "editor"}, headers={"X-CSRF": csrf})
     other, token = second_user
     other.post("/items", json={"title": "Theirs"}, headers={"X-CSRF": token})
     assert client.post("/admin/users/2/delete", headers={"X-CSRF": csrf}).status_code == 200
     from hyprprem.models import Item
     with client.application.app_context():
-        assert Item.query.count() == 0
+        assert Item.query.count() == 1
 
 
 def test_instance_settings_are_range_checked(client, csrf, admin):

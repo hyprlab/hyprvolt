@@ -10,6 +10,7 @@ from flask_login import login_user
 
 from .auth import EMAIL_RE, MIN_PASSWORD
 from .models import User, db, set_setting
+from .permissions import public
 
 bp = Blueprint("setup", __name__)
 
@@ -28,6 +29,7 @@ def needs_setup() -> bool:
 
 
 @bp.route("/setup")
+@public
 def wizard():
     if not needs_setup():
         return redirect(url_for("auth.login"))
@@ -35,6 +37,7 @@ def wizard():
 
 
 @bp.route("/setup", methods=["POST"])
+@public
 def submit():
     if not needs_setup():
         return jsonify(error="This instance is already set up."), 409
@@ -54,13 +57,13 @@ def submit():
     if not 0 <= worker <= 1440:
         return jsonify(error="The background interval must be between 0 and 1440 minutes."), 400
 
-    admin = User(username=username, is_admin=True,
+    admin = User(username=username, role="admin",
                  name=(data.get("name") or "").strip()[:120] or None)
     admin.set_password(password)
     db.session.add(admin)
     db.session.commit()
 
-    set_setting("registration_open", "1" if data.get("registration_open", True) else "0")
+    set_setting("registration_open", "1" if data.get("registration_open") else "0")
     set_setting("worker_minutes", str(worker))
 
     _completed["done"] = True

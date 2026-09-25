@@ -26,7 +26,9 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)  # an email address
     name = db.Column(db.String(120))
     password_hash = db.Column(db.String(256), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    # viewer | editor | admin (permissions.py). The data belongs to the
+    # instance; the role decides what an account may do with it.
+    role = db.Column(db.String(10), default="viewer", nullable=False)
     # Preferences live on the account, not in localStorage, so they follow the
     # user to another browser.
     theme = db.Column(db.String(10), default="system", nullable=False)     # system|light|dark
@@ -34,9 +36,13 @@ class User(UserMixin, db.Model):
     infinite_scroll = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
-    items = db.relationship(
-        "Item", backref="owner", cascade="all, delete-orphan", lazy="dynamic"
-    )
+    @property
+    def is_admin(self) -> bool:
+        return self.role == "admin"
+
+    @property
+    def can_edit(self) -> bool:
+        return self.role in ("editor", "admin")
 
     @property
     def display_name(self) -> str:
@@ -97,8 +103,8 @@ class Item(db.Model):
     __table_args__ = (db.Index("ix_items_user_created", "user_id", "created_at"),)
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
-                        nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"),
+                        index=True)
     title = db.Column(db.String(300), nullable=False)
     body = db.Column(db.Text, default="", nullable=False)
     pinned = db.Column(db.Boolean, default=False, nullable=False)

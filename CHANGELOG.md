@@ -6,6 +6,13 @@ All notable changes to Hyprprem are documented here. The format follows
 
 ## Unreleased
 
+### Added
+- Accounts have a role: viewers read everything, editors also change the documentation, admins also manage users and the instance. Admins pick the role per user and the role new accounts start with
+
+### Changed
+- Documentation belongs to the instance rather than to the account that wrote it; deleting an account keeps it
+- Sign-up is off on a fresh install
+
 ## [0.1.0] — 2026-09-25
 
 ### Added

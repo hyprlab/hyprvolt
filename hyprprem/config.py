@@ -76,7 +76,9 @@ class Config:
     TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
 
     # ——— Fresh-install defaults; an admin overrides these at runtime ———
-    ALLOW_REGISTRATION = _flag("ALLOW_REGISTRATION", "1")
+    # Off by default: infrastructure documentation is rarely something strangers
+    # should be able to sign up to read. New accounts start as viewers.
+    ALLOW_REGISTRATION = _flag("ALLOW_REGISTRATION", "0")
     # Background worker cadence, in minutes. 0 keeps the thread from starting.
     WORKER_MINUTES = _int("WORKER_MINUTES", 15)
     ITEMS_PER_PAGE = _int("ITEMS_PER_PAGE", 40)

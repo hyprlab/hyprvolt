@@ -34,7 +34,7 @@ Everything is optional. Put values in a `.env` file next to
 | `SESSION_COOKIE_SECURE` | `0` | Set to `1` when the app is served over HTTPS |
 | `TRUST_PROXY` | `0` | How many reverse proxies are in front; see below |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | empty | Cloudflare Turnstile keys; see [Turnstile](#turnstile). Usually set in the app instead |
-| `ALLOW_REGISTRATION` | `1` | Whether anyone can create an account |
+| `ALLOW_REGISTRATION` | `0` | Whether anyone can create an account. New accounts get the default role (viewer unless an admin changes it) |
 | `WORKER_MINUTES` | `15` | How often background work runs; `0` turns it off |
 | `ITEMS_PER_PAGE` | `40` | Records per page |
 | `DATA_DIR` | `/data` | Where the database lives inside the container |

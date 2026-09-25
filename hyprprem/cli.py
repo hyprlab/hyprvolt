@@ -48,19 +48,22 @@ def _ask_password() -> str:
 @with_appcontext
 @click.argument("username")
 @click.option("--name", default=None, help="Display name.")
-@click.option("--admin", is_flag=True, help="Make the account an admin.")
-def create_user(username, name, admin):
+@click.option("--role", "role_", type=click.Choice(["viewer", "editor", "admin"]),
+              default="viewer", show_default=True, help="What the account may do.")
+@click.option("--admin", is_flag=True, help="Shorthand for --role admin.")
+def create_user(username, name, role_, admin):
     """Create an account."""
     username = username.strip().lower()
     if not EMAIL_RE.match(username):
         raise click.ClickException("The username must be an email address.")
     if _find(username):
         raise click.ClickException(f"{username} already exists.")
-    user = User(username=username, name=name, is_admin=admin)
+    role_ = "admin" if admin else role_
+    user = User(username=username, name=name, role=role_)
     user.set_password(_ask_password())
     db.session.add(user)
     db.session.commit()
-    click.echo(f"Created {username}{' (admin)' if admin else ''}.")
+    click.echo(f"Created {username} ({role_}).")
 
 
 @click.command("reset-password")

@@ -24,7 +24,7 @@ services:
       - TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY:-}
       - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY:-}
       # Fresh-install defaults. After setup, Settings > Admin wins.
-      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-1}
+      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-0}
       - WORKER_MINUTES=${WORKER_MINUTES:-15}
       - ITEMS_PER_PAGE=${ITEMS_PER_PAGE:-40}
     volumes:

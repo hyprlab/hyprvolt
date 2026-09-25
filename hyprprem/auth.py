@@ -10,10 +10,11 @@ import time
 
 import requests
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_required, login_user, logout_user
+from flask_login import current_user, login_user, logout_user
 from sqlalchemy import func
 
 from .models import User, db, get_setting
+from .permissions import public, role
 
 bp = Blueprint("auth", __name__)
 
@@ -138,6 +139,7 @@ def safe_next(dest: str | None) -> str:
 
 
 @bp.route("/login", methods=["GET", "POST"])
+@public
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("main.index"))
@@ -162,6 +164,7 @@ def login():
 
 
 @bp.route("/register", methods=["GET", "POST"])
+@public
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("main.index"))
@@ -185,7 +188,9 @@ def register():
             flash("An account with that email already exists.", "error")
         else:
             # The first account on a fresh instance becomes the admin.
-            user = User(username=username, is_admin=User.query.count() == 0,
+            from .main import default_role
+            user = User(username=username,
+                        role="admin" if User.query.count() == 0 else default_role(),
                         name=request.form.get("name", "").strip()[:120] or None)
             user.set_password(password)
             db.session.add(user)
@@ -197,7 +202,7 @@ def register():
 
 
 @bp.route("/logout", methods=["POST"])
-@login_required
+@role("viewer")
 def logout():
     logout_user()
     return redirect(url_for("auth.login"))

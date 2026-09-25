@@ -12,15 +12,16 @@ Two shapes of route live here:
   ``{"error": "..."}`` with a 4xx status, written for the person reading it; the
   client shows it as a toast or an inline form error.
 
-Admin routes are grouped at the end behind ``_require_admin``.
+Admin routes are grouped at the end, each behind ``@role("admin")``.
 """
 from flask import Blueprint, abort, jsonify, render_template, request
-from flask_login import current_user, login_required
+from flask_login import current_user
 from sqlalchemy import func, or_
 
 from . import __version__
 from .auth import EMAIL_RE, MIN_PASSWORD, siteverify, turnstile_config
 from .models import Item, User, db, get_setting, int_setting, set_setting
+from .permissions import ROLES, public, role
 
 bp = Blueprint("main", __name__)
 
@@ -36,6 +37,7 @@ SORTS = {
 # ———— Health ————
 
 @bp.route("/healthz")
+@public
 def healthz():
     """Liveness probe for Docker and any proxy in front of it.
 
@@ -53,7 +55,7 @@ def healthz():
 # ———— The shell ————
 
 def _items_query(filter_name: str, sort: str):
-    query = Item.query.filter(Item.user_id == current_user.id)
+    query = Item.query
     if filter_name == "open":
         query = query.filter(Item.done.is_(False))
     elif filter_name == "pinned":
@@ -65,7 +67,7 @@ def _items_query(filter_name: str, sort: str):
 
 
 @bp.route("/")
-@login_required
+@role("viewer")
 def index():
     filter_name = request.args.get("filter", "open")
     if filter_name not in FILTERS:
@@ -89,7 +91,7 @@ def index():
     if request.args.get("partial") == "1":
         return render_template("partials/records.html", **context)
 
-    mine = Item.query.filter_by(user_id=current_user.id)
+    mine = Item.query
     counts = {
         "open": mine.filter_by(done=False).count(),
         "pinned": mine.filter_by(pinned=True).count(),
@@ -105,12 +107,10 @@ def _admin_context() -> dict:
         return {}
     return {
         "admin_users": User.query.order_by(User.created_at).all(),
-        "admin_item_counts": dict(
-            db.session.query(Item.user_id, func.count(Item.id)).group_by(Item.user_id).all()
-        ),
         "admin_stats": {"users": User.query.count(), "records": Item.query.count()},
         "inst_worker": int_setting("worker_minutes", 15),
         "inst_per_page": int_setting("items_per_page", 40),
+        "inst_default_role": default_role(),
         "turnstile": _turnstile_status(),
     }
 
@@ -118,12 +118,7 @@ def _admin_context() -> dict:
 # ———— Records ————
 
 def _own_item(item_id: int) -> Item:
-    """404, not 403, for someone else's record: its existence is not theirs to
-    learn either."""
-    item = db.session.get(Item, item_id)
-    if item is None or item.user_id != current_user.id:
-        abort(404)
-    return item
+    return db.get_or_404(Item, item_id)
 
 
 def _item_json(item: Item) -> dict:
@@ -140,7 +135,7 @@ def _item_json(item: Item) -> dict:
 
 
 @bp.route("/items", methods=["POST"])
-@login_required
+@role("editor")
 def item_create():
     data = request.get_json(silent=True) or {}
     title = (data.get("title") or "").strip()
@@ -155,13 +150,13 @@ def item_create():
 
 
 @bp.route("/items/<int:item_id>")
-@login_required
+@role("viewer")
 def item_detail(item_id):
     return jsonify(ok=True, item=_item_json(_own_item(item_id)))
 
 
 @bp.route("/items/<int:item_id>", methods=["POST"])
-@login_required
+@role("editor")
 def item_update(item_id):
     item = _own_item(item_id)
     data = request.get_json(silent=True) or {}
@@ -183,7 +178,7 @@ def item_update(item_id):
 
 
 @bp.route("/items/<int:item_id>/delete", methods=["POST"])
-@login_required
+@role("editor")
 def item_delete(item_id):
     item = _own_item(item_id)
     snapshot = _item_json(item)
@@ -194,7 +189,7 @@ def item_delete(item_id):
 
 
 @bp.route("/items/restore", methods=["POST"])
-@login_required
+@role("editor")
 def item_restore():
     """Undo for a delete: re-create a record from the snapshot the delete
     returned. Only the user's own fields come back; the id is new."""
@@ -210,7 +205,7 @@ def item_restore():
 
 
 @bp.route("/search")
-@login_required
+@role("viewer")
 def search():
     """Backs the Ctrl/Cmd+K palette: a case-insensitive substring match over
     the user's own records, newest first, capped so a broad query stays cheap."""
@@ -220,7 +215,6 @@ def search():
     like = "%" + query.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     rows = (
         Item.query
-        .filter(Item.user_id == current_user.id)
         .filter(or_(func.lower(Item.title).like(like, escape="\\"),
                     func.lower(Item.body).like(like, escape="\\")))
         .order_by(Item.created_at.desc())
@@ -235,7 +229,7 @@ def search():
 # ———— Account ————
 
 @bp.route("/settings", methods=["POST"])
-@login_required
+@role("viewer")
 def settings():
     data = request.get_json(silent=True) or {}
     if "name" in data:
@@ -251,7 +245,7 @@ def settings():
 
 
 @bp.route("/account/password", methods=["POST"])
-@login_required
+@role("viewer")
 def change_password():
     data = request.get_json(silent=True) or {}
     if not current_user.check_password(data.get("current", "")):
@@ -266,9 +260,11 @@ def change_password():
 
 # ———— Admin ————
 
-def _require_admin() -> None:
-    if not current_user.is_admin:
-        abort(403)
+def default_role() -> str:
+    """The role a new account gets: from sign-up, or from Add user when none
+    is chosen."""
+    stored = get_setting("default_role")
+    return stored if stored in ("viewer", "editor") else "viewer"
 
 
 INSTANCE_SETTINGS = {
@@ -279,9 +275,8 @@ INSTANCE_SETTINGS = {
 
 
 @bp.route("/admin/instance", methods=["POST"])
-@login_required
+@role("admin")
 def admin_instance():
-    _require_admin()
     data = request.get_json(silent=True) or {}
     for key, (low, high, label) in INSTANCE_SETTINGS.items():
         if key not in data:
@@ -293,13 +288,16 @@ def admin_instance():
         if not low <= value <= high:
             return jsonify(error=f"{label} must be between {low} and {high}."), 400
         set_setting(key, str(value))
+    if "default_role" in data:
+        if data["default_role"] not in ("viewer", "editor"):
+            return jsonify(error="New accounts can start as viewers or editors."), 400
+        set_setting("default_role", data["default_role"])
     return jsonify(ok=True)
 
 
 @bp.route("/admin/registration", methods=["POST"])
-@login_required
+@role("admin")
 def admin_registration():
-    _require_admin()
     open_ = bool((request.get_json(silent=True) or {}).get("open"))
     set_setting("registration_open", "1" if open_ else "0")
     return jsonify(ok=True, open=open_)
@@ -320,7 +318,7 @@ def _turnstile_status() -> dict:
 
 
 @bp.route("/admin/turnstile", methods=["POST"])
-@login_required
+@role("admin")
 def admin_turnstile():
     """Turn Turnstile on, or change its keys.
 
@@ -330,7 +328,6 @@ def admin_turnstile():
     a wrong pair saved blindly would lock everyone, the admin included, out of
     sign-in.
     """
-    _require_admin()
     data = request.get_json(silent=True) or {}
     site_key = (data.get("site_key") or "").strip()
     secret_key = (data.get("secret_key") or "").strip()
@@ -355,19 +352,17 @@ def admin_turnstile():
 
 
 @bp.route("/admin/turnstile/disable", methods=["POST"])
-@login_required
+@role("admin")
 def admin_turnstile_disable():
     """Turn Turnstile off. The keys stay saved, so turning it back on is one
     challenge away. The stored "off" also overrides TURNSTILE_* variables."""
-    _require_admin()
     set_setting("turnstile_enabled", "0")
     return jsonify(ok=True, status=_turnstile_status())
 
 
 @bp.route("/admin/users", methods=["POST"])
-@login_required
+@role("admin")
 def admin_create_user():
-    _require_admin()
     data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip().lower()
     password = data.get("password") or ""
@@ -377,7 +372,10 @@ def admin_create_user():
         return jsonify(error=f"Passwords need at least {MIN_PASSWORD} characters."), 400
     if User.query.filter(func.lower(User.username) == username).first():
         return jsonify(error="An account with that email already exists."), 409
-    user = User(username=username, is_admin=bool(data.get("is_admin")),
+    new_role = data.get("role") or default_role()
+    if new_role not in ROLES:
+        return jsonify(error="Choose viewer, editor or admin."), 400
+    user = User(username=username, role=new_role,
                 name=(data.get("name") or "").strip()[:120] or None)
     user.set_password(password)
     db.session.add(user)
@@ -386,9 +384,8 @@ def admin_create_user():
 
 
 @bp.route("/admin/users/<int:user_id>/password", methods=["POST"])
-@login_required
+@role("admin")
 def admin_reset_password(user_id):
-    _require_admin()
     user = db.get_or_404(User, user_id)
     new = (request.get_json(silent=True) or {}).get("new", "")
     if len(new) < MIN_PASSWORD:
@@ -398,25 +395,28 @@ def admin_reset_password(user_id):
     return jsonify(ok=True)
 
 
-@bp.route("/admin/users/<int:user_id>/toggle-admin", methods=["POST"])
-@login_required
-def admin_toggle_admin(user_id):
-    _require_admin()
+@bp.route("/admin/users/<int:user_id>/role", methods=["POST"])
+@role("admin")
+def admin_set_role(user_id):
     user = db.get_or_404(User, user_id)
+    new_role = (request.get_json(silent=True) or {}).get("role")
+    if new_role not in ROLES:
+        return jsonify(error="Choose viewer, editor or admin."), 400
     if user.id == current_user.id:
-        return jsonify(error="You can't change your own admin status."), 400
-    user.is_admin = not user.is_admin
+        return jsonify(error="You can't change your own role."), 400
+    user.role = new_role
     db.session.commit()
-    return jsonify(ok=True, is_admin=user.is_admin)
+    return jsonify(ok=True, role=user.role)
 
 
 @bp.route("/admin/users/<int:user_id>/delete", methods=["POST"])
-@login_required
+@role("admin")
 def admin_delete_user(user_id):
-    _require_admin()
     user = db.get_or_404(User, user_id)
     if user.id == current_user.id:
         return jsonify(error="You can't delete your own account from here."), 400
-    db.session.delete(user)   # their records cascade through the relationship
+    # The documentation they wrote belongs to the instance and stays; the
+    # history keeps their name as it was.
+    db.session.delete(user)
     db.session.commit()
     return jsonify(ok=True)
