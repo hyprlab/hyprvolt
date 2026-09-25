@@ -75,6 +75,11 @@ class Config:
     TURNSTILE_SITE_KEY = os.environ.get("TURNSTILE_SITE_KEY", "")
     TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
 
+    # Where modules are discovered: every subpackage exporting `module`.
+    MODULE_PACKAGES = ["hyprprem.modules"]
+    # Raise on a broken manifest instead of leaving the module out.
+    MODULES_STRICT = _flag("MODULES_STRICT", "0")
+
     # ——— Fresh-install defaults; an admin overrides these at runtime ———
     # Off by default: infrastructure documentation is rarely something strangers
     # should be able to sign up to read. New accounts start as viewers.

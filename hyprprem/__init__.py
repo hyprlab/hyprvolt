@@ -19,6 +19,7 @@ from werkzeug.exceptions import HTTPException
 
 from .config import Config
 from .models import User, db, utcnow
+from .core import models as _core_models  # noqa: F401  (the shared tables, for create_all)
 
 #: The single source of truth for the version. tools/bump-version.sh edits this
 #: line; the About section, /healthz, the release scripts and the Docker tags all
@@ -71,11 +72,16 @@ def create_app(config_class=Config) -> Flask:
             return jsonify(error="You are signed out. Reload the page to sign in again."), 401
         return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
 
-    from . import auth, cli, main, setup
+    from . import auth, cli, main, registry, setup
     app.register_blueprint(auth.bp)
     app.register_blueprint(main.bp)
     app.register_blueprint(setup.bp)
     cli.register(app)
+
+    # Modules are imported before create_all so their tables exist, turned on
+    # or not; the registry then mounts their blueprints and templates.
+    modules = registry.discover(app.config["MODULE_PACKAGES"], strict=app.config["MODULES_STRICT"])
+    registry.init_app(app, modules)
 
     @app.before_request
     def steer_to_setup():
@@ -215,27 +221,23 @@ def _wants_json() -> bool:
 def _migrate(app: Flask) -> None:
     """In-place migrations for databases created by older versions.
 
-    Every step inspects the schema first, so it is safe to run on every boot
-    and safe to run twice. Add new steps at the end and never edit an old one:
-    an install that has already run it will not run it again. A step that makes
-    the database unreadable to the previous version is a MAJOR release
-    (docs/RELEASING.md).
+    The core's steps run first, then each module's, in the registry's fixed
+    migration order (``registry.migration_order``). Every step checks before
+    it acts, so it is safe to run on every boot and safe to run twice. Add new
+    steps at the end of their list and never edit an old one: an install that
+    has already run it will not run it again. When a step is needed at all is
+    in migrate.py and docs/ARCHITECTURE.md. A step that makes the database
+    unreadable to the previous version is a MAJOR release (docs/RELEASING.md).
     """
-    from sqlalchemy import inspect, text
+    from .migrate import Migrator
+    from .registry import current
 
-    inspector = inspect(db.engine)
+    core = Migrator("core")
+    # The shape every step takes.
+    core.add_column("users", "infinite_scroll", "BOOLEAN NOT NULL DEFAULT 1")
 
-    def columns(table: str) -> set[str]:
-        return {c["name"] for c in inspector.get_columns(table)}
-
-    # The shape every step takes. Keep it as the pattern, or delete it once
-    # the app has steps of its own.
-    if "infinite_scroll" not in columns("users"):
-        db.session.execute(text(
-            "ALTER TABLE users ADD COLUMN infinite_scroll BOOLEAN NOT NULL DEFAULT 1"
-        ))
-        db.session.commit()
-        app.logger.info("migrated: added users.infinite_scroll")
+    for module, step in current().migration_steps():
+        step.run(Migrator(module.id))
 
 
 def _start_worker(app: Flask) -> None:

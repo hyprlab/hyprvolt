@@ -30,6 +30,10 @@ def app(tmp_path, monkeypatch):
 
     class TestConfig(hyprprem.config.Config):
         TESTING = True
+        # The example module (tests/example_modules) is loaded next to the
+        # real ones, and a broken manifest fails the test instead of hiding.
+        MODULE_PACKAGES = ["hyprprem.modules", "tests.example_modules"]
+        MODULES_STRICT = True
 
     yield hyprprem.create_app(TestConfig)
 
