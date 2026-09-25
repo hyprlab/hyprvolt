@@ -374,6 +374,19 @@
     });
   });
 
+  document.querySelectorAll("[data-module-toggle]").forEach(function (box) {
+    box.addEventListener("change", function () {
+      var on = box.checked;
+      api("/admin/modules/" + box.getAttribute("data-module-toggle"), { enabled: on }).then(function () {
+        // The sidebar, search and every page change with it.
+        reloadWith(on ? "Module turned on" : "Module turned off; its records are kept");
+      }).catch(function (err) {
+        box.checked = !on;   // the server still has it the other way
+        toastError(err);
+      });
+    });
+  });
+
   var adduserForm = document.getElementById("admin-adduser");
   if (adduserForm) {
     adduserForm.addEventListener("submit", function (e) {
@@ -745,7 +758,8 @@
   //   form[data-api="/url"]      submits its fields as JSON (or multipart,
   //                              with enctype) and then does data-then
   //   [data-api-post="/url"]     posts data-body (JSON) and then does data-then
-  //   data-then="sheet|reload"   re-render the open sheet, or reload the page
+  //   data-then="sheet|reload|remove"  re-render the open sheet, reload the
+  //                              page, or remove the closest [data-row]
   //   data-done="Message"        the toast, with Undo when the answer has one
   //   [data-pick]                chooses a record in the palette; its id goes
   //                              into the form's data-pick-into field (other_id)
@@ -757,6 +771,10 @@
     if (then === "reload") {
       if (done) queueToast(done);
       location.reload();
+    } else if (then === "remove") {
+      var row = el.closest("[data-row]");
+      if (row) row.remove();
+      offerUndo(done, data && data.undo);
     } else if (then === "sheet") {
       refreshSheet();
       if (data && data.undo) offerUndo(done, data.undo, refreshSheet);

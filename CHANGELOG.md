@@ -14,6 +14,7 @@ All notable changes to Hyprprem are documented here. The format follows
 - Typed links between records in both directions, and a view of what breaks if a record goes down
 - Files attached to any record, included in `flask backup` when the backup is named `.tar.gz`
 - Tags shared by every module, custom fields an admin adds to any kind of record, and a history of every change
+- Settings has a Modules section to turn modules on and off (a module that is off keeps its records) and a Custom fields section
 - Deleting a record can be undone, and deleted records stay under Recently deleted until they are purged
 - The dashboard counts what is documented, shows what changed lately, and how full each rack is
 - Accounts have a role: viewers read everything, editors also change the documentation, admins also manage users and the instance. Admins pick the role per user and the role new accounts start with

@@ -158,7 +158,16 @@
 ] + ([
   ('admin', 'Admin', 'Instance', '<path d="M12 22s8-4 8-10V5.5L12 2.5 4 5.5V12c0 6 8 10 8 10Z"/><path d="m8.8 12 2.2 2.2 4.2-4.4"/>'),
   ('security', 'Security', 'Instance', '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3M12 14.5v2.5"/>'),
+  ('modules', 'Modules', 'Instance', '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M16.5 13.5v6M13.5 16.5h6"/>'),
+  ('fields', 'Custom fields', 'Instance', '<path d="M4 6.5h9M4 12h6M4 17.5h9M15.5 9.5l4-4M17 14.5v6M14 17.5h6"/>'),
 ] if current_user.is_admin else []) %}
+{# Sections modules add (their manifest's settings_pane). A namespace,
+   because a set inside a loop doesn't outlive the loop. #}
+{% set extra = namespace(sections=settings_sections) %}
+{% for m, pane in module_panes %}
+  {% set extra.sections = extra.sections + [(pane.key, pane.label, 'Modules', pane.icon or m.icon)] %}
+{% endfor %}
+{% set settings_sections = extra.sections %}
 {% set about_icon = '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/>' %}
 {% macro settings_navitem(id, label, icon, active=false) %}
   <button type="button" class="settings-navitem {{ 'is-active' if active }}" role="tab"
@@ -374,6 +383,83 @@
         <code>docker exec {{ app_package }} flask turnstile off</code> turns it off.</p>
     </section>
     {% endif %}
+
+    {% if current_user.is_admin %}
+    <section class="settings-pane" data-pane="modules" id="settings-modules" role="tabpanel" aria-labelledby="settings-tab-modules" tabindex="0">
+      <p class="hint">A module that is turned off disappears from the sidebar, search, the dashboard and every record's tabs. Its records stay in the database and come back when it is turned on again.</p>
+      <ul class="manage-list modules-list">
+        {% for entry in admin_modules %}
+        {% set m = entry.module %}
+        <li class="manage-item" data-row>
+          <span class="module-icon">{{ type_icon(m.icon) }}</span>
+          <div class="manage-meta">
+            <span class="manage-title">{{ m.name }}{% if m.core %} <span class="chip chip--muted">built in</span>{% endif %}</span>
+            <span class="manage-sub">{{ m.description or '' }}</span>
+            <span class="manage-sub">{{ m.types|map(attribute='plural')|join(', ') }} · {{ entry.count }} {{ 'record' if entry.count == 1 else 'records' }}</span>
+          </div>
+          <label class="switch" title="{{ 'Built in' if m.core else ('Turn off' if entry.enabled else 'Turn on') }}">
+            <input type="checkbox" data-module-toggle="{{ m.id }}" {{ 'checked' if entry.enabled }} {{ 'disabled' if m.core }}
+                   aria-label="{{ m.name }} is {{ 'on' if entry.enabled else 'off' }}">
+            <span class="switch-track"></span>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if admin_module_errors %}
+      <p class="setting-label setting-label--spaced">Left out because of an error</p>
+      <ul class="manage-list">
+        {% for name, error in admin_module_errors %}
+        <li class="manage-item"><div class="manage-meta"><span class="manage-title">{{ name }}</span><span class="manage-sub form-error">{{ error }}</span></div></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+
+    <section class="settings-pane" data-pane="fields" id="settings-fields" role="tabpanel" aria-labelledby="settings-tab-fields" tabindex="0">
+      <p class="hint">Fields of your own on any kind of record. They show in its form and its Overview, and search finds their values.</p>
+      <form class="stack customform" data-api="/api/custom-fields" data-then="reload" data-done="Field added">
+        <div class="inst-grid">
+          <label class="field"><span class="field-label">Add to</span>
+            <select name="entity_type" required>
+              {% for group in nav_groups %}{% for entry in group.modules %}
+              <optgroup label="{{ entry.module.name }}">
+                {% for t in entry.module.types %}<option value="{{ t.key }}">{{ t.plural }}</option>{% endfor %}
+              </optgroup>
+              {% endfor %}{% endfor %}
+            </select></label>
+          <label class="field"><span class="field-label">Kind</span>
+            <select name="kind">{% for value, label in custom_kind_labels.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+          <label class="field"><span class="field-label">Label</span><input name="label" maxlength="80" required placeholder="Purchase order"></label>
+          <label class="field"><span class="field-label">Choices</span><input name="options" placeholder="For a choice list: separated by commas"></label>
+        </div>
+        <p class="form-error" hidden></p>
+        <button class="btn btn--primary" type="submit">Add field</button>
+      </form>
+      {% for group in nav_groups %}{% for entry in group.modules %}{% for t in entry.module.types if admin_custom_fields.get(t.key) %}
+      <p class="setting-label setting-label--spaced">{{ t.plural }}</p>
+      <ul class="manage-list">
+        {% for cf in admin_custom_fields[t.key] %}
+        <li class="manage-item" data-row>
+          <div class="manage-meta">
+            <span class="manage-title">{{ cf.label }}</span>
+            <span class="manage-sub">{{ custom_kind_labels.get(cf.kind, cf.kind) }}{% if cf.options %}: {{ cf.options|join(', ') }}{% endif %} · <code class="slug">c.{{ cf.key }}</code></span>
+          </div>
+          <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/api/custom-fields/{{ cf.id }}/delete" data-then="remove"
+                  data-done="Field removed, with its values" aria-label="Remove {{ cf.label }}" title="Remove the field and its values">
+            <svg viewBox="0 0 24 24"><path d="M5.5 7.5h13M9.5 7V5h5v2M7 7.5l.8 12a1 1 0 0 0 1 .9h6.4a1 1 0 0 0 1-.9l.8-12"/></svg>
+          </button>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endfor %}{% endfor %}{% endfor %}
+    </section>
+    {% endif %}
+
+    {% for m, pane in module_panes %}
+    <section class="settings-pane" data-pane="{{ pane.key }}" id="settings-{{ pane.key }}" role="tabpanel" aria-labelledby="settings-tab-{{ pane.key }}" tabindex="0">
+      {{ pane.render()|safe }}
+    </section>
+    {% endfor %}
 
     <section class="settings-pane" data-pane="about" id="settings-about" role="tabpanel" aria-labelledby="settings-tab-about" tabindex="0">
       <div class="about-hero">

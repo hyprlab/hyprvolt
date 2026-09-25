@@ -198,7 +198,27 @@ def _admin_context() -> dict:
         "inst_upload_mb": int_setting("max_upload_mb", 25),
         "inst_default_role": default_role(),
         "turnstile": _turnstile_status(),
+        **_modules_context(),
     }
+
+
+CUSTOM_KIND_LABELS = {"text": "Text", "number": "Number", "date": "Date", "select": "Choice list",
+                      "url": "Web address", "boolean": "Yes or no"}
+
+
+def _modules_context() -> dict:
+    """Settings > Modules and Settings > Custom fields."""
+    from .core.models import CustomField
+    reg = registry()
+    counts = shell.type_counts()
+    enabled = reg.enabled_ids()
+    modules = [{"module": m, "enabled": m.id in enabled,
+                "count": sum(counts.get(t.key, 0) for t in m.types)} for m in reg.sidebar_order()]
+    fields: dict[str, list] = {}
+    for cf in CustomField.query.order_by(CustomField.position, CustomField.id):
+        fields.setdefault(cf.entity_type, []).append(cf)
+    return {"admin_modules": modules, "admin_module_errors": sorted(reg.errors.items()),
+            "admin_custom_fields": fields, "custom_kind_labels": CUSTOM_KIND_LABELS}
 
 
 # ———— Search (the Ctrl/Cmd+K palette) ————
@@ -444,3 +464,18 @@ def admin_delete_user(user_id):
     db.session.delete(user)
     db.session.commit()
     return jsonify(ok=True)
+
+
+@bp.route("/admin/modules/<module_id>", methods=["POST"])
+@role("admin")
+def admin_module(module_id):
+    """Turn a module on or off. Off hides it everywhere and keeps its data;
+    a built-in module can't be turned off."""
+    module = registry().module(module_id)
+    if module is None:
+        return jsonify(error="There is no such module."), 404
+    on = bool((request.get_json(silent=True) or {}).get("enabled"))
+    if module.core and not on:
+        return jsonify(error=f"{module.name} is built in and can't be turned off."), 400
+    set_setting(f"module:{module.id}:enabled", "1" if on else "0")
+    return jsonify(ok=True, enabled=on)
