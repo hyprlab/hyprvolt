@@ -1,0 +1,6 @@
+# Loaded automatically by `docker compose` in a clone of the repository: it
+# builds the image from local source instead of pulling it from Docker Hub.
+# Anyone who downloads only docker-compose.yml never sees this file.
+services:
+  hyprprem:
+    build: .

@@ -1,0 +1,11 @@
+{# The brand block and flashed messages every auth page opens with. #}
+<div class="auth-mark">
+  {% include "partials/mark.html" %}
+  <h1 class="wordmark">{{ app_name }}</h1>
+  <p class="auth-tag">{{ app_tagline }}</p>
+</div>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="flash flash--{{ category }}">{{ message }}</div>
+  {% endfor %}
+{% endwith %}

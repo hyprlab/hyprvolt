@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Create account — {{ app_name }}{% endblock %}
+{% block bodyclass %}auth-body{% endblock %}
+{% block body %}
+<main class="auth-wrap">
+  <div class="auth-card">
+    {% include "partials/auth_head.html" %}
+    <form method="post" class="auth-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label class="field">
+        <span class="field-label">Name</span>
+        <input name="name" type="text" autocomplete="name" maxlength="120" placeholder="Your name"
+               value="{{ request.form.get('name', '') }}">
+      </label>
+      <label class="field">
+        <span class="field-label">Email</span>
+        <input name="username" type="email" required autocomplete="email"
+               spellcheck="false" maxlength="80" placeholder="you@example.com"
+               value="{{ request.form.get('username', '') }}">
+      </label>
+      <label class="field">
+        <span class="field-label">Password</span>
+        <input name="password" type="password" required minlength="8" autocomplete="new-password">
+      </label>
+      <label class="field">
+        <span class="field-label">Confirm password</span>
+        <input name="confirm" type="password" required minlength="8" autocomplete="new-password">
+      </label>
+      {% if turnstile_site_key %}
+        <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="auto"></div>
+      {% endif %}
+      <button class="btn btn--primary btn--block" type="submit">Create account</button>
+    </form>
+    <p class="auth-alt">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+  </div>
+</main>
+{% if turnstile_site_key %}
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
+{% endblock %}

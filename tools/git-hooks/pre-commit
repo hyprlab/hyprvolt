@@ -1,0 +1,24 @@
+#!/bin/sh
+# Runs the documentation check when Markdown is staged, and refuses to commit
+# anything the clone lists by name in .git/info/exclude: files kept for the
+# maintainer's own tools, which stay out of the repository (see
+# docs/CONTRIBUTING.md, "Local files").
+set -e
+
+exclude="$(git rev-parse --git-path info/exclude)"
+if [ -f "$exclude" ]; then
+    staged=$(git diff --cached --name-only --diff-filter=ACMR)
+    # Plain names only: a line with a wildcard or a comment is not one.
+    for name in $(grep -v '^#' "$exclude" | grep -v '[][*?!]' | sed 's:^/::; s:/$::'); do
+        if printf '%s\n' "$staged" | grep -qxF "$name" ||
+           printf '%s\n' "$staged" | cut -d/ -f1 | grep -qxF "$name"; then
+            echo "pre-commit: $name is local only (.git/info/exclude) and must not be committed." >&2
+            echo "            git rm -r --cached $name" >&2
+            exit 1
+        fi
+    done
+fi
+
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '\.md$'; then
+    python3 tools/check-docs.py
+fi

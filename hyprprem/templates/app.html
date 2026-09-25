@@ -1,0 +1,473 @@
+{% extends "base.html" %}
+{% set titles = {'open': 'Open', 'all': 'All records', 'pinned': 'Pinned', 'done': 'Done'} %}
+{% block title %}{% if filter == 'open' %}{{ app_name }}{% else %}{{ titles[filter] }} — {{ app_name }}{% endif %}{% endblock %}
+{% block body %}
+<div class="shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <a class="brand" href="{{ url_for('main.index') }}">
+        {% include "partials/mark.html" %}
+        <span class="wordmark">{{ app_name }}</span>
+      </a>
+      <button class="iconbtn sidebar-close" data-close-sidebar aria-label="Close menu">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="sidebar-scroll">
+      <nav class="nav-primary" aria-label="Records">
+        <a class="navitem {{ 'is-active' if filter == 'open' }}" href="{{ url_for('main.index', filter='open') }}">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
+          <span>Open</span>
+          {% if counts.open %}<span class="count count--accent" id="count-open">{{ counts.open if counts.open < 1000 else '999+' }}</span>{% endif %}
+        </a>
+        <a class="navitem {{ 'is-active' if filter == 'all' }}" href="{{ url_for('main.index', filter='all') }}">
+          <svg viewBox="0 0 24 24"><path d="M4 5.5h16M4 12h16M4 18.5h10"/></svg>
+          <span>All records</span>
+        </a>
+        <a class="navitem {{ 'is-active' if filter == 'pinned' }}" href="{{ url_for('main.index', filter='pinned') }}">
+          <svg viewBox="0 0 24 24"><path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.5L6 20V5.5a1 1 0 0 1 1-1Z"/></svg>
+          <span>Pinned</span>
+          {% if counts.pinned %}<span class="count">{{ counts.pinned }}</span>{% endif %}
+        </a>
+        <a class="navitem {{ 'is-active' if filter == 'done' }}" href="{{ url_for('main.index', filter='done') }}">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/></svg>
+          <span>Done</span>
+          {% if counts.done %}<span class="count">{{ counts.done }}</span>{% endif %}
+        </a>
+      </nav>
+
+      {# The scrolling section: where an app lists its own collection (feeds,
+         projects, boards). The head above and the foot below stay pinned
+         however long it grows. .sideitem is the row style. #}
+      <div class="sidebar-label">
+        <span>Collections</span>
+        <button class="iconbtn iconbtn--sm" data-open="item-modal" aria-label="New record" title="New record">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <ul class="sidelist">
+        <li class="sidelist-empty">The app's own collection goes here.</li>
+      </ul>
+    </div>
+
+    <div class="sidebar-foot">
+      <button type="button" class="user" data-open="settings-modal" data-settings-section="account" title="Account settings">
+        <span class="avatar" id="user-avatar">{{ current_user.display_name[0]|upper }}</span>
+        <span class="user-meta">
+          <span class="user-name" id="user-name">{{ current_user.display_name }}</span>
+          <span class="user-email" id="user-email" {% if not current_user.name %}hidden{% endif %}>{{ current_user.username }}</span>
+        </span>
+      </button>
+      <button class="iconbtn" data-open="settings-modal" aria-label="Settings" title="Settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+      </button>
+      <form method="post" action="{{ url_for('auth.logout') }}" class="inline-form">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="iconbtn" aria-label="Sign out" title="Sign out">
+          <svg viewBox="0 0 24 24"><path d="M14 5H7a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h7M17 15.5 20.5 12 17 8.5M20 12H10"/></svg>
+        </button>
+      </form>
+    </div>
+  </aside>
+  <div class="scrim" data-close-sidebar hidden></div>
+
+  <main class="content">
+    <header class="topbar">
+      <button class="iconbtn topbar-menu" data-open-sidebar aria-label="Open menu">
+        <svg viewBox="0 0 24 24"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg>
+      </button>
+
+      <h2 class="context-title">{{ titles[filter] }}{% if sort != 'newest' %}<span class="title-chip">{{ sorts[sort][0] }}</span>{% endif %}</h2>
+
+      <div class="topbar-actions">
+        <button class="searchpill" id="search-btn" aria-label="Search" title="Search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+          <kbd id="search-kbd">Ctrl K</kbd>
+        </button>
+        <button class="iconbtn" data-open="item-modal" aria-label="New record" title="New record (n)">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+
+        <div class="menu" id="sort-menu">
+          <button class="menubtn" aria-haspopup="true" aria-expanded="false" title="Sort">
+            <svg viewBox="0 0 24 24"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M14 6h7M14 12h5M14 18h3"/></svg>
+            <span class="menubtn-label">{{ sorts[sort][0] }}</span>
+            <svg class="chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
+          </button>
+          <div class="menupop" role="menu" hidden>
+            <p class="menupop-head">Sort {{ titles[filter]|lower }}</p>
+            {% for key, (label, _order) in sorts.items() %}
+            <a class="menuopt {{ 'is-active' if key == sort }}" role="menuitem"
+               href="{{ url_for('main.index', filter=filter, sort=key, view=request.args.get('view')) }}">
+              <span>{{ label }}</span>
+              <svg class="tick" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="viewswitch" role="group" aria-label="View">
+          <a class="viewswitch-btn {{ 'is-active' if view == 'cards' }}" title="Cards"
+             href="{{ url_for('main.index', view='cards', filter=filter, sort=sort) }}">
+            <svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>
+          </a>
+          <a class="viewswitch-btn {{ 'is-active' if view == 'list' }}" title="List"
+             href="{{ url_for('main.index', view='list', filter=filter, sort=sort) }}">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </a>
+        </div>
+        <button class="iconbtn" id="theme-btn" aria-label="Toggle theme" title="Toggle theme">
+          <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="records" id="records-root" data-view="{{ view }}" data-filter="{{ filter }}"
+         data-infinite="{{ '1' if current_user.infinite_scroll else '0' }}">
+      {% include "partials/records.html" %}
+    </div>
+  </main>
+</div>
+
+<!-- ————— New / edit record ————— -->
+<dialog class="modal" id="item-modal">
+  <div class="modal-head">
+    <h3 id="item-modal-title">New record</h3>
+    <button class="iconbtn" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <form id="item-form" class="modal-body">
+    <input type="hidden" id="item-id">
+    <label class="field">
+      <span class="field-label">Title</span>
+      <input id="item-title" maxlength="300" autocomplete="off" required autofocus>
+    </label>
+    <label class="field">
+      <span class="field-label">Notes</span>
+      <textarea id="item-body" rows="5" placeholder="Anything worth keeping with it."></textarea>
+    </label>
+    <p class="form-error" id="item-error" hidden></p>
+    <button class="btn btn--primary btn--block" type="submit">
+      <span class="btn-label">Save</span>
+      <span class="btn-busy" hidden>Saving…</span>
+    </button>
+  </form>
+</dialog>
+
+<!-- ————— Settings ————— -->
+{# Sections: (id, label, group, icon path). The rail, the header title and the
+   panes all key off the id; a new section is a row here plus a pane below. #}
+{% set settings_sections = [
+  ('appearance', 'Appearance', 'Preferences', '<circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>'),
+  ('account', 'Account', 'Preferences', '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.6 4-5.5 7.5-5.5s6.6 1.9 7.5 5.5"/>'),
+] + ([
+  ('admin', 'Admin', 'Instance', '<path d="M12 22s8-4 8-10V5.5L12 2.5 4 5.5V12c0 6 8 10 8 10Z"/><path d="m8.8 12 2.2 2.2 4.2-4.4"/>'),
+  ('security', 'Security', 'Instance', '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3M12 14.5v2.5"/>'),
+] if current_user.is_admin else []) %}
+{% set about_icon = '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/>' %}
+{% macro settings_navitem(id, label, icon, active=false) %}
+  <button type="button" class="settings-navitem {{ 'is-active' if active }}" role="tab"
+          id="settings-tab-{{ id }}" data-section="{{ id }}" aria-controls="settings-{{ id }}"
+          aria-selected="{{ 'true' if active else 'false' }}" tabindex="{{ '0' if active else '-1' }}">
+    <svg viewBox="0 0 24 24">{{ icon|safe }}</svg>
+    <span>{{ label }}</span>
+    <svg class="settings-navitem-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>
+  </button>
+{% endmacro %}
+<dialog class="modal" id="settings-modal" aria-labelledby="settings-title">
+  <div class="settings">
+    <aside class="settings-nav">
+      <div class="settings-nav-head">
+        <h3 class="settings-nav-title" id="settings-title">Settings</h3>
+        <button class="iconbtn settings-nav-close" data-close aria-label="Close">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="settings-nav-tabs" role="tablist" aria-orientation="vertical" aria-labelledby="settings-title">
+        <div class="settings-nav-list">
+          {% set ns = namespace(group=None) %}
+          {% for id, label, group, icon in settings_sections %}
+            {% if group != ns.group %}<p class="settings-nav-label">{{ group }}</p>{% set ns.group = group %}{% endif %}
+            {{ settings_navitem(id, label, icon, loop.first) }}
+          {% endfor %}
+        </div>
+        {# Pinned like the main sidebar's foot: About is always one click away. #}
+        <div class="settings-nav-foot">
+          {{ settings_navitem('about', 'About', about_icon) }}
+          <p class="settings-nav-version" role="presentation">{{ app_name }} {{ app_version }}</p>
+        </div>
+      </div>
+    </aside>
+
+    <div class="settings-main">
+      <header class="settings-head">
+        <button class="iconbtn settings-back" aria-label="All settings" title="All settings">
+          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <h4 class="settings-head-title" id="settings-section-title">Appearance</h4>
+        <button class="iconbtn" data-close aria-label="Close" title="Close (Esc)">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+
+    <section class="settings-pane is-active" data-pane="appearance" id="settings-appearance" role="tabpanel" aria-labelledby="settings-tab-appearance" tabindex="0">
+      <p class="setting-label">Theme</p>
+      <div class="theme-picker">
+        {% for t in ('system', 'light', 'dark') %}
+        <label class="theme-opt">
+          <input type="radio" name="theme" value="{{ t }}" {{ 'checked' if current_user.theme == t }}>
+          <span class="theme-chip theme-chip--{{ t }}"><span class="theme-chip-dot"></span>{{ t|capitalize }}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <p class="setting-label setting-label--spaced">Default view</p>
+      <div class="seg">
+        {% for v in ('cards', 'list') %}
+        <label><input type="radio" name="view_mode" value="{{ v }}" {{ 'checked' if current_user.view_mode == v }}><span>{{ v|capitalize }}</span></label>
+        {% endfor %}
+      </div>
+      <label class="check setting-row">
+        <input type="checkbox" id="infinite-scroll" {{ 'checked' if current_user.infinite_scroll }}>
+        <span>Load more records automatically as you scroll</span>
+      </label>
+    </section>
+
+    <section class="settings-pane" data-pane="account" id="settings-account" role="tabpanel" aria-labelledby="settings-tab-account" tabindex="0">
+      <p class="setting-label">Profile</p>
+      <label class="field field--narrow">
+        <span class="field-label">Name</span>
+        <input id="acct-name" maxlength="120" placeholder="Your name" autocomplete="name" value="{{ current_user.name or '' }}">
+      </label>
+      <p class="setting-label setting-label--spaced">Change password</p>
+      <form id="password-form" class="stack">
+        <label class="field"><span class="field-label">Current password</span>
+          <input type="password" id="pw-current" autocomplete="current-password" required></label>
+        <label class="field"><span class="field-label">New password</span>
+          <input type="password" id="pw-new" minlength="8" autocomplete="new-password" required></label>
+        <p class="form-error" id="pw-error" hidden></p>
+        <button class="btn btn--primary" type="submit">Update password</button>
+      </form>
+      <p class="hint account-meta">Signed in as <strong>{{ current_user.username }}</strong>{% if current_user.is_admin %} <span class="chip">admin</span>{% endif %} · member since {{ current_user.created_at.strftime('%B %Y') }}</p>
+    </section>
+
+    {% if current_user.is_admin %}
+    <section class="settings-pane" data-pane="admin" id="settings-admin" role="tabpanel" aria-labelledby="settings-tab-admin" tabindex="0">
+      <p class="setting-label">Instance</p>
+      <label class="check">
+        <input type="checkbox" id="reg-open" {{ 'checked' if allow_registration }}>
+        <span>Allow new account registration</span>
+      </label>
+      <div class="inst-grid">
+        <label class="field">
+          <span class="field-label">Background work every (minutes)</span>
+          <input type="number" id="inst-worker" min="0" max="1440" step="1" value="{{ inst_worker }}">
+        </label>
+        <label class="field">
+          <span class="field-label">Records per page</span>
+          <input type="number" id="inst-perpage" min="10" max="500" step="10" value="{{ inst_per_page }}">
+        </label>
+      </div>
+      <p class="hint">0 minutes pauses the background worker. A change takes effect after the current wait.</p>
+      <p class="hint admin-stats">{{ admin_stats.users }} {{ 'user' if admin_stats.users == 1 else 'users' }} · {{ admin_stats.records }} {{ 'record' if admin_stats.records == 1 else 'records' }}</p>
+
+      <p class="setting-label">Users</p>
+      <form class="adduser" id="admin-adduser">
+        <input type="text" id="au-name" placeholder="Name" autocomplete="off" maxlength="120">
+        <input type="email" id="au-email" placeholder="user@example.com" autocomplete="off" spellcheck="false" maxlength="80" required>
+        <input type="password" id="au-password" placeholder="Temporary password" autocomplete="new-password" minlength="8" required>
+        <span class="adduser-actions">
+          <label class="check"><input type="checkbox" id="au-admin"><span>Admin</span></label>
+          <button class="btn btn--primary" type="submit">Add user</button>
+        </span>
+      </form>
+      <p class="form-error" id="au-error" hidden></p>
+      <ul class="manage-list">
+        {% for u in admin_users %}
+        {% set n = admin_item_counts.get(u.id, 0) %}
+        <li class="manage-item" data-user="{{ u.id }}" data-username="{{ u.username }}">
+          <span class="avatar">{{ u.display_name[0]|upper }}</span>
+          <div class="manage-meta">
+            <span class="manage-title">{{ u.display_name }}
+              {% if u.is_admin %}<span class="chip">admin</span>{% endif %}
+              {% if u.id == current_user.id %}<span class="chip chip--muted">you</span>{% endif %}
+            </span>
+            <span class="manage-sub">{{ u.username }} · joined {{ u.created_at.strftime('%b %-d, %Y') }} · {{ n }} {{ 'record' if n == 1 else 'records' }}</span>
+          </div>
+          <button class="iconbtn iconbtn--sm" data-admin-password aria-label="Reset password" title="Reset password">
+            <svg viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="4"/><path d="M10.3 12.7 21 2M15 5l3 3M18 2l3 3"/></svg>
+          </button>
+          {% if u.id != current_user.id %}
+          <button class="iconbtn iconbtn--sm" data-admin-toggle aria-label="{{ 'Remove admin' if u.is_admin else 'Make admin' }}" title="{{ 'Remove admin' if u.is_admin else 'Make admin' }}">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5.5L12 2.5 4 5.5V12c0 6 8 10 8 10Z"/>{% if not u.is_admin %}<path d="m8.8 12 2.2 2.2 4.2-4.4"/>{% endif %}</svg>
+          </button>
+          <button class="iconbtn iconbtn--sm iconbtn--danger" data-admin-delete aria-label="Delete user" title="Delete user">
+            <svg viewBox="0 0 24 24"><path d="M5.5 7.5h13M9.5 7V5h5v2M7 7.5l.8 12a1 1 0 0 0 1 .9h6.4a1 1 0 0 0 1-.9l.8-12M10.2 11v6M13.8 11v6"/></svg>
+          </button>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% if current_user.is_admin %}
+    <section class="settings-pane" data-pane="security" id="settings-security" role="tabpanel" aria-labelledby="settings-tab-security" tabindex="0">
+      <p class="setting-label">Cloudflare Turnstile</p>
+      <p class="hint">Adds a Cloudflare challenge to the sign-in and sign-up pages,
+        which stops most automated password guessing and sign-up spam. It needs a
+        free widget from the <a class="link" href="https://dash.cloudflare.com/?to=/:account/turnstile" target="_blank" rel="noopener">Cloudflare dashboard</a>
+        with this site's hostname in its list.</p>
+
+      <div class="ts-status" id="ts-status">
+        <span class="chip {{ '' if turnstile.on else 'chip--muted' }}" id="ts-chip">{{ 'On' if turnstile.on else 'Off' }}</span>
+        <span class="hint" id="ts-status-text">
+          {%- if turnstile.source == 'environment' %}From the TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY environment variables. Keys saved here take over from them.
+          {%- elif turnstile.on %}Sign-in and sign-up show a challenge.
+          {%- else %}Sign-in and sign-up have no challenge.{% endif -%}
+        </span>
+      </div>
+
+      <form id="ts-form" class="stack" autocomplete="off"
+            data-on="{{ '1' if turnstile.on else '0' }}" data-has-secret="{{ '1' if turnstile.secret_hint else '0' }}">
+        <label class="field">
+          <span class="field-label">Site key</span>
+          <input id="ts-site" value="{{ turnstile.site_key }}" spellcheck="false" maxlength="200" placeholder="0x4AAAAAAA…">
+        </label>
+        <label class="field">
+          <span class="field-label">Secret key</span>
+          <input id="ts-secret" type="password" spellcheck="false" maxlength="200"
+                 placeholder="{{ 'Saved, ends in ' ~ turnstile.secret_hint ~ '. Leave empty to keep it.' if turnstile.secret_hint else 'From the same widget' }}">
+        </label>
+        <div class="ts-challenge" id="ts-challenge" hidden>
+          <p class="hint">Complete the challenge. It proves the keys belong together
+            and work on this address before anyone is asked to pass it.</p>
+          <div id="ts-widget"></div>
+        </div>
+        <p class="form-error" id="ts-error" hidden></p>
+        <div class="ts-actions">
+          <button class="btn btn--primary" type="submit" id="ts-verify">
+            <span class="btn-label">{{ 'Verify and save the keys' if turnstile.on else 'Verify and turn on' }}</span>
+            <span class="btn-busy" hidden>Checking…</span>
+          </button>
+          <button class="btn btn--ghost" type="button" id="ts-off" {% if not turnstile.on %}hidden{% endif %}>Turn off</button>
+        </div>
+      </form>
+
+      <p class="hint ts-recovery">Locked out of sign-in anyway? On the server,
+        <code>docker exec {{ app_package }} flask turnstile off</code> turns it off.</p>
+    </section>
+    {% endif %}
+
+    <section class="settings-pane" data-pane="about" id="settings-about" role="tabpanel" aria-labelledby="settings-tab-about" tabindex="0">
+      <div class="about-hero">
+        <canvas class="about-hero-bg" aria-hidden="true"></canvas>
+        <div class="about-brand">
+          {% with extra = 'mark--about' %}{% include "partials/mark.html" %}{% endwith %}
+          <div class="about-name">{{ app_name }}</div>
+          <div class="about-version">Version {{ app_version }}</div>
+          <p class="about-tagline">{{ app_tagline }}</p>
+          <p class="about-credit">Built by
+            <a class="hyprlab-credit" href="https://hyprlab.co" target="_blank" rel="noopener">
+              <img src="{{ static_url('img/icon_hyprlab.png') }}" alt="">Hyprlab</a></p>
+          <p class="about-license">Free software under the
+            <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener">GNU AGPL-3.0</a>{% if source_url %}
+            · <a href="{{ source_url }}" target="_blank" rel="noopener">Source</a>{% endif %}</p>
+        </div>
+        <div class="about-stack">
+          <div class="about-stack-label">Built with</div>
+          <div class="tech-stack">
+            {% for name, slug, url in [
+              ('Python', 'python', 'https://www.python.org/'),
+              ('Flask', 'flask', 'https://flask.palletsprojects.com/'),
+              ('Jinja', 'jinja', 'https://jinja.palletsprojects.com/'),
+              ('SQLAlchemy', 'sqlalchemy', 'https://www.sqlalchemy.org/'),
+              ('SQLite', 'sqlite', 'https://www.sqlite.org/'),
+              ('Gunicorn', 'gunicorn', 'https://gunicorn.org/'),
+              ('JavaScript', 'javascript', 'https://developer.mozilla.org/docs/Web/JavaScript'),
+              ('Docker', 'docker', 'https://www.docker.com/'),
+              ('Cloudflare', 'cloudflare', 'https://www.cloudflare.com/'),
+            ] %}
+            <a class="tech-tile" href="{{ url }}" target="_blank" rel="noopener" title="{{ name }}">
+              <span class="tech-icon" style="-webkit-mask-image: url('{{ static_url('img/tech/' ~ slug ~ '.svg') }}'); mask-image: url('{{ static_url('img/tech/' ~ slug ~ '.svg') }}');"></span>
+              <span class="tech-tile-name">{{ name }}</span>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <details class="about-details" open>
+        <summary class="about-summary"><h4>Changelog</h4></summary>
+        <ul class="release-list">
+          {% for e in app_changelog() %}
+          <li>
+            <div class="rel-version">{{ e.version }}{% if e.is_latest %} <span class="chip">latest</span>{% endif %}</div>
+            {% if e.date_label %}<div class="rel-meta">{{ e.date_label }}</div>{% endif %}
+            <div class="rel-body">{{ e.body_html|safe }}</div>
+          </li>
+          {% endfor %}
+        </ul>
+      </details>
+    </section>
+    </div>
+  </div>
+</dialog>
+
+<!-- ————— Search palette ————— -->
+<dialog class="palette" id="search-modal">
+  <div class="palette-inputrow">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+    <input id="search-input" placeholder="Search records…" autocomplete="off" spellcheck="false">
+    <kbd>esc</kbd>
+  </div>
+  <div class="palette-results" id="search-results" hidden></div>
+</dialog>
+
+<!-- ————— Detail sheet ————— -->
+<dialog class="sheet" id="sheet">
+  <div class="sheet-bar">
+    <button class="iconbtn" data-close aria-label="Close" title="Close (Esc)">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="sheet-bar-actions">
+      <button class="iconbtn" id="sheet-prev" aria-label="Previous record" title="Previous (k)">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <button class="iconbtn" id="sheet-next" aria-label="Next record" title="Next (j)">
+        <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+      <button class="iconbtn" id="sheet-done" aria-label="Mark as done" title="Mark as done (d)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/></svg>
+      </button>
+      <button class="iconbtn" id="sheet-pin" aria-label="Pin" title="Pin (p)">
+        <svg viewBox="0 0 24 24"><path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.5L6 20V5.5a1 1 0 0 1 1-1Z"/></svg>
+      </button>
+      <button class="iconbtn" id="sheet-edit" aria-label="Edit" title="Edit (e)">
+        <svg viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2 2 0 0 0-3-3L5 17v3ZM13.5 6.5l3 3"/></svg>
+      </button>
+      <button class="iconbtn" id="sheet-copy" aria-label="Copy link" title="Copy link">
+        <svg viewBox="0 0 24 24"><path d="M10.5 13.5a4 4 0 0 0 6 .4l2.6-2.6a4 4 0 1 0-5.7-5.7l-1.3 1.3M13.5 10.5a4 4 0 0 0-6-.4l-2.6 2.6a4 4 0 1 0 5.7 5.7l1.3-1.3"/></svg>
+      </button>
+      <button class="iconbtn iconbtn--danger" id="sheet-delete" aria-label="Delete" title="Delete">
+        <svg viewBox="0 0 24 24"><path d="M5.5 7.5h13M9.5 7V5h5v2M7 7.5l.8 12a1 1 0 0 0 1 .9h6.4a1 1 0 0 0 1-.9l.8-12M10.2 11v6M13.8 11v6"/></svg>
+      </button>
+    </div>
+  </div>
+  <article class="sheet-article">
+    <p class="kicker" id="sheet-kicker"></p>
+    <h1 class="sheet-title" id="sheet-title"></h1>
+    <p class="sheet-meta" id="sheet-meta"></p>
+    <div class="prose" id="sheet-body"></div>
+  </article>
+</dialog>
+
+<div class="ptr" id="ptr" aria-hidden="true">
+  <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 3.5V7h-3.5"/></svg>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — {{ app_name }}{% endblock %}
+{% block bodyclass %}auth-body{% endblock %}
+{% block body %}
+<main class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-mark">
+      {% include "partials/mark.html" %}
+      <h1 class="wordmark">{{ app_name }}</h1>
+    </div>
+    <p class="error-code">{{ code }}</p>
+    <p class="error-text">{{ message }}</p>
+    <a class="btn btn--primary btn--block" href="{{ url_for('main.index') }}">Back to {{ app_name }}</a>
+  </div>
+</main>
+{% endblock %}

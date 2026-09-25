@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Sign in — {{ app_name }}{% endblock %}
+{% block bodyclass %}auth-body{% endblock %}
+{% block body %}
+<main class="auth-wrap">
+  <div class="auth-card">
+    {% include "partials/auth_head.html" %}
+    <form method="post" class="auth-form">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label class="field">
+        <span class="field-label">Email</span>
+        {# type=text on purpose: accounts made before the email rule still sign in #}
+        <input name="username" required autofocus autocomplete="username" spellcheck="false"
+               inputmode="email" placeholder="you@example.com" value="{{ request.form.get('username', '') }}">
+      </label>
+      <label class="field">
+        <span class="field-label">Password</span>
+        <input name="password" type="password" required autocomplete="current-password">
+      </label>
+      <label class="check">
+        <input type="checkbox" name="remember" checked>
+        <span>Keep me signed in</span>
+      </label>
+      {% if turnstile_site_key %}
+        <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="auto"></div>
+      {% endif %}
+      <button class="btn btn--primary btn--block" type="submit">Sign in</button>
+    </form>
+    {% if allow_registration %}
+      <p class="auth-alt">New here? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+    {% endif %}
+  </div>
+</main>
+{% if turnstile_site_key %}
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}
+{% endblock %}

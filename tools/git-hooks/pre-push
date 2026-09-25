@@ -1,0 +1,41 @@
+#!/bin/sh
+# Last line of defence before anything is published: no commit or annotated
+# tag being pushed may carry AI attribution. One stray trailer puts the tool on
+# the GitHub Contributors panel, and taking it off again means rewriting
+# history. The patterns are commit-msg's, the clone's own included. See
+# docs/CONTRIBUTING.md, "Commits".
+set -e
+zero=0000000000000000000000000000000000000000
+hook="$(dirname "$0")/commit-msg"
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+status=0
+check() {   # $1 what; the text is in $tmp (not piped: a pipe's end is a
+            # subshell, and the status it sets would be lost)
+    if what=$(python3 "$hook" --attribution "$tmp"); then
+        return 0
+    fi
+    echo "pre-push: $1 carries $what." >&2
+    status=1
+}
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ "$local_sha" = "$zero" ] && continue
+    if [ "$remote_sha" = "$zero" ]; then
+        range="$local_sha --not --remotes"
+    else
+        range="$remote_sha..$local_sha"
+    fi
+    # shellcheck disable=SC2086
+    for sha in $(git rev-list $range 2>/dev/null); do
+        git log -1 --format='%an <%ae>%n%cn <%ce>%n%B' "$sha" > "$tmp"
+        check "commit $(git rev-parse --short "$sha")"
+    done
+    case "$local_ref" in
+        refs/tags/*)
+            if git cat-file -t "$local_sha" | grep -q tag; then
+                git cat-file -p "$local_sha" > "$tmp"
+                check "$local_ref"
+            fi ;;
+    esac
+done
+exit $status

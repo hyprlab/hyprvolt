@@ -1,0 +1,75 @@
+{# The record list. Included by app.html on a page load, and returned on its
+   own (?partial=1) when the client asks for the next page. #}
+{% macro pin(item) %}
+  <button class="pinbtn {{ 'is-pinned' if item.pinned }}" data-pin="{{ item.id }}"
+          aria-label="{{ 'Unpin' if item.pinned else 'Pin' }}" title="{{ 'Unpin' if item.pinned else 'Pin' }}">
+    <svg viewBox="0 0 24 24"><path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.5L6 20V5.5a1 1 0 0 1 1-1Z"/></svg>
+  </button>
+{% endmacro %}
+
+{% if items %}
+  {% if view == 'list' %}
+  <div class="grid--list">
+    {% for item in items %}
+    <article class="row {{ 'is-done' if item.done }}" data-item="{{ item.id }}" tabindex="0">
+      <span class="new-dot" aria-hidden="true"></span>
+      <h3 class="row-title">{{ item.title }}</h3>
+      <p class="row-dek">{{ item.summary }}</p>
+      <time class="row-time" datetime="{{ item.created_at.isoformat() }}Z">{{ item.created_at|ago }}</time>
+      {{ pin(item) }}
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="grid--cards">
+    {% for item in items %}
+    <article class="card {{ 'is-done' if item.done }}" data-item="{{ item.id }}" tabindex="0">
+      <p class="kicker">
+        <span class="new-dot" aria-hidden="true"></span>
+        {% if item.pinned %}<span>Pinned</span><span class="kicker-sep">·</span>{% endif %}
+        <time datetime="{{ item.created_at.isoformat() }}Z">{{ item.created_at|ago }}</time>
+      </p>
+      <h3 class="card-title">{{ item.title }}</h3>
+      {% if item.summary %}<p class="card-dek">{{ item.summary }}</p>{% endif %}
+      <p class="card-meta">{{ 'Done' if item.done else 'Open' }}</p>
+      {{ pin(item) }}
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if has_more %}
+  <div class="pager">
+    <button class="btn btn--ghost" id="load-more" data-page="{{ page + 1 }}">
+      <span class="btn-label">Load more</span>
+      <span class="btn-busy" hidden>Loading…</span>
+    </button>
+    <span class="pager-auto">
+      <svg class="pager-spin" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/></svg>
+      Loading more
+    </span>
+  </div>
+  {% elif page > 1 %}
+  <p class="pager-end">That's everything.</p>
+  {% endif %}
+
+{% elif page == 1 %}
+  <div class="empty {{ 'empty--onboard' if filter == 'open' }}">
+    {% if filter == 'open' %}
+      {% with extra = 'mark--xl' %}{% include "partials/mark.html" %}{% endwith %}
+      <h2 class="empty-title">Nothing here yet</h2>
+      <p class="empty-text">Create a record to see how the list, the detail
+        sheet and the search palette fit together.</p>
+      <button class="btn btn--primary" data-open="item-modal">New record</button>
+    {% elif filter == 'pinned' %}
+      <h2 class="empty-title">Nothing pinned</h2>
+      <p class="empty-text">A pinned record sits at the top of every list.</p>
+    {% elif filter == 'done' %}
+      <h2 class="empty-title">Nothing done yet</h2>
+      <p class="empty-text">Records you mark as done collect here.</p>
+    {% else %}
+      <h2 class="empty-title">Nothing to show</h2>
+      <p class="empty-text">This view is empty.</p>
+    {% endif %}
+  </div>
+{% endif %}

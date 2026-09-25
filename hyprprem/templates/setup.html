@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Set up {{ app_name }}{% endblock %}
+{% block bodyclass %}auth-body{% endblock %}
+{% block body %}
+<main class="auth-wrap">
+  <div class="auth-card wizard" id="wizard">
+
+    <div class="auth-mark">
+      {% include "partials/mark.html" %}
+      <h1 class="wordmark">{{ app_name }}</h1>
+    </div>
+
+    <div class="wiz-dots" aria-hidden="true">
+      <span class="wiz-dot is-active"></span><span class="wiz-dot"></span><span class="wiz-dot"></span><span class="wiz-dot"></span>
+    </div>
+
+    <!-- Step 1 · Welcome -->
+    <section class="wiz-step is-active" data-step="0">
+      <h2 class="wiz-title">Welcome</h2>
+      <p class="wiz-text">Setting up this instance takes about a minute.</p>
+      <ul class="wiz-list">
+        <li>Create the admin account</li>
+        <li>Choose how the instance behaves</li>
+        <li>Add a first record</li>
+      </ul>
+      <div class="wiz-nav">
+        <button class="btn btn--primary btn--block" data-next>Get started</button>
+      </div>
+    </section>
+
+    <!-- Step 2 · Admin account -->
+    <section class="wiz-step" data-step="1">
+      <h2 class="wiz-title">Create the admin account</h2>
+      <p class="wiz-text">This account manages users, registration and instance
+        settings. More accounts can be added later.</p>
+      <div class="auth-form">
+        <label class="field">
+          <span class="field-label">Name</span>
+          <input id="wiz-name" type="text" autocomplete="name" maxlength="120" placeholder="Your name">
+        </label>
+        <label class="field">
+          <span class="field-label">Email</span>
+          <input id="wiz-email" type="email" autocomplete="email" spellcheck="false" maxlength="80" placeholder="you@example.com" required>
+        </label>
+        <label class="field">
+          <span class="field-label">Password</span>
+          <input id="wiz-password" type="password" minlength="8" autocomplete="new-password" required>
+        </label>
+        <label class="field">
+          <span class="field-label">Confirm password</span>
+          <input id="wiz-confirm" type="password" minlength="8" autocomplete="new-password" required>
+        </label>
+      </div>
+      <p class="form-error" id="wiz-error-1" hidden></p>
+      <div class="wiz-nav">
+        <button class="btn btn--ghost" data-back>Back</button>
+        <button class="btn btn--primary" data-next>Continue</button>
+      </div>
+    </section>
+
+    <!-- Step 3 · Instance settings -->
+    <section class="wiz-step" data-step="2">
+      <h2 class="wiz-title">Choose how the instance behaves</h2>
+      <p class="wiz-text">Everything here can be changed later in Settings, under Admin.</p>
+      <div class="auth-form">
+        <label class="check">
+          <input type="checkbox" id="wiz-registration" checked>
+          <span>Allow others to create accounts</span>
+        </label>
+        <label class="field">
+          <span class="field-label">Background work every (minutes)</span>
+          <input id="wiz-worker" type="number" min="0" max="1440" step="1" value="15">
+        </label>
+        <p class="hint">0 turns the background worker off.</p>
+      </div>
+      <p class="form-error" id="wiz-error-2" hidden></p>
+      <div class="wiz-nav">
+        <button class="btn btn--ghost" data-back>Back</button>
+        <button class="btn btn--primary" data-next>
+          <span class="btn-label">Create the instance</span>
+          <span class="btn-busy" hidden>Setting up…</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Step 4 · First record -->
+    <section class="wiz-step" data-step="3">
+      <h2 class="wiz-title">Add a first record</h2>
+      <p class="wiz-text">Something to look at when the app opens. This step can be skipped.</p>
+      <form class="auth-form" id="wiz-add-form">
+        <label class="field">
+          <span class="field-label">Title</span>
+          <input id="wiz-title" type="text" maxlength="300" placeholder="Shape this app into something">
+        </label>
+        <button class="btn btn--ghost" type="submit">
+          <span class="btn-label">Add</span>
+          <span class="btn-busy" hidden>Adding…</span>
+        </button>
+      </form>
+      <p class="form-error" id="wiz-error-3" hidden></p>
+      <ul class="wiz-added" id="wiz-added"></ul>
+      <div class="wiz-nav">
+        <button class="btn btn--primary btn--block" id="wiz-finish">Open {{ app_name }}</button>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var CSRF = document.querySelector('meta[name="csrf"]').content;
+  var steps = Array.prototype.slice.call(document.querySelectorAll(".wiz-step"));
+  var dots = Array.prototype.slice.call(document.querySelectorAll(".wiz-dot"));
+  var current = 0;
+  var accountCreated = false;
+
+  function show(n) {
+    current = n;
+    steps.forEach(function (s, i) { s.classList.toggle("is-active", i === n); });
+    dots.forEach(function (d, i) { d.classList.toggle("is-active", i <= n); });
+    var focus = steps[n].querySelector("input");
+    if (focus) focus.focus();
+  }
+
+  function err(step, message) {
+    var el = document.getElementById("wiz-error-" + step);
+    el.textContent = message || "";
+    el.hidden = !message;
+  }
+
+  function api(url, body) {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF": CSRF },
+      body: JSON.stringify(body)
+    }).then(function (resp) {
+      return resp.json().then(function (data) {
+        if (!resp.ok) throw new Error(data.error || "Something went wrong.");
+        return data;
+      });
+    });
+  }
+
+  function setBusy(btn, busy) {
+    btn.disabled = busy;
+    var label = btn.querySelector(".btn-label"), busyEl = btn.querySelector(".btn-busy");
+    if (label) label.hidden = busy;
+    if (busyEl) busyEl.hidden = !busy;
+  }
+
+  document.querySelectorAll("[data-back]").forEach(function (btn) {
+    btn.addEventListener("click", function () { show(current - 1); });
+  });
+
+  document.querySelectorAll("[data-next]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (current === 0) { show(1); return; }
+      if (current === 1) {
+        var email = document.getElementById("wiz-email").value.trim();
+        var pw = document.getElementById("wiz-password").value;
+        var confirm = document.getElementById("wiz-confirm").value;
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err(1, "Enter a valid email address."); return; }
+        if (pw.length < 8) { err(1, "Passwords need at least 8 characters."); return; }
+        if (pw !== confirm) { err(1, "Passwords don't match."); return; }
+        err(1, null);
+        show(2);
+        return;
+      }
+      if (current === 2) {
+        err(2, null);
+        setBusy(btn, true);
+        api("/setup", {
+          name: document.getElementById("wiz-name").value.trim(),
+          username: document.getElementById("wiz-email").value.trim(),
+          password: document.getElementById("wiz-password").value,
+          registration_open: document.getElementById("wiz-registration").checked,
+          worker_minutes: parseInt(document.getElementById("wiz-worker").value, 10)
+        }).then(function () {
+          accountCreated = true;
+          show(3);
+        }).catch(function (e) {
+          err(2, e.message);
+        }).finally(function () { setBusy(btn, false); });
+      }
+    });
+  });
+
+  document.getElementById("wiz-add-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!accountCreated) return;
+    var input = document.getElementById("wiz-title");
+    var title = input.value.trim();
+    if (!title) return;
+    var btn = this.querySelector("button");
+    err(3, null);
+    setBusy(btn, true);
+    api("/items", { title: title })
+      .then(function (data) {
+        var li = document.createElement("li");
+        li.textContent = data.item.title;
+        document.getElementById("wiz-added").appendChild(li);
+        input.value = "";
+      })
+      .catch(function (e) { err(3, e.message); })
+      .finally(function () { setBusy(btn, false); });
+  });
+
+  document.getElementById("wiz-finish").addEventListener("click", function () {
+    location.href = "/";
+  });
+})();
+</script>
+{% endblock %}
