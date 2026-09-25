@@ -11,7 +11,7 @@
     </div>
 
     <div class="wiz-dots" aria-hidden="true">
-      <span class="wiz-dot is-active"></span><span class="wiz-dot"></span><span class="wiz-dot"></span><span class="wiz-dot"></span>
+      <span class="wiz-dot is-active"></span><span class="wiz-dot"></span><span class="wiz-dot"></span>
     </div>
 
     <!-- Step 1 · Welcome -->
@@ -21,7 +21,7 @@
       <ul class="wiz-list">
         <li>Create the admin account</li>
         <li>Choose how the instance behaves</li>
-        <li>Add a first record</li>
+        <li>Start documenting, or load a demo homelab to look around</li>
       </ul>
       <div class="wiz-nav">
         <button class="btn btn--primary btn--block" data-next>Get started</button>
@@ -83,27 +83,6 @@
       </div>
     </section>
 
-    <!-- Step 4 · First record -->
-    <section class="wiz-step" data-step="3">
-      <h2 class="wiz-title">Add a first record</h2>
-      <p class="wiz-text">Something to look at when the app opens. This step can be skipped.</p>
-      <form class="auth-form" id="wiz-add-form">
-        <label class="field">
-          <span class="field-label">Title</span>
-          <input id="wiz-title" type="text" maxlength="300" placeholder="Shape this app into something">
-        </label>
-        <button class="btn btn--ghost" type="submit">
-          <span class="btn-label">Add</span>
-          <span class="btn-busy" hidden>Adding…</span>
-        </button>
-      </form>
-      <p class="form-error" id="wiz-error-3" hidden></p>
-      <ul class="wiz-added" id="wiz-added"></ul>
-      <div class="wiz-nav">
-        <button class="btn btn--primary btn--block" id="wiz-finish">Open {{ app_name }}</button>
-      </div>
-    </section>
-
   </div>
 </main>
 
@@ -114,7 +93,6 @@
   var steps = Array.prototype.slice.call(document.querySelectorAll(".wiz-step"));
   var dots = Array.prototype.slice.call(document.querySelectorAll(".wiz-dot"));
   var current = 0;
-  var accountCreated = false;
 
   function show(n) {
     current = n;
@@ -178,8 +156,7 @@
           registration_open: document.getElementById("wiz-registration").checked,
           worker_minutes: parseInt(document.getElementById("wiz-worker").value, 10)
         }).then(function () {
-          accountCreated = true;
-          show(3);
+          location.href = "/";
         }).catch(function (e) {
           err(2, e.message);
         }).finally(function () { setBusy(btn, false); });
@@ -187,29 +164,6 @@
     });
   });
 
-  document.getElementById("wiz-add-form").addEventListener("submit", function (e) {
-    e.preventDefault();
-    if (!accountCreated) return;
-    var input = document.getElementById("wiz-title");
-    var title = input.value.trim();
-    if (!title) return;
-    var btn = this.querySelector("button");
-    err(3, null);
-    setBusy(btn, true);
-    api("/items", { title: title })
-      .then(function (data) {
-        var li = document.createElement("li");
-        li.textContent = data.item.title;
-        document.getElementById("wiz-added").appendChild(li);
-        input.value = "";
-      })
-      .catch(function (e) { err(3, e.message); })
-      .finally(function () { setBusy(btn, false); });
-  });
-
-  document.getElementById("wiz-finish").addEventListener("click", function () {
-    location.href = "/";
-  });
 })();
 </script>
 {% endblock %}

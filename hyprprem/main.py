@@ -1,36 +1,43 @@
-"""The app shell and its JSON API.
+"""The pages and the palette search.
 
 Two shapes of route live here:
 
-* ``index`` renders the shell (sidebar, topbar, records, dialogs) for a page
-  load. The filter, sort and view are query parameters, so every screen has a
-  URL and the back button works. With ``partial=1`` it returns only the record
-  list, which is how "Load more" and infinite scroll page: one renderer for the
-  list, not a second one in JavaScript.
+* Pages render the shell (sidebar, topbar, records, dialogs): the dashboard
+  at ``/``, one list per module at ``/<module>``, and every record at
+  ``/all``. Filters, sort and view are query parameters, so every screen has
+  a URL and the back button works. With ``partial=1`` a list returns only the
+  records, which is how "Load more" and infinite scroll page: one renderer
+  for the list, not a second one in JavaScript.
 * Everything else answers JSON to ``fetch`` calls from ``static/js/app.js``,
   behind the session CSRF check in the app factory. Failures return
-  ``{"error": "..."}`` with a 4xx status, written for the person reading it; the
-  client shows it as a toast or an inline form error.
+  ``{"error": "..."}`` with a 4xx status, written for the person reading it.
 
-Admin routes are grouped at the end, each behind ``@role("admin")``.
+The records' own JSON API is ``core/api.py``; the sheet and form fragments
+are ``core/views.py``. Admin routes are grouped at the end, each behind
+``@role("admin")``.
 """
-from flask import Blueprint, abort, jsonify, render_template, request
+from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
-from sqlalchemy import func, or_
+from markupsafe import Markup
+from sqlalchemy import func
 
 from . import __version__
 from .auth import EMAIL_RE, MIN_PASSWORD, siteverify, turnstile_config
-from .models import Item, User, db, get_setting, int_setting, set_setting
+from .core import present, shell
+from .core.api import like
+from .core.models import Entity, Tag
+from .models import User, db, get_setting, int_setting, set_setting
 from .permissions import ROLES, public, role
+from .registry import current as registry
 
 bp = Blueprint("main", __name__)
 
 VIEWS = ("cards", "list")
-FILTERS = ("open", "all", "pinned", "done")
 SORTS = {
-    "newest": ("Newest first", lambda: Item.created_at.desc()),
-    "oldest": ("Oldest first", lambda: Item.created_at.asc()),
-    "title": ("Title, A to Z", lambda: func.lower(Item.title).asc()),
+    "updated": ("Recently changed", lambda: Entity.updated_at.desc()),
+    "name": ("Name, A to Z", lambda: func.lower(Entity.name).asc()),
+    "newest": ("Newest first", lambda: Entity.created_at.desc()),
+    "oldest": ("Oldest first", lambda: Entity.created_at.asc()),
 }
 
 
@@ -41,7 +48,7 @@ SORTS = {
 def healthz():
     """Liveness probe for Docker and any proxy in front of it.
 
-    Outside @login_required and outside the setup gate, and it touches the
+    Outside the sign-in requirement and the setup gate, and it touches the
     database, so a healthy answer means the app can serve, not just that the
     port is open.
     """
@@ -52,52 +59,128 @@ def healthz():
     return jsonify(ok=True, version=__version__)
 
 
-# ———— The shell ————
-
-def _items_query(filter_name: str, sort: str):
-    query = Item.query
-    if filter_name == "open":
-        query = query.filter(Item.done.is_(False))
-    elif filter_name == "pinned":
-        query = query.filter(Item.pinned.is_(True))
-    elif filter_name == "done":
-        query = query.filter(Item.done.is_(True))
-    # Pinned records lead every list, whatever the sort.
-    return query.order_by(Item.pinned.desc(), SORTS[sort][1](), Item.id.desc())
-
+# ———— The dashboard ————
 
 @bp.route("/")
 @role("viewer")
 def index():
-    filter_name = request.args.get("filter", "open")
-    if filter_name not in FILTERS:
-        filter_name = "open"
-    sort = request.args.get("sort", "newest")
-    if sort not in SORTS:
-        sort = "newest"
-    view = request.args.get("view") or current_user.view_mode
-    if view not in VIEWS:
-        view = "cards"
+    reg = registry()
+    counts = shell.type_counts()
+    tiles = [{"module": m, "count": sum(counts.get(t.key, 0) for t in m.types),
+              "types": [(t, counts.get(t.key, 0)) for t in m.types]}
+             for m in reg.enabled_modules()]
+    recent = (Entity.live().filter(Entity.type.in_(reg.enabled_type_keys()))
+              .order_by(Entity.updated_at.desc(), Entity.id.desc()).limit(10).all())
+    widgets = []
+    for m in reg.enabled_modules():
+        for w in m.widgets:
+            widgets.append({"module": m, "widget": w, "html": Markup(w.render())})
+    return render_template("app.html", page="dashboard", tiles=tiles, recent=present.views(recent),
+                           widgets=widgets, view="list", can_seed=any(m.seed for m in reg.enabled_modules()),
+                           **shell.context(special="dashboard"),
+                           **_admin_context())
 
-    page = max(1, request.args.get("page", type=int) or 1)
+
+# ———— Lists ————
+
+def _list_args(module=None):
+    reg = registry()
+    args = request.args
+    type_key = args.get("type") or None
+    etype = reg.type(type_key) if type_key else None
+    if etype is not None and ((module is not None and etype.module != module.id)
+                              or not reg.is_enabled(etype.module)):
+        etype = None
+    flt = None
+    if module and args.get("f"):
+        flt = next((f for f in module.filters if f.key == args["f"]), None)
+    sort = args.get("sort") if args.get("sort") in SORTS else "updated"
+    view = args.get("view") if args.get("view") in VIEWS else current_user.view_mode
+    return {
+        "etype": etype, "filter": flt, "sort": sort, "view": view if view in VIEWS else "cards",
+        "tag": (args.get("tag") or "").strip() or None,
+        "q": (args.get("q") or "").strip()[:200] or None,
+        "status": (args.get("status") or "").strip() or None,
+        "location": args.get("location", type=int),
+        "archived": args.get("archived") == "1",
+        "deleted": args.get("deleted") == "1" and current_user.can_edit,
+        "page_no": max(1, args.get("page", type=int) or 1),
+    }
+
+
+def _list_query(module, a):
+    reg = registry()
+    keys = [t.key for t in module.types] if module else reg.enabled_type_keys()
+    if a["etype"]:
+        keys = [a["etype"].key]
+    query = Entity.query.filter(Entity.type.in_(keys))
+    if a["deleted"]:
+        query = query.filter(Entity.deleted_at.isnot(None))
+    else:
+        query = query.filter(Entity.deleted_at.is_(None), Entity.archived.is_(a["archived"]))
+    if a["filter"]:
+        query = a["filter"].apply(query)
+    if a["tag"]:
+        query = query.filter(Entity.tags.any(func.lower(Tag.name) == a["tag"].lower()))
+    if a["status"]:
+        query = query.filter(Entity.status == a["status"])
+    if a["location"]:
+        query = query.filter(Entity.location_id == a["location"])
+    if a["q"]:
+        query = query.filter(Entity.search_text.like(like(a["q"]), escape="\\"))
+    order = Entity.deleted_at.desc() if a["deleted"] else SORTS[a["sort"]][1]()
+    return query.order_by(order, Entity.id.desc())
+
+
+def _render_list(module):
+    a = _list_args(module)
     per_page = int_setting("items_per_page", 40)
-    query = _items_query(filter_name, sort)
-    items = query.limit(per_page + 1).offset((page - 1) * per_page).all()
-    has_more = len(items) > per_page
-    items = items[:per_page]
-
-    context = dict(items=items, filter=filter_name, sort=sort, view=view,
-                   page=page, has_more=has_more)
+    rows = _list_query(module, a).limit(per_page + 1).offset((a["page_no"] - 1) * per_page).all()
+    has_more = len(rows) > per_page
+    context = dict(items=present.views(rows[:per_page]), has_more=has_more, module=module, sorts=SORTS,
+                   page="list", **a)
     if request.args.get("partial") == "1":
         return render_template("partials/records.html", **context)
+    title = (a["etype"].plural if a["etype"] else module.name if module else
+             "Recently deleted" if a["deleted"] else "All records")
+    if a["archived"]:
+        title = "Archived " + (title.lower() if module or a["etype"] else "records")
+    if a["filter"]:
+        title = a["filter"].label
+    context["title"] = title
+    context["location_entity"] = db.session.get(Entity, a["location"]) if a["location"] else None
+    special = "deleted" if a["deleted"] else ("all" if module is None and not a["tag"] else None)
+    return render_template("app.html", **context,
+                           **shell.context(active_module=module, active_type=a["etype"].key if a["etype"] else None,
+                                           active_filter=a["filter"].key if a["filter"] else None,
+                                           active_tag=a["tag"], special=special),
+                           **_admin_context())
 
-    mine = Item.query
-    counts = {
-        "open": mine.filter_by(done=False).count(),
-        "pinned": mine.filter_by(pinned=True).count(),
-        "done": mine.filter_by(done=True).count(),
-    }
-    return render_template("app.html", counts=counts, sorts=SORTS, **context, **_admin_context())
+
+@bp.route("/all")
+@role("viewer")
+def all_records():
+    return _render_list(None)
+
+
+@bp.route("/<module:module_id>")
+@role("viewer")
+def module_list(module_id):
+    reg = registry()
+    if not reg.is_enabled(module_id):
+        abort(404)
+    return _render_list(reg.module(module_id))
+
+
+@bp.route("/e/<int:entity_id>")
+@role("viewer")
+def entity_link(entity_id):
+    """A stable link to a record: its module's list with the sheet open.
+    This is what [[slug]] links, copied links and labels point at."""
+    entity = db.session.get(Entity, entity_id)
+    if entity is None or not registry().type(entity.type) or not registry().is_enabled(entity.module):
+        abort(404)
+    return redirect(url_for("main.module_list", module_id=entity.module, open=entity.id))
 
 
 def _admin_context() -> dict:
@@ -107,123 +190,62 @@ def _admin_context() -> dict:
         return {}
     return {
         "admin_users": User.query.order_by(User.created_at).all(),
-        "admin_stats": {"users": User.query.count(), "records": Item.query.count()},
+        "admin_stats": {"users": User.query.count(),
+                        "records": Entity.query.filter(Entity.deleted_at.is_(None)).count()},
         "inst_worker": int_setting("worker_minutes", 15),
         "inst_per_page": int_setting("items_per_page", 40),
+        "inst_purge_days": int_setting("purge_days", 30),
+        "inst_upload_mb": int_setting("max_upload_mb", 25),
         "inst_default_role": default_role(),
         "turnstile": _turnstile_status(),
     }
 
 
-# ———— Records ————
-
-def _own_item(item_id: int) -> Item:
-    return db.get_or_404(Item, item_id)
-
-
-def _item_json(item: Item) -> dict:
-    return {
-        "id": item.id,
-        "title": item.title,
-        "body": item.body,
-        "summary": item.summary,
-        "pinned": item.pinned,
-        "done": item.done,
-        "created_at": item.created_at.isoformat() + "Z",
-        "updated_at": item.updated_at.isoformat() + "Z",
-    }
-
-
-@bp.route("/items", methods=["POST"])
-@role("editor")
-def item_create():
-    data = request.get_json(silent=True) or {}
-    title = (data.get("title") or "").strip()
-    if not title:
-        return jsonify(error="Give it a title."), 400
-    if len(title) > 300:
-        return jsonify(error="Titles are limited to 300 characters."), 400
-    item = Item(user_id=current_user.id, title=title, body=(data.get("body") or "").strip())
-    db.session.add(item)
-    db.session.commit()
-    return jsonify(ok=True, item=_item_json(item))
-
-
-@bp.route("/items/<int:item_id>")
-@role("viewer")
-def item_detail(item_id):
-    return jsonify(ok=True, item=_item_json(_own_item(item_id)))
-
-
-@bp.route("/items/<int:item_id>", methods=["POST"])
-@role("editor")
-def item_update(item_id):
-    item = _own_item(item_id)
-    data = request.get_json(silent=True) or {}
-    if "title" in data:
-        title = (data.get("title") or "").strip()
-        if not title:
-            return jsonify(error="Give it a title."), 400
-        if len(title) > 300:
-            return jsonify(error="Titles are limited to 300 characters."), 400
-        item.title = title
-    if "body" in data:
-        item.body = (data.get("body") or "").strip()
-    if "pinned" in data:
-        item.pinned = bool(data["pinned"])
-    if "done" in data:
-        item.done = bool(data["done"])
-    db.session.commit()
-    return jsonify(ok=True, item=_item_json(item))
-
-
-@bp.route("/items/<int:item_id>/delete", methods=["POST"])
-@role("editor")
-def item_delete(item_id):
-    item = _own_item(item_id)
-    snapshot = _item_json(item)
-    db.session.delete(item)
-    db.session.commit()
-    # The client keeps the snapshot to offer Undo, which re-creates it.
-    return jsonify(ok=True, item=snapshot)
-
-
-@bp.route("/items/restore", methods=["POST"])
-@role("editor")
-def item_restore():
-    """Undo for a delete: re-create a record from the snapshot the delete
-    returned. Only the user's own fields come back; the id is new."""
-    data = request.get_json(silent=True) or {}
-    title = (data.get("title") or "").strip()[:300]
-    if not title:
-        return jsonify(error="Nothing to restore."), 400
-    item = Item(user_id=current_user.id, title=title, body=(data.get("body") or "").strip(),
-                pinned=bool(data.get("pinned")), done=bool(data.get("done")))
-    db.session.add(item)
-    db.session.commit()
-    return jsonify(ok=True, item=_item_json(item))
-
+# ———— Search (the Ctrl/Cmd+K palette) ————
 
 @bp.route("/search")
 @role("viewer")
 def search():
-    """Backs the Ctrl/Cmd+K palette: a case-insensitive substring match over
-    the user's own records, newest first, capped so a broad query stays cheap."""
+    """Records whose name, slug, notes, tags or field values contain the
+    query, grouped by module, then whatever each module's own search adds.
+    ``pick=1`` (choosing a record for a link) returns records only, limited to
+    ``types``."""
     query = (request.args.get("q") or "").strip()
     if len(query) < 2:
-        return jsonify(results=[])
-    like = "%" + query.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-    rows = (
-        Item.query
-        .filter(or_(func.lower(Item.title).like(like, escape="\\"),
-                    func.lower(Item.body).like(like, escape="\\")))
-        .order_by(Item.created_at.desc())
-        .limit(20).all()
-    )
-    return jsonify(results=[
-        {"id": r.id, "title": r.title, "done": r.done, "when": r.created_at.strftime("%b %-d")}
-        for r in rows
-    ])
+        return jsonify(groups=[])
+    reg = registry()
+    keys = reg.enabled_type_keys()
+    if request.args.get("types"):
+        keys = [k for k in request.args["types"].split(",") if k in keys]
+    rows = (Entity.live().filter(Entity.type.in_(keys))
+            .filter(Entity.search_text.like(like(query), escape="\\"))
+            .order_by(Entity.archived.asc(), (func.lower(Entity.name) == query.lower()).desc(),
+                      Entity.updated_at.desc())
+            .limit(30).all())
+    exclude = request.args.get("exclude", type=int)
+    groups, by_module = [], {}
+    for e in rows:
+        if e.id == exclude:
+            continue
+        etype = reg.type(e.type)
+        if e.module not in by_module:
+            by_module[e.module] = {"label": reg.module(e.module).name, "items": []}
+            groups.append(by_module[e.module])
+        meta = etype.label
+        path = present.path_label(e.location_id) if e.location_id else ""
+        by_module[e.module]["items"].append({
+            "id": e.id, "title": e.name, "type": e.type,
+            "meta": f"{meta} · {path}" if path else meta, "archived": e.archived,
+        })
+    if request.args.get("pick") != "1":
+        for m in reg.enabled_modules():
+            if m.search is None:
+                continue
+            found = m.search(query, 10) or []
+            if found:
+                groups.append({"label": m.name, "items": [
+                    {"id": r.entity_id, "url": r.url, "title": r.title, "meta": r.meta} for r in found]})
+    return jsonify(groups=groups)
 
 
 # ———— Account ————

@@ -1,0 +1,63 @@
+{# The sidebar's scrolling middle: the dashboard, every module with its live
+   count (the open one lists its types and filters), then the tags. #}
+{% from "partials/macros.html" import type_icon %}
+<nav class="nav-primary" aria-label="Sections">
+  <a class="navitem {{ 'is-active' if nav_special == 'dashboard' }}" href="{{ url_for('main.index') }}">
+    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="8" rx="1.5"/><rect x="13" y="4" width="7" height="5" rx="1.5"/><rect x="13" y="11" width="7" height="9" rx="1.5"/><rect x="4" y="14" width="7" height="6" rx="1.5"/></svg>
+    <span>Dashboard</span>
+  </a>
+  <a class="navitem {{ 'is-active' if nav_special == 'all' }}" href="{{ url_for('main.all_records') }}">
+    <svg viewBox="0 0 24 24"><path d="M4 5.5h16M4 12h16M4 18.5h10"/></svg>
+    <span>All records</span>
+    {% if nav_total %}<span class="count">{{ nav_total }}</span>{% endif %}
+  </a>
+  {% if nav_deleted %}
+  <a class="navitem {{ 'is-active' if nav_special == 'deleted' }}" href="{{ url_for('main.all_records', deleted=1) }}">
+    <svg viewBox="0 0 24 24"><path d="M5.5 7.5h13M9.5 7V5h5v2M7 7.5l.8 12a1 1 0 0 0 1 .9h6.4a1 1 0 0 0 1-.9l.8-12"/></svg>
+    <span>Recently deleted</span>
+    <span class="count">{{ nav_deleted }}</span>
+  </a>
+  {% endif %}
+</nav>
+
+{% for group in nav_groups %}
+<div class="sidebar-label"><span>{{ group.label }}</span></div>
+<nav class="nav-primary" aria-label="{{ group.label }}">
+  {% for entry in group.modules %}
+  {% set m = entry.module %}
+  <a class="navitem {{ 'is-active' if entry.active and not entry.filters|selectattr('active')|list and not entry.types|selectattr('active')|list and not request.args.get('archived') }}"
+     href="{{ url_for('main.module_list', module_id=m.id) }}">
+    {{ type_icon(m.icon) }}
+    <span>{{ m.name }}</span>
+    {% if entry.count %}<span class="count">{{ entry.count }}</span>{% endif %}
+  </a>
+  {% if entry.active and (entry.types or entry.filters or entry.archived) %}
+  <ul class="sidelist sidelist--nested">
+    {% for t in entry.types %}
+    <li><a class="sideitem {{ 'is-active' if t.active }}" href="{{ url_for('main.module_list', module_id=m.id, type=t.type.key) }}">
+      <span class="sideitem-title">{{ t.type.plural }}</span>{% if t.count %}<span class="count">{{ t.count }}</span>{% endif %}</a></li>
+    {% endfor %}
+    {% for f in entry.filters %}
+    <li><a class="sideitem {{ 'is-active' if f.active }}" href="{{ url_for('main.module_list', module_id=m.id, f=f.filter.key) }}">
+      <span class="sideitem-title">{{ f.filter.label }}</span>{% if f.count %}<span class="count count--alert">{{ f.count }}</span>{% endif %}</a></li>
+    {% endfor %}
+    {% if entry.archived %}
+    <li><a class="sideitem {{ 'is-active' if request.args.get('archived') == '1' }}" href="{{ url_for('main.module_list', module_id=m.id, archived=1) }}">
+      <span class="sideitem-title">Archived</span><span class="count">{{ entry.archived }}</span></a></li>
+    {% endif %}
+  </ul>
+  {% endif %}
+  {% endfor %}
+</nav>
+{% endfor %}
+
+{% if nav_tags %}
+<div class="sidebar-label"><span>Tags</span></div>
+<ul class="sidelist">
+  {% for name, count in nav_tags %}
+  <li><a class="sideitem {{ 'is-active' if active_tag and active_tag|lower == name|lower }}"
+         href="{{ url_for('main.module_list', module_id=module.id, tag=name) if module else url_for('main.all_records', tag=name) }}">
+    <span class="tagdot" aria-hidden="true"></span><span class="sideitem-title">{{ name }}</span><span class="count">{{ count }}</span></a></li>
+  {% endfor %}
+</ul>
+{% endif %}

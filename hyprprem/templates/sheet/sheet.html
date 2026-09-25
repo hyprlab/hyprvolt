@@ -1,0 +1,32 @@
+{# The sheet's article: the record's header, its tabs, and the open tab.
+   Fetched by app.js (/e/<id>/sheet?tab=...) into the <dialog id="sheet">. #}
+{% from "partials/macros.html" import crumbs as crumb_nav, type_icon %}
+<div class="sheet-content" data-id="{{ entity.id }}" data-name="{{ entity.name }}" data-tab="{{ tab.key }}"
+     data-archived="{{ '1' if entity.archived else '0' }}" data-deleted="{{ '1' if entity.deleted_at else '0' }}">
+  {% if entity.deleted_at %}
+  <div class="banner banner--danger">
+    <span>Deleted {{ entity.deleted_at|ago }}. It is purged {{ purge_days }} days after it was deleted.</span>
+    {% if current_user.can_edit %}<button class="btn btn--xs btn--ghost" data-api-post="/api/entities/{{ entity.id }}/restore" data-then="reload" data-done="Restored">Restore</button>{% endif %}
+  </div>
+  {% elif entity.archived %}
+  <div class="banner">
+    <span>Archived. It is left out of lists and search, with its links and history kept.</span>
+    {% if current_user.can_edit %}<button class="btn btn--xs btn--ghost" data-sheet-action="archive">Unarchive</button>{% endif %}
+  </div>
+  {% endif %}
+  <p class="kicker"><span class="kicker-icon">{{ type_icon(icon) }}</span>{{ etype.label if etype else entity.type }} · {{ status }}</p>
+  <h1 class="sheet-title">{{ entity.name }}</h1>
+  {{ crumb_nav(crumbs) }}
+  <p class="sheet-meta">Updated {{ entity.updated_at|ago }}{% if entity.updated_by %} by {{ entity.updated_by.display_name }}{% endif %}
+    · <code class="slug" title="Link to it from a document with [[{{ entity.slug }}]]">{{ entity.slug }}</code></p>
+
+  <div class="tabs" role="tablist" aria-label="Sections of {{ entity.name }}">
+    {% for t in tabs %}
+    <button type="button" class="tab {{ 'is-active' if t.key == tab.key }}" role="tab" data-tab="{{ t.key }}"
+            aria-selected="{{ 'true' if t.key == tab.key else 'false' }}" title="{{ t.label }}{% if loop.index < 10 %} ({{ loop.index }}){% endif %}">
+      {{ t.label }}{% if t.count %}<span class="count">{{ t.count }}</span>{% endif %}
+    </button>
+    {% endfor %}
+  </div>
+  <section class="tab-panel" role="tabpanel" data-panel="{{ tab.key }}">{{ panel }}</section>
+</div>

@@ -1,0 +1,52 @@
+{# The home screen: what is documented, what changed lately, and whatever
+   the modules add (their widgets). #}
+{% from "partials/macros.html" import type_icon %}
+<div class="records dash" id="records-root" data-view="list" data-infinite="0">
+  {% set total = tiles|sum(attribute='count') %}
+  {% if total == 0 %}
+  <div class="empty empty--onboard">
+    {% with extra = 'mark--xl' %}{% include "partials/mark.html" %}{% endwith %}
+    <h2 class="empty-title">Nothing documented yet</h2>
+    <p class="empty-text">Start with where things are, then what runs there. Everything links to everything,
+      so each record you add makes the others more useful.</p>
+    {% if current_user.can_edit %}
+    <div class="empty-actions">
+      {% for t in tiles %}{% if loop.first %}
+      <button class="btn btn--primary" data-new-type="{{ t.types[0][0].key }}">New {{ t.types[0][0].label|lower }}</button>
+      {% endif %}{% endfor %}
+      {% if current_user.is_admin and can_seed %}
+      <button class="btn btn--ghost" data-api-post="/admin/seed-demo" data-then="reload" data-done="The demo homelab is loaded">Load a demo homelab</button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <section class="dash-section">
+    <div class="tiles">
+      {% for t in tiles %}
+      <a class="tile" href="{{ url_for('main.module_list', module_id=t.module.id) }}">
+        <span class="tile-head">{{ type_icon(t.module.icon) }}<span>{{ t.module.name }}</span></span>
+        <span class="tile-num">{{ t.count }}</span>
+        <span class="tile-sub">{% for etype, n in t.types if n %}{{ n }} {{ etype.plural|lower if n != 1 else etype.label|lower }}{{ ', ' if not loop.last }}{% else %}Nothing yet{% endfor %}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if widgets %}
+  <section class="dash-section widgets">
+    {% for w in widgets %}
+    <div class="card widget {{ 'widget--wide' if w.widget.wide }}">
+      <p class="setting-label">{{ w.widget.label }}</p>
+      {{ w.html }}
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <section class="dash-section">
+    <p class="setting-label">Recently changed</p>
+    {% with items = recent, view = 'list', has_more = false, page_no = 1 %}{% include "partials/records.html" %}{% endwith %}
+  </section>
+  {% endif %}
+</div>

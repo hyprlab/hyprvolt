@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% set titles = {'open': 'Open', 'all': 'All records', 'pinned': 'Pinned', 'done': 'Done'} %}
-{% block title %}{% if filter == 'open' %}{{ app_name }}{% else %}{{ titles[filter] }} — {{ app_name }}{% endif %}{% endblock %}
+{% from "partials/macros.html" import type_icon %}
+{% block title %}{% if page == 'dashboard' %}{{ app_name }}{% else %}{{ title }} — {{ app_name }}{% endif %}{% endblock %}
 {% block body %}
 <div class="shell">
 
@@ -16,40 +16,7 @@
     </div>
 
     <div class="sidebar-scroll">
-      <nav class="nav-primary" aria-label="Records">
-        <a class="navitem {{ 'is-active' if filter == 'open' }}" href="{{ url_for('main.index', filter='open') }}">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
-          <span>Open</span>
-          {% if counts.open %}<span class="count count--accent" id="count-open">{{ counts.open if counts.open < 1000 else '999+' }}</span>{% endif %}
-        </a>
-        <a class="navitem {{ 'is-active' if filter == 'all' }}" href="{{ url_for('main.index', filter='all') }}">
-          <svg viewBox="0 0 24 24"><path d="M4 5.5h16M4 12h16M4 18.5h10"/></svg>
-          <span>All records</span>
-        </a>
-        <a class="navitem {{ 'is-active' if filter == 'pinned' }}" href="{{ url_for('main.index', filter='pinned') }}">
-          <svg viewBox="0 0 24 24"><path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.5L6 20V5.5a1 1 0 0 1 1-1Z"/></svg>
-          <span>Pinned</span>
-          {% if counts.pinned %}<span class="count">{{ counts.pinned }}</span>{% endif %}
-        </a>
-        <a class="navitem {{ 'is-active' if filter == 'done' }}" href="{{ url_for('main.index', filter='done') }}">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/></svg>
-          <span>Done</span>
-          {% if counts.done %}<span class="count">{{ counts.done }}</span>{% endif %}
-        </a>
-      </nav>
-
-      {# The scrolling section: where an app lists its own collection (feeds,
-         projects, boards). The head above and the foot below stay pinned
-         however long it grows. .sideitem is the row style. #}
-      <div class="sidebar-label">
-        <span>Collections</span>
-        <button class="iconbtn iconbtn--sm" data-open="item-modal" aria-label="New record" title="New record">
-          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
-      </div>
-      <ul class="sidelist">
-        <li class="sidelist-empty">The app's own collection goes here.</li>
-      </ul>
+      {% include "partials/sidebar.html" %}
     </div>
 
     <div class="sidebar-foot">
@@ -79,17 +46,51 @@
         <svg viewBox="0 0 24 24"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg>
       </button>
 
-      <h2 class="context-title">{{ titles[filter] }}{% if sort != 'newest' %}<span class="title-chip">{{ sorts[sort][0] }}</span>{% endif %}</h2>
+      <h2 class="context-title">
+        {%- if page == 'dashboard' %}Dashboard{% else %}{{ title }}{% endif -%}
+        {%- if page == 'list' %}
+          {%- if tag %}<a class="title-chip" href="{{ url_with(tag=None) }}" title="Clear the tag filter">#{{ tag }} ×</a>{% endif -%}
+          {%- if q %}<a class="title-chip" href="{{ url_with(q=None) }}" title="Clear the search">“{{ q }}” ×</a>{% endif -%}
+          {%- if status %}<a class="title-chip" href="{{ url_with(status=None) }}" title="Clear the status filter">{{ status }} ×</a>{% endif -%}
+          {%- if location_entity %}<a class="title-chip" href="{{ url_with(location=None) }}" title="Clear the location filter">in {{ location_entity.name }} ×</a>{% endif -%}
+          {%- if sort != 'updated' and not deleted %}<span class="title-chip">{{ sorts[sort][0] }}</span>{% endif -%}
+        {%- endif -%}
+      </h2>
 
       <div class="topbar-actions">
         <button class="searchpill" id="search-btn" aria-label="Search" title="Search">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
           <kbd id="search-kbd">Ctrl K</kbd>
         </button>
-        <button class="iconbtn" data-open="item-modal" aria-label="New record" title="New record (n)">
+        {% if new_menu %}
+        {% set only = new_menu|length == 1 and new_menu[0].types|length == 1 %}
+        {% if only %}
+        <button class="iconbtn" data-new-type="{{ new_menu[0].types[0].key }}" aria-label="New {{ new_menu[0].types[0].label|lower }}" title="New {{ new_menu[0].types[0].label|lower }} (n)" id="new-btn">
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         </button>
+        {% else %}
+        <div class="menu" id="new-menu">
+          <button class="menubtn menubtn--icon" aria-haspopup="true" aria-expanded="false" title="New (n)" id="new-btn">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            <span class="menubtn-label">New</span>
+            <svg class="chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
+          </button>
+          <div class="menupop menupop--scroll" role="menu" hidden>
+            {% for group in new_menu %}
+            {% if new_menu|length > 1 %}<p class="menupop-head">{{ group.module.name }}</p>{% endif %}
+            {% for t in group.types %}
+            <button type="button" class="menuopt" role="menuitem" data-new-type="{{ t.key }}"
+                    {% if location_entity %}data-new-location="{{ location_entity.id }}"{% endif %}>
+              {{ type_icon(t.icon or group.module.icon) }}<span>{{ t.label }}</span>
+            </button>
+            {% endfor %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% endif %}
 
+        {% if page == 'list' and not deleted %}
         <div class="menu" id="sort-menu">
           <button class="menubtn" aria-haspopup="true" aria-expanded="false" title="Sort">
             <svg viewBox="0 0 24 24"><path d="M7 4v16M3.5 16.5 7 20l3.5-3.5M14 6h7M14 12h5M14 18h3"/></svg>
@@ -97,27 +98,27 @@
             <svg class="chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
           </button>
           <div class="menupop" role="menu" hidden>
-            <p class="menupop-head">Sort {{ titles[filter]|lower }}</p>
+            <p class="menupop-head">Sort {{ title|lower }}</p>
             {% for key, (label, _order) in sorts.items() %}
-            <a class="menuopt {{ 'is-active' if key == sort }}" role="menuitem"
-               href="{{ url_for('main.index', filter=filter, sort=key, view=request.args.get('view')) }}">
+            <a class="menuopt {{ 'is-active' if key == sort }}" role="menuitem" href="{{ url_with(sort=key) }}">
               <span>{{ label }}</span>
               <svg class="tick" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
             </a>
             {% endfor %}
           </div>
         </div>
+        {% endif %}
 
+        {% if page == 'list' %}
         <div class="viewswitch" role="group" aria-label="View">
-          <a class="viewswitch-btn {{ 'is-active' if view == 'cards' }}" title="Cards"
-             href="{{ url_for('main.index', view='cards', filter=filter, sort=sort) }}">
+          <a class="viewswitch-btn {{ 'is-active' if view == 'cards' }}" title="Cards" href="{{ url_with(view='cards') }}">
             <svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg>
           </a>
-          <a class="viewswitch-btn {{ 'is-active' if view == 'list' }}" title="List"
-             href="{{ url_for('main.index', view='list', filter=filter, sort=sort) }}">
+          <a class="viewswitch-btn {{ 'is-active' if view == 'list' }}" title="List" href="{{ url_with(view='list') }}">
             <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
           </a>
         </div>
+        {% endif %}
         <button class="iconbtn" id="theme-btn" aria-label="Toggle theme" title="Toggle theme">
           <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
           <svg class="icon-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
@@ -125,37 +126,27 @@
       </div>
     </header>
 
-    <div class="records" id="records-root" data-view="{{ view }}" data-filter="{{ filter }}"
+    {% if page == 'dashboard' %}
+    {% include "partials/dashboard.html" %}
+    {% else %}
+    <div class="records" id="records-root" data-view="{{ view }}"
          data-infinite="{{ '1' if current_user.infinite_scroll else '0' }}">
       {% include "partials/records.html" %}
     </div>
+    {% endif %}
   </main>
 </div>
 
 <!-- ————— New / edit record ————— -->
-<dialog class="modal" id="item-modal">
+{# The form inside is fetched per type (core/views.py, sheet/form.html). #}
+<dialog class="modal modal--wide" id="entity-modal" aria-labelledby="entity-modal-title">
   <div class="modal-head">
-    <h3 id="item-modal-title">New record</h3>
+    <h3 id="entity-modal-title">New record</h3>
     <button class="iconbtn" data-close aria-label="Close">
       <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
   </div>
-  <form id="item-form" class="modal-body">
-    <input type="hidden" id="item-id">
-    <label class="field">
-      <span class="field-label">Title</span>
-      <input id="item-title" maxlength="300" autocomplete="off" required autofocus>
-    </label>
-    <label class="field">
-      <span class="field-label">Notes</span>
-      <textarea id="item-body" rows="5" placeholder="Anything worth keeping with it."></textarea>
-    </label>
-    <p class="form-error" id="item-error" hidden></p>
-    <button class="btn btn--primary btn--block" type="submit">
-      <span class="btn-label">Save</span>
-      <span class="btn-busy" hidden>Saving…</span>
-    </button>
-  </form>
+  <div class="modal-body" id="entity-form-slot"></div>
 </dialog>
 
 <!-- ————— Settings ————— -->
@@ -271,8 +262,16 @@
           <span class="field-label">Records per page</span>
           <input type="number" id="inst-perpage" min="10" max="500" step="10" value="{{ inst_per_page }}">
         </label>
+        <label class="field">
+          <span class="field-label">Keep deleted records (days)</span>
+          <input type="number" id="inst-purge" min="1" max="365" step="1" value="{{ inst_purge_days }}">
+        </label>
+        <label class="field">
+          <span class="field-label">Largest attachment (MB)</span>
+          <input type="number" id="inst-upload" min="1" max="2048" step="1" value="{{ inst_upload_mb }}">
+        </label>
       </div>
-      <p class="hint">0 minutes pauses the background worker. A change takes effect after the current wait.</p>
+      <p class="hint">0 minutes pauses the background worker. A change takes effect after the current wait. Deleted records can be restored until they are purged.</p>
       <p class="setting-label setting-label--spaced">New accounts start as</p>
       <div class="seg" id="inst-default-role">
         {% for r in ('viewer', 'editor') %}
@@ -435,7 +434,7 @@
 <dialog class="palette" id="search-modal">
   <div class="palette-inputrow">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-    <input id="search-input" placeholder="Search records…" autocomplete="off" spellcheck="false">
+    <input id="search-input" placeholder="Search everything…" autocomplete="off" spellcheck="false">
     <kbd>esc</kbd>
   </div>
   <div class="palette-results" id="search-results" hidden></div>
@@ -454,29 +453,25 @@
       <button class="iconbtn" id="sheet-next" aria-label="Next record" title="Next (j)">
         <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
       </button>
-      <button class="iconbtn" id="sheet-done" aria-label="Mark as done" title="Mark as done (d)">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.4 2.6 2.6 5-5.6"/></svg>
-      </button>
-      <button class="iconbtn" id="sheet-pin" aria-label="Pin" title="Pin (p)">
-        <svg viewBox="0 0 24 24"><path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.5L6 20V5.5a1 1 0 0 1 1-1Z"/></svg>
-      </button>
+      {% if current_user.can_edit %}
       <button class="iconbtn" id="sheet-edit" aria-label="Edit" title="Edit (e)">
         <svg viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2 2 0 0 0-3-3L5 17v3ZM13.5 6.5l3 3"/></svg>
       </button>
+      <button class="iconbtn" id="sheet-archive" aria-label="Archive" title="Archive (a)">
+        <svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="4" rx="1"/><path d="M5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5M10 12.5h4"/></svg>
+      </button>
+      {% endif %}
       <button class="iconbtn" id="sheet-copy" aria-label="Copy link" title="Copy link">
         <svg viewBox="0 0 24 24"><path d="M10.5 13.5a4 4 0 0 0 6 .4l2.6-2.6a4 4 0 1 0-5.7-5.7l-1.3 1.3M13.5 10.5a4 4 0 0 0-6-.4l-2.6 2.6a4 4 0 1 0 5.7 5.7l1.3-1.3"/></svg>
       </button>
+      {% if current_user.can_edit %}
       <button class="iconbtn iconbtn--danger" id="sheet-delete" aria-label="Delete" title="Delete">
         <svg viewBox="0 0 24 24"><path d="M5.5 7.5h13M9.5 7V5h5v2M7 7.5l.8 12a1 1 0 0 0 1 .9h6.4a1 1 0 0 0 1-.9l.8-12M10.2 11v6M13.8 11v6"/></svg>
       </button>
+      {% endif %}
     </div>
   </div>
-  <article class="sheet-article">
-    <p class="kicker" id="sheet-kicker"></p>
-    <h1 class="sheet-title" id="sheet-title"></h1>
-    <p class="sheet-meta" id="sheet-meta"></p>
-    <div class="prose" id="sheet-body"></div>
-  </article>
+  <article class="sheet-article" id="sheet-article"></article>
 </dialog>
 
 <div class="ptr" id="ptr" aria-hidden="true">

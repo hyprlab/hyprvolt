@@ -1,0 +1,104 @@
+{# The record form, for creating and editing. Built from the type's field
+   schema; fetched by app.js into <dialog id="entity-modal">. Field names are
+   what the API takes: name, status, location_id, tags, notes, f.<field>,
+   c.<custom field>. #}
+{% macro input(item) %}
+{% set f = item.field %}{% set v = item.value %}
+{% if f.kind == 'boolean' %}
+  <label class="check form-check"><input type="checkbox" name="{{ item.name }}" value="1" {{ 'checked' if v }}><span>{{ f.label }}</span></label>
+{% else %}
+<label class="field {{ 'form-wide' if f.kind in ('longtext', 'markdown') }}">
+  <span class="field-label">{{ f.label }}{% if f.unit %} ({{ f.unit }}){% endif %}{% if f.required %} <span class="req" aria-label="required">*</span>{% endif %}</span>
+  {% if f.kind == 'longtext' %}
+  <textarea name="{{ item.name }}" rows="4" {{ 'required' if f.required }}>{{ v or '' }}</textarea>
+  {% elif f.kind == 'markdown' %}
+  <textarea name="{{ item.name }}" rows="16" class="mono" spellcheck="true" {{ 'required' if f.required }}>{{ v or '' }}</textarea>
+  {% elif f.kind == 'select' %}
+  <select name="{{ item.name }}" {{ 'required' if f.required }}>
+    {% if not f.required %}<option value="">Not set</option>{% endif %}
+    {% for value, label in f.options %}<option value="{{ value }}" {{ 'selected' if v == value }}>{{ label }}</option>{% endfor %}
+  </select>
+  {% elif f.kind == 'ref' %}
+  <select name="{{ item.name }}" {{ 'required' if f.required }}>
+    <option value="">Not set</option>
+    {% for id, label in item.choices %}<option value="{{ id }}" {{ 'selected' if v == id }}>{{ label }}</option>{% endfor %}
+  </select>
+  {% elif f.kind in ('integer', 'number') %}
+  <input type="number" name="{{ item.name }}" value="{{ v if v is not none else '' }}" step="{{ '1' if f.kind == 'integer' else 'any' }}"
+         {% if f.min is not none %}min="{{ f.min }}"{% endif %} {% if f.max is not none %}max="{{ f.max }}"{% endif %} {{ 'required' if f.required }}>
+  {% elif f.kind == 'date' %}
+  <input type="date" name="{{ item.name }}" value="{{ v.isoformat() if v else '' }}" {{ 'required' if f.required }}>
+  {% else %}
+  <input type="{{ 'email' if f.kind == 'email' else 'text' }}" name="{{ item.name }}" value="{{ v or '' }}"
+         maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https://" spellcheck="false"{% endif %}>
+  {% endif %}
+  {% if f.help %}<span class="hint">{{ f.help }}</span>{% endif %}
+</label>
+{% endif %}
+{% endmacro %}
+
+<form class="entity-form" id="entity-form" data-id="{{ entity.id if entity else '' }}" data-type="{{ etype.key }}"
+      data-title="{{ ('Edit ' ~ entity.name) if entity else ('New ' ~ etype.label|lower) }}" novalidate>
+  <input type="hidden" name="type" value="{{ etype.key }}">
+  {% if attach_to %}<input type="hidden" name="attach_to" value="{{ attach_to }}">{% endif %}
+  <div class="form-grid">
+    <label class="field form-wide">
+      <span class="field-label">Name <span class="req" aria-label="required">*</span></span>
+      <input name="name" maxlength="200" required autocomplete="off" value="{{ entity.name if entity else name }}" autofocus>
+    </label>
+    <label class="field">
+      <span class="field-label">Status</span>
+      <select name="status">
+        {% for value, label in etype.statuses %}<option value="{{ value }}" {{ 'selected' if entity and entity.status == value }}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    {% if etype.located_in != () %}
+    <label class="field">
+      <span class="field-label">Location</span>
+      <select name="location_id">
+        <option value="">Not set</option>
+        {% for g in locations %}
+        <optgroup label="{{ g.label }}">
+          {% for id, label in g.options %}<option value="{{ id }}" {{ 'selected' if location_id == id }}>{{ label }}</option>{% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+    </label>
+    {% endif %}
+    <label class="field">
+      <span class="field-label">Tags</span>
+      <input name="tags" value="{{ tags }}" autocomplete="off" placeholder="Separated by commas">
+    </label>
+    <label class="field">
+      <span class="field-label">Slug</span>
+      <input name="slug" value="{{ entity.slug if entity else '' }}" maxlength="119" spellcheck="false" autocomplete="off"
+             placeholder="Made from the name" pattern="[a-z0-9][a-z0-9-]*">
+    </label>
+  </div>
+
+  {% set ns = namespace(group=None, open=false) %}
+  {% for item in fields %}
+    {% if loop.first or item.field.group != ns.group %}
+      {% if ns.open %}</div>{% endif %}
+      {% if item.field.group %}<p class="setting-label setting-label--spaced">{{ item.field.group }}</p>{% elif loop.first and fields|length > 1 %}<p class="setting-label setting-label--spaced">{{ etype.label }}</p>{% endif %}
+      <div class="form-grid">{% set ns.open = true %}{% set ns.group = item.field.group %}
+    {% endif %}
+    {{ input(item) }}
+    {% if loop.last %}</div>{% endif %}
+  {% endfor %}
+
+  {% if custom %}
+  <p class="setting-label setting-label--spaced">Custom fields</p>
+  <div class="form-grid">{% for item in custom %}{{ input(item) }}{% endfor %}</div>
+  {% endif %}
+
+  <label class="field form-notes">
+    <span class="field-label">Notes</span>
+    <textarea name="notes" rows="4" placeholder="Markdown. Link to a record with [[its-slug]].">{{ entity.notes if entity else '' }}</textarea>
+  </label>
+  <p class="form-error" id="entity-error" hidden></p>
+  <button class="btn btn--primary btn--block" type="submit">
+    <span class="btn-label">{{ 'Save' if entity else 'Create' }}</span>
+    <span class="btn-busy" hidden>Saving…</span>
+  </button>
+</form>

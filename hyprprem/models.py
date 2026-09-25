@@ -89,30 +89,3 @@ def set_setting(key: str, value: str) -> None:
     else:
         db.session.add(Setting(key=key, value=value))
     db.session.commit()
-
-
-class Item(db.Model):
-    """The one domain model the template ships with.
-
-    It exists so the shell, the list and grid views, the detail sheet, the
-    search palette and the JSON API are wired to something real. Rename it to
-    whatever the app is about, or replace it and keep the machinery around it
-    (docs/TEMPLATE.md).
-    """
-    __tablename__ = "items"
-    __table_args__ = (db.Index("ix_items_user_created", "user_id", "created_at"),)
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"),
-                        index=True)
-    title = db.Column(db.String(300), nullable=False)
-    body = db.Column(db.Text, default="", nullable=False)
-    pinned = db.Column(db.Boolean, default=False, nullable=False)
-    done = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow, nullable=False)
-
-    @property
-    def summary(self) -> str:
-        """The body on one line, for the card dek and the list row."""
-        return " ".join((self.body or "").split())[:220]

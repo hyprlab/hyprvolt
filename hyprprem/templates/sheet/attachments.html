@@ -1,0 +1,39 @@
+{% if rows %}
+<ul class="manage-list files">
+  {% for a in rows %}
+  <li class="manage-item">
+    {% if a.is_image %}
+    <a class="file-thumb" href="/attachments/{{ a.id }}/{{ a.filename|urlencode }}" target="_blank" rel="noopener">
+      <img src="/attachments/{{ a.id }}/{{ a.filename|urlencode }}" alt="" loading="lazy"></a>
+    {% else %}
+    <span class="file-thumb"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20V3.5Z"/><path d="M14 3.5V8h4"/></svg></span>
+    {% endif %}
+    <div class="manage-meta">
+      <a class="manage-title link" href="/attachments/{{ a.id }}/{{ a.filename|urlencode }}" target="_blank" rel="noopener">{{ a.filename }}</a>
+      <span class="manage-sub">{{ human_size(a.size) }} · {{ a.created_at|ago }}{% if a.created_by %} · {{ a.created_by.display_name }}{% endif %}</span>
+    </div>
+    <a class="iconbtn iconbtn--sm" href="/attachments/{{ a.id }}/{{ a.filename|urlencode }}?download=1" aria-label="Download" title="Download">
+      <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg></a>
+    {% if current_user.can_edit %}
+    <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/api/attachments/{{ a.id }}/delete"
+            data-then="sheet" data-done="File removed" aria-label="Remove" title="Remove">
+      <svg viewBox="0 0 24 24"><path d="M5.5 7.5h13M9.5 7V5h5v2M7 7.5l.8 12a1 1 0 0 0 1 .9h6.4a1 1 0 0 0 1-.9l.8-12"/></svg>
+    </button>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No files yet: photos of the labels, PDFs of the manual, exported configs.</p>
+{% endif %}
+{% if current_user.can_edit %}
+<form class="dropzone" data-api="/api/entities/{{ entity.id }}/attachments" data-then="sheet" enctype="multipart/form-data">
+  <input type="file" name="file" id="file-input-{{ entity.id }}" multiple data-autosubmit>
+  <label for="file-input-{{ entity.id }}">
+    <svg viewBox="0 0 24 24"><path d="M12 16V5M7.5 9.5 12 5l4.5 4.5M5 19.5h14"/></svg>
+    <span>Drop files here, or <strong>choose files</strong></span>
+    <span class="hint">Up to {{ limit_mb }} MB each</span>
+  </label>
+  <p class="form-error" hidden></p>
+</form>
+{% endif %}

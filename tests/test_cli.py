@@ -26,4 +26,4 @@ def test_backup_writes_a_readable_copy(app, tmp_path):
     result = app.test_cli_runner().invoke(args=["backup", str(dest)])
     assert result.exit_code == 0, result.output
     tables = {r[0] for r in sqlite3.connect(dest).execute("SELECT name FROM sqlite_master")}
-    assert {"users", "items", "settings"} <= tables
+    assert {"users", "entities", "settings"} <= tables

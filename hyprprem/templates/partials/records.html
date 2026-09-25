@@ -1,38 +1,37 @@
 {# The record list. Included by app.html on a page load, and returned on its
    own (?partial=1) when the client asks for the next page. #}
-{% macro pin(item) %}
-  <button class="pinbtn {{ 'is-pinned' if item.pinned }}" data-pin="{{ item.id }}"
-          aria-label="{{ 'Unpin' if item.pinned else 'Pin' }}" title="{{ 'Unpin' if item.pinned else 'Pin' }}">
-    <svg viewBox="0 0 24 24"><path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.5L6 20V5.5a1 1 0 0 1 1-1Z"/></svg>
-  </button>
-{% endmacro %}
-
+{% from "partials/macros.html" import type_icon %}
 {% if items %}
   {% if view == 'list' %}
   <div class="grid--list">
-    {% for item in items %}
-    <article class="row {{ 'is-done' if item.done }}" data-item="{{ item.id }}" tabindex="0">
-      <span class="new-dot" aria-hidden="true"></span>
-      <h3 class="row-title">{{ item.title }}</h3>
-      <p class="row-dek">{{ item.summary }}</p>
-      <time class="row-time" datetime="{{ item.created_at.isoformat() }}Z">{{ item.created_at|ago }}</time>
-      {{ pin(item) }}
+    {% for v in items %}
+    <article class="row {{ 'is-archived' if v.archived or v.deleted }}" data-item="{{ v.id }}" tabindex="0">
+      <span class="row-icon" title="{{ v.type_label }}">{{ type_icon(v.icon) }}</span>
+      <h3 class="row-title">{{ v.name }}</h3>
+      <p class="row-dek">{{ v.summary }}</p>
+      <span class="row-type">{{ v.type_label }}{% if v.status != 'Active' %} · {{ v.status }}{% endif %}</span>
+      <time class="row-time" datetime="{{ v.updated_at.isoformat() }}Z">{{ v.updated_at|ago }}</time>
     </article>
     {% endfor %}
   </div>
   {% else %}
   <div class="grid--cards">
-    {% for item in items %}
-    <article class="card {{ 'is-done' if item.done }}" data-item="{{ item.id }}" tabindex="0">
+    {% for v in items %}
+    <article class="card {{ 'is-archived' if v.archived or v.deleted }}" data-item="{{ v.id }}" tabindex="0">
       <p class="kicker">
-        <span class="new-dot" aria-hidden="true"></span>
-        {% if item.pinned %}<span>Pinned</span><span class="kicker-sep">·</span>{% endif %}
-        <time datetime="{{ item.created_at.isoformat() }}Z">{{ item.created_at|ago }}</time>
+        <span class="kicker-icon">{{ type_icon(v.icon) }}</span>
+        <span>{{ v.type_label }}</span><span class="kicker-sep">·</span><span>{{ v.status }}</span>
+        {% if v.deleted %}<span class="kicker-sep">·</span><span>Deleted</span>{% elif v.archived %}<span class="kicker-sep">·</span><span>Archived</span>{% endif %}
+        <time datetime="{{ v.updated_at.isoformat() }}Z">{{ v.updated_at|ago }}</time>
       </p>
-      <h3 class="card-title">{{ item.title }}</h3>
-      {% if item.summary %}<p class="card-dek">{{ item.summary }}</p>{% endif %}
-      <p class="card-meta">{{ 'Done' if item.done else 'Open' }}</p>
-      {{ pin(item) }}
+      <h3 class="card-title">{{ v.name }}</h3>
+      {% if v.dek %}<p class="card-dek">{{ v.dek }}</p>{% endif %}
+      {% if v.card_facts %}
+      <dl class="facts">
+        {% for label, shown in v.card_facts %}<div><dt>{{ label }}</dt><dd>{{ shown }}</dd></div>{% endfor %}
+      </dl>
+      {% endif %}
+      {% if v.tags %}<p class="card-meta">{% for t in v.tags %}<span class="tagchip">{{ t }}</span>{% endfor %}</p>{% endif %}
     </article>
     {% endfor %}
   </div>
@@ -40,7 +39,7 @@
 
   {% if has_more %}
   <div class="pager">
-    <button class="btn btn--ghost" id="load-more" data-page="{{ page + 1 }}">
+    <button class="btn btn--ghost" id="load-more" data-page="{{ page_no + 1 }}">
       <span class="btn-label">Load more</span>
       <span class="btn-busy" hidden>Loading…</span>
     </button>
@@ -49,27 +48,36 @@
       Loading more
     </span>
   </div>
-  {% elif page > 1 %}
+  {% elif page_no > 1 %}
   <p class="pager-end">That's everything.</p>
   {% endif %}
 
-{% elif page == 1 %}
-  <div class="empty {{ 'empty--onboard' if filter == 'open' }}">
-    {% if filter == 'open' %}
+{% elif page_no == 1 %}
+  <div class="empty {{ 'empty--onboard' if not (q or tag or filter or archived or deleted or status or location) }}">
+    {% if deleted %}
+      <h2 class="empty-title">Nothing deleted</h2>
+      <p class="empty-text">Deleted records wait here until they are purged.</p>
+    {% elif archived %}
+      <h2 class="empty-title">Nothing archived</h2>
+      <p class="empty-text">Archived records leave the lists but keep their history and links.</p>
+    {% elif q or tag or filter or status or location %}
+      <h2 class="empty-title">Nothing matches</h2>
+      <p class="empty-text">No record fits these filters.</p>
+    {% else %}
       {% with extra = 'mark--xl' %}{% include "partials/mark.html" %}{% endwith %}
       <h2 class="empty-title">Nothing here yet</h2>
-      <p class="empty-text">Create a record to see how the list, the detail
-        sheet and the search palette fit together.</p>
-      <button class="btn btn--primary" data-open="item-modal">New record</button>
-    {% elif filter == 'pinned' %}
-      <h2 class="empty-title">Nothing pinned</h2>
-      <p class="empty-text">A pinned record sits at the top of every list.</p>
-    {% elif filter == 'done' %}
-      <h2 class="empty-title">Nothing done yet</h2>
-      <p class="empty-text">Records you mark as done collect here.</p>
-    {% else %}
-      <h2 class="empty-title">Nothing to show</h2>
-      <p class="empty-text">This view is empty.</p>
+      {% if module %}
+      <p class="empty-text">{{ module.description or 'Records of this module appear here.' }}</p>
+      {% if current_user.can_edit %}
+      <div class="empty-actions">
+        {% for t in ([etype] if etype else module.types) %}
+        <button class="btn {{ 'btn--primary' if loop.first else 'btn--ghost' }}" data-new-type="{{ t.key }}">New {{ t.label|lower }}</button>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% else %}
+      <p class="empty-text">Every record of every module appears here.</p>
+      {% endif %}
     {% endif %}
   </div>
 {% endif %}

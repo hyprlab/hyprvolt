@@ -230,6 +230,16 @@ def entity_dependencies(entity_id):
 @role("editor")
 def relationship_create():
     data = _body()
+    if "direction" in data:
+        # From the sheet's form: "kind:out" reads from this record, "kind:in"
+        # the other way round.
+        kind, _, direction = str(data.get("kind") or "").partition(":")
+        direction = direction or data["direction"]
+        here, other = data.get("entity_id"), data.get("other_id")
+        if not other:
+            return jsonify(error="Choose the record to link to."), 400
+        data = {**data, "kind": kind, "source_id": here if direction == "out" else other,
+                "target_id": other if direction == "out" else here}
     source, target = records.live(data.get("source_id")), records.live(data.get("target_id"))
     if source is None or target is None:
         return jsonify(error="Both ends of a link must be records that exist."), 400

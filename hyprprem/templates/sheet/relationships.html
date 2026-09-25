@@ -1,0 +1,60 @@
+{% from "partials/macros.html" import dep_tree, entity_link %}
+{% if grouped %}
+<div class="rel-groups">
+  {% for g in grouped %}
+  <div class="rel-group">
+    <p class="setting-label">{{ g.label }}</p>
+    <ul class="manage-list">
+      {% for r in g['items'] %}
+      <li class="manage-item">
+        <div class="manage-meta">
+          <span class="manage-title">{{ entity_link(r.other.id, r.other.name) }}</span>
+          <span class="manage-sub">{{ r.view.type_label }}{% if r.view.path %} · {{ r.view.path }}{% endif %}{% if r.rel.note %} · {{ r.rel.note }}{% endif %}</span>
+        </div>
+        {% if current_user.can_edit %}
+        <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/api/relationships/{{ r.rel.id }}/delete"
+                data-then="sheet" data-done="Link removed" aria-label="Remove this link" title="Remove this link">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="hint">Not linked to anything yet.{% if current_user.can_edit %} Say what it runs on, depends on or connects to below.{% endif %}</p>
+{% endif %}
+
+{% if current_user.can_edit %}
+<form class="linkform" data-api="/api/relationships" data-then="sheet" data-done="Linked">
+  <input type="hidden" name="entity_id" value="{{ entity.id }}">
+  <input type="hidden" name="direction" value="out">
+  <input type="hidden" name="other_id" value="">
+  <label class="field"><span class="field-label">This record</span>
+    <select name="kind">{% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+  </label>
+  <div class="field"><span class="field-label">Record</span>
+    <button type="button" class="pickbtn" data-pick data-pick-exclude="{{ entity.id }}">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+      <span data-pick-label>Choose…</span>
+    </button>
+  </div>
+  <label class="field linkform-note"><span class="field-label">Note</span><input name="note" maxlength="300" placeholder="Optional"></label>
+  <button class="btn btn--primary" type="submit">Link</button>
+  <p class="form-error" hidden></p>
+</form>
+{% endif %}
+
+<div class="deps">
+  <section>
+    <p class="setting-label">What breaks if this goes down{% if n_dependents %} <span class="count">{{ n_dependents }}</span>{% endif %}</p>
+    {% if dependents %}{{ dep_tree(dependents) }}{% else %}<p class="hint">Nothing depends on it.</p>{% endif %}
+  </section>
+  <section>
+    <p class="setting-label">What it needs{% if n_needs %} <span class="count">{{ n_needs }}</span>{% endif %}</p>
+    {% if needs %}{{ dep_tree(needs) }}{% else %}<p class="hint">It depends on nothing documented here.</p>{% endif %}
+  </section>
+</div>
+<p class="hint">Followed through links that carry a dependency: runs on, hosted by, depends on, installed on, powered by.</p>

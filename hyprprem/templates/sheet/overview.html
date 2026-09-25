@@ -1,0 +1,46 @@
+{% from "partials/macros.html" import crumbs as crumb_nav, entity_link, tag_chips %}
+<dl class="kv">
+  <div><dt>Status</dt><dd>{{ status }}</dd></div>
+  {% if etype and etype.located_in != () %}
+  <div><dt>Location</dt><dd>{% if crumbs %}{{ crumb_nav(crumbs) }}{% else %}<span class="kv-empty">Not set</span>{% endif %}</dd></div>
+  {% endif %}
+  <div><dt>Tags</dt><dd>{% if entity.tag_names %}{{ tag_chips(entity.tag_names) }}{% else %}<span class="kv-empty">None</span>{% endif %}</dd></div>
+</dl>
+
+{% for group in groups %}
+{% if group.label %}<p class="setting-label setting-label--spaced">{{ group.label }}</p>{% endif %}
+<dl class="kv">
+  {% for item in group['items'] %}
+  <div><dt>{{ item.field.label }}</dt><dd>
+    {%- if item.ref %}{{ entity_link(item.ref.id, item.ref.name) }}
+    {%- elif item.link %}<a class="link" href="{{ item.link }}" target="_blank" rel="noopener noreferrer">{{ item.shown }}</a>
+    {%- elif item.field.kind == 'longtext' and item.shown %}<span class="kv-long">{{ item.shown }}</span>
+    {%- elif item.shown %}{{ item.shown }}
+    {%- else %}<span class="kv-empty">Not set</span>{% endif -%}
+  </dd></div>
+  {% endfor %}
+</dl>
+{% endfor %}
+
+{% if custom %}
+<p class="setting-label setting-label--spaced">Custom fields</p>
+<dl class="kv">
+  {% for item in custom %}
+  <div><dt>{{ item.field.label }}</dt><dd>
+    {%- if item.link %}<a class="link" href="{{ item.link }}" target="_blank" rel="noopener noreferrer">{{ item.shown }}</a>
+    {%- elif item.shown %}{{ item.shown }}{% else %}<span class="kv-empty">Not set</span>{% endif -%}
+  </dd></div>
+  {% endfor %}
+</dl>
+{% endif %}
+
+{% for f, html in prose %}
+<div class="prose sheet-prose">{% if html %}{{ html }}{% else %}<p class="kv-empty">Nothing written yet.</p>{% endif %}</div>
+{% endfor %}
+
+{% if notes %}
+<p class="setting-label setting-label--spaced">Notes</p>
+<div class="prose sheet-prose">{{ notes }}</div>
+{% endif %}
+
+<p class="hint sheet-foot">Created {{ entity.created_at.strftime('%b %-d, %Y') }}{% if entity.created_by %} by {{ entity.created_by.display_name }}{% endif %}.</p>

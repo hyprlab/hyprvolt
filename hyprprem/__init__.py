@@ -73,18 +73,21 @@ def create_app(config_class=Config) -> Flask:
         return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
 
     from . import auth, cli, main, registry, setup
+    # Modules first: they are imported before create_all so their tables
+    # exist, turned on or not, and the registry adds the /<module> URL
+    # converter the main blueprint's routes use.
+    modules = registry.discover(app.config["MODULE_PACKAGES"], strict=app.config["MODULES_STRICT"])
+    registry.init_app(app, modules)
     app.register_blueprint(auth.bp)
     app.register_blueprint(main.bp)
     app.register_blueprint(setup.bp)
     from .core import api as core_api
     app.register_blueprint(core_api.bp)
     app.register_blueprint(core_api.files_bp)
+    from .core import views as core_views
+    app.register_blueprint(core_views.bp)
     cli.register(app)
 
-    # Modules are imported before create_all so their tables exist, turned on
-    # or not; the registry then mounts their blueprints and templates.
-    modules = registry.discover(app.config["MODULE_PACKAGES"], strict=app.config["MODULES_STRICT"])
-    registry.init_app(app, modules)
 
     @app.before_request
     def steer_to_setup():
@@ -154,6 +157,19 @@ def create_app(config_class=Config) -> Flask:
         except OSError:
             version = 0
         return url_for("static", filename=filename, v=version)
+
+    @app.template_global()
+    def url_with(**changes) -> str:
+        """This page's URL with some query parameters changed; None removes
+        one. Paging and the open record never carry over."""
+        from urllib.parse import urlencode
+        args = {k: v for k, v in request.args.items() if k not in ("page", "partial", "open", "tab")}
+        for key, value in changes.items():
+            if value is None:
+                args.pop(key, None)
+            else:
+                args[key] = value
+        return request.path + ("?" + urlencode(args) if args else "")
 
     @app.context_processor
     def inject_globals():

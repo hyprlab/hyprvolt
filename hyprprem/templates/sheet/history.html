@@ -1,0 +1,20 @@
+{% if rows %}
+<ol class="history">
+  {% for r in rows %}
+  <li>
+    <p class="history-head"><strong>{{ r.user_name or 'The app' }}</strong> {{ actions.get(r.action, r.action) }}
+      <time datetime="{{ r.at.isoformat() }}Z" title="{{ r.at.strftime('%Y-%m-%d %H:%M') }} UTC">{{ r.at|ago }}</time></p>
+    {% if r.changes %}
+    <table class="changes">
+      {% for c in r.changes %}
+      <tr><th>{{ c.label }}</th>
+        <td>{% if c.old %}<del>{{ c.old|truncate(200) }}</del>{% endif %}{% if c.old and c.new %}<span class="changes-arrow" aria-label="changed to">→</span>{% endif %}{% if c.new %}<ins>{{ c.new|truncate(200) }}</ins>{% endif %}</td></tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<p class="hint">No history.</p>
+{% endif %}

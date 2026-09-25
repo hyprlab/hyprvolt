@@ -1,0 +1,40 @@
+{# Small pieces shared by the shell, the lists and the sheet. #}
+
+{% macro type_icon(paths, cls='') -%}
+<svg class="{{ cls }}" viewBox="0 0 24 24" aria-hidden="true">{{ paths|safe }}</svg>
+{%- endmacro %}
+
+{# A link that opens a record's sheet in place, and works as a plain link
+   (/e/<id>) for a new tab or without JavaScript. #}
+{% macro entity_link(id, name, cls='elink') -%}
+<a class="{{ cls }}" href="/e/{{ id }}" data-entity="{{ id }}">{{ name }}</a>
+{%- endmacro %}
+
+{% macro crumbs(chain, current=None) -%}
+{% if chain %}<nav class="crumbs" aria-label="Location">
+  {%- for id, name in chain %}<a href="/e/{{ id }}" data-entity="{{ id }}">{{ name }}</a><span class="crumbs-sep" aria-hidden="true">›</span>{% endfor %}
+  {%- if current %}<span>{{ current }}</span>{% endif %}
+</nav>{% endif %}
+{%- endmacro %}
+
+{% macro tag_chips(tags) -%}
+{% for t in tags %}<a class="tagchip" href="{{ url_for('main.all_records', tag=t) }}">{{ t }}</a>{% endfor %}
+{%- endmacro %}
+
+{# One level of the dependency tree, and its children. #}
+{% macro dep_tree(nodes) -%}
+<ul class="deptree">
+  {% for n in nodes %}
+  <li class="{{ 'is-cycle' if n.cycle }}{{ ' is-repeat' if n.repeat }}">
+    <span class="deptree-row">
+      <span class="deptree-label">{{ n.label }}</span>
+      {{ entity_link(n.entity.id, n.entity.name) }}
+      {% if n.cycle %}<span class="chip chip--muted" title="This leads back to a record above it">loop</span>{% endif %}
+      {% if n.repeat %}<span class="hint">shown above</span>{% endif %}
+      {% if n.truncated %}<span class="hint">and more</span>{% endif %}
+    </span>
+    {% if n.children %}{{ dep_tree(n.children) }}{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{%- endmacro %}

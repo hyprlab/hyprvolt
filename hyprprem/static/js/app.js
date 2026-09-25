@@ -1,8 +1,8 @@
 /* Hyprprem client. No dependencies, no build step.
  *
  * Sections, in order: API, toasts, theme, mobile sidebar, dialogs, settings,
- * admin, menus, records, the record form, the detail sheet, keyboard, search
- * palette, paging, pull to refresh, the About hero. Each section guards on
+ * admin, menus, records, the record form, data-* behaviors, the detail sheet,
+ * keyboard, search palette, paging, pull to refresh, the About hero. Each section guards on
  * the elements it needs, so deleting one leaves the rest working.
  */
 (function () {
@@ -185,7 +185,6 @@
       if (section) showSettingsSection(section);
       else if (narrow.matches) dialog.classList.remove("is-showing-pane");
     }
-    if (id === "item-modal") resetItemForm();
     setSidebar(false);
     dialog.showModal();
   }
@@ -355,7 +354,9 @@
     });
   }
   [["inst-worker", "worker_minutes", "Background interval saved"],
-   ["inst-perpage", "items_per_page", "Page size saved"]].forEach(function (spec) {
+   ["inst-perpage", "items_per_page", "Page size saved"],
+   ["inst-purge", "purge_days", "Deleted records are kept that long"],
+   ["inst-upload", "max_upload_mb", "Upload limit saved"]].forEach(function (spec) {
     var input = document.getElementById(spec[0]);
     if (!input) return;
     input.addEventListener("change", function () {
@@ -593,21 +594,6 @@
       return parseInt(el.getAttribute("data-item"), 10);
     });
   }
-  function setCardDone(id, done) {
-    var el = cardFor(id);
-    if (!el) return;
-    el.classList.toggle("is-done", !!done);
-    var meta = el.querySelector(".card-meta");
-    if (meta) meta.textContent = done ? "Done" : "Open";
-  }
-  function setCardPinned(id, pinned) {
-    var el = cardFor(id);
-    var btn = el && el.querySelector(".pinbtn");
-    if (!btn) return;
-    btn.classList.toggle("is-pinned", !!pinned);
-    btn.setAttribute("title", pinned ? "Unpin" : "Pin");
-    btn.setAttribute("aria-label", pinned ? "Unpin" : "Pin");
-  }
   function removeCard(id) {
     var el = cardFor(id);
     if (el) el.remove();
@@ -616,57 +602,123 @@
   if (recordsRoot) {
     // Delegated: records appended by paging need no binding of their own.
     recordsRoot.addEventListener("click", function (e) {
-      var pin = e.target.closest("[data-pin]");
-      if (pin) {
-        e.stopPropagation();
-        var pid = parseInt(pin.getAttribute("data-pin"), 10);
-        var next = !pin.classList.contains("is-pinned");
-        setCardPinned(pid, next);             // optimistic: the UI answers at once
-        api("/items/" + pid, { pinned: next }).catch(function (err) {
-          setCardPinned(pid, !next);          // and rolls back if the server says no
-          toastError(err);
-        });
-        return;
-      }
+      if (e.target.closest("a, button")) return;
       var card = e.target.closest("[data-item]");
-      if (card) openItem(parseInt(card.getAttribute("data-item"), 10));
+      if (card) openEntity(parseInt(card.getAttribute("data-item"), 10));
     });
     recordsRoot.addEventListener("keydown", function (e) {
       var card = e.target.closest("[data-item]");
       if (card && e.target === card && (e.key === "Enter" || e.key === " ")) {
         e.preventDefault();
-        openItem(parseInt(card.getAttribute("data-item"), 10));
+        openEntity(parseInt(card.getAttribute("data-item"), 10));
       }
     });
   }
 
-  /* ————— The record form ————— */
-  var itemModal = document.getElementById("item-modal");
-  var itemForm = document.getElementById("item-form");
+  // A link to a record (a[data-entity], or /e/<id> inside a document) opens
+  // its sheet in place. A modified click keeps the browser's own behavior,
+  // so Ctrl-click still opens it in a new tab.
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("a[data-entity], .prose a[href^='/e/']");
+    if (!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    var id = parseInt(a.getAttribute("data-entity") || a.getAttribute("href").slice(3), 10);
+    if (!id) return;
+    e.preventDefault();
+    openEntity(id);
+  });
 
-  function resetItemForm(item) {
-    if (!itemForm) return;
-    document.getElementById("item-id").value = item ? item.id : "";
-    document.getElementById("item-title").value = item ? item.title : "";
-    document.getElementById("item-body").value = item ? item.body : "";
-    document.getElementById("item-modal-title").textContent = item ? "Edit record" : "New record";
-    document.getElementById("item-error").hidden = true;
+  // Anything the server says can be taken back comes with an "undo": the URL
+  // and body that take it back.
+  function offerUndo(message, undo, after) {
+    if (!undo) { if (message) toast(message); return; }
+    toast(message, "Undo", function () {
+      api(undo.url, undo.body).then(function () {
+        if (after) after(); else location.reload();
+      }).catch(toastError);
+    });
   }
 
-  if (itemForm) {
-    itemForm.addEventListener("submit", function (e) {
+  function closeMenus() {
+    document.querySelectorAll(".menu.is-open").forEach(function (menu) {
+      menu.classList.remove("is-open");
+      var pop = menu.querySelector(".menupop");
+      if (pop) pop.hidden = true;
+    });
+  }
+
+  /* ————— The record form ————— */
+  // One dialog for every type: the form inside is the server's, built from
+  // the type's field schema (sheet/form.html), fetched each time it opens.
+  var entityModal = document.getElementById("entity-modal");
+  var formSlot = document.getElementById("entity-form-slot");
+  var formSource = null;
+
+  function fetchHTML(url) {
+    return fetch(url, { headers: { "Accept": "text/html" } }).then(function (resp) {
+      if (resp.ok) return resp.text();
+      return resp.json().catch(function () { return {}; }).then(function (data) {
+        throw new Error(data.error || "Couldn't load that.");
+      });
+    }, function () { throw new Error("Can't reach the server."); });
+  }
+
+  function loadForm(url) {
+    return fetchHTML(url).then(function (html) {
+      formSlot.innerHTML = html;
+      formSource = url;
+      var form = formSlot.querySelector("form");
+      document.getElementById("entity-modal-title").textContent = form.getAttribute("data-title");
+      return form;
+    });
+  }
+
+  function openEntityForm(url) {
+    if (!entityModal) return;
+    loadForm(url).then(function (form) {
+      if (!entityModal.open) entityModal.showModal();
+      var first = form.querySelector("[autofocus]");
+      if (first) first.focus();
+    }).catch(toastError);
+  }
+
+  function formData(form) {
+    var out = {};
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!el.name || el.disabled || el.type === "file" || el.type === "submit") return;
+      out[el.name] = el.type === "checkbox" ? el.checked : el.value;
+    });
+    return out;
+  }
+  function fillForm(form, values) {
+    Object.keys(values || {}).forEach(function (name) {
+      var el = form.elements[name];
+      if (!el || el.type === "file") return;
+      if (el.type === "checkbox") el.checked = !!values[name];
+      else el.value = values[name];
+    });
+  }
+
+  // After a save, show the record: its sheet, over a list that has it.
+  function goToEntity(id) {
+    var params = new URLSearchParams(location.search);
+    params.set("open", id);
+    params.delete("tab");
+    location.assign(location.pathname + "?" + params.toString());
+  }
+
+  if (formSlot) {
+    formSlot.addEventListener("submit", function (e) {
+      var form = e.target.closest("#entity-form");
+      if (!form) return;
       e.preventDefault();
-      var errEl = document.getElementById("item-error");
-      var btn = itemForm.querySelector("button[type=submit]");
-      var id = document.getElementById("item-id").value;
+      var errEl = form.querySelector(".form-error");
+      var btn = form.querySelector("button[type=submit]");
+      var id = form.getAttribute("data-id");
       errEl.hidden = true;
       setBusy(btn, true);
-      api(id ? "/items/" + id : "/items", {
-        title: document.getElementById("item-title").value.trim(),
-        body: document.getElementById("item-body").value
-      }).then(function () {
-        itemModal.close();   // saved: the reload shows the list, not the form again
-        reloadWith(id ? "Record updated" : "Record created");
+      api(id ? "/api/entities/" + id : "/api/entities", formData(form)).then(function (data) {
+        entityModal.close();   // saved: the page that follows shows the record, not the form
+        goToEntity(data.entity.id);
       }).catch(function (err) {
         errEl.textContent = err.message;
         errEl.hidden = false;
@@ -675,115 +727,280 @@
     });
   }
 
-  /* ————— Detail sheet ————— */
-  var currentItem = null;
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-new-type]");
+    if (!btn) return;
+    e.preventDefault();
+    closeMenus();
+    var params = new URLSearchParams({ type: btn.getAttribute("data-new-type") });
+    if (btn.getAttribute("data-new-location")) params.set("location_id", btn.getAttribute("data-new-location"));
+    if (btn.getAttribute("data-new-attach")) params.set("attach_to", btn.getAttribute("data-new-attach"));
+    if (btn.getAttribute("data-new-name")) params.set("name", btn.getAttribute("data-new-name"));
+    setSidebar(false);
+    openEntityForm("/e/form?" + params.toString());
+  });
 
-  function renderSheet(item) {
-    currentItem = item;
-    document.getElementById("sheet-title").textContent = item.title;
-    document.getElementById("sheet-kicker").textContent = item.done ? "Done" : "Open";
-    document.getElementById("sheet-meta").textContent = "Created " +
-      new Date(item.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-    // textContent, never innerHTML: the body is whatever the user typed.
-    var body = document.getElementById("sheet-body");
-    body.textContent = "";
-    (item.body || "").split(/\n{2,}/).forEach(function (para) {
-      if (!para.trim()) return;
-      var p = document.createElement("p");
-      p.textContent = para;
-      body.appendChild(p);
-    });
-    var pin = document.getElementById("sheet-pin");
-    pin.classList.toggle("is-pinned", item.pinned);
-    pin.setAttribute("title", item.pinned ? "Unpin (p)" : "Pin (p)");
-    var done = document.getElementById("sheet-done");
-    done.classList.toggle("is-done", item.done);
-    done.setAttribute("title", item.done ? "Mark as open (d)" : "Mark as done (d)");
+  /* ————— Small behaviors templates ask for with data-* ————— */
+  // Module templates use these instead of scripts of their own:
+  //   form[data-api="/url"]      submits its fields as JSON (or multipart,
+  //                              with enctype) and then does data-then
+  //   [data-api-post="/url"]     posts data-body (JSON) and then does data-then
+  //   data-then="sheet|reload"   re-render the open sheet, or reload the page
+  //   data-done="Message"        the toast, with Undo when the answer has one
+  //   [data-pick]                chooses a record in the palette; its id goes
+  //                              into the form's data-pick-into field (other_id)
+  //   [data-fill='{"a": 1}']     sets fields of its form (or data-fill-form)
+  //   input[data-autosubmit]     submits its form when it changes
+  function afterAction(el, data) {
+    var then = el.getAttribute("data-then");
+    var done = el.getAttribute("data-done");
+    if (then === "reload") {
+      if (done) queueToast(done);
+      location.reload();
+    } else if (then === "sheet") {
+      refreshSheet();
+      if (data && data.undo) offerUndo(done, data.undo, refreshSheet);
+    } else if (done) {
+      offerUndo(done, data && data.undo);
+    }
   }
 
-  function setOpenParam(id) {
+  function submitApiForm(form) {
+    var errEl = form.querySelector(".form-error");
+    if (errEl) errEl.hidden = true;
+    var url = form.getAttribute("data-api");
+    var sending = form.getAttribute("enctype") === "multipart/form-data"
+      ? request(url, { method: "POST", headers: { "X-CSRF": CSRF, "Accept": "application/json" }, body: new FormData(form) })
+      : api(url, formData(form));
+    form.classList.add("is-busy");
+    sending.then(function (data) {
+      form.classList.remove("is-busy");
+      afterAction(form, data);
+    }).catch(function (err) {
+      form.classList.remove("is-busy");
+      if (errEl) { errEl.textContent = err.message; errEl.hidden = false; }
+      else toastError(err);
+    });
+  }
+
+  document.addEventListener("submit", function (e) {
+    var form = e.target.closest("form[data-api]");
+    if (!form) return;
+    e.preventDefault();
+    submitApiForm(form);
+  });
+  document.addEventListener("change", function (e) {
+    var input = e.target.closest("input[data-autosubmit]");
+    if (input && input.form && input.form.hasAttribute("data-api")) submitApiForm(input.form);
+  });
+  // Files dropped on a .dropzone go in through its file input.
+  ["dragenter", "dragover"].forEach(function (type) {
+    document.addEventListener(type, function (e) {
+      var zone = e.target.closest && e.target.closest(".dropzone");
+      if (!zone) return;
+      e.preventDefault();
+      zone.classList.add("is-over");
+    });
+  });
+  document.addEventListener("dragleave", function (e) {
+    var zone = e.target.closest && e.target.closest(".dropzone");
+    if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove("is-over");
+  });
+  document.addEventListener("drop", function (e) {
+    var zone = e.target.closest && e.target.closest(".dropzone");
+    if (!zone) return;
+    e.preventDefault();
+    zone.classList.remove("is-over");
+    var input = zone.querySelector("input[type=file]");
+    if (input && e.dataTransfer.files.length) {
+      input.files = e.dataTransfer.files;
+      submitApiForm(zone);
+    }
+  });
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-api-post]");
+    if (btn) {
+      e.preventDefault();
+      var body = {};
+      try { body = JSON.parse(btn.getAttribute("data-body") || "{}"); } catch (_) {}
+      btn.disabled = true;
+      api(btn.getAttribute("data-api-post"), body).then(function (data) {
+        btn.disabled = false;
+        afterAction(btn, data);
+      }).catch(function (err) { btn.disabled = false; toastError(err); });
+      return;
+    }
+    var pick = e.target.closest("[data-pick]");
+    if (pick) {
+      e.preventDefault();
+      var form = pick.closest("form");
+      openPalette({
+        types: pick.getAttribute("data-pick-types") || "",
+        exclude: pick.getAttribute("data-pick-exclude") || "",
+        pick: function (item) {
+          var field = form && form.elements[pick.getAttribute("data-pick-into") || "other_id"];
+          if (field) field.value = item.id;
+          var label = pick.querySelector("[data-pick-label]");
+          if (label) { label.textContent = item.title; pick.classList.add("is-picked"); }
+          if (pick.hasAttribute("data-pick-submit") && form) submitApiForm(form);
+          else pick.focus();
+        }
+      });
+      return;
+    }
+    var fill = e.target.closest("[data-fill]");
+    if (fill) {
+      e.preventDefault();
+      var target = fill.getAttribute("data-fill-form")
+        ? document.getElementById(fill.getAttribute("data-fill-form")) : fill.closest("form");
+      if (!target) return;
+      try { fillForm(target, JSON.parse(fill.getAttribute("data-fill"))); } catch (_) { return; }
+      target.hidden = false;
+      var focus = target.querySelector("[data-fill-focus]") || target.querySelector("input, select");
+      if (focus) focus.focus();
+      return;
+    }
+    if (e.target.closest("[data-sheet-action='archive']")) { e.preventDefault(); toggleArchive(); }
+  });
+
+  /* ————— Detail sheet ————— */
+  // The article is the server's (sheet/sheet.html): the header, the tabs and
+  // the open tab. The record and its tab live in the URL (?open=&tab=), which
+  // also makes them a link.
+  var sheetArticle = document.getElementById("sheet-article");
+  var current = null;
+
+  function setOpenParam(id, tab) {
     var params = new URLSearchParams(location.search);
     if (id) params.set("open", id); else params.delete("open");
+    if (id && tab && tab !== "overview") params.set("tab", tab); else params.delete("tab");
     var qs = params.toString();
     history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
   }
 
-  function openItem(id, opts) {
+  function openEntity(id, opts) {
     if (!sheet) return;
     opts = opts || {};
-    get("/items/" + id).then(function (data) {
-      renderSheet(data.item);
+    var before = sheet.scrollTop;
+    fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview")).then(function (html) {
+      sheetArticle.innerHTML = html;
+      var root = sheetArticle.querySelector(".sheet-content");
+      current = {
+        id: id,
+        tab: root.getAttribute("data-tab"),
+        name: root.getAttribute("data-name"),
+        archived: root.getAttribute("data-archived") === "1",
+        deleted: root.getAttribute("data-deleted") === "1"
+      };
+      updateSheetBar();
       if (!sheet.open) {
         if (opts.restoring) markRestoring(sheet);
         sheet.showModal();
       }
-      sheet.scrollTop = opts.scroll || 0;
-      setOpenParam(id);
+      if (opts.keepScroll) {
+        sheet.scrollTop = before;
+      } else if (opts.tabSwitch) {
+        // Keep the tabs in view when the new tab is shorter than the scroll.
+        var tabs = sheetArticle.querySelector(".tabs");
+        sheet.scrollTop = Math.min(before, tabs ? tabs.offsetTop - 64 : 0);
+      } else {
+        sheet.scrollTop = opts.scroll || 0;
+      }
+      setOpenParam(id, current.tab);
     }).catch(toastError);
+  }
+  function refreshSheet() {
+    if (current && sheet && sheet.open) openEntity(current.id, { tab: current.tab, keepScroll: true });
+  }
+
+  function updateSheetBar() {
+    var archive = document.getElementById("sheet-archive");
+    var edit = document.getElementById("sheet-edit");
+    var del = document.getElementById("sheet-delete");
+    if (archive) {
+      archive.hidden = current.deleted;
+      archive.classList.toggle("is-on", current.archived);
+      archive.setAttribute("title", current.archived ? "Unarchive (a)" : "Archive (a)");
+      archive.setAttribute("aria-label", current.archived ? "Unarchive" : "Archive");
+    }
+    if (edit) edit.hidden = current.deleted;
+    if (del) del.hidden = current.deleted;
   }
 
   function openSibling(step) {
-    if (!currentItem) return;
+    if (!current) return;
     var ids = itemIds();
-    var next = ids[ids.indexOf(currentItem.id) + step];
-    if (next !== undefined && ids.indexOf(currentItem.id) !== -1) openItem(next);
+    var at = ids.indexOf(current.id);
+    if (at !== -1 && ids[at + step] !== undefined) openEntity(ids[at + step], { tab: current.tab });
   }
-
-  function togglePin() {
-    if (!currentItem) return;
-    api("/items/" + currentItem.id, { pinned: !currentItem.pinned }).then(function (data) {
-      renderSheet(data.item);
-      setCardPinned(data.item.id, data.item.pinned);
-    }).catch(toastError);
+  function openTab(key) {
+    if (current && key && key !== current.tab) openEntity(current.id, { tab: key, tabSwitch: true });
   }
-  function toggleDone() {
-    if (!currentItem) return;
-    api("/items/" + currentItem.id, { done: !currentItem.done }).then(function (data) {
-      renderSheet(data.item);
-      setCardDone(data.item.id, data.item.done);
+  function toggleArchive() {
+    if (!current || current.deleted) return;
+    var id = current.id, next = !current.archived;
+    api("/api/entities/" + id + "/archive", { archived: next }).then(function (data) {
+      refreshSheet();
+      var card = cardFor(id);
+      if (card) card.classList.toggle("is-archived", next);
+      offerUndo(next ? "Archived" : "Unarchived", data.undo, function () {
+        refreshSheet();
+        if (card) card.classList.toggle("is-archived", !next);
+      });
     }).catch(toastError);
   }
   function editCurrent() {
-    if (!currentItem) return;
-    var item = currentItem;
-    closeDialog(sheet, function () {
-      resetItemForm(item);
-      itemModal.showModal();
-    });
+    if (!current || current.deleted) return;
+    var id = current.id;
+    closeDialog(sheet, function () { openEntityForm("/e/" + id + "/form"); });
   }
 
   if (sheet) {
     sheet.addEventListener("close", function () {
-      currentItem = null;
+      current = null;
       setOpenParam(null);
+    });
+    sheetArticle.addEventListener("click", function (e) {
+      var tab = e.target.closest(".tab[data-tab]");
+      if (tab) openTab(tab.getAttribute("data-tab"));
+    });
+    sheetArticle.addEventListener("keydown", function (e) {
+      // Arrow keys move along the tabs (the WAI-ARIA tab pattern).
+      var tab = e.target.closest(".tab[data-tab]");
+      if (!tab || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return;
+      var all = Array.prototype.slice.call(sheetArticle.querySelectorAll(".tab[data-tab]"));
+      var next = all[(all.indexOf(tab) + (e.key === "ArrowRight" ? 1 : -1) + all.length) % all.length];
+      e.preventDefault();
+      openTab(next.getAttribute("data-tab"));
     });
     document.getElementById("sheet-prev").addEventListener("click", function () { openSibling(-1); });
     document.getElementById("sheet-next").addEventListener("click", function () { openSibling(1); });
-    document.getElementById("sheet-pin").addEventListener("click", togglePin);
-    document.getElementById("sheet-done").addEventListener("click", toggleDone);
-    document.getElementById("sheet-edit").addEventListener("click", editCurrent);
-    document.getElementById("sheet-copy").addEventListener("click", function () {
-      if (!currentItem) return;
-      var btn = this;
-      copyText(location.origin + "/?open=" + currentItem.id).then(function () {
-        btn.classList.add("show-tip");
-        setTimeout(function () { btn.classList.remove("show-tip"); }, 1200);
-      });
-    });
-    document.getElementById("sheet-delete").addEventListener("click", function () {
-      if (!currentItem) return;
-      var id = currentItem.id;
-      api("/items/" + id + "/delete").then(function (data) {
+    var editBtn = document.getElementById("sheet-edit");
+    if (editBtn) editBtn.addEventListener("click", editCurrent);
+    var archiveBtn = document.getElementById("sheet-archive");
+    if (archiveBtn) archiveBtn.addEventListener("click", toggleArchive);
+    document.getElementById("sheet-copy").addEventListener("click", copyLink);
+    var deleteBtn = document.getElementById("sheet-delete");
+    if (deleteBtn) deleteBtn.addEventListener("click", function () {
+      if (!current) return;
+      var id = current.id;
+      api("/api/entities/" + id + "/delete").then(function (data) {
         closeDialog(sheet);
         removeCard(id);
-        // Undo instead of a confirm dialog: the delete happens at once, and
-        // the snapshot the server returned is enough to put it back.
-        toast("Record deleted", "Undo", function () {
-          api("/items/restore", data.item)
-            .then(function () { reloadWith("Record restored"); })
-            .catch(toastError);
-        });
+        // Undo instead of a confirm dialog: the delete only marks the
+        // record, and restoring it brings back the same id and its links.
+        offerUndo("Deleted", data.undo);
       }).catch(toastError);
+    });
+  }
+
+  function copyLink() {
+    if (!current) return;
+    var btn = document.getElementById("sheet-copy");
+    copyText(location.origin + "/e/" + current.id).then(function () {
+      btn.classList.add("show-tip");
+      setTimeout(function () { btn.classList.remove("show-tip"); }, 1200);
     });
   }
 
@@ -818,41 +1035,59 @@
     }
     var typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
     if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (sheet && sheet.open) {
+    var top = document.querySelector("dialog[open]:not(#sheet)");
+    if (sheet && sheet.open && !top) {
       if (e.key === "j") { e.preventDefault(); openSibling(1); }
       else if (e.key === "k") { e.preventDefault(); openSibling(-1); }
-      else if (e.key === "p") { e.preventDefault(); togglePin(); }
-      else if (e.key === "d") { e.preventDefault(); toggleDone(); }
       else if (e.key === "e") { e.preventDefault(); editCurrent(); }
+      else if (e.key === "a") { e.preventDefault(); toggleArchive(); }
+      else if (e.key === "c") { e.preventDefault(); copyLink(); }
+      else if (/^[1-9]$/.test(e.key)) {
+        var tabs = sheetArticle.querySelectorAll(".tab[data-tab]");
+        var tab = tabs[parseInt(e.key, 10) - 1];
+        if (tab) { e.preventDefault(); openTab(tab.getAttribute("data-tab")); }
+      }
       return;
     }
     if (document.querySelector("dialog[open]")) return;
-    if (e.key === "n" && itemModal) { e.preventDefault(); openDialog("item-modal"); }
-    else if (e.key === "/") { e.preventDefault(); openPalette(); }
+    if (e.key === "n") {
+      var newBtn = document.getElementById("new-btn");
+      if (newBtn) { e.preventDefault(); newBtn.click(); }
+    } else if (e.key === "/") { e.preventDefault(); openPalette(); }
   });
 
   /* ————— Search palette (Ctrl/Cmd+K) ————— */
+  // Also the record picker: openPalette({pick: fn}) hands the chosen record
+  // to fn instead of opening it, which is how links are made.
   var palette = document.getElementById("search-modal");
   var searchInput = document.getElementById("search-input");
   var searchResults = document.getElementById("search-results");
   var searchTimer = null;
   var searchSeq = 0;
   var activeIndex = -1;
+  var paletteItems = [];
+  var picking = null;
 
   var kbd = document.getElementById("search-kbd");
   if (kbd && /Mac|iPhone|iPad/.test(navigator.platform)) kbd.textContent = "⌘K";
 
-  function openPalette() {
+  function openPalette(opts) {
     if (!palette || palette.open) return;
+    picking = opts && opts.pick ? opts : null;
     searchInput.value = "";
+    searchInput.placeholder = picking ? "Find the record to link…" : "Search everything…";
+    // A half-made link isn't worth bringing back after a reload.
+    if (picking) palette.setAttribute("data-restore", "off"); else palette.removeAttribute("data-restore");
     searchResults.hidden = true;
     searchResults.textContent = "";
     activeIndex = -1;
+    paletteItems = [];
     palette.showModal();
     searchInput.focus();
   }
+  if (palette) palette.addEventListener("close", function () { picking = null; });
   var searchBtn = document.getElementById("search-btn");
-  if (searchBtn) searchBtn.addEventListener("click", openPalette);
+  if (searchBtn) searchBtn.addEventListener("click", function () { openPalette(); });
 
   function highlight(text, query) {
     var at = text.toLowerCase().indexOf(query.toLowerCase());
@@ -866,38 +1101,50 @@
     return frag;
   }
 
-  function renderResults(results, query) {
+  function renderResults(groups, query) {
     searchResults.textContent = "";
-    activeIndex = results.length ? 0 : -1;
-    if (!results.length) {
+    paletteItems = [];
+    var found = groups.some(function (g) { return g.items.length; });
+    if (!found) {
       var empty = document.createElement("p");
       empty.className = "palette-empty";
       empty.textContent = "Nothing matches “" + query + "”.";
       searchResults.appendChild(empty);
       searchResults.hidden = false;
+      activeIndex = -1;
       return;
     }
-    var label = document.createElement("p");
-    label.className = "palette-label";
-    label.textContent = "Records";
-    searchResults.appendChild(label);
-    results.forEach(function (r, i) {
-      var row = document.createElement("div");
-      row.className = "palette-item" + (r.done ? " is-done" : "") + (i === 0 ? " is-active" : "");
-      row.setAttribute("data-id", r.id);
-      var title = document.createElement("span");
-      title.className = "palette-item-title";
-      title.appendChild(highlight(r.title, query));
-      var meta = document.createElement("span");
-      meta.className = "palette-item-meta";
-      meta.textContent = r.when;
-      row.appendChild(title);
-      row.appendChild(meta);
-      row.addEventListener("click", function () { choose(i); });
-      row.addEventListener("mousemove", function () { setActive(i, true); });
-      searchResults.appendChild(row);
+    if (!picking) {
+      groups = groups.concat([{ label: "", items: [{ url: "/all?q=" + encodeURIComponent(query),
+        title: "Every record matching “" + query + "”", meta: "as a list", all: true }] }]);
+    }
+    groups.forEach(function (group) {
+      if (group.label) {
+        var label = document.createElement("p");
+        label.className = "palette-label";
+        label.textContent = group.label;
+        searchResults.appendChild(label);
+      }
+      group.items.forEach(function (r) {
+        var i = paletteItems.length;
+        paletteItems.push(r);
+        var row = document.createElement("div");
+        row.className = "palette-item" + (r.archived ? " is-done" : "") + (r.all ? " palette-item--all" : "");
+        var title = document.createElement("span");
+        title.className = "palette-item-title";
+        title.appendChild(r.all ? document.createTextNode(r.title) : highlight(r.title, query));
+        var meta = document.createElement("span");
+        meta.className = "palette-item-meta";
+        meta.textContent = r.meta || "";
+        row.appendChild(title);
+        row.appendChild(meta);
+        row.addEventListener("click", function () { choose(i); });
+        row.addEventListener("mousemove", function () { setActive(i, true); });
+        searchResults.appendChild(row);
+      });
     });
     searchResults.hidden = false;
+    setActive(0, true);
   }
 
   function rows() { return searchResults.querySelectorAll(".palette-item"); }
@@ -909,11 +1156,13 @@
     if (!noScroll) all[activeIndex].scrollIntoView({ block: "nearest" });
   }
   function choose(i) {
-    var all = rows();
-    var pick = all[i === undefined ? activeIndex : i];
-    if (!pick) return;
+    var item = paletteItems[i === undefined ? activeIndex : i];
+    if (!item) return;
+    var pick = picking && picking.pick;
     palette.close();
-    openItem(parseInt(pick.getAttribute("data-id"), 10));
+    if (pick) { pick(item); return; }
+    if (item.id) openEntity(item.id);
+    else if (item.url) location.href = item.url;
   }
 
   if (searchInput) {
@@ -921,12 +1170,18 @@
       var query = searchInput.value.trim();
       clearTimeout(searchTimer);
       if (query.length < 2) { searchResults.hidden = true; return; }
+      var url = "/search?q=" + encodeURIComponent(query);
+      if (picking) {
+        url += "&pick=1";
+        if (picking.types) url += "&types=" + encodeURIComponent(picking.types);
+        if (picking.exclude) url += "&exclude=" + encodeURIComponent(picking.exclude);
+      }
       // Debounced, and sequenced so a slow answer to an old query never
       // replaces the answer to the current one.
       searchTimer = setTimeout(function () {
         var seq = ++searchSeq;
-        get("/search?q=" + encodeURIComponent(query)).then(function (data) {
-          if (seq === searchSeq) renderResults(data.results || [], query);
+        get(url).then(function (data) {
+          if (seq === searchSeq) renderResults(data.groups || [], query);
         }).catch(function () {});
       }, 150);
     });
@@ -1067,20 +1322,17 @@
         if (pane) requestAnimationFrame(function () { pane.scrollTop = s.scroll || 0; });
       }
     },
-    "item-modal": {
+    "entity-modal": {
       save: function () {
-        return {
-          id: document.getElementById("item-id").value,
-          title: document.getElementById("item-title").value,
-          body: document.getElementById("item-body").value
-        };
+        var form = formSlot && formSlot.querySelector("form");
+        return form ? { src: formSource, values: formData(form) } : null;
       },
       restore: function (d, s) {
-        openDialog("item-modal");   // resets the form, then the draft goes back in
-        document.getElementById("item-id").value = s.id || "";
-        document.getElementById("item-title").value = s.title || "";
-        document.getElementById("item-body").value = s.body || "";
-        document.getElementById("item-modal-title").textContent = s.id ? "Edit record" : "New record";
+        if (!s || !s.src) return;
+        loadForm(s.src).then(function (form) {   // the form fresh, then the draft back in
+          fillForm(form, s.values);
+          d.showModal();
+        }).catch(toastError);
       }
     },
     "search-modal": {
@@ -1091,8 +1343,8 @@
         searchInput.dispatchEvent(new Event("input"));
       }
     },
-    // The sheet's record lives in the URL (?open=<id>), which also makes it a
-    // link; only its scroll offset needs remembering.
+    // The sheet's record and tab live in the URL (?open=<id>&tab=), which
+    // also makes them a link; only its scroll offset needs remembering.
     "sheet": {
       save: function (d) { return { scroll: d.scrollTop }; },
       restore: function () {}
@@ -1136,7 +1388,8 @@
   var deepLink = parseInt(new URLSearchParams(location.search).get("open"), 10);
   if (deepLink) {
     var sheetState = remembered && remembered.id === "sheet" ? remembered.state || {} : null;
-    openItem(deepLink, { restoring: !!sheetState, scroll: sheetState ? sheetState.scroll : 0 });
+    openEntity(deepLink, { tab: new URLSearchParams(location.search).get("tab"), restoring: !!sheetState,
+                           scroll: sheetState ? sheetState.scroll : 0 });
   } else if (remembered) {
     var toRestore = document.getElementById(remembered.id);
     if (toRestore && toRestore.tagName === "DIALOG" && toRestore.getAttribute("data-restore") !== "off" && remembered.id !== "sheet") {

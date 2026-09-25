@@ -4,7 +4,7 @@ These cover what is easy to break while reshaping the app and expensive to
 notice later: the setup gate, CSRF, roles, the admin guard, and the
 error shapes the client depends on. Add to them rather than replacing them.
 """
-from .conftest import token_for
+from .conftest import make, token_for
 
 
 def test_fresh_install_steers_to_setup(client):
@@ -27,48 +27,28 @@ def test_setup_runs_once(client, csrf, admin):
 
 
 def test_post_without_csrf_is_refused(client, csrf, admin):
-    resp = client.post("/items", json={"title": "x"})
+    resp = client.post("/api/entities", json={"type": "gadget", "name": "x"})
     assert resp.status_code == 400
     assert "error" in resp.get_json()
 
 
-def test_item_round_trip(client, csrf, admin):
-    h = {"X-CSRF": csrf}
-    item = client.post("/items", json={"title": "Write it down", "body": "Later."}, headers=h).get_json()["item"]
-    assert client.get(f"/items/{item['id']}").get_json()["item"]["title"] == "Write it down"
-
-    updated = client.post(f"/items/{item['id']}", json={"pinned": True, "done": True}, headers=h).get_json()["item"]
-    assert updated["pinned"] and updated["done"]
-
-    deleted = client.post(f"/items/{item['id']}/delete", headers=h).get_json()
-    assert client.get(f"/items/{item['id']}", headers=h).status_code == 404
-
-    restored = client.post("/items/restore", json=deleted["item"], headers=h).get_json()["item"]
-    assert restored["title"] == "Write it down" and restored["pinned"]
-
-
-def test_item_needs_a_title(client, csrf, admin):
-    resp = client.post("/items", json={"title": "   "}, headers={"X-CSRF": csrf})
-    assert resp.status_code == 400
-    assert "title" in resp.get_json()["error"].lower()
-
-
 def test_records_belong_to_the_instance(client, csrf, admin, second_user):
     """Everyone signed in reads everything; a viewer can't change it."""
-    shared = client.post("/items", json={"title": "Shared"}, headers={"X-CSRF": csrf}).get_json()["item"]
+    h = {"X-CSRF": csrf}
+    shared = make(client, h, name="Shared")
     other, token = second_user
-    assert other.get(f"/items/{shared['id']}", headers={"X-CSRF": token}).status_code == 200
-    assert len(other.get("/search?q=shar").get_json()["results"]) == 1
-    refused = other.post(f"/items/{shared['id']}", json={"title": "Changed"}, headers={"X-CSRF": token})
+    assert other.get(f"/api/entities/{shared['id']}").status_code == 200
+    assert other.get("/search?q=shar").get_json()["groups"][0]["items"][0]["title"] == "Shared"
+    refused = other.post(f"/api/entities/{shared['id']}", json={"name": "Changed"}, headers={"X-CSRF": token})
     assert refused.status_code == 403 and "editor" in refused.get_json()["error"]
-    assert other.post("/items", json={"title": "New"}, headers={"X-CSRF": token}).status_code == 403
 
 
 def test_an_editor_can_write(client, csrf, admin, second_user):
     other, token = second_user
     assert client.post("/admin/users/2/role", json={"role": "editor"},
                        headers={"X-CSRF": csrf}).get_json()["role"] == "editor"
-    assert other.post("/items", json={"title": "Mine"}, headers={"X-CSRF": token}).status_code == 200
+    assert other.post("/api/entities", json={"type": "gadget", "name": "Mine"},
+                      headers={"X-CSRF": token}).status_code == 200
     assert other.post("/admin/registration", json={"open": False},
                       headers={"X-CSRF": token}).status_code == 403
 
@@ -91,28 +71,40 @@ def test_every_route_declares_a_role(app):
     assert undeclared_routes(app) == []
 
 
-def test_search(client, csrf, admin):
-    client.post("/items", json={"title": "Findable 100%"}, headers={"X-CSRF": csrf})
-    assert client.get("/search?q=F").get_json()["results"] == []
-    assert len(client.get("/search?q=fin").get_json()["results"]) == 1
+def test_palette_search_groups_by_module(client, csrf, admin):
+    h = {"X-CSRF": csrf}
+    make(client, h, name="Findable 100%")
+    make(client, h, "document", name="Findable notes")
+    assert client.get("/search?q=F").get_json()["groups"] == []
+    groups = client.get("/search?q=fin").get_json()["groups"]
+    assert {g["label"]: [i["title"] for i in g["items"]] for g in groups} == \
+        {"Gadgets": ["Findable 100%"], "Knowledge base": ["Findable notes"]}
     # LIKE wildcards in the query are matched literally.
-    assert len(client.get("/search?q=0%25").get_json()["results"]) == 1
-    assert client.get("/search?q=__").get_json()["results"] == []
+    assert len(client.get("/search?q=0%25").get_json()["groups"]) == 1
+    assert client.get("/search?q=__").get_json()["groups"] == []
+    # Picking a record for a link: only the types asked for.
+    picked = client.get("/search?q=fin&pick=1&types=document").get_json()["groups"]
+    assert [i["title"] for g in picked for i in g["items"]] == ["Findable notes"]
 
 
 def test_listing_filters_sorts_and_pages(client, csrf, app, admin):
     h = {"X-CSRF": csrf}
     for n in range(12):
-        client.post("/items", json={"title": f"Item {n:02d}"}, headers=h)
+        make(client, h, name=f"Item {n:02d}", tags="even" if n % 2 == 0 else "odd")
     client.post("/admin/instance", json={"items_per_page": 10}, headers=h)
 
-    first = client.get("/?sort=title&view=list").data.decode()
+    first = client.get("/example?sort=name&view=list").data.decode()
     assert first.index("Item 00") < first.index("Item 09")
     assert 'id="load-more"' in first and "Item 11" not in first
 
-    second = client.get("/?sort=title&view=list&page=2&partial=1").data.decode()
+    second = client.get("/example?sort=name&view=list&page=2&partial=1").data.decode()
     assert "Item 11" in second and "<aside" not in second
     assert "That's everything" in second
+
+    odd = client.get("/all?tag=odd&view=list").data.decode()
+    assert "Item 01" in odd and "Item 02" not in odd
+    found = client.get("/all?q=item+07&view=list").data.decode()
+    assert "Item 07" in found and "Item 08" not in found
 
 
 def test_admin_routes_refuse_a_plain_account(second_user):
@@ -132,11 +124,9 @@ def test_admin_cannot_delete_or_demote_itself(client, csrf, admin):
 def test_deleting_a_user_keeps_what_they_wrote(client, csrf, admin, second_user):
     client.post("/admin/users/2/role", json={"role": "editor"}, headers={"X-CSRF": csrf})
     other, token = second_user
-    other.post("/items", json={"title": "Theirs"}, headers={"X-CSRF": token})
+    theirs = make(other, {"X-CSRF": token}, name="Theirs")
     assert client.post("/admin/users/2/delete", headers={"X-CSRF": csrf}).status_code == 200
-    from hyprprem.models import Item
-    with client.application.app_context():
-        assert Item.query.count() == 1
+    assert client.get(f"/api/entities/{theirs['id']}").get_json()["entity"]["name"] == "Theirs"
 
 
 def test_instance_settings_are_range_checked(client, csrf, admin):
@@ -171,7 +161,7 @@ def test_failed_sign_ins_are_throttled(client, csrf, admin):
 
 
 def test_errors_are_json_for_the_api_and_a_page_for_people(client, csrf, admin):
-    api = client.get("/items/999", headers={"X-CSRF": csrf})
+    api = client.get("/api/entities/999", headers={"X-CSRF": csrf})
     assert api.status_code == 404 and "error" in api.get_json()
     page = client.get("/no-such-page")
     assert page.status_code == 404 and b"error-code" in page.data
@@ -179,7 +169,7 @@ def test_errors_are_json_for_the_api_and_a_page_for_people(client, csrf, admin):
 
 def test_signed_out_api_calls_get_json_401(app, admin):
     stranger = app.test_client()
-    resp = stranger.get("/items/1", headers={"Accept": "application/json"})
+    resp = stranger.get("/api/entities/1", headers={"Accept": "application/json"})
     assert resp.status_code == 401 and "error" in resp.get_json()
 
 
@@ -199,7 +189,7 @@ def test_changelog_renders_in_the_about_tab(client, csrf, admin):
 def test_admin_tab_shows_instance_counts(client, csrf, admin):
     """A dict key named like a dict method ("items") renders as the method in
     Jinja; the stats must come out as numbers."""
-    client.post("/items", json={"title": "One"}, headers={"X-CSRF": csrf})
+    make(client, {"X-CSRF": csrf}, name="One")
     body = client.get("/").data.decode()
     assert "1 user · 1 record" in body
     assert "built-in method" not in body

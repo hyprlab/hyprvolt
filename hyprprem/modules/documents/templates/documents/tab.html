@@ -1,0 +1,44 @@
+{% from "partials/macros.html" import entity_link %}
+{% if docs %}
+<ul class="manage-list">
+  {% for d in docs %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(d.view.id, d.view.name) }}{% if d.view.status != 'Current' %} <span class="chip chip--muted">{{ d.view.status }}</span>{% endif %}</span>
+      {% if d.excerpt %}<span class="manage-sub">{{ d.excerpt }}</span>{% endif %}
+    </div>
+    {% if current_user.can_edit %}
+    <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/api/relationships/{{ d.rel.id }}/delete"
+            data-then="sheet" data-done="Document detached" aria-label="Detach" title="Detach (the document stays)">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No documents attached. A runbook, a how-to or the reasoning behind a setup belongs here.</p>
+{% endif %}
+
+{% if current_user.can_edit %}
+<form class="doc-actions" data-api="/api/relationships" data-then="sheet" data-done="Document attached">
+  <input type="hidden" name="entity_id" value="{{ entity.id }}">
+  <input type="hidden" name="kind" value="documented_by:out">
+  <input type="hidden" name="direction" value="out">
+  <input type="hidden" name="other_id" value="">
+  <button type="button" class="btn btn--primary" data-new-type="document" data-new-attach="{{ entity.id }}">Write a document</button>
+  <button type="button" class="btn btn--ghost" data-pick data-pick-types="document" data-pick-submit>Attach an existing one</button>
+</form>
+{% endif %}
+
+{% if mentioned %}
+<p class="setting-label setting-label--spaced">Mentioned in</p>
+<ul class="manage-list">
+  {% for d in mentioned %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(d.view.id, d.view.name) }}</span>
+    {% if d.excerpt %}<span class="manage-sub">{{ d.excerpt }}</span>{% endif %}
+  </div></li>
+  {% endfor %}
+</ul>
+{% endif %}
