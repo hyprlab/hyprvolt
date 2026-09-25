@@ -76,6 +76,8 @@ def create_app(config_class=Config) -> Flask:
     app.register_blueprint(auth.bp)
     app.register_blueprint(main.bp)
     app.register_blueprint(setup.bp)
+    from .core import api as core_api
+    app.register_blueprint(core_api.bp)
     cli.register(app)
 
     # Modules are imported before create_all so their tables exist, turned on

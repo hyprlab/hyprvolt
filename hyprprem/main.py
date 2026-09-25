@@ -271,6 +271,8 @@ INSTANCE_SETTINGS = {
     # key: (lowest, highest, how the error names it)
     "worker_minutes": (0, 1440, "The background interval"),
     "items_per_page": (10, 500, "The page size"),
+    "purge_days": (1, 365, "How long deleted records are kept"),
+    "max_upload_mb": (1, 2048, "The upload limit"),
 }
 
 

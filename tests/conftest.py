@@ -76,3 +76,31 @@ def second_user(app, admin):
     })
     assert resp.status_code == 302
     return other, token
+
+
+@pytest.fixture()
+def h(csrf):
+    """Headers for the admin's JSON calls."""
+    return {"X-CSRF": csrf}
+
+
+@pytest.fixture()
+def viewer(second_user):
+    """The second account, left as a viewer: (client, headers)."""
+    other, token = second_user
+    return other, {"X-CSRF": token}
+
+
+@pytest.fixture()
+def editor(client, h, second_user):
+    """The second account, made an editor: (client, headers)."""
+    client.post("/admin/users/2/role", json={"role": "editor"}, headers=h)
+    other, token = second_user
+    return other, {"X-CSRF": token}
+
+
+def make(client, h, type_="gadget", **data):
+    """Create an entity through the API and return its JSON."""
+    resp = client.post("/api/entities", json={"type": type_, **data}, headers=h)
+    assert resp.status_code == 200, resp.get_json()
+    return resp.get_json()["entity"]

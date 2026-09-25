@@ -1,0 +1,177 @@
+"""Field kinds: how a value is read from a form or the API, checked, shown,
+and turned into text for search and custom-field storage.
+
+One set of rules serves the fields a module declares and the custom fields
+an admin adds, so both behave the same everywhere.
+"""
+import re
+from datetime import date
+
+from ..auth import EMAIL_RE
+from ..manifest import Field
+
+URL_SCHEMES = ("http", "https", "ftp", "sftp", "ssh", "smb", "rdp", "vnc", "nfs", "git")
+URL_RE = re.compile(r"^([a-z][a-z0-9+.-]*)://\S+$", re.I)
+TRUE = ("1", "true", "on", "yes")
+FALSE = ("", "0", "false", "off", "no")
+MAX_TEXT = 500
+MAX_LONG = 200_000
+
+
+class Invalid(ValueError):
+    """A value that can't be accepted, with the reason written for a person."""
+
+
+def custom_field(cf) -> Field:
+    """A custom field definition, seen as a Field."""
+    return Field(cf.key, cf.label, cf.kind, options=tuple((o, o) for o in cf.options))
+
+
+def parse(f: Field, raw, lookup=None):
+    """The stored value for ``raw``, or ``Invalid``. ``lookup(id)`` returns a
+    live entity for ref fields."""
+    if f.kind == "boolean":
+        if isinstance(raw, bool):
+            return raw
+        text = str(raw if raw is not None else "").strip().lower()
+        if text in TRUE:
+            return True
+        if text in FALSE:
+            return False
+        raise Invalid(f"{f.label} must be yes or no.")
+
+    if isinstance(raw, str):
+        raw = raw.strip()
+    if raw is None or raw == "":
+        if f.required:
+            raise Invalid(f"{f.label} is required.")
+        return None
+
+    kind = f.kind
+    if kind in ("text", "longtext", "markdown", "email", "url"):
+        if not isinstance(raw, str):
+            raw = str(raw)
+        limit = MAX_TEXT if kind in ("text", "email", "url") else MAX_LONG
+        if len(raw) > limit:
+            raise Invalid(f"{f.label} is limited to {limit} characters.")
+        if kind == "email" and not EMAIL_RE.match(raw):
+            raise Invalid(f"{f.label} must be an email address.")
+        if kind == "url":
+            m = URL_RE.match(raw)
+            if not m or m.group(1).lower() not in URL_SCHEMES:
+                raise Invalid(f"{f.label} must be a full address, such as https://example.com.")
+        return raw
+
+    if kind in ("integer", "number"):
+        try:
+            if kind == "integer":
+                if isinstance(raw, float) and not raw.is_integer():
+                    raise ValueError
+                value = int(raw) if not isinstance(raw, str) else int(raw.replace(",", ""))
+            else:
+                value = float(raw.replace(",", "") if isinstance(raw, str) else raw)
+        except (TypeError, ValueError):
+            raise Invalid(f"{f.label} must be a {'whole ' if kind == 'integer' else ''}number.") from None
+        if value != value or value in (float("inf"), float("-inf")):
+            raise Invalid(f"{f.label} must be a number.")
+        low, high = f.min, f.max
+        if (low is not None and value < low) or (high is not None and value > high):
+            if low is not None and high is not None:
+                raise Invalid(f"{f.label} must be between {_num(low)} and {_num(high)}.")
+            raise Invalid(f"{f.label} must be at least {_num(low)}." if low is not None
+                          else f"{f.label} must be at most {_num(high)}.")
+        return value
+
+    if kind == "date":
+        if isinstance(raw, date):
+            return raw
+        try:
+            return date.fromisoformat(str(raw)[:10])
+        except ValueError:
+            raise Invalid(f"{f.label} must be a date, such as 2026-09-25.") from None
+
+    if kind == "select":
+        values = [v for v, _ in f.options]
+        if str(raw) not in values:
+            raise Invalid(f"{f.label} must be one of: {', '.join(label for _, label in f.options)}.")
+        return str(raw)
+
+    if kind == "ref":
+        try:
+            ref_id = int(raw)
+        except (TypeError, ValueError):
+            raise Invalid(f"{f.label} must be a record.") from None
+        target = lookup(ref_id) if lookup else None
+        if target is None or (f.types and target.type not in f.types):
+            raise Invalid(f"{f.label} must point at an existing record of the right type.")
+        return ref_id
+
+    raise Invalid(f"{f.label} has a kind the app doesn't know.")
+
+
+def _num(value) -> str:
+    return str(int(value)) if float(value).is_integer() else str(value)
+
+
+def display(f: Field, value, lookup=None) -> str:
+    """How a value reads in the sheet, a card or the history."""
+    if value is None or value == "":
+        return ""
+    if f.kind == "boolean":
+        return "Yes" if value else "No"
+    if f.kind == "select":
+        return dict(f.options).get(value, str(value))
+    if f.kind == "ref":
+        target = lookup(value) if lookup else None
+        return target.name if target else f"#{value}"
+    if f.kind == "date":
+        return value.isoformat() if isinstance(value, date) else str(value)
+    if f.kind == "number":
+        text = f"{value:,.2f}".rstrip("0").rstrip(".") if isinstance(value, float) else str(value)
+    elif f.kind == "integer":
+        text = str(value)
+    else:
+        text = str(value)
+    return f"{text} {f.unit}" if f.unit else text
+
+
+def to_text(f: Field, value) -> str:
+    """Normalized text: what custom_values stores and search matches."""
+    if value is None:
+        return ""
+    if f.kind == "boolean":
+        return "1" if value else "0"
+    if f.kind == "date" and isinstance(value, date):
+        return value.isoformat()
+    if f.kind == "number" and isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def from_text(f: Field, text: str):
+    """Back from ``to_text``, for custom values."""
+    if text is None or text == "":
+        return False if f.kind == "boolean" else None
+    try:
+        if f.kind == "boolean":
+            return text == "1"
+        if f.kind == "number":
+            return float(text)
+        if f.kind == "integer":
+            return int(text)
+        if f.kind == "date":
+            return date.fromisoformat(text)
+    except ValueError:
+        return None
+    return text
+
+
+def to_json(f: Field, value):
+    if isinstance(value, date):
+        return value.isoformat()
+    return value
+
+
+def is_link(f: Field, value) -> bool:
+    """Only web addresses become links; ssh:// and the like are shown as text."""
+    return f.kind == "url" and isinstance(value, str) and value.lower().startswith(("http://", "https://"))
