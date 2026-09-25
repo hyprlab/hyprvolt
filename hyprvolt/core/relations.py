@@ -21,9 +21,10 @@ CORE_KINDS = (
 )
 
 
-def link(kind_key: str, source, target, note: str = "", user=None):
+def link(kind_key: str, source, target, note: str = "", user=None, audit_source: bool = True):
     """Create ``source <kind> target`` unless it exists, writing the history
-    of both ends. Returns the relationship."""
+    of both ends (only the target's when the source records the change
+    itself, as a field kept as a link does). Returns the relationship."""
     from ..registry import current as registry
     from . import records
     from .fields import Invalid
@@ -39,14 +40,15 @@ def link(kind_key: str, source, target, note: str = "", user=None):
     rel = Relationship(kind=kind.key, source_id=source.id, target_id=target.id,
                        note=(note or "").strip()[:300], created_by_id=records._user_id(user))
     db.session.add(rel)
-    records.audit(source, "linked", [{"field": "relationship", "label": kind.label.capitalize(),
-                                      "old": "", "new": target.name}], user)
+    if audit_source:
+        records.audit(source, "linked", [{"field": "relationship", "label": kind.label.capitalize(),
+                                          "old": "", "new": target.name}], user)
     records.audit(target, "linked", [{"field": "relationship", "label": kind.reverse.capitalize(),
                                       "old": "", "new": source.name}], user)
     return rel
 
 
-def unlink(rel, user=None) -> dict:
+def unlink(rel, user=None, audit_source: bool = True) -> dict:
     """Remove a relationship; returns what re-creates it (for Undo)."""
     from ..registry import current as registry
     from . import records
@@ -54,8 +56,9 @@ def unlink(rel, user=None) -> dict:
     label = kind.label if kind else rel.kind
     reverse = kind.reverse if kind else rel.kind
     snapshot = {"kind": rel.kind, "source_id": rel.source_id, "target_id": rel.target_id, "note": rel.note}
-    records.audit(rel.source, "unlinked", [{"field": "relationship", "label": label.capitalize(),
-                                            "old": rel.target.name, "new": ""}], user)
+    if audit_source:
+        records.audit(rel.source, "unlinked", [{"field": "relationship", "label": label.capitalize(),
+                                                "old": rel.target.name, "new": ""}], user)
     records.audit(rel.target, "unlinked", [{"field": "relationship", "label": reverse.capitalize(),
                                             "old": rel.source.name, "new": ""}], user)
     db.session.delete(rel)

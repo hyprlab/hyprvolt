@@ -56,7 +56,8 @@ tests/             pytest, with an example module of its own
 **A module is a manifest.** Each package in `hyprvolt/modules/` exports a
 `Module` that says what it adds: its entity types and their fields, its
 routes, sidebar filters, dashboard widgets, jobs, settings pane, relationship
-kinds, sheet tabs, migration steps and demo data. The core builds everything
+kinds, sheet tabs and form sections on other modules' records, migration
+steps and demo data. The core builds everything
 else from that: lists, cards, forms, the sheet, search, the API. How to write
 one is [MODULES.md](MODULES.md).
 
@@ -111,7 +112,10 @@ If it ever isn't, an FTS5 table can take its place without touching a module.
 **Relationships are typed and directed.** A kind has a label for each
 direction ("runs on", "runs") and an impact: which end breaks when the other
 goes down. The dependency view walks only kinds with an impact, marks a loop
-instead of following it, and shows a record reached twice once in full.
+instead of following it, and shows a record reached twice once in full. A
+field that names another record in a way that matters when it fails (a VM's
+host) is kept as a relationship, not a column, so the form and the
+dependency view can never disagree.
 
 **Delete marks, the worker purges.** Deleting stamps `deleted_at`. Undo
 clears it, so the record comes back with the same id, its links, files,

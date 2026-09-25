@@ -1,7 +1,7 @@
 {# The record form, for creating and editing. Built from the type's field
    schema; fetched by app.js into <dialog id="entity-modal">. Field names are
    what the API takes: name, status, location_id, tags, notes, f.<field>,
-   c.<custom field>. #}
+   c.<custom field>, and s.<section>.<name> for what other modules add. #}
 {% macro input(item) %}
 {% set f = item.field %}{% set v = item.value %}
 {% if f.kind == 'boolean' %}
@@ -91,6 +91,11 @@
   <p class="setting-label setting-label--spaced">Custom fields</p>
   <div class="form-grid">{% for item in custom %}{{ input(item) }}{% endfor %}</div>
   {% endif %}
+
+  {% for item in sections %}
+  <p class="setting-label setting-label--spaced">{{ item.section.label }}</p>
+  {{ item.html }}
+  {% endfor %}
 
   <label class="field form-notes">
     <span class="field-label">Notes</span>

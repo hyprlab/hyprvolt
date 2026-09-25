@@ -60,7 +60,7 @@ required.
 | `id` | Lower-case letters, digits and underscores; the URL (`/<id>`) and the name of its settings. Can't be a word the core uses (`all`, `api`, `admin`, `search`, …) |
 | `name`, `description`, `icon` | What the sidebar, dashboard and Settings > Modules show. `icon` is the inside of a 24×24 stroked `<svg>`, like every icon in the app |
 | `group`, `order` | Where it sits in the sidebar: under the `group` heading, sorted by `order` |
-| `requires` | Ids of modules it builds on. They migrate and seed first, and a module whose requirement is missing is left out |
+| `requires` | Ids of modules it builds on. They migrate and seed first; a module whose requirement is missing is left out, and one whose requirement is turned off is off too |
 | `core` | Built in; it can't be turned off. Only the knowledge base is |
 | `models` | Its SQLAlchemy models, for the record; importing the package is what registers them |
 | `migrations` | Its `Step`s, in order. See [Migrations](#migrations) |
@@ -73,6 +73,7 @@ required.
 | `settings_pane` | A `Pane` in the settings window, admin-only by default |
 | `relation_kinds` | `RelationKind`s it adds to the core's |
 | `sheet_tabs` | `Tab`s on records of any module, shown where `when(entity)` says |
+| `form_sections` | `FormSection`s in the record form of any module's types. See [Adding to other modules' forms](#adding-to-other-modules-forms) |
 | `seed` | `seed(demo)`, its part of `flask seed-demo` |
 
 A manifest that fails validation is left out, logged, and listed in
@@ -103,6 +104,10 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   location type, `()` is none at all, or a tuple of type keys.
 - `tabs` are sheet tabs for this type only. They follow Overview.
 - `icon` overrides the module's icon for this type.
+- `traits` are words other modules look for, so a type can take part in
+  what another module adds without either naming the other: Hardware marks a
+  server `("rackmount",)`, and Locations adds a rack position to the form of
+  every type with that trait.
 
 A `Field` has a `key` that must be a column of the detail table, a `label`,
 and a `kind`:
@@ -116,7 +121,14 @@ and a `kind`:
 | `date` | a date | `2026-09-25` |
 | `select` | one of `options`, as (value, label) pairs | its label |
 | `boolean` | true or false | Yes or No |
-| `ref` | the id of a record of one of `types` | a link to it |
+| `ref` | the id of a record of one of `types`, or a relationship (below) | a link to it |
+
+A `ref` with `relation="runs_on"` is kept as a relationship of that kind from
+this record to the chosen one, instead of in a column. A VM's host is one:
+choosing it in the form links the VM to the hypervisor, so the Relationships
+tab shows it and the dependency view follows it, and unlinking it there
+empties the field. The detail table needs no column for it, and a type whose
+fields are all kept as links needs no detail table.
 
 `required`, `default`, `help`, `unit` and `group` (a heading in the form and
 the Overview) do what they say. `list=True` puts the value in the list row,
@@ -140,6 +152,32 @@ for a person; roll back and show it.
 Links are `relations.link(kind, source, target)` and `relations.unlink(rel)`.
 `records.audit(entity, action, changes)` adds a line to a record's history for
 anything else a module does to it (Locations logs rack mounts this way).
+
+## Adding to other modules' forms
+
+A `FormSection` puts fields of one module into the form of another module's
+records, with the values kept in the first module's tables. Locations uses
+one for the rack position of anything with the `rackmount` trait:
+
+```python
+FormSection("rack", "Rack position", render=rack_form, save=rack_save,
+            when=lambda etype: "rackmount" in etype.traits)
+```
+
+- `render(etype, entity)` returns the fields' HTML, from a template. Each
+  input is named `s.<key>.<name>`: `s.rack.position_u`. `entity` is None in
+  a new record's form.
+- `save(entity, values, user)` runs inside `records.create` and
+  `records.update`, after the record's own fields, whenever the data names the
+  section. `values` is `{"position_u": "12", ...}`. It checks them, raising
+  `Invalid` to refuse the whole save, stores them, and returns the changes
+  for the history in the shape `records` uses:
+  `[{"field", "label", "old", "new"}]`. To move the record, it calls
+  `records.move(entity, place)` and returns that change too; the history
+  shows one line per field.
+- The API takes the same values as `s.rack.position_u` or nested as
+  `"sections": {"rack": {"position_u": 12}}`. A save that doesn't name the
+  section leaves its values alone.
 
 ## Pages, tabs and routes
 
@@ -208,7 +246,8 @@ on every write.
 
 ## Checklist
 
-1. A package in `hyprvolt/modules/<id>/` exporting `module`.
+1. A package in `hyprvolt/modules/<id>/` exporting `module`, with
+   `requires` naming the modules it can't work without.
 2. Detail tables subclass `EntityDetail`; field keys match their columns.
 3. Every route has `@role(...)`; writes go through `records`.
 4. Templates in `templates/<id>/`, built from existing components.

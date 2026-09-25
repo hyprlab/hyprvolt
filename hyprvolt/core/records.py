@@ -13,11 +13,12 @@ import unicodedata
 
 from flask_login import current_user
 from sqlalchemy import delete as sql_delete
+from sqlalchemy.orm import aliased
 
 from ..models import db, int_setting, utcnow
 from ..registry import current as registry
 from . import fields as F
-from .models import AuditLog, CustomField, CustomValue, Entity, Tag
+from .models import AuditLog, CustomField, CustomValue, Entity, Relationship, Tag
 from .fields import Invalid
 
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,118}$")
@@ -61,14 +62,50 @@ def custom_values(entity: Entity) -> dict[int, str]:
     return {v.field_id: v.value for v in CustomValue.query.filter_by(entity_id=entity.id)}
 
 
+def linked_values(entity_ids, etype) -> dict[int, dict[str, int]]:
+    """entity id -> {field key: target id} for the type's fields that are
+    kept as links (``Field.relation``), in one query. The first live target
+    of the field's kind and types wins."""
+    rel_fields = [f for f in etype.fields if f.relation] if etype else []
+    ids = [i for i in entity_ids if i is not None]
+    if not rel_fields or not ids:
+        return {}
+    target = aliased(Entity)
+    rows = (db.session.query(Relationship.source_id, Relationship.kind, Relationship.target_id, target.type)
+            .join(target, target.id == Relationship.target_id)
+            .filter(Relationship.source_id.in_(ids), Relationship.kind.in_({f.relation for f in rel_fields}),
+                    target.deleted_at.is_(None))
+            .order_by(Relationship.id).all())
+    out: dict[int, dict[str, int]] = {}
+    for source_id, kind, target_id, target_type in rows:
+        for f in rel_fields:
+            if f.relation == kind and target_type in f.types:
+                out.setdefault(source_id, {}).setdefault(f.key, target_id)
+    return out
+
+
+def own_values(entity: Entity, detail=None, linked=None) -> dict:
+    """{field key: value} for the type's own fields, read from the detail
+    row or, for a field kept as a link, from the relationships."""
+    etype = registry().type(entity.type)
+    if etype is None:
+        return {}
+    if detail is None:
+        detail = detail_of(entity)
+    if linked is None:
+        linked = linked_values([entity.id], etype).get(entity.id, {})
+    return {f.key: linked.get(f.key) if f.relation else (getattr(detail, f.key, None) if detail else None)
+            for f in etype.fields}
+
+
 def field_values(entity: Entity) -> list[tuple]:
     """(Field, value) for the type's fields, then its custom fields, in the
     order the Overview shows them."""
     etype = registry().type(entity.type)
     out = []
-    detail = detail_of(entity)
+    values = own_values(entity)
     for f in etype.fields if etype else ():
-        out.append((f, getattr(detail, f.key, None) if detail else None))
+        out.append((f, values.get(f.key)))
     values = custom_values(entity)
     for cf in custom_fields(entity.type):
         f = F.custom_field(cf)
@@ -264,8 +301,9 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
 
     db.session.flush()   # an id for the detail and custom rows
     given = data.get("fields") or {}
-    if etype.detail is not None and (creating or given):
+    if etype.fields and (creating or given):
         detail = detail_of(entity, create=True)
+        linked = {} if creating else linked_values([entity.id], etype).get(entity.id, {})
         for f in etype.fields:
             if f.key in given:
                 raw = given[f.key]
@@ -274,10 +312,13 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
             else:
                 continue
             value = F.parse(f, raw, lookup=live)
-            old = getattr(detail, f.key, None)
+            old = linked.get(f.key) if f.relation else getattr(detail, f.key, None)
             if old != value:
                 note("f." + f.key, f.label, F.display(f, old, live), F.display(f, value, live))
-                setattr(detail, f.key, value)
+                if f.relation:
+                    _relink(entity, f, old, value, user)
+                else:
+                    setattr(detail, f.key, value)
 
     given = data.get("custom") or {}
     if given:
@@ -298,6 +339,13 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
             else:
                 row.value = text
 
+    given = data.get("sections") or {}
+    for section in registry().form_sections(etype):
+        if section.key in given:
+            values = given[section.key] if isinstance(given[section.key], dict) else {}
+            changes += section.save(entity, values, user) or []
+    changes[:] = _merge(changes)
+
     if changes or creating:
         _touch(entity, user)
         if creating:
@@ -307,17 +355,61 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
     return changes
 
 
+def _relink(entity: Entity, f, old_id, new_id, user) -> None:
+    """Point a field kept as a link somewhere else. The record's own history
+    has the field change; the other ends get "linked" and "unlinked"."""
+    from . import relations
+    if old_id is not None:
+        for rel in Relationship.query.filter_by(source_id=entity.id, kind=f.relation, target_id=old_id):
+            relations.unlink(rel, user, audit_source=False)
+    if new_id is not None:
+        relations.link(f.relation, entity, live(new_id), user=user, audit_source=False)
+
+
+def _merge(changes: list[dict]) -> list[dict]:
+    """One line per field: a form section may change what the form also
+    changed (a rack position moves the location), so keep the first old
+    value and the last new one, and drop what ends where it started."""
+    out, at = [], {}
+    for c in changes:
+        if c["field"] in at:
+            out[at[c["field"]]]["new"] = c["new"]
+        else:
+            at[c["field"]] = len(out)
+            out.append(dict(c))
+    return [c for c in out if c["old"] != c["new"]]
+
+
+def move(entity: Entity, target: Entity | None, user=None) -> list[dict]:
+    """Set the location from a form section or a module route: checked like
+    the form's, returned as a change for the caller's history line."""
+    etype = registry().type(entity.type)
+    new_loc = _check_location(entity, etype, target.id if target else None)
+    old_name = entity.location.name if entity.location else ""
+    if new_loc is entity.location:
+        return []
+    entity.location = new_loc
+    return [{"field": "location", "label": LABELS["location"], "old": old_name,
+             "new": new_loc.name if new_loc else ""}]
+
+
 def normalize(data: dict) -> dict:
-    """Accept the flat names a form posts (``f.height_u``, ``c.owner``) as
-    well as the nested ``fields`` and ``custom`` objects the API documents."""
-    out = {k: v for k, v in data.items() if not k.startswith(("f.", "c."))}
+    """Accept the flat names a form posts (``f.height_u``, ``c.owner``,
+    ``s.rack.position_u``) as well as the nested ``fields``, ``custom`` and
+    ``sections`` objects the API documents."""
+    out = {k: v for k, v in data.items() if not k.startswith(("f.", "c.", "s."))}
     out["fields"] = dict(data.get("fields") or {})
     out["custom"] = dict(data.get("custom") or {})
+    sections = data.get("sections") if isinstance(data.get("sections"), dict) else {}
+    out["sections"] = {k: dict(v) for k, v in sections.items() if isinstance(v, dict)}
     for k, v in data.items():
         if k.startswith("f."):
             out["fields"][k[2:]] = v
         elif k.startswith("c."):
             out["custom"][k[2:]] = v
+        elif k.startswith("s.") and k.count(".") == 2:
+            _, section, name = k.split(".")
+            out["sections"].setdefault(section, {})[name] = v
     return out
 
 

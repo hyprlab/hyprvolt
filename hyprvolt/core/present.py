@@ -63,7 +63,7 @@ def details_for(entities) -> dict[int, object]:
 class View:
     """One entity as a card or a list row shows it."""
 
-    def __init__(self, entity: Entity, detail=None):
+    def __init__(self, entity: Entity, detail=None, linked=None):
         self.entity = entity
         self.id = entity.id
         self.name = entity.name
@@ -80,7 +80,10 @@ class View:
         for f in self.etype.fields if self.etype else ():
             if not (f.card or f.list):
                 continue
-            value = getattr(detail, f.key, None) if detail is not None else None
+            if f.relation:
+                value = (linked or {}).get(f.key)
+            else:
+                value = getattr(detail, f.key, None) if detail is not None else None
             if value in (None, ""):
                 continue
             shown = F.display(f, value, records.live)
@@ -105,6 +108,20 @@ class View:
         return " · ".join(parts)
 
 
+def linked_for(entities) -> dict[int, dict[str, int]]:
+    """entity id -> the values of its fields kept as links, one query per
+    type on the page that has any shown in a card or a row."""
+    by_type: dict[str, list[int]] = {}
+    for e in entities:
+        by_type.setdefault(e.type, []).append(e.id)
+    out = {}
+    for type_key, ids in by_type.items():
+        etype = registry().type(type_key)
+        if etype is not None and any(f.relation and (f.card or f.list) for f in etype.fields):
+            out.update(records.linked_values(ids, etype))
+    return out
+
+
 def views(entities) -> list[View]:
-    details = details_for(entities)
-    return [View(e, details.get(e.id)) for e in entities]
+    details, linked = details_for(entities), linked_for(entities)
+    return [View(e, details.get(e.id), linked.get(e.id)) for e in entities]

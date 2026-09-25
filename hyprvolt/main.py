@@ -213,6 +213,7 @@ def _modules_context() -> dict:
     counts = shell.type_counts()
     enabled = reg.enabled_ids()
     modules = [{"module": m, "enabled": m.id in enabled,
+                "needs": [reg.module(r).name for r in m.requires if r not in enabled],
                 "count": sum(counts.get(t.key, 0) for t in m.types)} for m in reg.sidebar_order()]
     fields: dict[str, list] = {}
     for cf in CustomField.query.order_by(CustomField.position, CustomField.id):
@@ -469,14 +470,18 @@ def admin_delete_user(user_id):
 @bp.route("/admin/modules/<module_id>", methods=["POST"])
 @role("admin")
 def admin_module(module_id):
-    """Turn a module on or off. Off hides it everywhere and keeps its data;
-    a built-in module can't be turned off."""
+    """Turn a module on or off. Off hides it everywhere and keeps its data,
+    and turns off the modules that require it; a built-in module can't be
+    turned off."""
     module = registry().module(module_id)
     if module is None:
         return jsonify(error="There is no such module."), 404
     on = bool((request.get_json(silent=True) or {}).get("enabled"))
     if module.core and not on:
         return jsonify(error=f"{module.name} is built in and can't be turned off."), 400
+    off = [registry().module(r).name for r in module.requires if not registry().is_enabled(r)]
+    if on and off:
+        return jsonify(error=f"{module.name} needs {' and '.join(off)}. Turn that on first."), 400
     set_setting(f"module:{module.id}:enabled", "1" if on else "0")
     return jsonify(ok=True, enabled=on)
 

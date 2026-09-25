@@ -30,7 +30,7 @@ from jinja2 import ChoiceLoader, FileSystemLoader
 from werkzeug.routing import BaseConverter
 
 from .core.relations import CORE_KINDS
-from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, Job, ListFilter,
+from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, FormSection, Job, ListFilter,
                        Module, Pane, RelationKind, Step, Tab, Widget)
 
 log = logging.getLogger(__name__)
@@ -78,17 +78,26 @@ class Registry:
 
     def enabled_ids(self) -> set[str]:
         """The modules turned on, read once per request. Turned on unless an
-        admin has turned them off; a core module can't be."""
+        admin has turned them off, or turned off a module they require; a
+        core module can't be."""
         cached = g.get("_enabled_modules") if _has_g() else None
         if cached is not None:
             return cached
-        from .models import Setting
-        off = {row.key.split(":")[1] for row in Setting.query.filter(Setting.key.like("module:%:enabled"))
-               if row.value == "0"}
-        ids = {mid for mid, m in self.modules.items() if m.core or mid not in off}
+        ids = self.switched_on()
+        # Migration order puts requirements first, so one pass settles it.
+        for mid, m in self.modules.items():
+            if mid in ids and any(r not in ids for r in m.requires):
+                ids.discard(mid)
         if _has_g():
             g._enabled_modules = ids
         return ids
+
+    def switched_on(self) -> set[str]:
+        """The modules whose own switch is on, whatever they require."""
+        from .models import Setting
+        off = {row.key.split(":")[1] for row in Setting.query.filter(Setting.key.like("module:%:enabled"))
+               if row.value == "0"}
+        return {mid for mid, m in self.modules.items() if m.core or mid not in off}
 
     def is_enabled(self, module_id: str) -> bool:
         return module_id in self.enabled_ids()
@@ -121,6 +130,11 @@ class Registry:
         for m in self.enabled_modules():
             tabs += [(m, t) for t in m.sheet_tabs]
         return [(m, t) for m, t in tabs if t.when is None or t.when(entity)]
+
+    def form_sections(self, etype: EntityType) -> list[FormSection]:
+        """What turned-on modules add to the form of ``etype``."""
+        return [s for m in self.enabled_modules() for s in m.form_sections
+                if s.when is None or s.when(etype)]
 
 
 def _has_g() -> bool:
@@ -266,6 +280,15 @@ def validate(m: Module, reg: Registry) -> list[str]:
             elif item.key in keys:
                 p.append(f"the {what} {item.key!r} appears twice")
             keys.add(getattr(item, "key", None))
+    others = {s.key for o in reg.modules.values() for s in o.form_sections}
+    for section in m.form_sections:
+        if not isinstance(section, FormSection) or not callable(section.render) or not callable(section.save):
+            p.append(f"{section!r} is not a FormSection with render and save functions")
+        elif not ID_RE.match(section.key or ""):
+            p.append(f"the form section key {section.key!r} must be lower-case letters, digits or underscores")
+        elif section.key in others:
+            p.append(f"the form section {section.key!r} already exists")
+        others.add(getattr(section, "key", None))
     for job in m.jobs:
         if isinstance(job, Job) and job.minutes < 1:
             p.append(f"the job {job.key!r} must run at most every minute")
@@ -290,8 +313,10 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
         p.append(f"the type {t.key!r} needs a label and a plural")
     if not t.statuses or any(not isinstance(s, tuple) or len(s) != 2 for s in t.statuses):
         p.append(f"the type {t.key!r} needs statuses as (value, label) pairs")
-    if t.fields and t.detail is None:
+    if any(isinstance(f, Field) and not f.relation for f in t.fields) and t.detail is None:
         p.append(f"the type {t.key!r} has fields but no detail model to keep them in")
+    if not isinstance(t.traits, tuple) or not all(isinstance(x, str) for x in t.traits):
+        p.append(f"the traits of {t.key!r} must be a tuple of words")
     columns = set()
     if t.detail is not None:
         table = getattr(t.detail, "__table__", None)
@@ -318,7 +343,9 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
             p.append(f"{where} is a select with no options")
         if f.kind == "ref" and not f.types:
             p.append(f"{where} is a ref that names no types")
-        if columns and f.key not in columns:
+        if f.relation and f.kind != "ref":
+            p.append(f"{where} is kept as a link, so it must be a ref")
+        if columns and f.key not in columns and not f.relation:
             p.append(f"{where} has no column in {t.detail.__tablename__}")
     tabs = set()
     for tab in t.tabs:
@@ -360,6 +387,8 @@ def cross_check(m: Module, reg: Registry) -> list[str]:
             for target in f.types:
                 if target not in reg.types:
                     p.append(f"the field {t.key}.{f.key} points at the unknown type {target!r}")
+            if f.relation and f.relation not in reg.kinds:
+                p.append(f"the field {t.key}.{f.key} is kept as the unknown link kind {f.relation!r}")
         for parent in t.located_in or ():
             other = reg.types.get(parent)
             if other is None:

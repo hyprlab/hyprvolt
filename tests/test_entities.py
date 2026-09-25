@@ -7,7 +7,7 @@ from .conftest import make
 
 def test_create_read_and_slug(client, h, admin):
     g = make(client, h, name="Blue Box", tags="lab, Prod", **{"f.color": "blue"}, notes="Under the desk.")
-    assert g["slug"] == "blue-box" and g["fields"] == {"color": "blue"}
+    assert g["slug"] == "blue-box" and g["fields"] == {"color": "blue", "battery": None}
     assert g["tags"] == ["lab", "Prod"] and g["status"] == "active"
     again = make(client, h, name="Blue box")
     assert again["slug"] == "blue-box-2"

@@ -5,7 +5,7 @@ from flask import Blueprint
 
 from hyprvolt import registry as reg_mod
 from hyprvolt.core.models import EntityDetail
-from hyprvolt.manifest import EntityType, Field, Module, RelationKind, Step
+from hyprvolt.manifest import EntityType, Field, FormSection, Module, RelationKind, Step
 from hyprvolt.models import db, set_setting
 from hyprvolt.permissions import role
 
@@ -73,6 +73,12 @@ def test_a_good_manifest_passes():
      "impact"),
     (Module(id="tools", name="x", migrations=(Step("one", lambda m: None), Step("one", lambda m: None))),
      "appears twice"),
+    (Module(id="tools", name="x", types=(EntityType("tool", "Tool", "Tools", detail=ToolDetail,
+                                                    fields=(Field("size", "Size", relation="runs_on"),)),)),
+     "must be a ref"),
+    (Module(id="tools", name="x", types=(EntityType("tool", "Tool", "Tools", traits="rackmount"),)), "traits"),
+    (Module(id="tools", name="x", form_sections=(FormSection("Bad Key", "x", str, str),)), "form section key"),
+    (Module(id="tools", name="x", form_sections=(FormSection("extra", "x", str, None),)), "render and save"),
 ])
 def test_bad_manifests_are_refused(module, expected):
     found = problems(module)
@@ -123,6 +129,25 @@ def test_a_ref_field_must_point_at_a_known_type():
     assert "spaceship" in reg.errors["tools"]
 
 
+def test_a_field_kept_as_a_link_needs_no_column_but_a_known_kind():
+    ok = Module(id="tools", name="Tools", types=(
+        EntityType("tool", "Tool", "Tools", fields=(
+            Field("host", "Host", "ref", types=("tool",), relation="runs_on"),)),))
+    assert problems(ok) == []
+    reg = reg_mod.load(fresh(), [ok])
+    assert not reg.errors
+    bad = Module(id="tools", name="Tools", types=(
+        EntityType("tool", "Tool", "Tools", fields=(
+            Field("host", "Host", "ref", types=("tool",), relation="orbits"),)),))
+    assert "orbits" in reg_mod.load(fresh(), [bad]).errors["tools"]
+
+
+def test_a_form_section_key_can_only_be_taken_once(app):
+    reg = app.extensions[reg_mod.EXTENSION]
+    clash = Module(id="other", name="Other", form_sections=(FormSection("sticker", "x", str, str),))
+    assert "already exists" in "; ".join(problems(clash, reg))
+
+
 # ———— Order ————
 
 def test_migration_order_follows_requires_then_id():
@@ -156,6 +181,26 @@ def test_modules_are_on_until_an_admin_turns_them_off(app):
         assert "gadget" not in reg.enabled_type_keys()
         # Its model and table are still there.
         assert db.inspect(db.engine).has_table("example_gadgets")
+
+
+def test_a_module_is_off_while_one_it_requires_is(app, client, h, admin):
+    reg = reg_mod.load(fresh(), [Module(id="aa", name="A"), Module(id="bb", name="B", requires=("aa",))])
+    with app.test_request_context():
+        set_setting("module:aa:enabled", "0")
+        assert reg.enabled_ids() == set()
+        assert reg.switched_on() == {"bb"}
+    # Through the admin routes: Locations can't come back on before its
+    # requirement, and the pane says why.
+    real = app.extensions[reg_mod.EXTENSION]
+    needs = [m for m in real.modules.values() if m.requires]
+    if needs:
+        m = needs[0]
+        need = real.module(m.requires[0])
+        client.post(f"/admin/modules/{need.id}", json={"enabled": False}, headers=h)
+        page = client.get("/").data.decode()
+        assert f"Off while {need.name}" in page
+        resp = client.post(f"/admin/modules/{m.id}", json={"enabled": True}, headers=h)
+        assert resp.status_code == 400 and "Turn that on first" in resp.get_json()["error"]
 
 
 # ———— Migrations ————

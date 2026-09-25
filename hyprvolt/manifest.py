@@ -37,6 +37,7 @@ class Field:
     default: Any = None
     options: tuple = ()              # select: ((value, label), ...)
     types: tuple = ()                # ref: entity types it may point at
+    relation: str = ""               # ref: kept as a link of this kind, not a column
     help: str = ""
     unit: str = ""                   # shown after the value: "U", "W", "GB"
     min: float | None = None
@@ -71,7 +72,25 @@ class EntityType:
     located_in: tuple | None = None  # allowed location types; None: any, (): none
     tabs: tuple = ()
     icon: str = ""                   # SVG paths; the module's icon if empty
+    traits: tuple = ()               # words other modules look for: ("rackmount",)
     module: str = ""                 # filled in by the registry
+
+
+@dataclass(frozen=True)
+class FormSection:
+    """Fields a module adds to the record form of types it doesn't own (or
+    its own), kept in its own tables. ``when(etype)`` picks the types, often
+    by a trait. ``render(etype, entity)`` returns the fields' HTML, each named
+    ``s.<key>.<name>`` (``entity`` is None for a new record).
+    ``save(entity, values, user)`` gets those values as a dict when the
+    record is saved through ``records``, stores them or raises ``Invalid``,
+    and returns the changes for the history: [{"field", "label", "old",
+    "new"}]."""
+    key: str
+    label: str
+    render: Callable
+    save: Callable
+    when: Callable | None = None
 
 
 @dataclass(frozen=True)
@@ -158,5 +177,6 @@ class Module:
     settings_pane: Pane | None = None
     relation_kinds: tuple = ()
     sheet_tabs: tuple = ()           # tabs on any module's entities; use Tab.when
+    form_sections: tuple = ()        # form sections on any module's types
     seed: Callable | None = None     # seed(demo) for flask seed-demo
     package: str = field(default="", compare=False)  # filled in by the registry

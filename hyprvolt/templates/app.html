@@ -396,9 +396,10 @@
             <span class="manage-title">{{ m.name }}{% if m.core %} <span class="chip chip--muted">built in</span>{% endif %}</span>
             <span class="manage-sub">{{ m.description or '' }}</span>
             <span class="manage-sub">{{ m.types|map(attribute='plural')|join(', ') }} · {{ entry.count }} {{ 'record' if entry.count == 1 else 'records' }}</span>
+            {% if entry.needs %}<span class="manage-sub">Off while {{ entry.needs|join(' and ') }} {{ 'is' if entry.needs|length == 1 else 'are' }} off.</span>{% endif %}
           </div>
-          <label class="switch" title="{{ 'Built in' if m.core else ('Turn off' if entry.enabled else 'Turn on') }}">
-            <input type="checkbox" data-module-toggle="{{ m.id }}" {{ 'checked' if entry.enabled }} {{ 'disabled' if m.core }}
+          <label class="switch" title="{{ 'Built in' if m.core else ('Needs ' ~ entry.needs|join(' and ')) if entry.needs else ('Turn off' if entry.enabled else 'Turn on') }}">
+            <input type="checkbox" data-module-toggle="{{ m.id }}" {{ 'checked' if entry.enabled }} {{ 'disabled' if m.core or entry.needs }}
                    aria-label="{{ m.name }} is {{ 'on' if entry.enabled else 'off' }}">
             <span class="switch-track"></span>
           </label>

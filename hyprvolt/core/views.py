@@ -163,9 +163,10 @@ def _inside(loc: Entity, entity: Entity) -> bool:
     return False
 
 
-def _ref_choices(f) -> list[tuple[int, str]]:
-    rows = Entity.live().filter(Entity.type.in_(f.types)).order_by(Entity.name).all()
-    return [(e.id, e.name) for e in rows]
+def _ref_choices(f, entity=None) -> list[tuple[int, str]]:
+    keys = [k for k in f.types if k in registry().enabled_type_keys()]
+    rows = Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name).all()
+    return [(e.id, e.name) for e in rows if entity is None or e.id != entity.id]
 
 
 @bp.route("/e/form")
@@ -177,21 +178,22 @@ def form(entity_id=None):
     etype = reg.type(entity.type if entity else request.args.get("type", ""))
     if etype is None or not reg.is_enabled(etype.module):
         abort(404, description="There is no such kind of record.")
-    detail = records.detail_of(entity) if entity else None
+    own = records.own_values(entity) if entity else {}
     values = records.custom_values(entity) if entity else {}
     fields = []
     for f in etype.fields:
-        value = getattr(detail, f.key, None) if detail is not None else f.default
+        value = own.get(f.key) if entity else f.default
         fields.append({"field": f, "name": "f." + f.key, "value": value,
-                       "choices": _ref_choices(f) if f.kind == "ref" else None})
+                       "choices": _ref_choices(f, entity) if f.kind == "ref" else None})
     custom = []
     for cf in records.custom_fields(etype.key):
         f = F.custom_field(cf)
         custom.append({"field": f, "name": "c." + cf.key, "value": F.from_text(f, values.get(cf.id, "")),
                        "choices": None})
     location_id = entity.location_id if entity else request.args.get("location_id", type=int)
+    sections = [{"section": s, "html": Markup(s.render(etype, entity))} for s in reg.form_sections(etype)]
     return render_template(
-        "sheet/form.html", entity=entity, etype=etype, fields=fields, custom=custom,
+        "sheet/form.html", entity=entity, etype=etype, fields=fields, custom=custom, sections=sections,
         locations=_location_choices(etype, entity), location_id=location_id,
         attach_to=request.args.get("attach_to", type=int), name=request.args.get("name", ""),
         tags=", ".join(entity.tag_names) if entity else "", can_admin=current_user.is_admin,

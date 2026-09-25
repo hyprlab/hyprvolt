@@ -65,9 +65,8 @@ def to_json(entity: Entity, full: bool = True) -> dict:
         out["notes"] = entity.notes
         out["created_at"] = entity.created_at.isoformat() + "Z"
         out["path"] = [{"id": c.id, "name": c.name} for c in records.crumbs(entity)]
-        detail = records.detail_of(entity)
-        out["fields"] = {f.key: F.to_json(f, getattr(detail, f.key, None) if detail else None)
-                         for f in (etype.fields if etype else ())}
+        values = records.own_values(entity)
+        out["fields"] = {f.key: F.to_json(f, values.get(f.key)) for f in (etype.fields if etype else ())}
         values = records.custom_values(entity)
         out["custom"] = {}
         for cf in records.custom_fields(entity.type):
