@@ -1,7 +1,7 @@
 """Finds the modules, checks their manifests, and wires them into the app.
 
 Discovery imports every subpackage of the packages in ``MODULE_PACKAGES``
-(``hyprprem.modules`` in production) and takes its ``module`` attribute.
+(``hyprvolt.modules`` in production) and takes its ``module`` attribute.
 Nothing else has to be edited to add a module.
 
 A manifest that fails validation is left out and its error is shown in
@@ -44,7 +44,7 @@ RESERVED = {"all", "e", "api", "admin", "search", "settings", "setup", "login", 
 CORE_FIELDS = {"id", "name", "slug", "status", "location", "location_id", "tags", "notes",
                "type", "module", "archived", "custom", "fields"}
 
-EXTENSION = "hyprprem.registry"
+EXTENSION = "hyprvolt.registry"
 SETTING = "module:{}:enabled"
 
 

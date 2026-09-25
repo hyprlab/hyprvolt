@@ -1,6 +1,6 @@
 """What a module declares, and the core reads at startup.
 
-A module is a subpackage of ``hyprprem.modules`` whose ``__init__`` exports
+A module is a subpackage of ``hyprvolt.modules`` whose ``__init__`` exports
 ``module = Module(...)``. Everything in it is data the core already knows how
 to use: the entity types and their field schemas drive the list rows, cards,
 forms and the detail sheet; the rest are hooks the shell calls when it

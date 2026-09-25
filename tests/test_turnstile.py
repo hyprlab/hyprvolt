@@ -5,7 +5,7 @@ one known token, so the tests cover the app's decisions, not the network.
 """
 import pytest
 
-from hyprprem import auth
+from hyprvolt import auth
 
 GOOD_TOKEN = "passes"
 

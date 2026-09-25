@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="hyprprem/static/img/logo.svg" width="72" alt="Hyprprem logo">
+  <img src="hyprvolt/static/img/logo.svg" width="72" alt="Hyprvolt logo">
 </p>
 
-<h1 align="center">Hyprprem</h1>
+<h1 align="center">Hyprvolt</h1>
 
 <p align="center"><strong>IT documentation for on-premise infrastructure.</strong></p>
 
@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0 license"></a>
 </p>
 
-Hyprprem documents what an on-premise business, organization or homelab
+Hyprvolt documents what an on-premise business, organization or homelab
 runs: where each box is, what sits in which rack unit, how things depend on
 each other, and the runbooks that explain them. It is a self-hosted web app
 that runs in one Docker container with its data in a single SQLite volume.
@@ -30,7 +30,7 @@ that runs in one Docker container with its data in a single SQLite volume.
 ## Install with Docker Compose
 
 ```sh
-curl -O https://raw.githubusercontent.com/hyprlab/hyprprem/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/hyprlab/hyprvolt/main/docker-compose.yml
 docker compose up -d
 ```
 
@@ -50,7 +50,7 @@ Configuration is covered in [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md).
 
 ## AI notice
 
-Hyprprem is built by a human maintainer who uses generative AI as a development
+Hyprvolt is built by a human maintainer who uses generative AI as a development
 tool. The maintainer decides what gets built, reviews the results, tests every
 release and signs off on everything that ships. Commits are made under the
 maintainer's name; the tool is declared here once, for the whole repository,
@@ -59,7 +59,7 @@ makes no requests to AI services.
 
 ## License
 
-Hyprprem is free software, licensed under the **GNU Affero General Public License
+Hyprvolt is free software, licensed under the **GNU Affero General Public License
 v3.0 or later** ([AGPL-3.0-or-later](LICENSE)).
 
 © 2026 Hyprlab

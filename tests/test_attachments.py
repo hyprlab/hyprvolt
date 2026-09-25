@@ -52,8 +52,8 @@ def test_delete_undo_and_purge(app, client, h, admin):
     assert client.get(att["url"]).status_code == 200
 
     client.post(f"/api/attachments/{att['id']}/delete", headers=h)
-    from hyprprem.core.records import purge
-    from hyprprem.models import db
+    from hyprvolt.core.records import purge
+    from hyprvolt.models import db
     with app.app_context():
         assert purge(older_than_days=0) == 1
         db.session.commit()
@@ -77,11 +77,11 @@ def test_backup_archives_the_database_and_attachments(app, client, h, admin, tmp
     assert result.exit_code == 0, result.output
     with tarfile.open(dest) as tar:
         names = tar.getnames()
-        assert "hyprprem.db" in names
+        assert "hyprvolt.db" in names
         files = [m for m in tar.getmembers() if m.isfile() and m.name.startswith("attachments/")]
         assert [tar.extractfile(m).read() for m in files] == [b"config file"]
-        tar.extract("hyprprem.db", tmp_path, filter="data")
-    tables = {r[0] for r in sqlite3.connect(tmp_path / "hyprprem.db").execute("SELECT name FROM sqlite_master")}
+        tar.extract("hyprvolt.db", tmp_path, filter="data")
+    tables = {r[0] for r in sqlite3.connect(tmp_path / "hyprvolt.db").execute("SELECT name FROM sqlite_master")}
     assert {"entities", "attachments", "users"} <= tables
 
 

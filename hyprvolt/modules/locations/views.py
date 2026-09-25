@@ -3,12 +3,12 @@ rack position tab other records get, the dashboard widget, and the JSON
 routes for placing things in racks."""
 from flask import Blueprint, abort, jsonify, render_template, request
 
-from hyprprem.core import present, records
-from hyprprem.core.fields import Invalid
-from hyprprem.core.models import Entity
-from hyprprem.models import db
-from hyprprem.permissions import role
-from hyprprem.registry import current as registry
+from hyprvolt.core import present, records
+from hyprvolt.core.fields import Invalid
+from hyprvolt.core.models import Entity
+from hyprvolt.models import db
+from hyprvolt.permissions import role
+from hyprvolt.registry import current as registry
 
 from . import racks
 from .models import FACES, RackMount

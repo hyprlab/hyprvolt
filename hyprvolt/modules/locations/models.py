@@ -1,7 +1,7 @@
 """Locations' tables: one detail table for every location type (a column
 each type uses or leaves empty), and the rack mounts."""
-from hyprprem.core.models import Entity, EntityDetail
-from hyprprem.models import db, utcnow
+from hyprvolt.core.models import Entity, EntityDetail
+from hyprvolt.models import db, utcnow
 
 
 class LocationDetail(EntityDetail, db.Model):

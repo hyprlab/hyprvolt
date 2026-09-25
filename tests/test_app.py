@@ -61,13 +61,13 @@ def test_sign_ups_get_the_default_role(client, csrf, admin, app):
     token = token_for(stranger)
     stranger.post("/register", data={"_csrf": token, "username": "new@example.com",
                                      "password": "password1", "confirm": "password1"})
-    from hyprprem.models import User
+    from hyprvolt.models import User
     with app.app_context():
         assert User.query.filter_by(username="new@example.com").one().role == "editor"
 
 
 def test_every_route_declares_a_role(app):
-    from hyprprem.permissions import undeclared_routes
+    from hyprvolt.permissions import undeclared_routes
     assert undeclared_routes(app) == []
 
 
@@ -181,7 +181,7 @@ def test_security_headers(client):
 
 
 def test_changelog_renders_in_the_about_tab(client, csrf, admin):
-    from hyprprem import __version__
+    from hyprvolt import __version__
     body = client.get("/").data.decode()
     assert "Changelog" in body and __version__ in body
 

@@ -45,14 +45,14 @@ def _int(name: str, default: int) -> int:
 
 
 class Config:
-    APP_NAME = os.environ.get("APP_NAME", "Hyprprem")
+    APP_NAME = os.environ.get("APP_NAME", "Hyprvolt")
     APP_TAGLINE = os.environ.get("APP_TAGLINE", "IT documentation for on-premise infrastructure.")
     # Where the About section's Source link points. Empty hides the link.
-    SOURCE_URL = os.environ.get("SOURCE_URL", "https://github.com/hyprlab/hyprprem")
+    SOURCE_URL = os.environ.get("SOURCE_URL", "https://github.com/hyprlab/hyprvolt")
 
     SECRET_KEY = _secret_key()
     SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", f"sqlite:///{DATA_DIR / 'hyprprem.db'}"
+        "DATABASE_URL", f"sqlite:///{DATA_DIR / 'hyprvolt.db'}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
@@ -76,7 +76,7 @@ class Config:
     TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
 
     # Where modules are discovered: every subpackage exporting `module`.
-    MODULE_PACKAGES = ["hyprprem.modules"]
+    MODULE_PACKAGES = ["hyprvolt.modules"]
     # Raise on a broken manifest instead of leaving the module out.
     MODULES_STRICT = _flag("MODULES_STRICT", "0")
 

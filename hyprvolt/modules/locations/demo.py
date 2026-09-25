@@ -1,7 +1,7 @@
 """The demo homelab's places: a house with a basement rack and an office
 closet. The equipment is in the rack as labels until a module documents it
 as records of its own."""
-from hyprprem.models import db
+from hyprvolt.models import db
 
 from .models import RackMount
 

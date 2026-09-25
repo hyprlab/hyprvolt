@@ -1,14 +1,14 @@
 # Documentation
 
-Installing, configuring and running Hyprprem.
+Installing, configuring and running Hyprvolt.
 
 ## Installing
 
-Hyprprem runs as one Docker container with its data in one volume.
+Hyprvolt runs as one Docker container with its data in one volume.
 
 ```sh
-mkdir hyprprem && cd hyprprem
-curl -O https://raw.githubusercontent.com/hyprlab/hyprprem/main/docker-compose.yml
+mkdir hyprvolt && cd hyprvolt
+curl -O https://raw.githubusercontent.com/hyprlab/hyprvolt/main/docker-compose.yml
 docker compose up -d
 ```
 
@@ -30,7 +30,7 @@ Everything is optional. Put values in a `.env` file next to
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `IMAGE_TAG` | `latest` | The image to run: `latest` for stable, `beta`, or a version to pin |
-| `APP_NAME` | `Hyprprem` | What the app calls itself |
+| `APP_NAME` | `Hyprvolt` | What the app calls itself |
 | `APP_TAGLINE` | `IT documentation for on-premise infrastructure.` | The line under the name on the sign-in page and in About |
 | `SECRET_KEY` | generated | Signs sessions. If unset, one is generated and kept in the volume |
 | `SESSION_COOKIE_SECURE` | `0` | Set to `1` when the app is served over HTTPS |
@@ -63,7 +63,7 @@ change their own role or delete themselves, so there is always one left.
 
 ## Modules and custom fields
 
-What Hyprprem documents comes in modules: Locations and the knowledge base
+What Hyprvolt documents comes in modules: Locations and the knowledge base
 so far. Settings > Modules turns a module off; it then disappears from the
 sidebar, search and the dashboard, and its records stay in the database until
 it is turned back on. The knowledge base is built in.
@@ -108,7 +108,7 @@ If sign-in becomes impossible anyway (the widget's hostname list was changed,
 or Cloudflare is unreachable), turn it off from the server:
 
 ```sh
-docker exec hyprprem flask turnstile off
+docker exec hyprvolt flask turnstile off
 ```
 
 The `TURNSTILE_*` variables still work, as a fresh-install default: with both
@@ -152,18 +152,18 @@ Everything is in the volume: the SQLite database, the attachments and the
 generated secret key. For a consistent copy while the app runs:
 
 ```sh
-docker exec hyprprem flask backup /data/backup-$(date +%F).tar.gz
-docker cp hyprprem:/data/backup-$(date +%F).tar.gz .
+docker exec hyprvolt flask backup /data/backup-$(date +%F).tar.gz
+docker cp hyprvolt:/data/backup-$(date +%F).tar.gz .
 ```
 
 A name ending in `.tar.gz` (or `.tgz`, `.tar`) gets an archive of the
-database (`hyprprem.db`) and every attachment (`attachments/`). A name ending
+database (`hyprvolt.db`) and every attachment (`attachments/`). A name ending
 in `.db` gets the database alone, without the files. `flask backup` uses
 SQLite's online backup API; copying the `.db` file by hand while the app
 writes can produce a torn copy.
 
 To restore, stop the container, unpack the archive into the volume so that
-`hyprprem.db` and `attachments/` replace what is there (remove any `-wal` and
+`hyprvolt.db` and `attachments/` replace what is there (remove any `-wal` and
 `-shm` files beside the database), and start it again.
 
 ## Commands
@@ -179,7 +179,7 @@ Run inside the container:
 | `flask turnstile status`, `flask turnstile off` | Show whether Turnstile is on; turn it off when nobody can sign in |
 
 ```sh
-docker exec -it hyprprem flask reset-password you@example.com
+docker exec -it hyprvolt flask reset-password you@example.com
 ```
 
 ## Health
@@ -216,7 +216,7 @@ proxy's address.
 
 **The challenge on the sign-in page fails for everyone.** The Turnstile
 widget no longer lists the hostname the app is reached on. Run
-`docker exec hyprprem flask turnstile off`, fix the hostname list in the
+`docker exec hyprvolt flask turnstile off`, fix the hostname list in the
 Cloudflare dashboard, then turn it back on in Settings > Security.
 
 **The container stays unhealthy.** `docker compose logs` shows why. The usual

@@ -1,6 +1,6 @@
 """Entities through the JSON API: the write path, history, tags, custom
 fields, archive, delete with Undo, the purge, and who may do what."""
-from hyprprem.models import set_setting
+from hyprvolt.models import set_setting
 
 from .conftest import make
 
@@ -72,8 +72,8 @@ def test_the_purge_removes_deleted_records_for_good(app, client, h, admin):
     keep = make(client, h, name="Keep")
     gone = make(client, h, name="Gone")
     client.post(f"/api/entities/{gone['id']}/delete", headers=h)
-    from hyprprem.core.records import purge
-    from hyprprem.models import db
+    from hyprvolt.core.records import purge
+    from hyprvolt.models import db
     with app.app_context():
         assert purge(older_than_days=1) == 0      # too recent
         assert purge(older_than_days=0) == 1
@@ -81,14 +81,14 @@ def test_the_purge_removes_deleted_records_for_good(app, client, h, admin):
     assert client.get(f"/api/entities/{gone['id']}").status_code == 404
     assert client.get(f"/api/entities/{keep['id']}").status_code == 200
     # The history outlives it.
-    from hyprprem.core.models import AuditLog
+    from hyprvolt.core.models import AuditLog
     with app.app_context():
         assert [r.action for r in AuditLog.query.filter_by(entity_id=gone["id"]).order_by(AuditLog.id)] == \
             ["created", "deleted", "purged"]
 
 
 def test_the_worker_runs_the_purge_job(app, client, h, admin):
-    from hyprprem.worker import run_once
+    from hyprvolt.worker import run_once
     assert "core.purge" in run_once(app)
     assert run_once(app) == {}            # not due again for an hour
 

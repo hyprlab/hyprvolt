@@ -19,23 +19,23 @@ def app(tmp_path, monkeypatch):
 
     # config reads the environment at import time, so reload it after the
     # variables above are set.
-    import hyprprem
-    import hyprprem.auth
-    import hyprprem.config
-    import hyprprem.setup
-    importlib.reload(hyprprem.config)
+    import hyprvolt
+    import hyprvolt.auth
+    import hyprvolt.config
+    import hyprvolt.setup
+    importlib.reload(hyprvolt.config)
     # Process-wide caches that assume one database for the life of the process.
-    hyprprem.setup._completed["done"] = False
-    hyprprem.auth._failures.clear()
+    hyprvolt.setup._completed["done"] = False
+    hyprvolt.auth._failures.clear()
 
-    class TestConfig(hyprprem.config.Config):
+    class TestConfig(hyprvolt.config.Config):
         TESTING = True
         # The example module (tests/example_modules) is loaded next to the
         # real ones, and a broken manifest fails the test instead of hiding.
-        MODULE_PACKAGES = ["hyprprem.modules", "tests.example_modules"]
+        MODULE_PACKAGES = ["hyprvolt.modules", "tests.example_modules"]
         MODULES_STRICT = True
 
-    yield hyprprem.create_app(TestConfig)
+    yield hyprvolt.create_app(TestConfig)
 
 
 def token_for(client) -> str:

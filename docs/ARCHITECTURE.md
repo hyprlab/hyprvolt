@@ -8,7 +8,7 @@ how the pieces fit and why.
 ## Layout
 
 ```
-hyprprem/
+hyprvolt/
   __init__.py      the app factory: modules, database, sessions, CSRF, setup
                    gate, headers, error pages, template globals, migrations,
                    worker
@@ -49,11 +49,11 @@ tests/             pytest, with an example module of its own
 ```
 
 `run.py` is the development server. Production runs gunicorn against
-`hyprprem:create_app()`.
+`hyprvolt:create_app()`.
 
 ## Modules
 
-**A module is a manifest.** Each package in `hyprprem/modules/` exports a
+**A module is a manifest.** Each package in `hyprvolt/modules/` exports a
 `Module` that says what it adds: its entity types and their fields, its
 routes, sidebar filters, dashboard widgets, jobs, settings pane, relationship
 kinds, sheet tabs, migration steps and demo data. The core builds everything

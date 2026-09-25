@@ -4,9 +4,9 @@ record ("documented by"), and link to records with ``[[slug]]``.
 Built in (``core=True``): the Documents tab every record has comes from here,
 so it can't be turned off.
 """
-from hyprprem.core.models import EntityDetail
-from hyprprem.manifest import EntityType, Field, Module, Tab
-from hyprprem.models import db
+from hyprvolt.core.models import EntityDetail
+from hyprvolt.manifest import EntityType, Field, Module, Tab
+from hyprvolt.models import db
 
 ICON = '<path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20V3.5Z"/><path d="M14 3.5V8h4M10 12h5M10 15.5h5"/>'
 

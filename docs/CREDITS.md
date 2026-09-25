@@ -1,6 +1,6 @@
 # Credits
 
-Hyprprem is made by [Hyprlab](https://hyprlab.co).
+Hyprvolt is made by [Hyprlab](https://hyprlab.co).
 
 Names are kept in `data/CONTRIBUTORS`, one person per line; this page says
 what each person did. When outside work lands, add both

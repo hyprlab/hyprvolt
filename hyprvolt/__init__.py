@@ -27,7 +27,7 @@ from .core import models as _core_models  # noqa: F401  (the shared tables, for 
 __version__ = "0.1.0"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-log = logging.getLogger("hyprprem")
+log = logging.getLogger("hyprvolt")
 
 _worker_lock = threading.Lock()
 _worker_running = False
@@ -292,4 +292,4 @@ def _start_worker(app: Flask) -> None:
                     log.exception("background work failed")
             time.sleep(max(minutes, 1) * 60)
 
-    threading.Thread(target=loop, daemon=True, name="hyprprem-worker").start()
+    threading.Thread(target=loop, daemon=True, name="hyprvolt-worker").start()

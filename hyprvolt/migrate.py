@@ -21,7 +21,7 @@ from sqlalchemy import inspect, text
 
 from .models import db, get_setting, set_setting
 
-log = logging.getLogger("hyprprem.migrate")
+log = logging.getLogger("hyprvolt.migrate")
 
 
 class Migrator:

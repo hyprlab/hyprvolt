@@ -3,11 +3,11 @@ and the migration helpers modules use."""
 import pytest
 from flask import Blueprint
 
-from hyprprem import registry as reg_mod
-from hyprprem.core.models import EntityDetail
-from hyprprem.manifest import EntityType, Field, Module, RelationKind, Step
-from hyprprem.models import db, set_setting
-from hyprprem.permissions import role
+from hyprvolt import registry as reg_mod
+from hyprvolt.core.models import EntityDetail
+from hyprvolt.manifest import EntityType, Field, Module, RelationKind, Step
+from hyprvolt.models import db, set_setting
+from hyprvolt.permissions import role
 
 
 def fresh():
@@ -161,7 +161,7 @@ def test_modules_are_on_until_an_admin_turns_them_off(app):
 # ———— Migrations ————
 
 def test_migration_helpers_are_safe_to_run_twice(app):
-    from hyprprem.migrate import Migrator
+    from hyprvolt.migrate import Migrator
     calls = []
     with app.app_context():
         m = Migrator("example")
@@ -180,7 +180,7 @@ def test_module_steps_run_after_the_core_in_order(app):
         Module(id="zz", name="Z", migrations=(Step("1", lambda m: ran.append(("zz", m.owner))),)),
         Module(id="aa", name="A", requires=("zz",), migrations=(Step("1", lambda m: ran.append(("aa", m.owner))),)),
     ])
-    from hyprprem import _migrate
+    from hyprvolt import _migrate
     app.extensions[reg_mod.EXTENSION] = reg
     with app.app_context():
         _migrate(app)

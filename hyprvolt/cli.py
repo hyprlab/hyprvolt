@@ -2,11 +2,11 @@
 
 Inside the container:
 
-    docker exec -it hyprprem flask create-user you@example.com --admin
-    docker exec -it hyprprem flask reset-password you@example.com
-    docker exec hyprprem flask backup /data/backup-$(date +%F).tar.gz
-    docker exec hyprprem flask turnstile off
-    docker exec hyprprem flask seed-demo
+    docker exec -it hyprvolt flask create-user you@example.com --admin
+    docker exec -it hyprvolt flask reset-password you@example.com
+    docker exec hyprvolt flask backup /data/backup-$(date +%F).tar.gz
+    docker exec hyprvolt flask turnstile off
+    docker exec hyprvolt flask seed-demo
 
 (The image sets FLASK_APP, so no --app is needed inside the container.)
 
@@ -123,11 +123,11 @@ def backup(destination: Path):
             click.echo("Attachments are not in a .db backup; name it .tar.gz to include them.", err=True)
     else:
         with tempfile.TemporaryDirectory() as tmp:
-            db_copy = Path(tmp) / "hyprprem.db"
+            db_copy = Path(tmp) / "hyprvolt.db"
             copy_db(db_copy)
             mode = "w" if name.endswith(".tar") else "w:gz"
             with tarfile.open(destination, mode) as tar:
-                tar.add(db_copy, arcname="hyprprem.db")
+                tar.add(db_copy, arcname="hyprvolt.db")
                 if files.is_dir():
                     tar.add(files, arcname="attachments")
     click.echo(f"Backed up to {destination} ({destination.stat().st_size // 1024} KB).")

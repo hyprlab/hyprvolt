@@ -6,7 +6,7 @@ The hierarchy is the core's own ``location`` field: a room's location is its
 building. So every record anywhere gets breadcrumbs, and the Contents tab
 lists what is directly inside a place.
 """
-from hyprprem.manifest import EntityType, Field, ListFilter, Module, Tab, Widget
+from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Tab, Widget
 
 from . import demo, views
 from .models import LocationDetail, RackMount

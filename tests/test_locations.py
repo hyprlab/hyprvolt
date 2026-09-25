@@ -117,7 +117,7 @@ def test_viewers_see_racks_but_cannot_change_them(client, h, admin, viewer):
 
 def test_turning_locations_off_hides_it_and_keeps_the_data(app, client, h, admin):
     site, building, room, rack = place(client, h)
-    from hyprprem.models import set_setting
+    from hyprvolt.models import set_setting
     with app.app_context():
         set_setting("module:locations:enabled", "0")
     assert client.get("/locations").status_code == 404

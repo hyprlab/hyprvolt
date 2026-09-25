@@ -4,8 +4,8 @@ things claim the same unit or something doesn't fit.
 A full-depth mount occupies its units on both faces. Units are numbered
 from the bottom (U1 at the bottom) unless the rack says "top".
 """
-from hyprprem.core.models import Entity
-from hyprprem.models import db
+from hyprvolt.core.models import Entity
+from hyprvolt.models import db
 
 from .models import LocationDetail, RackMount
 

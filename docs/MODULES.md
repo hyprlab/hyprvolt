@@ -1,13 +1,13 @@
 # Modules
 
-Everything Hyprprem documents comes from a module: Locations, the knowledge
+Everything Hyprvolt documents comes from a module: Locations, the knowledge
 base, and later Hardware, Virtual, Network and the rest. A module is a Python
-package in `hyprprem/modules/` whose `__init__.py` exports one `Module(...)`,
+package in `hyprvolt/modules/` whose `__init__.py` exports one `Module(...)`,
 its manifest. The core reads the manifests at startup and builds the
 interface, the search, the API and the migrations from them.
 
 Adding a module needs no edit to any core file: the registry finds every
-subpackage of `hyprprem/modules/` by itself. This page is how to write one;
+subpackage of `hyprvolt/modules/` by itself. This page is how to write one;
 [ARCHITECTURE.md](ARCHITECTURE.md#modules) is why it works this way.
 
 ## The smallest module
@@ -16,9 +16,9 @@ This is `tests/example_modules/example/`, which the test suite loads next to
 the real modules:
 
 ```python
-from hyprprem.core.models import EntityDetail
-from hyprprem.manifest import EntityType, Field, Module
-from hyprprem.models import db
+from hyprvolt.core.models import EntityDetail
+from hyprvolt.manifest import EntityType, Field, Module
+from hyprvolt.models import db
 
 
 class GadgetDetail(EntityDetail, db.Model):
@@ -52,7 +52,7 @@ With nothing more, gadgets get:
 
 ## The manifest
 
-`Module` is a dataclass in `hyprprem/manifest.py`. Only `id` and `name` are
+`Module` is a dataclass in `hyprvolt/manifest.py`. Only `id` and `name` are
 required.
 
 | Field | What it is |
@@ -127,7 +127,7 @@ Admins can add fields without code (Settings > Custom fields), of the kinds
 ## Writing records
 
 Everything that creates or changes a record goes through
-`hyprprem.core.records`: `create(type, data)`, `update(entity, data)`,
+`hyprvolt.core.records`: `create(type, data)`, `update(entity, data)`,
 `set_archived`, `delete`, `restore`. They check the values, write the detail
 and custom field rows, rebuild the search text, and write the history, which
 nothing else does. Never set attributes on an `Entity` and commit.
@@ -169,7 +169,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 Routes live on the module's blueprint, which must be named like the module
 and is mounted at `/<id>`. Every view declares who may call it with
 `@role("viewer")`, `@role("editor")` or `@role("admin")` from
-`hyprprem.permissions`; a manifest whose blueprint has a view without one is
+`hyprvolt.permissions`; a manifest whose blueprint has a view without one is
 refused. JSON errors are `{"error": "..."}` written for a person. Anything
 that can be taken back answers with `"undo": {"url": ..., "body": ...}`, which
 the interface offers as Undo. When the module is turned off its routes answer
@@ -183,7 +183,7 @@ After it has shipped, a change to one of its tables is a step appended to
 `migrations`:
 
 ```python
-from hyprprem.manifest import Step
+from hyprvolt.manifest import Step
 
 migrations = (
     Step("0001-rack-power", lambda m: m.add_column("location_details", "power_w", "INTEGER")),
@@ -191,7 +191,7 @@ migrations = (
 )
 ```
 
-`m` is a `Migrator` (`hyprprem/migrate.py`): `add_column`, `add_index`,
+`m` is a `Migrator` (`hyprvolt/migrate.py`): `add_column`, `add_index`,
 `once(key, fn)` for data, `has_table`, `has_column`, `execute`. Each checks
 before it acts, so every step is safe to run on every boot. Steps are
 appended and never edited. The core's steps run first, then each module's in
@@ -208,7 +208,7 @@ on every write.
 
 ## Checklist
 
-1. A package in `hyprprem/modules/<id>/` exporting `module`.
+1. A package in `hyprvolt/modules/<id>/` exporting `module`.
 2. Detail tables subclass `EntityDetail`; field keys match their columns.
 3. Every route has `@role(...)`; writes go through `records`.
 4. Templates in `templates/<id>/`, built from existing components.

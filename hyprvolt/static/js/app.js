@@ -1,4 +1,4 @@
-/* Hyprprem client. No dependencies, no build step.
+/* Hyprvolt client. No dependencies, no build step.
  *
  * Sections, in order: API, toasts, theme, mobile sidebar, dialogs, settings,
  * admin, menus, records, the record form, data-* behaviors, the detail sheet,

@@ -2,10 +2,10 @@
 the ones that mention it with [[its-slug]]."""
 from flask import render_template
 
-from hyprprem.core import present
-from hyprprem.core.markdown import excerpt
-from hyprprem.core.models import Entity, Relationship
-from hyprprem.models import db
+from hyprvolt.core import present
+from hyprvolt.core.markdown import excerpt
+from hyprvolt.core.models import Entity, Relationship
+from hyprvolt.models import db
 
 
 def attached(entity):
@@ -22,7 +22,7 @@ def mentions(entity):
     pattern = f"%[[{entity.slug}%"
     rows = (Entity.live().join(DocumentBody, DocumentBody.entity_id == Entity.id)
             .filter(DocumentBody.body.like(pattern), Entity.id != entity.id).order_by(Entity.name).all())
-    from hyprprem.core.markdown import slugs_in
+    from hyprvolt.core.markdown import slugs_in
     return [e for e in rows if entity.slug in slugs_in(db.session.get(DocumentBody, e.id).body)]
 
 

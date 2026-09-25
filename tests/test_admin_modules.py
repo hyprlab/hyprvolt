@@ -2,8 +2,8 @@
 modules add."""
 import pytest
 
-from hyprprem.manifest import Pane
-from hyprprem.registry import EXTENSION
+from hyprvolt.manifest import Pane
+from hyprvolt.registry import EXTENSION
 
 from .conftest import make
 
@@ -53,7 +53,7 @@ def test_a_module_adds_a_settings_section(client, h, admin, pane):
 @pytest.fixture()
 def hooks(app):
     """A job and a search provider on the example module, for these tests."""
-    from hyprprem.manifest import Job, SearchResult
+    from hyprvolt.manifest import Job, SearchResult
     module = app.extensions[EXTENSION].module("example")
     ran = []
     module.jobs = (Job("count", lambda: ran.append(1) or 7, minutes=5),)
@@ -64,7 +64,7 @@ def hooks(app):
 
 
 def test_module_jobs_run_when_due_and_only_when_on(app, client, h, admin, hooks):
-    from hyprprem.worker import run_once
+    from hyprvolt.worker import run_once
     assert run_once(app)["example.count"] == 7
     assert "example.count" not in run_once(app)            # not due for five minutes
     assert run_once(app, force=True)["example.count"] == 7

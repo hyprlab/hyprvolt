@@ -3,7 +3,7 @@
 ## Reporting a problem
 
 Report security problems privately, through GitHub's
-[private vulnerability reporting](https://github.com/hyprlab/hyprprem/security/advisories/new)
+[private vulnerability reporting](https://github.com/hyprlab/hyprvolt/security/advisories/new)
 (Security, then "Report a vulnerability"), or by email to
 hyprlab@proton.me. Please don't open a public issue.
 

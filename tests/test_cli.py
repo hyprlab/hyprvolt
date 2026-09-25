@@ -10,7 +10,7 @@ def test_create_user_and_reset_password(app):
     result = runner.invoke(args=["reset-password", "OPS@example.com"],
                            input="password2\npassword2\n")
     assert result.exit_code == 0, result.output
-    from hyprprem.models import User
+    from hyprvolt.models import User
     with app.app_context():
         assert User.query.one().check_password("password2")
 

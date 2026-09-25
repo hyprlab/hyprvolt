@@ -5,9 +5,9 @@ detail sheet with its Relationships, Documents, Attachments and History tabs,
 search, custom fields, archive, delete with Undo, and a place in the sidebar.
 docs/MODULES.md walks through it.
 """
-from hyprprem.core.models import EntityDetail
-from hyprprem.manifest import EntityType, Field, Module
-from hyprprem.models import db
+from hyprvolt.core.models import EntityDetail
+from hyprvolt.manifest import EntityType, Field, Module
+from hyprvolt.models import db
 
 
 class GadgetDetail(EntityDetail, db.Model):

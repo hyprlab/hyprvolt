@@ -4,7 +4,7 @@ from .conftest import make
 
 
 def render(app, text):
-    from hyprprem.core.markdown import render as md
+    from hyprvolt.core.markdown import render as md
     with app.test_request_context():
         return str(md(text))
 
@@ -46,8 +46,8 @@ def test_a_new_document_can_be_attached_to_a_record(client, h, admin):
 
 
 def test_the_knowledge_base_cannot_be_turned_off(app):
-    from hyprprem.models import set_setting
-    from hyprprem.registry import EXTENSION
+    from hyprvolt.models import set_setting
+    from hyprvolt.registry import EXTENSION
     with app.app_context():
         set_setting("module:documents:enabled", "0")
     with app.test_request_context():
