@@ -12,7 +12,7 @@
 
 {% macro crumbs(chain, current=None) -%}
 {% if chain %}<nav class="crumbs" aria-label="Location">
-  {%- for id, name in chain %}<a href="/e/{{ id }}" data-entity="{{ id }}">{{ name }}</a><span class="crumbs-sep" aria-hidden="true">›</span>{% endfor %}
+  {%- for id, name in chain %}<a href="/e/{{ id }}" data-entity="{{ id }}">{{ name }}</a>{% if not loop.last or current %}<span class="crumbs-sep" aria-hidden="true">›</span>{% endif %}{% endfor %}
   {%- if current %}<span>{{ current }}</span>{% endif %}
 </nav>{% endif %}
 {%- endmacro %}

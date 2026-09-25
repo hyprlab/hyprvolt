@@ -479,3 +479,15 @@ def admin_module(module_id):
         return jsonify(error=f"{module.name} is built in and can't be turned off."), 400
     set_setting(f"module:{module.id}:enabled", "1" if on else "0")
     return jsonify(ok=True, enabled=on)
+
+
+@bp.route("/admin/seed-demo", methods=["POST"])
+@role("admin")
+def admin_seed_demo():
+    """The dashboard's Load a demo homelab, for an empty instance only."""
+    from .demo import DemoError, seed_for_request
+    try:
+        made = seed_for_request()
+    except DemoError as err:
+        return jsonify(error=str(err)), 409
+    return jsonify(ok=True, records=made)

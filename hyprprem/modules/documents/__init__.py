@@ -36,6 +36,7 @@ module = Module(
         Tab("documents", "Documents", lambda e: views.documents_tab(e),
             when=lambda e: e.type != "document", count=lambda e: views.count(e)),
     ),
+    seed=lambda demo_: demo.seed(demo_),
 )
 
-from . import views  # noqa: E402  (after DocumentBody, which it imports)
+from . import demo, views  # noqa: E402  (after DocumentBody, which views imports)

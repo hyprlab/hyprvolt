@@ -6,6 +6,7 @@ Inside the container:
     docker exec -it hyprprem flask reset-password you@example.com
     docker exec hyprprem flask backup /data/backup-$(date +%F).tar.gz
     docker exec hyprprem flask turnstile off
+    docker exec hyprprem flask seed-demo
 
 (The image sets FLASK_APP, so no --app is needed inside the container.)
 
@@ -31,6 +32,7 @@ def register(app: Flask) -> None:
     app.cli.add_command(reset_password)
     app.cli.add_command(backup)
     app.cli.add_command(turnstile)
+    app.cli.add_command(seed_demo)
 
 
 def _find(username: str) -> User | None:
@@ -155,3 +157,16 @@ def turnstile_off():
     back on after a successful challenge."""
     set_setting("turnstile_enabled", "0")
     click.echo("Turnstile is off. Sign-in and sign-up no longer show a challenge.")
+
+
+@click.command("seed-demo")
+@with_appcontext
+@click.option("--force", is_flag=True, help="Add the demo even though the instance has records.")
+def seed_demo(force):
+    """Fill an empty instance with a small homelab to try the app on."""
+    from .demo import DemoError, seed
+    try:
+        made = seed(force=force)
+    except DemoError as err:
+        raise click.ClickException(str(err) + " Use --force to add it anyway.") from None
+    click.echo(f"Added the demo homelab: {made} records.")

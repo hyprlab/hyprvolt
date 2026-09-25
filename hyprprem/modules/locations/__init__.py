@@ -8,7 +8,7 @@ lists what is directly inside a place.
 """
 from hyprprem.manifest import EntityType, Field, ListFilter, Module, Tab, Widget
 
-from . import views
+from . import demo, views
 from .models import LocationDetail, RackMount
 
 STATUSES = (("active", "In use"), ("planned", "Planned"), ("retired", "Out of use"))
@@ -63,4 +63,5 @@ module = Module(
     filters=(ListFilter("conflicts", "Racks with conflicts", views.conflicts_filter),),
     widgets=(Widget("rack-space", "Rack space", views.rack_space_widget),),
     sheet_tabs=(in_a_rack,),
+    seed=demo.seed,
 )
