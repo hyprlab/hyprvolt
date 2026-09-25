@@ -18,9 +18,9 @@ from ..models import db
 from ..permissions import role
 from ..registry import current as registry
 from . import fields as F
-from . import records
+from . import records, relations
 from .fields import Invalid
-from .models import AuditLog, CustomField, CustomValue, Entity, Tag, entity_tags
+from .models import AuditLog, CustomField, CustomValue, Entity, Relationship, Tag, entity_tags
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -138,11 +138,10 @@ def entity_create():
 
 def _attach_new(entity: Entity, target_id) -> None:
     """A document written from another record's Documents tab: link it."""
-    from .relations import link
     target = records.live(target_id)
     if target is None:
         raise Invalid("The record to attach it to no longer exists.")
-    link("documented_by", target, entity)
+    relations.link("documented_by", target, entity)
 
 
 @bp.route("/entities/<int:entity_id>", methods=["POST"])
@@ -195,6 +194,60 @@ def entity_history(entity_id):
     return jsonify(history=[{
         "at": r.at.isoformat() + "Z", "user": r.user_name, "action": r.action, "changes": r.changes,
     } for r in rows])
+
+
+# ———— Relationships ————
+
+def _rel_json(item: dict) -> dict:
+    rel, other = item["rel"], item["other"]
+    return {"id": rel.id, "kind": rel.kind, "label": item["label"], "outgoing": item["outgoing"],
+            "note": rel.note, "other": to_json(other, full=False)}
+
+
+@bp.route("/entities/<int:entity_id>/relationships")
+@role("viewer")
+def entity_relationships(entity_id):
+    entity = entity_or_404(entity_id)
+    return jsonify(relationships=[_rel_json(r) for r in relations.for_entity(entity)])
+
+
+@bp.route("/entities/<int:entity_id>/dependencies")
+@role("viewer")
+def entity_dependencies(entity_id):
+    """``direction=dependents`` (the default: what breaks if this goes down)
+    or ``dependencies`` (what this needs)."""
+    entity = entity_or_404(entity_id)
+    direction = request.args.get("direction", "dependents")
+    if direction not in ("dependents", "dependencies"):
+        return jsonify(error="direction is dependents or dependencies."), 400
+    depth = min(max(request.args.get("depth", 6, type=int), 1), 20)
+    return jsonify(tree=relations.tree_json(relations.walk(entity, direction, depth)))
+
+
+@bp.route("/relationships", methods=["POST"])
+@role("editor")
+def relationship_create():
+    data = _body()
+    source, target = records.live(data.get("source_id")), records.live(data.get("target_id"))
+    if source is None or target is None:
+        return jsonify(error="Both ends of a link must be records that exist."), 400
+    try:
+        rel = relations.link(data.get("kind") or "", source, target, data.get("note") or "")
+    except Invalid as err:
+        return _fail(err)
+    db.session.commit()
+    kind = registry().kinds[rel.kind]
+    return jsonify(ok=True, relationship={"id": rel.id, "kind": rel.kind, "label": kind.label,
+                                          "source_id": source.id, "target_id": target.id, "note": rel.note})
+
+
+@bp.route("/relationships/<int:rel_id>/delete", methods=["POST"])
+@role("editor")
+def relationship_delete(rel_id):
+    rel = db.get_or_404(Relationship, rel_id)
+    snapshot = relations.unlink(rel)
+    db.session.commit()
+    return jsonify(ok=True, undo={"url": "/api/relationships", "body": snapshot})
 
 
 # ———— Tags ————
