@@ -63,10 +63,19 @@ change their own role or delete themselves, so there is always one left.
 
 ## Modules and custom fields
 
-What Hyprvolt documents comes in modules: Locations and the knowledge base
-so far. Settings > Modules turns a module off; it then disappears from the
-sidebar, search and the dashboard, and its records stay in the database until
-it is turned back on. The knowledge base is built in.
+What Hyprvolt documents comes in modules: Locations, Hardware and the
+knowledge base so far. Settings > Modules turns a module off; it then
+disappears from the sidebar, search and the dashboard, and its records stay
+in the database until it is turned back on. A module that needs another is
+off while that one is: Hardware needs Locations. The knowledge base is built
+in.
+
+Hardware's status is where a device is in its life: deployed, ordered, in
+stock, in repair, retired or disposed. Anything that goes in a rack has its
+rack, units and face in its own form, and choosing a rack there makes the
+rack its location. The sidebar lists hardware whose warranty ends within 90
+days and hardware out of warranty (retired and disposed hardware is left out
+of both), and the dashboard's Warranties card shows the same.
 
 Settings > Custom fields adds fields of your own to any kind of record: text,
 a number, a date, a choice list, a web address, or yes or no. They appear in

@@ -183,6 +183,8 @@ def form(entity_id=None):
     fields = []
     for f in etype.fields:
         value = own.get(f.key) if entity else f.default
+        if f.kind == "number" and isinstance(value, float) and value.is_integer():
+            value = int(value)   # 850, not 850.0
         fields.append({"field": f, "name": "f." + f.key, "value": value,
                        "choices": _ref_choices(f, entity) if f.kind == "ref" else None})
     custom = []

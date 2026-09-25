@@ -1,0 +1,114 @@
+"""Hardware: the physical things. Servers, network gear, firewalls, access
+points, UPSes, NAS boxes, workstations, printers and peripherals, each with
+its make, serial, asset tag, purchase, warranty and specs, and a lifecycle
+status from ordered to disposed.
+
+Where a device is comes from the core's location, and its rack position
+from Locations' form section: the types that go in a rack carry the
+``rackmount`` trait. Hardware needs Locations for both.
+"""
+from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Widget
+
+from . import demo, views
+from .models import HardwareDetail
+
+#: The lifecycle. The first is what a new record starts as: most hardware
+#: is written down once it is in use.
+STATUSES = (("deployed", "Deployed"), ("ordered", "Ordered"), ("in_stock", "In stock"),
+            ("in_repair", "In repair"), ("retired", "Retired"), ("disposed", "Disposed"))
+
+# ———— Fields, shared by the types that use them ————
+
+MANUFACTURER = Field("manufacturer", "Manufacturer", list=True)
+MODEL = Field("model", "Model", card=True, list=True)
+SERIAL = Field("serial", "Serial number")
+ASSET_TAG = Field("asset_tag", "Asset tag", card=True)
+IDENTITY = (MANUFACTURER, MODEL, SERIAL, ASSET_TAG)
+
+PURCHASE = (
+    Field("purchase_date", "Purchased", "date", group="Purchase"),
+    Field("price", "Price", "number", min=0, group="Purchase"),
+    Field("vendor", "Bought from", group="Purchase"),
+    Field("warranty_until", "Warranty ends", "date", group="Purchase"),
+)
+
+CPU = Field("cpu", "CPU", group="Specs", help="As many as it has: 2 × Xeon E5-2680 v4.")
+CORES = Field("cpu_cores", "CPU cores", "integer", min=1, max=4096, group="Specs")
+RAM = Field("ram_gb", "Memory", "integer", min=0, max=1_000_000, unit="GB", card=True, group="Specs")
+STORAGE = Field("storage", "Disks", "longtext", group="Specs", help="One per line: 2 × 960 GB SSD, mirror.")
+NICS = Field("nics", "Network ports", "longtext", group="Specs", help="One per line: 4 × 1 GbE, 2 × 10 GbE SFP+.")
+POWER = Field("power_w", "Power draw", "integer", min=0, max=100_000, unit="W", group="Specs")
+OS = Field("os", "Operating system", group="Specs")
+FIRMWARE = Field("os", "Firmware", group="Specs")
+PORTS = Field("ports", "Ports", "integer", min=0, max=1000, card=True, group="Specs")
+
+FORM_FACTORS = (("rack", "Rack mount"), ("tower", "Tower"), ("mini", "Mini PC"), ("blade", "Blade"),
+                ("sbc", "Single-board computer"), ("other", "Other"))
+NETWORK_KINDS = (("switch", "Switch"), ("router", "Router"), ("modem", "Modem"),
+                 ("patch_panel", "Patch panel"), ("other", "Other"))
+
+# ———— Icons, 24×24 stroked paths ————
+
+ICON = '<rect x="3.5" y="4.5" width="17" height="6" rx="1"/><rect x="3.5" y="13.5" width="17" height="6" rx="1"/><path d="M7 7.5h.1M7 16.5h.1M11 7.5h6M11 16.5h6"/>'
+SERVER = ICON
+NETWORK = '<rect x="2.5" y="8" width="19" height="8" rx="1.2"/><path d="M6 12h.1M9 12h.1M12 12h.1M15 12h.1M18 12h.1"/>'
+FIREWALL = '<path d="M12 3.5 5 6v5.5c0 4.2 3 7.8 7 9 4-1.2 7-4.8 7-9V6l-7-2.5Z"/><path d="M8.5 11h7M8.5 14.5h7M12 11v3.5"/>'
+ACCESS_POINT = '<path d="M5 9.5a10 10 0 0 1 14 0M7.8 12.5a6 6 0 0 1 8.4 0M10.6 15.5a2 2 0 0 1 2.8 0"/><path d="M12 18.5h.1"/>'
+UPS = '<rect x="6.5" y="3.5" width="11" height="17" rx="1.5"/><path d="m12.8 7.5-2.6 4.5h3.6l-2.6 4.5"/>'
+NAS = '<rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M8.5 7.5h7M8.5 11h7M8.5 14.5h7M12 17.5h.1"/>'
+WORKSTATION = '<rect x="3.5" y="4.5" width="17" height="11" rx="1"/><path d="M9 19.5h6M12 15.5v4"/>'
+PRINTER = '<path d="M7 9V4.5h10V9"/><rect x="3.5" y="9" width="17" height="7" rx="1"/><path d="M7 14h10v5.5H7z"/>'
+PERIPHERAL = '<rect x="3" y="8" width="18" height="9" rx="1.2"/><path d="M6.5 11h.1M9.5 11h.1M12.5 11h.1M15.5 11h.1M8 14h8"/>'
+
+RACK = ("rackmount",)
+
+
+def hardware(key, label, plural, icon, specs=(), traits=()):
+    return EntityType(key, label, plural, detail=HardwareDetail, statuses=STATUSES, icon=icon, traits=traits,
+                      fields=IDENTITY + tuple(specs) + PURCHASE)
+
+
+module = Module(
+    id="hardware",
+    name="Hardware",
+    icon=ICON,
+    description="Servers, network gear, UPSes, storage and desks: make, serial, warranty, specs and lifecycle.",
+    group="Infrastructure",
+    order=20,
+    requires=("locations",),
+    models=(HardwareDetail,),
+    types=(
+        hardware("server", "Server", "Servers", SERVER, traits=RACK, specs=(
+            Field("kind", "Form factor", "select", options=FORM_FACTORS, group="Specs"),
+            CPU, CORES, RAM, STORAGE, NICS, POWER, OS)),
+        hardware("network_device", "Network device", "Network gear", NETWORK, traits=RACK, specs=(
+            Field("kind", "Kind", "select", options=NETWORK_KINDS, list=True, group="Specs"),
+            PORTS, Field("managed", "Managed", "boolean", group="Specs"), FIRMWARE, POWER)),
+        hardware("firewall", "Firewall", "Firewalls", FIREWALL, traits=RACK, specs=(
+            PORTS, FIRMWARE, CPU, RAM, POWER)),
+        hardware("access_point", "Access point", "Access points", ACCESS_POINT, specs=(
+            Field("wifi", "Wi-Fi", group="Specs", help="The standard and bands: Wi-Fi 6, 2.4 and 5 GHz."),
+            FIRMWARE, POWER)),
+        hardware("ups", "UPS", "UPSes", UPS, traits=RACK, specs=(
+            Field("capacity_va", "Capacity", "integer", min=0, max=1_000_000, unit="VA", card=True, group="Specs"),
+            Field("runtime_min", "Runtime at load", "integer", min=0, max=10_000, unit="min", group="Specs"),
+            Field("battery_due", "Battery due", "date", group="Specs",
+                  help="When the batteries should be replaced."),
+            Field("power_w", "Rated output", "integer", min=0, max=1_000_000, unit="W", group="Specs"))),
+        hardware("nas", "NAS", "NAS", NAS, traits=RACK, specs=(
+            Field("drive_bays", "Drive bays", "integer", min=0, max=500, group="Specs"),
+            Field("capacity_tb", "Usable capacity", "number", min=0, unit="TB", card=True, group="Specs"),
+            STORAGE, CPU, RAM, NICS, POWER, OS)),
+        hardware("workstation", "Workstation", "Workstations", WORKSTATION, specs=(
+            Field("assigned_to", "Used by", list=True, group="Specs"),
+            CPU, CORES, RAM, STORAGE, OS)),
+        hardware("printer", "Printer", "Printers", PRINTER, specs=(FIRMWARE, POWER)),
+        hardware("peripheral", "Peripheral", "Peripherals", PERIPHERAL, traits=RACK, specs=(
+            Field("category", "What it is", list=True, group="Specs",
+                  help="A monitor, a KVM switch, a PDU, a dock."), POWER)),
+    ),
+    filters=(ListFilter("warranty_soon", "Warranty ending soon", views.warranty_soon),
+             ListFilter("warranty_over", "Out of warranty", views.warranty_over)),
+    widgets=(Widget("warranties", "Warranties", views.warranty_widget),),
+    seed=demo.seed,
+)

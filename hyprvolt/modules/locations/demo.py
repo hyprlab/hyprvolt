@@ -1,6 +1,6 @@
-"""The demo homelab's places: a house with a basement rack and an office
-closet. The equipment is in the rack as labels until a module documents it
-as records of its own."""
+"""The demo homelab's places: a house with a basement rack and an office.
+The rack holds the passive parts as labels; Hardware's demo puts the
+equipment in it as records."""
 from hyprvolt.models import db
 
 from .models import RackMount
@@ -14,7 +14,7 @@ def seed(demo):
     demo.add("room", "Office", key="office", location=house, floor="1", code="OFC")
     rack = demo.add("rack", "Rack 1", key="rack-1", location=basement, tags=["lab"], height_u=24,
                     numbering="bottom", depth_mm=600,
-                    notes="24U open frame. Power comes from the UPS at the bottom; the PDU runs up the rear.")
+                    notes="24U open frame. Power comes from the UPS at the bottom; the PDU is on the rear.")
     shelf = demo.add("shelf", "Rack shelf", key="rack-shelf", location=rack, height_u=2,
                      notes="Holds the mini PCs and the modem.")
     demo.add("shelf", "Storage shelf", key="storage-shelf", location=basement,
@@ -28,10 +28,5 @@ def seed(demo):
 
     mount("Patch panel, 24 ports", 24, 1)
     mount("Cable manager", 23, 1)
-    mount("Switch sw-core", 22, 1)
-    mount("Firewall edge-fw", 20, 1)
-    mount("Hypervisor pve1", 16, 2, "full")
-    mount("NAS nas1", 12, 2, "full")
+    mount("Blanking plate", 19, 1)
     mount(None, 9, 2, "full", entity=shelf)
-    mount("PDU", 5, 1, "rear")
-    mount("UPS", 1, 3, "full")

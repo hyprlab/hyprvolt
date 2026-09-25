@@ -11,6 +11,9 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Locations: sites, buildings, rooms, racks and shelves, with breadcrumbs on everything that has a place
 - Rack elevations show what occupies each unit on the front and rear, and flag overlaps and anything that no longer fits; a sidebar filter lists the racks with conflicts
 - The form of anything that goes in a rack has its rack position: the rack, the lowest unit, the height and the face
+- Hardware: servers, network gear, firewalls, access points, UPSes, NAS, workstations, printers and peripherals, with make, model, serial, asset tag, purchase, warranty, specs and a lifecycle status from ordered to disposed
+- Sidebar filters list hardware whose warranty ends within 90 days or is over, and a dashboard card shows both
+- A module that needs another is off while that one is, and Settings > Modules says why
 - A knowledge base of Markdown documents that attach to any record and link to records with [[slug]]
 - Typed links between records in both directions, and a view of what breaks if a record goes down
 - Files attached to any record, included in `flask backup` when the backup is named `.tar.gz`

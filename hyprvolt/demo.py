@@ -26,13 +26,16 @@ class Demo:
         self.made: dict[str, Entity] = {}
 
     def add(self, type_key: str, name: str, key: str | None = None, location=None, tags=(), notes: str = "",
-            status: str | None = None, **fields) -> Entity | None:
+            status: str | None = None, sections: dict | None = None, **fields) -> Entity | None:
         """Create a record; ``key`` (default: its slug) finds it again.
-        ``location`` is a key or an entity. Returns None if the type's module
+        ``location`` is a key or an entity. ``sections`` are values for other
+        modules' form sections: ``{"rack": {"rack_id": ..., ...}}``, where an
+        entity or a key stands for its id. Returns None if the type's module
         is turned off, so seeds need not check."""
         if registry().type(type_key) is None or not registry().is_enabled(registry().type(type_key).module):
             return None
-        data = {"name": name, "tags": list(tags), "notes": notes, "fields": fields}
+        data = {"name": name, "tags": list(tags), "notes": notes, "fields": fields,
+                "sections": {k: {n: self._id(v) for n, v in values.items()} for k, values in (sections or {}).items()}}
         if status:
             data["status"] = status
         loc = self.get(location) if isinstance(location, str) else location
@@ -44,6 +47,13 @@ class Demo:
 
     def get(self, key: str) -> Entity | None:
         return self.made.get(key)
+
+    def _id(self, value):
+        if isinstance(value, Entity):
+            return value.id
+        if isinstance(value, str) and value in self.made:
+            return self.made[value].id
+        return value
 
     def link(self, kind: str, source, target, note: str = "") -> None:
         source = self.get(source) if isinstance(source, str) else source
