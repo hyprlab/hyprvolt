@@ -10,13 +10,22 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0 license"></a>
 </p>
 
-Hyprprem is a self-hosted web app that runs in one Docker container with its data
-in a single SQLite volume.
+Hyprprem documents what an on-premise business, organization or homelab
+runs: where each box is, what sits in which rack unit, how things depend on
+each other, and the runbooks that explain them. It is a self-hosted web app
+that runs in one Docker container with its data in a single SQLite volume.
 
 ## Features
 
-- Accounts with a first-run setup wizard; the first account is the admin
-- Light and dark themes that follow the system
+- Sites, buildings, rooms, racks and shelves, with breadcrumbs on everything
+- Rack elevations, front and rear, that flag overlaps and anything that no longer fits
+- A Markdown knowledge base whose documents attach to records and link to them with `[[slug]]`
+- Typed links between any two records, and a view of what breaks if one goes down
+- Attachments, tags, custom fields and a full history on every record
+- Delete with Undo, archive, and search across everything with Ctrl K
+- Viewer, editor and admin roles; the documentation belongs to the instance
+- A module system, so new kinds of records arrive without changes to the core
+- A demo homelab to try it on, and backups that include the attachments
 
 ## Install with Docker Compose
 
@@ -34,6 +43,7 @@ Configuration is covered in [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md).
 | --- | --- |
 | [Documentation](docs/DOCUMENTATION.md) | Configuration, deployment, backups |
 | [Architecture](docs/ARCHITECTURE.md) | How the pieces fit, and why |
+| [Modules](docs/MODULES.md) | Writing a module |
 | [Contributing](docs/CONTRIBUTING.md) | Commits, prose style, tests |
 | [Releasing](docs/RELEASING.md) | Versions, the beta and stable channels |
 | [Changelog](CHANGELOG.md) | What changed in each release |

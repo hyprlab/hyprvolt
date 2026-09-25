@@ -25,7 +25,9 @@ Only the latest stable release receives security fixes.
 | Password guessing | Salted hashes (Werkzeug's scrypt/pbkdf2); a throttle of eight failures per account and address per fifteen minutes; optional Cloudflare Turnstile, turned on in Settings > Security only after a challenge passes with the new keys |
 | Open redirects | The post-sign-in `next` must be a same-site path |
 | Session theft | `HttpOnly` and `SameSite=Lax` cookies; `Secure` with `SESSION_COOKIE_SECURE=1` |
-| Reading other accounts' data | Every record route checks ownership and answers 404, not 403 |
+| Doing more than a role allows | Every route declares the role it needs (viewer, editor, admin), checked on the server; the app refuses to start with a route that declares none |
+| Files that run script | Attachments are stored under generated names, served with `Content-Security-Policy: sandbox` (PDFs excepted) and `nosniff`; anything but images, PDFs and plain text downloads |
+| HTML in documents | Markdown is rendered, then passed through the allowlist sanitizer; `[[slug]]` labels are escaped |
 | A default password | There is none: the first account is created in the setup wizard |
 | Stale pages | HTML is served `no-store` |
 | Running as root | The container runs as an unprivileged user |
@@ -40,3 +42,5 @@ Only the latest stable release receives security fixes.
 - The Turnstile secret is stored in the database unencrypted, like every other
   setting; whoever can read the volume can read it. It is never sent to a
   browser.
+- Documentation is readable by every signed-in account. Keep credentials out
+  of notes and documents; the secrets vault (planned) is where they will go.

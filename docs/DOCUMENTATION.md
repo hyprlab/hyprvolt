@@ -12,8 +12,10 @@ curl -O https://raw.githubusercontent.com/hyprlab/hyprprem/main/docker-compose.y
 docker compose up -d
 ```
 
-Open `http://<host>:8100`. The first visit opens the setup wizard, which
-creates the admin account. There is no default account or password.
+Open `http://<host>:8101`. The first visit opens the setup wizard, which
+creates the admin account. There is no default account or password. On an
+empty instance the dashboard offers to load a demo homelab to look around in;
+`flask seed-demo` does the same from the server.
 
 From a clone of the repository, `docker compose up -d --build` builds the
 image from source instead: `docker-compose.override.yml` is picked up
@@ -37,11 +39,51 @@ Everything is optional. Put values in a `.env` file next to
 | `ALLOW_REGISTRATION` | `0` | Whether anyone can create an account. New accounts get the default role (viewer unless an admin changes it) |
 | `WORKER_MINUTES` | `15` | How often background work runs; `0` turns it off |
 | `ITEMS_PER_PAGE` | `40` | Records per page |
-| `DATA_DIR` | `/data` | Where the database lives inside the container |
+| `DATA_DIR` | `/data` | Where the database and attachments live inside the container |
+| `MODULES_STRICT` | `0` | Stop at startup when a module's manifest is broken, instead of leaving the module out |
 
 `ALLOW_REGISTRATION`, `WORKER_MINUTES`, `ITEMS_PER_PAGE` and the Turnstile
 keys are only defaults for a fresh install. Once they are changed in Settings
 (under Admin or Security), what is saved there wins.
+
+## Accounts and roles
+
+Every account has a role:
+
+| Role | Can |
+| --- | --- |
+| Viewer | Read everything, and download attachments |
+| Editor | Also create, edit, link, archive and delete records, and attach files |
+| Admin | Also manage users, modules, custom fields and the instance settings |
+
+The account made in the setup wizard is an admin. Admins set each account's
+role in Settings > Admin, and the role accounts from sign-up start with
+(viewer unless changed). Sign-up is off on a fresh install. An admin can't
+change their own role or delete themselves, so there is always one left.
+
+## Modules and custom fields
+
+What Hyprprem documents comes in modules: Locations and the knowledge base
+so far. Settings > Modules turns a module off; it then disappears from the
+sidebar, search and the dashboard, and its records stay in the database until
+it is turned back on. The knowledge base is built in.
+
+Settings > Custom fields adds fields of your own to any kind of record: text,
+a number, a date, a choice list, a web address, or yes or no. They appear in
+the record's form and Overview, and search finds their values. Removing one
+removes its values too, with Undo.
+
+## Records
+
+Deleting a record, a link or a file can be undone from the message that
+follows. A deleted record then waits under Recently deleted, where it can
+still be restored, and is purged for good after the number of days set in
+Settings > Admin (30 by default). Archiving a record instead keeps it out of
+lists and search with its history and links, until it is unarchived.
+
+Attachments are limited in size per file in Settings > Admin (25 MB by
+default). Images, PDFs and plain text open in the browser; everything else
+downloads.
 
 ## Turnstile
 
@@ -106,18 +148,23 @@ existing install needs something done by hand; the changelog says what.
 
 ## Backups
 
-Everything is in the volume: the SQLite database and the generated secret key.
-For a consistent copy while the app runs:
+Everything is in the volume: the SQLite database, the attachments and the
+generated secret key. For a consistent copy while the app runs:
 
 ```sh
-docker exec hyprprem flask backup /data/backup-$(date +%F).db
-docker cp hyprprem:/data/backup-$(date +%F).db .
+docker exec hyprprem flask backup /data/backup-$(date +%F).tar.gz
+docker cp hyprprem:/data/backup-$(date +%F).tar.gz .
 ```
 
-`flask backup` uses SQLite's online backup API; copying the `.db` file by hand
-while the app writes can produce a torn copy. To restore, stop the container,
-replace `hyprprem.db` in the volume (and remove any `-wal` and `-shm` files
-beside it), and start it again.
+A name ending in `.tar.gz` (or `.tgz`, `.tar`) gets an archive of the
+database (`hyprprem.db`) and every attachment (`attachments/`). A name ending
+in `.db` gets the database alone, without the files. `flask backup` uses
+SQLite's online backup API; copying the `.db` file by hand while the app
+writes can produce a torn copy.
+
+To restore, stop the container, unpack the archive into the volume so that
+`hyprprem.db` and `attachments/` replace what is there (remove any `-wal` and
+`-shm` files beside the database), and start it again.
 
 ## Commands
 
@@ -125,9 +172,10 @@ Run inside the container:
 
 | Command | What it does |
 | --- | --- |
-| `flask create-user EMAIL [--admin] [--name NAME]` | Create an account; asks for the password |
+| `flask create-user EMAIL [--role viewer\|editor\|admin] [--admin] [--name NAME]` | Create an account; asks for the password. `--admin` is `--role admin` |
 | `flask reset-password EMAIL` | Set a new password; the way back in for a locked-out admin |
-| `flask backup PATH` | Write a consistent copy of the database |
+| `flask backup PATH` | Write a consistent copy: `.tar.gz` for the database and attachments, `.db` for the database alone |
+| `flask seed-demo [--force]` | Fill an empty instance with a small demo homelab |
 | `flask turnstile status`, `flask turnstile off` | Show whether Turnstile is on; turn it off when nobody can sign in |
 
 ```sh
@@ -145,9 +193,10 @@ its database, without signing in. The image's `HEALTHCHECK` uses it, so
 | Key | Where | What it does |
 | --- | --- | --- |
 | Ctrl K, ⌘K or `/` | anywhere | Search |
-| `n` | the list | New record |
-| `j`, `k` | a record | Next, previous |
-| `p`, `d`, `e` | a record | Pin, mark as done, edit |
+| `n` | a page | New record (the menu of kinds, where there is more than one) |
+| `j`, `k` | a record | Next, previous in the list |
+| `1` to `9`, ← → | a record | Its tabs |
+| `e`, `a`, `c` | a record | Edit, archive or unarchive, copy its link |
 | Esc | a dialog | Close it |
 
 ## Troubleshooting

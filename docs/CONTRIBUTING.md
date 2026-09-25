@@ -43,7 +43,8 @@ Subjects follow [Conventional Commits](https://www.conventionalcommits.org):
   it to decide the next version ([RELEASING.md](RELEASING.md)).
 - The area is where the change lives: `auth`, `setup`, `admin`, `settings`,
   `sidebar`, `sheet`, `search`, `worker`, `db`, `ui`, `docker`, `release`,
-  plus the app's own. Leave it out only when there is no single place.
+  plus the app's own: `core`, `api`, `cli`, and each module's id
+  (`locations`, `documents`). Leave it out only when there is no single place.
 - An issue number goes at the end: `fix(auth): keep the next page after sign-in (#12)`.
 - Releases: `chore(release): 1.4.0`, `chore(release): 1.5.0-beta.1`.
 
@@ -101,8 +102,12 @@ renders the changelog, so a skipped section is a gap users see.
 
 - Match what is there: the app factory, blueprints, the `{"error": "..."}`
   shape for JSON failures, `api()` in `app.js` for every mutating call.
-- Schema changes go in `_migrate()` as guarded `ALTER TABLE` steps. Never edit
-  an old step. A step an older version can't read back is a MAJOR release.
+- Schema changes go in `_migrate()` (the core's) or a module's `migrations`
+  as guarded steps; a new table needs none. Never edit an old step. A step an
+  older version can't read back is a MAJOR release. The rule is in
+  [ARCHITECTURE.md](ARCHITECTURE.md#schema-changes).
+- Every route carries `@role(...)`, and every change to a record goes through
+  `core/records.py`. A new kind of record is a module ([MODULES.md](MODULES.md)).
 - Anything the user typed is rendered with Jinja's escaping or `textContent`,
   never `|safe` or `innerHTML`. Foreign HTML goes through
   `sanitize.sanitize_html()` first.

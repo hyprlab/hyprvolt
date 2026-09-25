@@ -55,23 +55,40 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.btn` + `--primary`, `--ghost`, `--danger`, `--block`, `--xs` | Buttons. One primary per view. |
 | `.iconbtn` + `--sm`, `--danger`, `.is-busy` | Square icon buttons; `.is-busy` spins the icon |
 | `.field`, `.field-label`, `.check`, `.hint`, `.form-error` | Form parts |
-| `.seg` | Segmented control over radio inputs |
+| `.seg`, `.seg--xs` | Segmented control over radio inputs; `--xs` inside a list row (a user's role) |
+| `.switch`, `.switch-track` | An on/off switch over a checkbox, for something that takes effect at once (a module) |
 | `.theme-picker`, `.theme-chip` | Chip-style radio group |
-| `.chip`, `.chip--muted`, `.count`, `.count--accent`, `.title-chip` | Small labels and counters |
+| `.chip`, `.chip--muted`, `.count`, `.count--accent`, `.count--alert`, `.title-chip` | Small labels and counters. `--alert` is a count that needs attention (conflicts); a `.title-chip` link clears a filter |
+| `.tagchip`, `.tagdot` | A tag, the same in every module; a link where it filters. The dot marks tags in the sidebar |
 | `.shell`, `.sidebar`, `.sidebar-head/-scroll/-foot` | The layout. The head and foot stay pinned; only the middle scrolls. |
-| `.navitem`, `.sidebar-label`, `.sidelist`, `.sideitem` | Sidebar rows. `.is-active` adds the wash and an inset accent bar. |
+| `.navitem`, `.sidebar-label`, `.sidelist`, `.sidelist--nested`, `.sideitem` | Sidebar rows: a module is a `.navitem`; the open module's types and filters are a nested list under it. `.is-active` adds the wash and an inset accent bar. |
 | `.topbar`, `.context-title`, `.topbar-actions` | The sticky, blurred bar over the content |
 | `.searchpill`, `.viewswitch`, `.menu`/`.menubtn`/`.menupop`/`.menuopt` | Topbar controls |
-| `.card`, `.row`, `.kicker`, `.new-dot`, `.pinbtn`, `.is-done` | Records as cards or list rows |
+| `.card`, `.row`, `.kicker`, `.kicker-icon`, `.facts`, `.is-archived` | Records as cards or list rows. The row's first cell is the type's icon; `.facts` are a card's key fields; archived and deleted records step back with `.is-archived` |
+| `.tiles`, `.tile`, `.widget` | The dashboard: one tile per module with its count, and module widgets as cards |
+| `.meters`, `.meter` | How much of something is used (rack units), as a bar with the number beside it |
 | `.empty`, `.pager`, `.pager-end` | Empty states and paging |
 | `.modal`, `.modal--wide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>` |
+| `.form-grid`, `.form-wide`, `.form-check`, `.req` | The record form: two columns, long text across both, a required mark |
+| `.pickbtn` | A button standing in for a field: it opens the palette to choose a record |
 | `.settings`, `.settings-nav`, `.settings-navitem`, `.settings-head`, `.settings-pane` | The settings window: a rail of sections beside the chosen one; on phones a list that slides into each section |
 | `.sheet`, `.sheet-bar`, `.sheet-article`, `.prose` | The full-height detail view |
+| `.tabs`, `.tab`, `.tab-panel` | The sheet's sections. The active tab is underlined in the accent; the row scrolls sideways on a phone |
+| `.crumbs`, `.crumbs-sep` | Where a record is: its locations, outermost first, each a link |
+| `.kv`, `.kv-empty`, `.kv-long` | A record's fields: label and value in two columns, stacked on a phone |
+| `.banner`, `.banner--danger` | A notice at the top of the sheet (archived, deleted, rack conflicts), with its action |
+| `.elink` | A link to a record inside text; it opens the record's sheet in place |
+| `.deptree` | The dependency view, nested; a loop and a repeat are marked, not followed |
+| `.linkform`, `.mountform`, `.doc-actions` | Small forms inside a tab: make a link, place something in a rack |
+| `.dropzone`, `.file-thumb` | Where files are dropped or chosen, and an attachment's preview |
+| `.history`, `.changes` | Who changed what: a line per change, old value struck through, new value after |
+| `.elevation`, `.rack-grid`, `.rack-u`, `.rack-slot`, `.rack-item` | A rack, front and rear, one grid row per unit. An empty unit is a button; overlapping items share the width, and a conflict is drawn in the danger color |
 | `.palette` and its parts | The Ctrl/Cmd+K search |
 | `.toast`, `.toast--error`, `.toast-action` | Confirmations under the topbar, with an optional action such as Undo |
 | `.about-hero`, `.tech-stack`, `.release-list` | The About section |
 | `.auth-card`, `.auth-mark`, `.flash`, `.wizard`, `.wiz-*`, `.error-code` | Sign-in, setup and error pages |
 | `.ptr` | Pull to refresh on touch devices |
+| `.modules-list`, `.module-icon`, `.customform` | Settings > Modules and Settings > Custom fields |
 
 ## Interface rules
 
@@ -98,4 +115,15 @@ Long-form text uses `.prose` at 16.5px and 1.72.
   700px settings goes full screen as a list of sections, each opening with a
   Back button (Escape goes back too); under 560px the view switch moves into
   settings.
+- **One way to show a record.** Every record, whatever its module, appears as
+  the same card, list row and sheet, built from its type's fields. A module
+  adds tabs and widgets, not a look of its own.
+- **Behavior by attribute.** Templates, a module's included, get behavior
+  from `app.js` through `data-*` attributes (`data-api`, `data-pick`,
+  `data-then` and the rest, listed in [MODULES.md](MODULES.md#pages-tabs-and-routes)).
+  Nothing ships a script of its own.
+- **Conflicts are shown, not refused.** Where the real world can be
+  inconsistent (two things in one rack unit), the app records it and marks it
+  in the danger color, with a sidebar count, so documentation can say how
+  things are before they are fixed.
 - **American spelling** in everything the interface says.

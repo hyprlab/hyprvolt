@@ -7,6 +7,7 @@ this directory is listed below; `tools/check-docs.py` fails if one is not.
 | --- | --- |
 | [DOCUMENTATION.md](DOCUMENTATION.md) | Installing, configuration, reverse proxies, backups, commands, troubleshooting |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the pieces fit together, and why they are the way they are |
+| [MODULES.md](MODULES.md) | Writing a module: the manifest, entity types and fields, routes, migrations, tests |
 | [DESIGN.md](DESIGN.md) | The design system: tokens, components, and the interface rules |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Commits, prose style, code, credit, issue replies |
 | [RELEASING.md](RELEASING.md) | SemVer, the beta and stable channels, and the ship procedure |
@@ -20,6 +21,7 @@ this directory is listed below; `tools/check-docs.py` fails if one is not.
 | A feature worth pitching | The README's feature list, only if it displaces a bullet already there |
 | How to set something up or run it | [DOCUMENTATION.md](DOCUMENTATION.md) |
 | A design decision and its reasoning | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| How modules are written, or a new manifest hook | [MODULES.md](MODULES.md) |
 | A new component, token or interface rule | [DESIGN.md](DESIGN.md) |
 | A convention for anyone editing the repository | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | A change to how releases are made | [RELEASING.md](RELEASING.md) |
