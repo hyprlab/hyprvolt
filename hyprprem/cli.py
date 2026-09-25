@@ -4,7 +4,7 @@ Inside the container:
 
     docker exec -it hyprprem flask create-user you@example.com --admin
     docker exec -it hyprprem flask reset-password you@example.com
-    docker exec hyprprem flask backup /data/backup-$(date +%F).db
+    docker exec hyprprem flask backup /data/backup-$(date +%F).tar.gz
     docker exec hyprprem flask turnstile off
 
 (The image sets FLASK_APP, so no --app is needed inside the container.)
@@ -83,24 +83,51 @@ def reset_password(username):
 @with_appcontext
 @click.argument("destination", type=click.Path(dir_okay=False, path_type=Path))
 def backup(destination: Path):
-    """Write a consistent copy of the SQLite database, safe while the app runs.
+    """Write a consistent copy of the instance, safe while the app runs.
 
-    Uses SQLite's online backup API, so a write in progress can't leave a torn
-    copy the way copying the file (and its -wal) by hand can.
+    A name ending in .tar.gz, .tgz or .tar gets an archive of the database and
+    every attachment. A name ending in .db gets the database alone.
+
+    The database copy uses SQLite's online backup API, so a write in progress
+    can't leave a torn copy the way copying the file (and its -wal) by hand can.
     """
+    import tarfile
+    import tempfile
+
+    from .core.attachments import root as attachments_root
     uri = current_app.config["SQLALCHEMY_DATABASE_URI"]
     if not uri.startswith("sqlite:///"):
         raise click.ClickException("backup only knows how to copy a SQLite database.")
-    source = uri.removeprefix("sqlite:///")
     if destination.exists():
         raise click.ClickException(f"{destination} already exists.")
-    src = sqlite3.connect(source)
-    dst = sqlite3.connect(destination)
-    try:
-        src.backup(dst)
-    finally:
-        dst.close()
-        src.close()
+    name = destination.name.lower()
+    archive = name.endswith((".tar.gz", ".tgz", ".tar"))
+    if not archive and not name.endswith(".db"):
+        raise click.ClickException("Name the backup .tar.gz (database and attachments) or .db (database only).")
+
+    def copy_db(target: Path) -> None:
+        src = sqlite3.connect(uri.removeprefix("sqlite:///"))
+        dst = sqlite3.connect(target)
+        try:
+            src.backup(dst)
+        finally:
+            dst.close()
+            src.close()
+
+    files = attachments_root()
+    if not archive:
+        copy_db(destination)
+        if files.is_dir() and any(files.rglob("*")):
+            click.echo("Attachments are not in a .db backup; name it .tar.gz to include them.", err=True)
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            db_copy = Path(tmp) / "hyprprem.db"
+            copy_db(db_copy)
+            mode = "w" if name.endswith(".tar") else "w:gz"
+            with tarfile.open(destination, mode) as tar:
+                tar.add(db_copy, arcname="hyprprem.db")
+                if files.is_dir():
+                    tar.add(files, arcname="attachments")
     click.echo(f"Backed up to {destination} ({destination.stat().st_size // 1024} KB).")
 
 

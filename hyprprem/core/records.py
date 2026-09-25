@@ -149,11 +149,18 @@ def purge(older_than_days: int | None = None) -> int:
     from datetime import timedelta
 
     from .attachments import remove_files
+    from .models import Attachment
     days = int_setting("purge_days", 30) if older_than_days is None else older_than_days
     cutoff = utcnow() - timedelta(days=days)
+    files = Attachment.query.filter(Attachment.deleted_at.isnot(None), Attachment.deleted_at <= cutoff).all()
+    if files:
+        remove_files(attachments=files)
+        for att in files:
+            db.session.delete(att)
+        db.session.flush()
     doomed = Entity.query.filter(Entity.deleted_at.isnot(None), Entity.deleted_at <= cutoff).all()
     if not doomed:
-        return 0
+        return len(files)
     ids = [e.id for e in doomed]
     for e in doomed:
         audit(e, "purged", [], None)
@@ -163,7 +170,7 @@ def purge(older_than_days: int | None = None) -> int:
     # Straight SQL: the database's ON DELETE rules take the detail rows,
     # tags, custom values, relationships and attachments with it.
     db.session.execute(sql_delete(Entity).where(Entity.id.in_(ids)))
-    return len(ids)
+    return len(ids) + len(files)
 
 
 def _touch(entity: Entity, user) -> None:

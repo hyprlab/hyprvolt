@@ -13,7 +13,6 @@ from pathlib import Path
 
 from flask import current_app
 
-from ..config import DATA_DIR
 from ..models import db, int_setting
 from .fields import Invalid
 from .models import Attachment
@@ -24,7 +23,7 @@ INLINE = {"image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf
 
 
 def root() -> Path:
-    return Path(current_app.config.get("ATTACHMENTS_DIR") or DATA_DIR / "attachments")
+    return Path(current_app.config.get("ATTACHMENTS_DIR") or Path(current_app.config["DATA_DIR"]) / "attachments")
 
 
 def path_for(att: Attachment) -> Path:

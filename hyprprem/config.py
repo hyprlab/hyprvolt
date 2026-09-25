@@ -87,3 +87,7 @@ class Config:
     # Background worker cadence, in minutes. 0 keeps the thread from starting.
     WORKER_MINUTES = _int("WORKER_MINUTES", 15)
     ITEMS_PER_PAGE = _int("ITEMS_PER_PAGE", 40)
+
+    # Last, so the class body above still sees the module's Path. Read at
+    # runtime from app.config, which follows a reloaded environment.
+    DATA_DIR = str(DATA_DIR)

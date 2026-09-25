@@ -8,19 +8,21 @@ and body that take it back, which the interface offers as Undo.
 """
 import json
 import re
+from urllib.parse import quote
 
-from flask import Blueprint, abort, jsonify, request
+from flask import Blueprint, abort, jsonify, request, send_file
 from flask_login import current_user
 from sqlalchemy import func
 
 from ..manifest import CUSTOM_KINDS
-from ..models import db
+from ..models import db, utcnow
 from ..permissions import role
 from ..registry import current as registry
+from . import attachments as files
 from . import fields as F
 from . import records, relations
 from .fields import Invalid
-from .models import AuditLog, CustomField, CustomValue, Entity, Relationship, Tag, entity_tags
+from .models import Attachment, AuditLog, CustomField, CustomValue, Entity, Relationship, Tag, entity_tags
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -248,6 +250,110 @@ def relationship_delete(rel_id):
     snapshot = relations.unlink(rel)
     db.session.commit()
     return jsonify(ok=True, undo={"url": "/api/relationships", "body": snapshot})
+
+
+# ———— Attachments ————
+
+def attachment_json(att) -> dict:
+    return {"id": att.id, "entity_id": att.entity_id, "filename": att.filename, "size": att.size,
+            "content_type": att.content_type, "sha256": att.sha256,
+            "created_at": att.created_at.isoformat() + "Z",
+            "url": f"/attachments/{att.id}/{quote(att.filename)}"}
+
+
+@bp.route("/entities/<int:entity_id>/attachments")
+@role("viewer")
+def attachment_list(entity_id):
+    entity_or_404(entity_id)
+    rows = Attachment.query.filter_by(entity_id=entity_id, deleted_at=None).order_by(Attachment.created_at.desc())
+    return jsonify(attachments=[attachment_json(a) for a in rows])
+
+
+@bp.route("/entities/<int:entity_id>/attachments", methods=["POST"])
+@role("editor")
+def attachment_upload(entity_id):
+    """Multipart, one or more ``file`` parts."""
+    entity = entity_or_404(entity_id)
+    limit = files.max_bytes()
+    if request.content_length and request.content_length > limit + 64 * 1024:
+        return jsonify(error=f"Files are limited to {limit // (1024 * 1024)} MB."), 413
+    uploads = request.files.getlist("file")
+    if not uploads:
+        return jsonify(error="Choose a file to attach."), 400
+    saved = []
+    try:
+        for upload in uploads:
+            att = files.save(entity, upload, current_user)
+            saved.append(att)
+            records.audit(entity, "attached", [{"field": "attachment", "label": "Attachment",
+                                                "old": "", "new": att.filename}])
+    except Invalid as err:
+        db.session.flush()
+        files.remove_files(attachments=saved)
+        return _fail(err)
+    db.session.commit()
+    return jsonify(ok=True, attachments=[attachment_json(a) for a in saved])
+
+
+def attachment_or_404(att_id: int, deleted_ok: bool = False):
+    att = db.session.get(Attachment, att_id)
+    if att is None or (att.deleted_at is not None and not deleted_ok):
+        abort(404, description="There is no such file.")
+    entity_or_404(att.entity_id, deleted_ok=True)
+    return att
+
+
+@bp.route("/attachments/<int:att_id>/delete", methods=["POST"])
+@role("editor")
+def attachment_delete(att_id):
+    """Hidden at once; the file goes with the next purge, so Undo works."""
+    att = attachment_or_404(att_id)
+    att.deleted_at = utcnow()
+    records.audit(att_entity(att), "detached", [{"field": "attachment", "label": "Attachment",
+                                                 "old": att.filename, "new": ""}])
+    db.session.commit()
+    return jsonify(ok=True, undo={"url": f"/api/attachments/{att.id}/restore", "body": {}})
+
+
+@bp.route("/attachments/<int:att_id>/restore", methods=["POST"])
+@role("editor")
+def attachment_restore(att_id):
+    att = attachment_or_404(att_id, deleted_ok=True)
+    if att.deleted_at is not None:
+        att.deleted_at = None
+        records.audit(att_entity(att), "attached", [{"field": "attachment", "label": "Attachment",
+                                                     "old": "", "new": att.filename}])
+        db.session.commit()
+    return jsonify(ok=True, attachment=attachment_json(att))
+
+
+def att_entity(att) -> Entity:
+    return db.session.get(Entity, att.entity_id)
+
+
+files_bp = Blueprint("files", __name__)
+
+
+@files_bp.route("/attachments/<int:att_id>")
+@files_bp.route("/attachments/<int:att_id>/<path:name>")
+@role("viewer")
+def attachment_download(att_id, name=None):
+    """The file, under the name it was uploaded with. Images, PDFs and plain
+    text open in the browser; anything else downloads. Nothing served from
+    here runs script: it is sandboxed unless it is a PDF, which the browser's
+    own viewer shows."""
+    att = attachment_or_404(att_id)
+    path = files.path_for(att)
+    if not path.exists():
+        abort(404, description="The file is missing from the data directory.")
+    inline = att.content_type in files.INLINE and request.args.get("download") != "1"
+    resp = send_file(path, mimetype=att.content_type if inline else "application/octet-stream",
+                     as_attachment=not inline, download_name=att.filename, etag=att.sha256 or True,
+                     max_age=0, conditional=True)
+    if att.content_type != "application/pdf" or not inline:
+        resp.headers["Content-Security-Policy"] = "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'"
+    resp.headers["Cache-Control"] = "private, no-cache"
+    return resp
 
 
 # ———— Tags ————
