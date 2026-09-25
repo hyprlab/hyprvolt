@@ -1,6 +1,6 @@
 """Locations' pages and routes: the rack elevation and Contents tabs, the
-rack position tab other records get, the dashboard widget, and the JSON
-routes for placing things in racks."""
+rack position tab and form section other records get, the dashboard widget,
+and the JSON routes for placing things in racks."""
 from flask import Blueprint, abort, jsonify, render_template, request
 
 from hyprvolt.core import present, records
@@ -112,6 +112,86 @@ def _position_text(m: RackMount) -> str:
     return f"{m.rack.name}, {m.units_label}, {dict(FACES)[m.face].lower()}"
 
 
+def place(entity: Entity, rack: Entity, position: int, size: int, face: str, note: str = "",
+          user=None) -> tuple[RackMount | None, list[dict]]:
+    """Put a record in a rack, replacing where it was, and move it into the
+    rack where its type may be there. Returns the mount (None if nothing
+    changed) and the changes for the record's history; the rack's own
+    history is written here."""
+    if entity.type in NOT_MOUNTABLE:
+        raise Invalid(f"A {registry().type(entity.type).label.lower()} doesn't go in a rack.")
+    old = RackMount.query.filter_by(entity_id=entity.id).first()
+    if old is not None and (old.rack_id, old.position_u, old.height_u, old.face) == (rack.id, position, size, face):
+        return None, []
+    before = _position_text(old) if old is not None else ""
+    if old is not None:
+        db.session.delete(old)
+    mount = RackMount(rack_id=rack.id, entity_id=entity.id, label="", position_u=position, height_u=size,
+                      face=face, note=note or (old.note if old is not None else ""))
+    db.session.add(mount)
+    db.session.flush()
+    changes = [{"field": "rack", "label": "Rack position", "old": before, "new": _position_text(mount)}]
+    etype = registry().type(entity.type)
+    if entity.location_id != rack.id and (etype.located_in is None or "rack" in etype.located_in):
+        changes += records.move(entity, rack, user)
+    records.audit(rack, "mounted", [{**changes[0], "old": "", "new": f"{mount.name}, {mount.units_label}"}], user)
+    return mount, changes
+
+
+def unplace(entity: Entity, user=None) -> list[dict]:
+    """Take a record out of its rack; its location stays the rack."""
+    mount = RackMount.query.filter_by(entity_id=entity.id).first()
+    if mount is None:
+        return []
+    text = _position_text(mount)
+    records.audit(mount.rack, "unmounted", [{"field": "rack", "label": "Rack position",
+                                             "old": f"{mount.name}, {mount.units_label}", "new": ""}], user)
+    db.session.delete(mount)
+    return [{"field": "rack", "label": "Rack position", "old": text, "new": ""}]
+
+
+def _face(data) -> str:
+    face = data.get("face") or "front"
+    if face not in dict(FACES):
+        raise Invalid("The face is front, rear or full depth.")
+    return face
+
+
+# ———— The rack position in a record's form ————
+
+def is_rackmount(etype) -> bool:
+    return "rackmount" in etype.traits
+
+
+def rack_form(etype, entity) -> str:
+    mount = RackMount.query.filter_by(entity_id=entity.id).first() if entity is not None else None
+    rack_id = mount.rack_id if mount else None
+    if rack_id is None and entity is None:
+        # A new record made from a rack's Contents or Elevation starts there.
+        start = records.live(request.args.get("location_id", type=int))
+        rack_id = start.id if start is not None and start.type == "rack" else None
+    choices = []
+    for rack in Entity.live().filter(Entity.type == "rack"):
+        path = present.path_label(rack.location_id)
+        choices.append((rack.id, f"{path} › {rack.name}" if path else rack.name))
+    choices.sort(key=lambda c: c[1].lower())
+    return render_template("locations/rack_form.html", mount=mount, rack_id=rack_id, choices=choices, faces=FACES)
+
+
+def rack_save(entity, values, user) -> list[dict]:
+    if values.get("rack_id") in (None, "", 0, "0"):
+        return unplace(entity, user)
+    rack = records.live(values["rack_id"])
+    if rack is None or rack.type != "rack":
+        raise Invalid("Choose a rack that exists.")
+    height, _ = racks.height_of(rack.id)
+    if str(values.get("position_u") or "").strip() == "":
+        raise Invalid("Choose the unit it starts at in the rack.")
+    position = _int(values, "position_u", "The lowest unit", 1, height)
+    size = _int({"height_u": values.get("height_u") or 1}, "height_u", "The height", 1, height)
+    return place(entity, rack, position, size, _face(values), user=user)[1]
+
+
 @bp.route("/racks/<int:rack_id>/elevation")
 @role("viewer")
 def elevation_json(rack_id):
@@ -137,38 +217,31 @@ def mount_create(rack_id):
         height, _ = racks.height_of(rack.id)
         position = _int(data, "position_u", "The position", 1, height)
         size = _int(data, "height_u", "The height", 1, height)
-        face = data.get("face") or "front"
-        if face not in dict(FACES):
-            raise Invalid("The face is front, rear or full depth.")
+        face = _face(data)
+        note = " ".join(str(data.get("note") or "").split())[:200]
         entity = None
         if data.get("entity_id"):
             entity = records.live(data["entity_id"])
             if entity is None:
                 raise Invalid("That record no longer exists.")
-            if entity.type in NOT_MOUNTABLE:
-                raise Invalid(f"A {registry().type(entity.type).label.lower()} doesn't go in a rack.")
         label = " ".join(str(data.get("label") or "").split())[:120]
         if entity is None and not label:
             raise Invalid("Choose a record, or name what goes there.")
         if entity is not None:
-            old = RackMount.query.filter_by(entity_id=entity.id).first()
-            if old is not None:
-                db.session.delete(old)
-            etype = registry().type(entity.type)
-            if entity.location_id != rack.id and (etype.located_in is None or "rack" in etype.located_in):
-                records.update(entity, {"location_id": rack.id})
-        mount = RackMount(rack_id=rack.id, entity_id=entity.id if entity else None, label="" if entity else label,
-                          position_u=position, height_u=size, face=face,
-                          note=" ".join(str(data.get("note") or "").split())[:200])
-        db.session.add(mount)
-        db.session.flush()
+            mount, changes = place(entity, rack, position, size, face, note)
+            if mount is None:
+                mount = RackMount.query.filter_by(entity_id=entity.id).first()
+            else:
+                records.audit(entity, "mounted", changes)
+        else:
+            mount = RackMount(rack_id=rack.id, label=label, position_u=position, height_u=size, face=face, note=note)
+            db.session.add(mount)
+            db.session.flush()
+            records.audit(rack, "mounted", [{"field": "rack", "label": "Rack position", "old": "",
+                                             "new": f"{mount.name}, {mount.units_label}"}])
     except Invalid as err:
         db.session.rollback()
         return jsonify(error=str(err)), 400
-    change = [{"field": "rack", "label": "Rack position", "old": "", "new": _position_text(mount)}]
-    records.audit(rack, "mounted", [{**change[0], "new": f"{mount.name}, {mount.units_label}"}])
-    if entity is not None:
-        records.audit(entity, "mounted", change)
     db.session.commit()
     lay = racks.layout(rack)
     problems = next((p for m, p in lay["problems"] if m.id == mount.id), [])

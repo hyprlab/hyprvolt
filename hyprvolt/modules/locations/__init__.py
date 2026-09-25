@@ -1,12 +1,13 @@
 """Locations: where everything is. Sites hold buildings, buildings hold
 rooms, rooms hold racks and shelves, and anything can be put in a rack at a
-unit position, on the front, the rear or through the full depth.
+unit position, on the front, the rear or through the full depth. A type with
+the ``rackmount`` trait gets its rack position in its own form.
 
 The hierarchy is the core's own ``location`` field: a room's location is its
 building. So every record anywhere gets breadcrumbs, and the Contents tab
 lists what is directly inside a place.
 """
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Tab, Widget
+from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, Tab, Widget
 
 from . import demo, views
 from .models import LocationDetail, RackMount
@@ -55,7 +56,7 @@ module = Module(
                    ),
                    tabs=(Tab("elevation", "Elevation", views.elevation_tab, count=views.elevation_count),)),
         EntityType("shelf", "Shelf", "Shelves", detail=LocationDetail, location=True,
-                   located_in=("room", "rack"), statuses=STATUSES, icon=SHELF,
+                   located_in=("room", "rack"), statuses=STATUSES, icon=SHELF, traits=("rackmount",),
                    fields=(Field("height_u", "Height in a rack", "integer", min=1, max=60, unit="U",
                                  help="How many units it takes when it is mounted in a rack."),),
                    tabs=(Tab("contents", "Contents", views.contents_tab, count=views.contents_count),)),
@@ -63,5 +64,7 @@ module = Module(
     filters=(ListFilter("conflicts", "Racks with conflicts", views.conflicts_filter),),
     widgets=(Widget("rack-space", "Rack space", views.rack_space_widget),),
     sheet_tabs=(in_a_rack,),
+    form_sections=(FormSection("rack", "Rack position", views.rack_form, views.rack_save,
+                               when=views.is_rackmount),),
     seed=demo.seed,
 )

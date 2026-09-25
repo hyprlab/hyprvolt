@@ -127,3 +127,51 @@ def test_turning_locations_off_hides_it_and_keeps_the_data(app, client, h, admin
     with app.app_context():
         set_setting("module:locations:enabled", "1")
     assert client.get(f"/api/entities/{rack['id']}").get_json()["entity"]["name"] == "Rack A"
+
+
+def test_the_rack_position_is_part_of_a_rackmount_form(client, h, admin):
+    site, building, room, rack = place(client, h)
+    form = client.get(f"/e/form?type=shelf&location_id={rack['id']}").data.decode()
+    assert 'name="s.rack.rack_id"' in form and f'<option value="{rack["id"]}" selected>' in form
+    assert "s.rack" not in client.get("/e/form?type=room").data.decode()
+    shelf = make(client, h, "shelf", name="Shelf", location_id=room["id"],
+                 **{"s.rack.rack_id": rack["id"], "s.rack.position_u": 3, "s.rack.height_u": 2, "s.rack.face": "full"})
+    # In the rack, located in the rack, and one history line says both.
+    assert shelf["location"]["id"] == rack["id"]
+    mounts = client.get(f"/locations/racks/{rack['id']}/elevation").get_json()["mounts"]
+    assert [(m["name"], m["position_u"], m["height_u"], m["face"]) for m in mounts] == [("Shelf", 3, 2, "full")]
+    created = client.get(f"/api/entities/{shelf['id']}/history").get_json()["history"][0]
+    fields = {c["field"]: c["new"] for c in created["changes"]}
+    assert fields["rack"] == "Rack A, U3–4, full depth" and fields["location"] == "Rack A"
+    # Moving it in the form; saving without touching it changes nothing.
+    client.post(f"/api/entities/{shelf['id']}", json={"s.rack.rack_id": rack["id"], "s.rack.position_u": 7,
+                                                      "s.rack.height_u": 2, "s.rack.face": "full"}, headers=h)
+    edit = client.get(f"/api/entities/{shelf['id']}/history").get_json()["history"][0]
+    assert edit["changes"] == [{"field": "rack", "label": "Rack position", "old": "Rack A, U3–4, full depth",
+                                "new": "Rack A, U7–8, full depth"}]
+    client.post(f"/api/entities/{shelf['id']}", json={"name": "Shelf", "s.rack.rack_id": rack["id"],
+                                                      "s.rack.position_u": 7, "s.rack.height_u": 2,
+                                                      "s.rack.face": "full"}, headers=h)
+    assert client.get(f"/api/entities/{shelf['id']}/history").get_json()["history"][0] == edit
+    form = client.get(f"/e/{shelf['id']}/form").data.decode()
+    assert 'name="s.rack.position_u" min="1" max="60" value="7"' in form
+    # Clearing the rack takes it out; the rack's history has both.
+    client.post(f"/api/entities/{shelf['id']}", json={"s.rack.rack_id": ""}, headers=h)
+    assert client.get(f"/locations/racks/{rack['id']}/elevation").get_json()["mounts"] == []
+    actions = [r["action"] for r in client.get(f"/api/entities/{rack['id']}/history").get_json()["history"]]
+    assert actions[:3] == ["unmounted", "mounted", "mounted"]
+
+
+def test_the_rack_position_is_checked(client, h, admin):
+    site, building, room, rack = place(client, h)
+    def bad(**section):
+        resp = client.post("/api/entities", json={"type": "shelf", "name": "x", "location_id": room["id"],
+                                                  **{f"s.rack.{k}": v for k, v in section.items()}}, headers=h)
+        assert resp.status_code == 400
+        return resp.get_json()["error"]
+    assert "unit it starts at" in bad(rack_id=rack["id"])
+    assert "between 1 and 12" in bad(rack_id=rack["id"], position_u=13)
+    assert "rack that exists" in bad(rack_id=room["id"], position_u=1)
+    assert "front, rear" in bad(rack_id=rack["id"], position_u=1, face="side")
+    # Nothing was made.
+    assert client.get("/api/entities?type=shelf").get_json()["entities"] == []

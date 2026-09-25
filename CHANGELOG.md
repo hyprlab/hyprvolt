@@ -10,6 +10,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Records of every kind share one interface: cards or a list with filters and live counts in the sidebar, a detail sheet with Overview, Relationships, Documents, Attachments and History tabs, and one form
 - Locations: sites, buildings, rooms, racks and shelves, with breadcrumbs on everything that has a place
 - Rack elevations show what occupies each unit on the front and rear, and flag overlaps and anything that no longer fits; a sidebar filter lists the racks with conflicts
+- The form of anything that goes in a rack has its rack position: the rack, the lowest unit, the height and the face
 - A knowledge base of Markdown documents that attach to any record and link to records with [[slug]]
 - Typed links between records in both directions, and a view of what breaks if a record goes down
 - Files attached to any record, included in `flask backup` when the backup is named `.tar.gz`

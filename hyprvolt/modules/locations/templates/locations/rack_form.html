@@ -1,0 +1,26 @@
+{# The rack position section of a record's form (anything with the
+   rackmount trait). Saved by views.rack_save through the record's own save. #}
+<div class="form-grid">
+  <label class="field form-wide">
+    <span class="field-label">Rack</span>
+    <select name="s.rack.rack_id">
+      <option value="">Not in a rack</option>
+      {% for id, label in choices %}<option value="{{ id }}" {{ 'selected' if rack_id == id }}>{{ label }}</option>{% endfor %}
+    </select>
+    <span class="hint">While it is in a rack, its location is the rack.</span>
+  </label>
+  <label class="field">
+    <span class="field-label">Lowest unit</span>
+    <input type="number" name="s.rack.position_u" min="1" max="60" value="{{ mount.position_u if mount else '' }}">
+  </label>
+  <label class="field">
+    <span class="field-label">Height (U)</span>
+    <input type="number" name="s.rack.height_u" min="1" max="60" value="{{ mount.height_u if mount else 1 }}">
+  </label>
+  <label class="field">
+    <span class="field-label">Face</span>
+    <select name="s.rack.face">
+      {% for value, label in faces %}<option value="{{ value }}" {{ 'selected' if mount and mount.face == value }}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+</div>

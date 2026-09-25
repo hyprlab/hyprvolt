@@ -389,6 +389,7 @@ def move(entity: Entity, target: Entity | None, user=None) -> list[dict]:
     if new_loc is entity.location:
         return []
     entity.location = new_loc
+    _touch(entity, user)
     return [{"field": "location", "label": LABELS["location"], "old": old_name,
              "new": new_loc.name if new_loc else ""}]
 
