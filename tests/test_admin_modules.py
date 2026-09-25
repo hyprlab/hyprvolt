@@ -48,3 +48,34 @@ def pane(app):
 def test_a_module_adds_a_settings_section(client, h, admin, pane):
     page = client.get("/").data.decode()
     assert 'data-section="example-settings"' in page and "<p>Gadget options</p>" in page
+
+
+@pytest.fixture()
+def hooks(app):
+    """A job and a search provider on the example module, for these tests."""
+    from hyprprem.manifest import Job, SearchResult
+    module = app.extensions[EXTENSION].module("example")
+    ran = []
+    module.jobs = (Job("count", lambda: ran.append(1) or 7, minutes=5),)
+    module.search = lambda q, limit: [SearchResult(f"Port {q}", "Found by the example module", url="/example")]
+    yield ran
+    module.jobs = ()
+    module.search = None
+
+
+def test_module_jobs_run_when_due_and_only_when_on(app, client, h, admin, hooks):
+    from hyprprem.worker import run_once
+    assert run_once(app)["example.count"] == 7
+    assert "example.count" not in run_once(app)            # not due for five minutes
+    assert run_once(app, force=True)["example.count"] == 7
+    client.post("/admin/modules/example", json={"enabled": False}, headers=h)
+    assert "example.count" not in run_once(app, force=True)
+    assert hooks == [1, 1]
+
+
+def test_module_search_providers_add_to_the_palette(client, h, admin, hooks):
+    groups = client.get("/search?q=8080").get_json()["groups"]
+    assert groups == [{"label": "Gadgets", "items": [
+        {"id": None, "url": "/example", "title": "Port 8080", "meta": "Found by the example module"}]}]
+    # Choosing a record for a link only offers records.
+    assert client.get("/search?q=8080&pick=1").get_json()["groups"] == []
