@@ -1,0 +1,129 @@
+"""The Locations module: the hierarchy, breadcrumbs, rack mounts, conflicts,
+and its pages."""
+from .conftest import make
+
+
+def place(client, h):
+    site = make(client, h, "site", name="Home", **{"f.code": "HOME"})
+    building = make(client, h, "building", name="House", location_id=site["id"])
+    room = make(client, h, "room", name="Basement", location_id=building["id"])
+    rack = make(client, h, "rack", name="Rack A", location_id=room["id"], **{"f.height_u": 12})
+    return site, building, room, rack
+
+
+def mount(client, h, rack, status=200, **body):
+    resp = client.post(f"/locations/racks/{rack['id']}/mounts", json={"height_u": 1, "face": "front", **body},
+                       headers=h)
+    assert resp.status_code == status, resp.get_json()
+    return resp.get_json()
+
+
+def test_the_hierarchy_and_breadcrumbs(client, h, admin):
+    site, building, room, rack = place(client, h)
+    got = client.get(f"/api/entities/{rack['id']}").get_json()["entity"]
+    assert [p["name"] for p in got["path"]] == ["Home", "House", "Basement"]
+    assert rack["fields"]["height_u"] == 12 and rack["fields"]["numbering"] == "bottom"
+    wrong = client.post("/api/entities", json={"type": "rack", "name": "x", "location_id": site["id"]}, headers=h)
+    assert "can only be in a room" in wrong.get_json()["error"]
+    no = client.post("/api/entities", json={"type": "site", "name": "x", "location_id": site["id"]}, headers=h)
+    assert "has no location" in no.get_json()["error"]
+    sheet = client.get(f"/e/{rack['id']}/sheet").data.decode()
+    assert 'class="crumbs"' in sheet and ">Basement</a>" in sheet
+
+
+def test_a_location_cannot_end_up_inside_itself(client, h, admin):
+    a = make(client, h, "crate", name="Crate A")
+    b = make(client, h, "crate", name="Crate B", location_id=a["id"])
+    resp = client.post(f"/api/entities/{a['id']}", json={"location_id": b["id"]}, headers=h)
+    assert "inside itself" in resp.get_json()["error"]
+    # The form doesn't offer the loop either.
+    form = client.get(f"/e/{a['id']}/form").data.decode()
+    assert f'<option value="{b["id"]}"' not in form
+
+
+def test_placing_things_in_a_rack(client, h, admin):
+    site, building, room, rack = place(client, h)
+    shelf = make(client, h, "shelf", name="Shelf", location_id=room["id"])
+    got = mount(client, h, rack, entity_id=shelf["id"], position_u=5, height_u=2, face="full")
+    assert got["mount"]["name"] == "Shelf" and got["problems"] == []
+    # Mounting moves the record into the rack.
+    assert client.get(f"/api/entities/{shelf['id']}").get_json()["entity"]["location"]["id"] == rack["id"]
+    mount(client, h, rack, label="Patch panel", position_u=12)
+    elevation = client.get(f"/locations/racks/{rack['id']}/elevation").get_json()
+    assert elevation["rack"]["used_u"] == 3 and elevation["conflicts"] == []
+    # Mounting the same record again moves it rather than doubling it.
+    mount(client, h, rack, entity_id=shelf["id"], position_u=1, height_u=2, face="front")
+    assert [m["position_u"] for m in client.get(f"/locations/racks/{rack['id']}/elevation").get_json()["mounts"]
+            if m["entity_id"] == shelf["id"]] == [1]
+    history = client.get(f"/api/entities/{shelf['id']}/history").get_json()["history"]
+    assert history[0]["action"] == "mounted" and "Rack A, U1–2, front" in history[0]["changes"][0]["new"]
+
+
+def test_mounts_are_checked(client, h, admin):
+    site, building, room, rack = place(client, h)
+    assert "between 1 and 12" in mount(client, h, rack, 400, label="x", position_u=13)["error"]
+    assert "name what goes there" in mount(client, h, rack, 400, position_u=1)["error"]
+    assert "doesn't go in a rack" in mount(client, h, rack, 400, entity_id=room["id"], position_u=1)["error"]
+    assert "front, rear" in mount(client, h, rack, 400, label="x", position_u=1, face="side")["error"]
+
+
+def test_conflicts_are_flagged_not_refused(client, h, admin):
+    site, building, room, rack = place(client, h)
+    mount(client, h, rack, label="Switch", position_u=4, height_u=2, face="front")
+    rear = mount(client, h, rack, label="PDU", position_u=4, face="rear")
+    assert rear["problems"] == []                                    # other face: fine
+    full = mount(client, h, rack, label="Server", position_u=5, height_u=2, face="full")
+    assert full["problems"] == ["overlaps Switch on the front"]
+    # Shrinking the rack pushes something out of range.
+    mount(client, h, rack, label="Top", position_u=12)
+    client.post(f"/api/entities/{rack['id']}", json={"f.height_u": 10}, headers=h)
+    conflicts = client.get(f"/locations/racks/{rack['id']}/elevation").get_json()["conflicts"]
+    assert any("outside the rack's U1–U10" in p for c in conflicts for p in c["problems"])
+    listed = client.get("/locations?f=conflicts&view=list").data.decode()
+    assert "Rack A" in listed and "count--alert" in listed
+    sheet = client.get(f"/e/{rack['id']}/sheet?tab=elevation").data.decode()
+    assert "is-conflict" in sheet and "--lanes: 2" in sheet
+
+
+def test_taking_something_out_can_be_undone(client, h, admin):
+    site, building, room, rack = place(client, h)
+    made = mount(client, h, rack, label="Switch", position_u=4)
+    undo = client.post(f"/locations/mounts/{made['mount']['id']}/delete", headers=h).get_json()["undo"]
+    assert client.get(f"/locations/racks/{rack['id']}/elevation").get_json()["mounts"] == []
+    client.post(undo["url"], json=undo["body"], headers=h)
+    assert [m["label"] for m in client.get(f"/locations/racks/{rack['id']}/elevation").get_json()["mounts"]] == ["Switch"]
+
+
+def test_contents_elevation_and_widget_pages(client, h, admin):
+    site, building, room, rack = place(client, h)
+    make(client, h, "shelf", name="Storage", location_id=room["id"])
+    contents = client.get(f"/e/{room['id']}/sheet?tab=contents").data.decode()
+    assert "Rack A" in contents and "Storage" in contents and 'data-new-type="rack"' in contents
+    mount(client, h, rack, label="Switch", position_u=4)
+    elevation = client.get(f"/e/{rack['id']}/sheet?tab=elevation").data.decode()
+    assert "Switch" in elevation and "1 of 12 U in use" in elevation and 'data-fill-form="mount-form-' in elevation
+    assert "Rack space" in client.get("/").data.decode()
+
+
+def test_viewers_see_racks_but_cannot_change_them(client, h, admin, viewer):
+    site, building, room, rack = place(client, h)
+    other, oh = viewer
+    assert other.post(f"/locations/racks/{rack['id']}/mounts", json={"label": "x", "position_u": 1},
+                      headers=oh).status_code == 403
+    assert other.get(f"/locations/racks/{rack['id']}/elevation").status_code == 200
+    page = other.get(f"/e/{rack['id']}/sheet?tab=elevation").data.decode()
+    assert "mountform" not in page and "button" not in page.split('class="elevation"')[1].split("</div>\n\n")[0]
+
+
+def test_turning_locations_off_hides_it_and_keeps_the_data(app, client, h, admin):
+    site, building, room, rack = place(client, h)
+    from hyprprem.models import set_setting
+    with app.app_context():
+        set_setting("module:locations:enabled", "0")
+    assert client.get("/locations").status_code == 404
+    assert client.get(f"/locations/racks/{rack['id']}/elevation").status_code == 404
+    assert client.get(f"/api/entities/{rack['id']}").status_code == 404
+    assert "Locations" not in client.get("/").data.decode().split('class="sidebar-scroll"')[1].split("</aside>")[0]
+    with app.app_context():
+        set_setting("module:locations:enabled", "1")
+    assert client.get(f"/api/entities/{rack['id']}").get_json()["entity"]["name"] == "Rack A"

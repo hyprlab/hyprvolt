@@ -938,6 +938,60 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .dropzone.is-busy label { opacity: .6; }
 .doc-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 
+/* Rack elevation: front and rear side by side, one grid row per unit.
+   Unit numbers sit in the first column; mounts span their rows. */
+.elevation { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 6px 0 8px; }
+.rack-grid {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr); grid-template-rows: repeat(var(--units), 24px);
+  column-gap: 6px; padding: 6px 8px 6px 4px;
+  background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+}
+.rack-u { grid-column: 1; align-self: center; text-align: right; font-size: 10.5px; font-weight: 600; color: var(--faint); font-variant-numeric: tabular-nums; }
+.rack-slot { grid-column: 2; border-bottom: 1px dashed var(--line); }
+button.rack-slot { border-radius: 4px; }
+button.rack-slot:hover, button.rack-slot:focus-visible { background: var(--wash); border-bottom-color: transparent; }
+.rack-item {
+  grid-column: 2; position: relative; z-index: 1; margin: 1px 0; min-height: 0;
+  display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 5px;
+  box-shadow: var(--shadow-1); font-size: 13px;
+  /* Overlapping mounts share the width, one lane each. */
+  width: calc(100% / var(--lanes, 1) - 2px); margin-left: calc(100% * var(--lane, 0) / var(--lanes, 1));
+}
+.rack-item.is-label { background: var(--field); box-shadow: none; }
+.rack-item.is-label .rack-item-name { color: var(--muted); font-style: italic; }
+.rack-item.is-full { border-left: 3px solid var(--line-strong); }
+.rack-item.is-conflict { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--surface)); opacity: .92; }
+.rack-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.rack-item-u { font-size: 11px; color: var(--faint); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rack-item-remove { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 5px; color: var(--faint); opacity: 0; }
+.rack-item-remove svg { width: 13px; height: 13px; }
+.rack-item:hover .rack-item-remove, .rack-item-remove:focus-visible { opacity: 1; }
+.rack-item-remove:hover { color: var(--danger); background: rgb(220 70 60 / .12); }
+@media (hover: none) { .rack-item-remove { opacity: 1; } }
+.rack-problems ul { margin: 0; padding-left: 1.1em; }
+.rack-summary { margin-bottom: 12px; }
+.mountform {
+  display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end;
+  margin-top: 18px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+}
+.mountform > .setting-label, .mountform .form-error { grid-column: 1 / -1; margin: 0; }
+.mountform-what { grid-column: 1 / 3; }
+.mountform-label { grid-column: 3 / -1; }
+@media (max-width: 700px) {
+  .elevation { grid-template-columns: 1fr; }
+  .mountform { grid-template-columns: 1fr 1fr; }
+  .mountform-what, .mountform-label { grid-column: 1 / -1; }
+}
+
+/* A horizontal meter: how much of something is used. */
+.meters { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.meters li { display: grid; grid-template-columns: minmax(0, 1fr) 2fr max-content; gap: 12px; align-items: center; font-size: 13.5px; }
+.meters-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meters-value { font-size: 12px; color: var(--faint); font-weight: 600; font-variant-numeric: tabular-nums; }
+.meter { display: block; height: 7px; border-radius: 99px; background: var(--field); border: 1px solid var(--line); overflow: hidden; }
+.meter span { display: block; height: 100%; background: var(--ink); opacity: .55; border-radius: 99px; }
+
 /* History: who changed what, newest first. */
 .history { list-style: none; margin: 0; padding: 0; }
 .history > li { padding: 12px 0; border-bottom: 1px solid var(--line); }

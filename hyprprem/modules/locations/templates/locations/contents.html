@@ -1,0 +1,26 @@
+{% from "partials/macros.html" import entity_link %}
+{% if groups %}
+{% for g in groups %}
+<p class="setting-label {{ 'setting-label--spaced' if not loop.first }}">{{ g.type.plural if g.type else 'Other' }} <span class="count">{{ g['items']|length }}</span></p>
+<ul class="manage-list">
+  {% for v in g['items'] %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+      <span class="manage-sub">{{ v.status }}{% for label, shown in v.list_facts %} · {{ shown }}{% endfor %}</span>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% endfor %}
+<p class="hint sheet-foot"><a class="link" href="{{ url_for('main.all_records', location=place.id) }}">All {{ total }} records here as a list</a></p>
+{% else %}
+<p class="hint">Nothing is recorded as being here yet.</p>
+{% endif %}
+{% if current_user.can_edit and addable %}
+<div class="doc-actions">
+  {% for t in addable %}
+  <button type="button" class="btn {{ 'btn--primary' if loop.first else 'btn--ghost' }}" data-new-type="{{ t.key }}" data-new-location="{{ place.id }}">Add a {{ t.label|lower }}</button>
+  {% endfor %}
+</div>
+{% endif %}

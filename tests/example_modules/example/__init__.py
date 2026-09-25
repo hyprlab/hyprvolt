@@ -21,5 +21,8 @@ module = Module(
     types=(
         EntityType("gadget", "Gadget", "Gadgets", detail=GadgetDetail,
                    fields=(Field("color", "Color", list=True),)),
+        # A place that can sit in any place, itself included, so the tests
+        # can try to build a loop.
+        EntityType("crate", "Crate", "Crates", location=True),
     ),
 )

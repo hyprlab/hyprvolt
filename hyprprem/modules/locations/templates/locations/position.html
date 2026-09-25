@@ -1,0 +1,10 @@
+{% from "partials/macros.html" import entity_link %}
+{% if mount %}
+<dl class="kv">
+  <div><dt>Rack</dt><dd>{{ entity_link(mount.rack.id, mount.rack.name) }}{% if path %} <span class="hint">in {{ path }}</span>{% endif %}</dd></div>
+  <div><dt>Units</dt><dd>{{ mount.units_label }} ({{ mount.height_u }} U)</dd></div>
+  <div><dt>Face</dt><dd>{{ faces[mount.face] }}</dd></div>
+  {% if mount.note %}<div><dt>Note</dt><dd>{{ mount.note }}</dd></div>{% endif %}
+</dl>
+<p class="hint sheet-foot">To move it, open the rack's Elevation and choose another unit.</p>
+{% endif %}

@@ -1,0 +1,83 @@
+{# A rack, front and rear, one grid row per unit. Mounts span their rows;
+   an empty unit is a button that fills in the form below (editors). #}
+{% from "partials/macros.html" import entity_link %}
+{% if lay.problems %}
+<div class="banner banner--danger rack-problems">
+  <ul>
+    {% for m, problems in lay.problems %}
+    <li><strong>{{ m.name }}</strong> ({{ m.units_label }}) {{ problems|join('; ') }}.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+<p class="hint rack-summary">{{ lay.used }} of {{ lay.height }} U in use · U1 at the {{ 'top' if lay.numbering == 'top' else 'bottom' }}{% if current_user.can_edit %} · Choose an empty unit to place something there{% endif %}</p>
+
+<div class="elevation" style="--units: {{ lay.height }}">
+  {% for face in ('front', 'rear') %}
+  <section class="rack-face" aria-label="{{ face|capitalize }}">
+    <p class="setting-label">{{ face|capitalize }}</p>
+    <div class="rack-grid">
+      {% for l in lay.labels %}<span class="rack-u" style="grid-row: {{ l.row }}">{{ l.u }}</span>{% endfor %}
+      {% for e in lay.faces[face].empty %}
+      {% if current_user.can_edit %}
+      <button type="button" class="rack-slot" style="grid-row: {{ e.row }}" aria-label="Place something at U{{ e.u }} on the {{ face }}"
+              data-fill='{"position_u": {{ e.u }}, "face": "{{ face }}"}' data-fill-form="mount-form-{{ rack.id }}"></button>
+      {% else %}
+      <span class="rack-slot" style="grid-row: {{ e.row }}"></span>
+      {% endif %}
+      {% endfor %}
+      {% for b in lay.faces[face].blocks %}
+      {% set m = b.mount %}
+      <div class="rack-item {{ 'is-conflict' if b.problems }} {{ 'is-label' if not m.entity_id }} {{ 'is-full' if m.face == 'full' }}"
+           style="grid-row: {{ b.row }} / span {{ b.span }}; --lane: {{ b.lane }}; --lanes: {{ b.lanes }}" title="{{ m.name }}, {{ m.units_label }}{% if b.problems %}: {{ b.problems|join('; ') }}{% endif %}">
+        <span class="rack-item-name">{% if m.entity_id %}{{ entity_link(m.entity_id, m.name) }}{% else %}{{ m.name }}{% endif %}</span>
+        <span class="rack-item-u">{{ m.units_label }}</span>
+        {% if current_user.can_edit %}
+        <button type="button" class="rack-item-remove" data-api-post="/locations/mounts/{{ m.id }}/delete" data-then="sheet"
+                data-done="Taken out of the rack" aria-label="Take {{ m.name }} out of the rack" title="Take it out of the rack">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+{% if unplaced %}
+<p class="setting-label setting-label--spaced">In this rack, not placed yet</p>
+<ul class="manage-list">
+  {% for v in unplaced %}
+  <li class="manage-item">
+    <div class="manage-meta"><span class="manage-title">{{ entity_link(v.id, v.name) }}</span><span class="manage-sub">{{ v.type_label }}</span></div>
+    {% if current_user.can_edit %}
+    <button type="button" class="btn btn--xs btn--ghost" data-fill='{"entity_id": {{ v.id }}, "label": ""}' data-fill-form="mount-form-{{ rack.id }}">Place</button>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if current_user.can_edit %}
+<form class="mountform" id="mount-form-{{ rack.id }}" data-api="/locations/racks/{{ rack.id }}/mounts" data-then="sheet" data-done="Placed" hidden>
+  <p class="setting-label">Place in {{ rack.name }}</p>
+  <input type="hidden" name="entity_id" value="">
+  <div class="field mountform-what"><span class="field-label">A record</span>
+    <button type="button" class="pickbtn" data-pick data-pick-into="entity_id" data-pick-exclude="{{ rack.id }}">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+      <span data-pick-label>Choose…</span>
+    </button>
+  </div>
+  <label class="field mountform-label"><span class="field-label">Or just a name</span>
+    <input name="label" maxlength="120" placeholder="Patch panel, blanking plate…"></label>
+  <label class="field"><span class="field-label">Lowest unit</span>
+    <input type="number" name="position_u" min="1" max="{{ lay.height }}" required data-fill-focus></label>
+  <label class="field"><span class="field-label">Height (U)</span>
+    <input type="number" name="height_u" min="1" max="{{ lay.height }}" value="1" required></label>
+  <label class="field"><span class="field-label">Face</span>
+    <select name="face">{% for value, label in faces %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+  <button class="btn btn--primary" type="submit">Place</button>
+  <p class="form-error" hidden></p>
+</form>
+{% endif %}

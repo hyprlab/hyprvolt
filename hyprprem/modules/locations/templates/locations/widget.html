@@ -1,0 +1,15 @@
+{% from "partials/macros.html" import entity_link %}
+{% if rows %}
+<ul class="meters">
+  {% for r in rows %}
+  <li>
+    <span class="meters-name">{{ entity_link(r.rack.id, r.rack.name) }}{% if r.problems %} <span class="count count--alert" title="Conflicts">{{ r.problems }}</span>{% endif %}</span>
+    <span class="meter" role="meter" aria-valuemin="0" aria-valuemax="{{ r.height }}" aria-valuenow="{{ r.used }}"
+          aria-label="{{ r.used }} of {{ r.height }} U"><span style="width: {{ r.percent }}%"></span></span>
+    <span class="meters-value">{{ r.used }}/{{ r.height }} U</span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No racks yet.</p>
+{% endif %}
