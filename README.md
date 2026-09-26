@@ -32,6 +32,7 @@ in a single SQLite volume.
 - Delete with Undo, archive, and search across everything with Ctrl K
 - CSV export of any list, CSV import with column matching and a check first, and a JSON export of everything
 - Viewer, editor and admin roles; the documentation belongs to the instance
+- A JSON API for scripts, with per-user tokens that can be limited to reading
 - A module system, so new kinds of records arrive without changes to the core
 - A demo homelab to try it on, and backups that include the attachments
 

@@ -173,6 +173,42 @@ token hashes and the Turnstile secret left out. Attached files are listed but
 not included. It is for reading elsewhere, not for restoring; `flask backup`
 is. `flask export PATH` writes the same file from the server.
 
+## The API
+
+Everything the interface does goes through a JSON API, and scripts can use it
+too. Make a token in Settings > API tokens, then send it as a header:
+
+```sh
+curl -H "Authorization: Bearer hv_…" "http://localhost:8101/api/entities?type=server"
+curl -H "Authorization: Bearer hv_…" -H "Content-Type: application/json" \
+     -d '{"type": "server", "name": "srv3", "fields": {"ram_gb": 64}}' \
+     http://localhost:8101/api/entities
+```
+
+A token acts as the account that made it, with its role, and is shown once
+when it is made; only a hash of it is kept. One made to "only read" is
+refused anything but reading. No token can reveal a secret or make or revoke
+tokens. Revoking one takes effect at once. Errors are
+`{"error": "..."}`, with a sentence meant for a person.
+
+| Route | What it does |
+| --- | --- |
+| `GET /api/entities` | Records, newest change first; filter with `type`, `module`, `tag`, `location`, `q`; page with `limit` (up to 500) and `offset` |
+| `GET /api/entities/<id>` | One record with its fields, custom fields and location path |
+| `POST /api/entities` | Make one: `type`, `name`, `status`, `location_id`, `tags`, `notes`, `fields`, `custom`, and `sections` for what other modules add (`{"rack": {...}}`, `{"addresses": {"list": "10.0.20.5"}}`) |
+| `POST /api/entities/<id>` | Change one; only what the body names changes |
+| `POST /api/entities/<id>/archive`, `/delete`, `/restore` | Archive (`{"archived": false}` to undo), delete, restore |
+| `GET /api/entities/<id>/history`, `/relationships`, `/dependencies` | Its history, its links, what depends on it (`direction=dependencies` for the other way) |
+| `POST /api/relationships`, `POST /api/relationships/<id>/delete` | Link two records (`kind`, `source_id`, `target_id`), unlink |
+| `GET /api/tags`, `GET /api/custom-fields` | Tags in use, custom field definitions |
+| `GET /export/<module>.csv` | A module's records as CSV, with the list's filters |
+| `GET /locations/racks/<id>/elevation` | A rack's units and what occupies them |
+| `GET /network/subnets/<id>/addresses` | A subnet's recorded addresses and how many are free |
+| `GET /network/devices/<id>/ports`, `GET /network/ports/<id>/trace` | A device's ports and cables; a cable path |
+| `GET /network/domains/<id>/records` | A domain's DNS records |
+| `GET /software/titles/<id>/installations`, `GET /software/hosts/<id>/installations` | Where a title is installed; what a host has |
+| `GET /vault/entities/<id>/secrets` | A record's secrets, without their values, for an account with access |
+
 ## Records
 
 Deleting a record, a link or a file can be undone from the message that

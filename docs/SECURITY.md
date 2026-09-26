@@ -32,6 +32,7 @@ Only the latest stable release receives security fixes.
 | Stale pages | HTML is served `no-store` |
 | Running as root | The container runs as an unprivileged user |
 | A stolen database or backup | Secrets are encrypted (Fernet: AES-128-CBC with an HMAC) with a key that is not in the database and not in `flask backup`'s archive |
+| A leaked API token | Only a SHA-256 of each token is stored; a token can be limited to reading, can't reveal secrets or make tokens, and is revoked at once in Settings |
 | Seeing a password without cause | Secrets are their own permission, given per account; each reveal and copy is written to the record's history with who and when; API tokens can't read them |
 
 ## Out of scope

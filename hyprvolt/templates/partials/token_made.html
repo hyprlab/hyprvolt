@@ -1,0 +1,9 @@
+{# A token just made: shown this once. #}
+<div class="banner">
+  <p><strong>{{ t.name }}</strong>: copy the token now. It isn't kept, so it can't be shown again.</p>
+  <code class="secret-value is-shown">{{ raw }}</code>
+  <div class="doc-actions">
+    <button type="button" class="btn btn--primary" data-copy="{{ raw }}" data-done="Token copied">Copy</button>
+    <a class="btn btn--ghost" href="">Done</a>
+  </div>
+</div>

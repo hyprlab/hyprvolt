@@ -11,7 +11,7 @@ import threading
 import time
 from datetime import datetime
 
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, g, jsonify, redirect, render_template, request, session, url_for
 from flask_login import LoginManager
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -99,6 +99,8 @@ def create_app(config_class=Config) -> Flask:
     app.register_blueprint(core_views.bp)
     from .core import transfer
     app.register_blueprint(transfer.bp)
+    from . import tokens
+    app.register_blueprint(tokens.bp)
     cli.register(app)
 
 
@@ -120,8 +122,16 @@ def create_app(config_class=Config) -> Flask:
         return session["_csrf"]
 
     @app.before_request
+    def api_token():
+        # Before the CSRF check: a token request has no session to forge.
+        from .tokens import authenticate
+        return authenticate()
+
+    @app.before_request
     def check_csrf():
         if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+            return None
+        if g.get("api_token") is not None:
             return None
         sent = request.headers.get("X-CSRF") or request.form.get("_csrf") or ""
         expected = session.get("_csrf", "")
@@ -242,7 +252,7 @@ _ERROR_TEXT = {
 
 def _wants_json() -> bool:
     """API callers get JSON errors; page loads get the error page."""
-    if request.headers.get("X-CSRF") or request.is_json:
+    if request.headers.get("X-CSRF") or request.is_json or request.headers.get("Authorization"):
         return True
     # HTML first: a client that accepts anything (curl, */*) gets the page;
     # only one that asks for JSON by name gets JSON.

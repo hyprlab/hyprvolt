@@ -136,6 +136,11 @@ core keeps a `reminders` table of what falls within the window, updated by
 every save and by the worker's hourly pass, and the dashboard and sidebar
 badge read it. No module writes a reminder job of its own.
 
+**A token is a user for one request.** `tokens.authenticate` runs before the
+CSRF check: a valid `Authorization: Bearer` token sets Flask-Login's user for
+that request only, without a session, so there is no cookie to forge and no
+CSRF token to check. The role decorator then treats it like anyone else.
+
 **SQLAlchemy begins every SQLite transaction.** The sqlite3 driver's own
 transaction handling breaks savepoints (releasing one commits it), so it is
 turned off on connect and SQLAlchemy emits `BEGIN` itself. An import's check

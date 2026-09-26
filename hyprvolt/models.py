@@ -58,6 +58,24 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
 
+class ApiToken(db.Model):
+    """A token a script sends instead of signing in. Only its SHA-256 is
+    kept; the token itself is shown once, when it is made (tokens.py)."""
+    __tablename__ = "api_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = db.Column(db.String(80), nullable=False)
+    token_hash = db.Column(db.String(64), unique=True, nullable=False)
+    prefix = db.Column(db.String(12), nullable=False)          # "hv_Ab12Cd": enough to tell them apart
+    read_only = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    last_used_at = db.Column(db.DateTime)
+    revoked_at = db.Column(db.DateTime)
+
+    user = db.relationship(User, backref=db.backref("tokens", cascade="all, delete-orphan", passive_deletes=True))
+
+
 class Setting(db.Model):
     """Instance-wide key/value settings an admin edits at runtime.
 
