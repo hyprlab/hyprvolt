@@ -614,6 +614,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .manage-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .manage-title { font-size: 14px; font-weight: 620; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .manage-sub { font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.manage-sub.form-error { color: var(--danger); white-space: normal; }
 .manage-item .avatar { width: 30px; height: 30px; font-size: 13px; }
 
 /* A switch: a checkbox that turns something on or off at once. */

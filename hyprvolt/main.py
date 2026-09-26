@@ -133,6 +133,10 @@ def _list_query(module, a):
     return query.order_by(order, Entity.id.desc())
 
 
+def reg_modules():
+    return registry().enabled_modules()
+
+
 def _render_list(module):
     a = _list_args(module)
     per_page = int_setting("items_per_page", 40)
@@ -140,6 +144,9 @@ def _render_list(module):
     has_more = len(rows) > per_page
     context = dict(items=present.views(rows[:per_page]), has_more=has_more, module=module, sorts=SORTS,
                    page="list", **a)
+    if current_user.can_edit:
+        mods = [module] if module is not None else reg_modules()
+        context["import_types"] = [{"module": m, "types": list(m.types)} for m in mods if m.types]
     if request.args.get("partial") == "1":
         return render_template("partials/records.html", **context)
     title = (a["etype"].plural if a["etype"] else module.name if module else

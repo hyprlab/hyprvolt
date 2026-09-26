@@ -1,0 +1,21 @@
+{# Step 3 of an import: what it will do, from a run that was rolled back. #}
+{% set labels = {'create': 'Will be made', 'update': 'Will be updated', 'same': 'Already the same'} %}
+<p class="setting-label setting-label--spaced">What the import will do</p>
+<p class="hint">{{ counts['create'] }} to make, {{ counts['update'] }} to update, {{ counts['same'] }} already the same{% if counts['skip'] %}, and {{ counts['skip'] }} with a problem, which will be left out{% endif %}.</p>
+<ul class="manage-list">
+  {% for r in results %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">Row {{ r.row }} · {{ r.name }}</span>
+    {% if r.error %}<span class="manage-sub form-error">{{ r.error }}</span>{% else %}<span class="manage-sub">{{ labels[r.action] }}</span>{% endif %}
+  </div></li>
+  {% endfor %}
+</ul>
+{% if total > results|length %}<p class="hint">The first {{ results|length }} of {{ total }} rows, problems first.</p>{% endif %}
+{% set n = counts['create'] + counts['update'] %}
+{% if n %}
+<div class="doc-actions">
+  <button type="button" class="btn btn--primary" data-api-post="/import/run" data-body='{{ body|tojson }}' data-then="reload">Import {{ n }} {{ 'record' if n == 1 else 'records' }}</button>
+</div>
+{% else %}
+<p class="hint">Nothing to import. Change where the columns go and check again.</p>
+{% endif %}

@@ -143,6 +143,36 @@ The background worker brings the list up to date every hour as the days go
 by, and saving a record updates its own dates at once. The sidebar filters
 for warranties, renewals and contracts ending soon use the same window.
 
+## Import and export
+
+Every list, as filtered and searched, exports as a CSV file from the
+download button in the top bar: one row per record with its name, status,
+location path, tags, every field and custom field, notes, dates and a link.
+Choices come out as their labels, linked records as their names, and text
+that a spreadsheet would read as a formula gets a leading apostrophe.
+
+Editors import from the same button. A CSV file (comma, semicolon or tab,
+with a header row, up to 5 MB and 5,000 rows) becomes records of one kind:
+
+1. Choose the kind of record and the file.
+2. Say which column goes into which field. Columns whose heading matches a
+   field's name are matched already; leave out the rest. A location can be
+   given by name, slug or full path (`Home lab > House > Basement`); a linked
+   record by name or slug; a choice by its label.
+3. Say what to do with records that are already there: always make new
+   ones, or update the one with the same name (or slug). An empty cell
+   leaves a field as it is when updating.
+4. Check. The whole import runs and is rolled back, and the result says
+   what would be made or updated, and why any row can't be.
+5. Import. Rows with a problem are left out; the rest are saved, each with
+   its line in the history. An exported file imports back unchanged.
+
+Settings > Admin exports the whole instance as one JSON file: every table
+and row, the modules' own included, with password hashes, secret values, API
+token hashes and the Turnstile secret left out. Attached files are listed but
+not included. It is for reading elsewhere, not for restoring; `flask backup`
+is. `flask export PATH` writes the same file from the server.
+
 ## Records
 
 Deleting a record, a link or a file can be undone from the message that
@@ -277,6 +307,7 @@ Run inside the container:
 | `flask turnstile status`, `flask turnstile off` | Show whether Turnstile is on; turn it off when nobody can sign in |
 | `flask secrets status` | Say where the secrets key is and whether it opens every secret |
 | `flask secrets new-key` | Print a new key for `SECRETS_KEY` |
+| `flask export PATH` | Write the whole instance as JSON, as Settings > Admin does |
 
 ```sh
 docker exec -it hyprvolt flask reset-password you@example.com

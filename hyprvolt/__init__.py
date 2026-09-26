@@ -45,6 +45,17 @@ def _sqlite_pragmas(dbapi_conn, _record):
         cur.execute("PRAGMA busy_timeout=5000")
         cur.execute("PRAGMA foreign_keys=ON")
         cur.close()
+        # The sqlite3 driver starts transactions its own way, which breaks
+        # SAVEPOINT: releasing one would commit it. With the driver's handling
+        # off, SQLAlchemy begins each transaction itself (below), and a
+        # savepoint (an import's check, one row of it) rolls back as it should.
+        dbapi_conn.isolation_level = None
+
+
+@event.listens_for(Engine, "begin")
+def _sqlite_begin(conn):
+    if conn.dialect.name == "sqlite":
+        conn.exec_driver_sql("BEGIN")
 
 
 def create_app(config_class=Config) -> Flask:
@@ -86,6 +97,8 @@ def create_app(config_class=Config) -> Flask:
     app.register_blueprint(core_api.files_bp)
     from .core import views as core_views
     app.register_blueprint(core_views.bp)
+    from .core import transfer
+    app.register_blueprint(transfer.bp)
     cli.register(app)
 
 

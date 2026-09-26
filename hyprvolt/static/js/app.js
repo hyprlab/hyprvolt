@@ -768,6 +768,7 @@
   //   [data-api-post="/url"]     posts data-body (JSON) and then does data-then
   //   data-then="sheet|reload|remove"  re-render the open sheet, reload the
   //                              page, or remove the closest [data-row]
+  //   data-then="replace"        put the answer's html in #data-replace
   //   data-done="Message"        the toast, with Undo when the answer has one
   //   [data-pick]                chooses a record in the palette; its id goes
   //                              into the form's data-pick-into field (other_id)
@@ -779,7 +780,9 @@
   //   input[data-autosubmit]     submits its form when it changes
   function afterAction(el, data) {
     var then = el.getAttribute("data-then");
-    var done = el.getAttribute("data-done");
+    // An answer that says what happened ("12 made, 2 skipped") wins over
+    // the element's fixed message.
+    var done = (data && typeof data.message === "string" && data.message) || el.getAttribute("data-done");
     if (then === "reload") {
       if (done) queueToast(done);
       location.reload();
@@ -787,6 +790,12 @@
       var row = el.closest("[data-row]");
       if (row) row.remove();
       offerUndo(done, data && data.undo);
+    } else if (then === "replace") {
+      // The answer's html takes the place of what is in data-replace: the
+      // next step of the import, its check.
+      var target = document.getElementById(el.getAttribute("data-replace"));
+      if (target && data && typeof data.html === "string") target.innerHTML = data.html;
+      if (done) toast(done);
     } else if (then === "sheet") {
       refreshSheet();
       if (data && data.undo) offerUndo(done, data.undo, refreshSheet);

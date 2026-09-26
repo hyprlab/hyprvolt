@@ -1,0 +1,32 @@
+{# Step 2 of an import: which column goes where. The check lands below. #}
+<form class="import-map" data-api="/import/check" data-then="replace" data-replace="import-check">
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="type" value="{{ etype.key }}">
+  <p class="hint"><strong>{{ filename }}</strong>: {{ rows }} {{ 'row' if rows == 1 else 'rows' }} to import as {{ etype.text(true) }}. Choose where each column goes. An empty cell leaves a field as it is when a record is updated.</p>
+  <ul class="manage-list">
+    {% for h in header %}
+    {% set i = loop.index0 %}
+    <li class="manage-item">
+      <div class="manage-meta">
+        <span class="manage-title">{{ h or 'Column ' ~ loop.index }}</span>
+        <span class="manage-sub">{{ samples[i]|select|join(' · ') or 'Empty in the first rows' }}</span>
+      </div>
+      <label class="field import-target"><select name="col{{ i }}" aria-label="Where {{ h or 'column ' ~ loop.index }} goes">
+        <option value="">Leave out</option>
+        {% for target, label in options %}<option value="{{ target }}" {{ 'selected' if chosen[i] == target }}>{{ label }}</option>{% endfor %}
+      </select></label>
+    </li>
+    {% endfor %}
+  </ul>
+  <label class="field"><span class="field-label">{{ etype.plural }} already recorded</span>
+    <select name="match">
+      <option value="none">Leave them alone: every row is a new record</option>
+      <option value="name">Update the one with the same name; the rest are new</option>
+      <option value="slug">Update the one with the same slug; the rest are new</option>
+    </select></label>
+  <div class="doc-actions">
+    <button class="btn btn--primary" type="submit">Check</button>
+  </div>
+  <p class="form-error" hidden></p>
+</form>
+<div id="import-check"></div>

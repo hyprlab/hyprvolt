@@ -34,6 +34,7 @@ def register(app: Flask) -> None:
     app.cli.add_command(turnstile)
     app.cli.add_command(seed_demo)
     app.cli.add_command(secrets_group)
+    app.cli.add_command(export_json)
 
 
 def _find(username: str) -> User | None:
@@ -216,3 +217,20 @@ def secrets_new_key():
     """Print a new key, for SECRETS_KEY on a fresh instance."""
     from .modules.vault import crypto
     click.echo(crypto.new_key())
+
+
+@click.command("export")
+@with_appcontext
+@click.argument("destination", type=click.Path(dir_okay=False, path_type=Path))
+def export_json(destination: Path):
+    """Write the whole instance as JSON, as Settings > Admin does: no
+    password hashes, secret values, token hashes or files."""
+    import json
+
+    from .core.transfer import export_all
+    if destination.exists():
+        raise click.ClickException(f"{destination} already exists.")
+    data = export_all()
+    destination.write_text(json.dumps(data, ensure_ascii=False, indent=1))
+    rows = sum(len(t) for t in data["tables"].values())
+    click.echo(f"Exported {rows} rows from {len(data['tables'])} tables to {destination}.")

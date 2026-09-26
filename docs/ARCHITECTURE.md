@@ -136,6 +136,12 @@ core keeps a `reminders` table of what falls within the window, updated by
 every save and by the worker's hourly pass, and the dashboard and sidebar
 badge read it. No module writes a reminder job of its own.
 
+**SQLAlchemy begins every SQLite transaction.** The sqlite3 driver's own
+transaction handling breaks savepoints (releasing one commits it), so it is
+turned off on connect and SQLAlchemy emits `BEGIN` itself. An import's check
+relies on this: it runs every row in a savepoint and rolls the whole
+transaction back.
+
 **Delete marks, the worker purges.** Deleting stamps `deleted_at`. Undo
 clears it, so the record comes back with the same id, its links, files,
 history and every `/e/<id>` link intact, which re-creating a record could not

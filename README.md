@@ -30,6 +30,7 @@ in a single SQLite volume.
 - Attachments, tags, custom fields and a full history on every record
 - A secrets vault: passwords and keys on any record, encrypted with a key kept out of the database, each reveal recorded
 - Delete with Undo, archive, and search across everything with Ctrl K
+- CSV export of any list, CSV import with column matching and a check first, and a JSON export of everything
 - Viewer, editor and admin roles; the documentation belongs to the instance
 - A module system, so new kinds of records arrive without changes to the core
 - A demo homelab to try it on, and backups that include the attachments

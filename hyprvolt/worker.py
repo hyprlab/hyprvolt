@@ -22,7 +22,8 @@ log = logging.getLogger(__name__)
 
 def _purge() -> int:
     from .core.records import purge
-    return purge()
+    from .core.transfer import cleanup
+    return purge() + cleanup()
 
 
 def _reminders() -> int:

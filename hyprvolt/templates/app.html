@@ -109,6 +109,22 @@
         </div>
         {% endif %}
 
+        {% if page == 'list' and not deleted %}
+        <div class="menu" id="transfer-menu">
+          <button class="menubtn menubtn--icon" aria-haspopup="true" aria-expanded="false" title="Export and import">
+            <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg>
+            <svg class="chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
+          </button>
+          <div class="menupop" role="menu" hidden>
+            <a class="menuopt" role="menuitem" href="{{ url_for('transfer.export_csv', name=module.id if module else 'all') }}?{{ request.query_string.decode() }}" download>
+              <span>Export these as CSV</span></a>
+            {% if current_user.can_edit %}
+            <button type="button" class="menuopt" role="menuitem" data-open="import-modal"><span>Import from CSV…</span></button>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
         {% if page == 'list' %}
         <div class="viewswitch" role="group" aria-label="View">
           <a class="viewswitch-btn {{ 'is-active' if view == 'cards' }}" title="Cards" href="{{ url_with(view='cards') }}">
@@ -148,6 +164,35 @@
   </div>
   <div class="modal-body" id="entity-form-slot"></div>
 </dialog>
+
+{% if page == 'list' and current_user.can_edit %}
+{# Importing a CSV: choose the file here; the column matching and the check
+   come from the server into #import-body (data-then="replace"). #}
+<dialog class="modal modal--wide" id="import-modal" aria-labelledby="import-modal-title" data-restore="off">
+  <div class="modal-head">
+    <h3 id="import-modal-title">Import from a CSV file</h3>
+    <button class="iconbtn" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="modal-body" id="import-body">
+    <form class="stack" data-api="/import/upload" enctype="multipart/form-data" data-then="replace" data-replace="import-body">
+      <p class="hint">One kind of record per file, with a header row. Next you choose which column goes into which field, and see what the import will do before anything is saved.</p>
+      <label class="field"><span class="field-label">Kind of record</span>
+        <select name="type">
+          {% for group in import_types %}
+          <optgroup label="{{ group.module.name }}">
+            {% for t in group.types %}<option value="{{ t.key }}" {{ 'selected' if etype and etype.key == t.key }}>{{ t.plural }}</option>{% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select></label>
+      <label class="field"><span class="field-label">CSV file</span><input type="file" name="file" accept=".csv,text/csv" required></label>
+      <button class="btn btn--primary" type="submit">Continue</button>
+      <p class="form-error" hidden></p>
+    </form>
+  </div>
+</dialog>
+{% endif %}
 
 <!-- ————— Settings ————— -->
 {# Sections: (id, label, group, icon path). The rail, the header title and the
@@ -293,6 +338,9 @@
       </div>
       <p class="hint">Viewers read everything; editors also change the documentation; admins also manage users, modules and these settings.</p>
       <p class="hint admin-stats">{{ admin_stats.users }} {{ 'user' if admin_stats.users == 1 else 'users' }} · {{ admin_stats.records }} {{ 'record' if admin_stats.records == 1 else 'records' }}</p>
+      <p class="setting-label setting-label--spaced">Export</p>
+      <p class="hint">Everything in the instance as one JSON file: every record, link, history line and setting, and the modules' own tables. Password hashes, secret values, API token hashes and attached files are left out; <code>flask backup</code> is for restoring.</p>
+      <div class="doc-actions"><a class="btn btn--ghost" href="{{ url_for('transfer.export_json') }}" download>Export everything as JSON</a></div>
 
       <p class="setting-label">Users</p>
       <form class="adduser" id="admin-adduser">
