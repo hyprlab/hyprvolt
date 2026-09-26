@@ -1015,6 +1015,10 @@ button.rack-slot:hover, button.rack-slot:focus-visible { background: var(--wash)
 }
 .secret-value.is-shown { color: var(--ink); letter-spacing: 0; user-select: all; }
 .mountform .secret-field { grid-column: 1 / -1; }
+@media (max-width: 700px) {
+  .secret-row { flex-wrap: wrap; }
+  .secret-row .manage-meta { flex-basis: 100%; }
+}
 
 /* A subnet's addresses, one cell each, sixteen to a row. Used is solid ink,
    reserved hatched, DHCP a filled field, free an outline. */

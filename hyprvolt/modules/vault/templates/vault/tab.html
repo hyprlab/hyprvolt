@@ -4,7 +4,7 @@
 {% if rows %}
 <ul class="manage-list">
   {% for s in rows %}
-  <li class="manage-item">
+  <li class="manage-item secret-row">
     <div class="manage-meta">
       <span class="manage-title">{{ s.name }} <span class="chip chip--muted">{{ dict(kinds)[s.kind] }}</span></span>
       {% if s.username %}<span class="manage-sub">User {{ s.username }}</span>{% endif %}
