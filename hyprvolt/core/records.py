@@ -162,6 +162,7 @@ def set_archived(entity: Entity, archived: bool, user=None) -> None:
     entity.archived = archived
     _touch(entity, user)
     audit(entity, "archived" if archived else "unarchived", [], user)
+    _remind(entity)
 
 
 def delete(entity: Entity, user=None) -> None:
@@ -171,6 +172,7 @@ def delete(entity: Entity, user=None) -> None:
     entity.deleted_at = utcnow()
     _touch(entity, user)
     audit(entity, "deleted", [], user)
+    _remind(entity)
 
 
 def restore(entity: Entity, user=None) -> None:
@@ -179,6 +181,7 @@ def restore(entity: Entity, user=None) -> None:
     entity.deleted_at = None
     _touch(entity, user)
     audit(entity, "restored", [], user)
+    _remind(entity)
 
 
 def purge(older_than_days: int | None = None) -> int:
@@ -209,6 +212,11 @@ def purge(older_than_days: int | None = None) -> int:
     # tags, custom values, relationships and attachments with it.
     db.session.execute(sql_delete(Entity).where(Entity.id.in_(ids)))
     return len(ids) + len(files)
+
+
+def _remind(entity: Entity) -> None:
+    from . import reminders
+    reminders.refresh(entity)
 
 
 def _touch(entity: Entity, user) -> None:
@@ -371,6 +379,7 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
             entity.created_by_id = entity.updated_by_id
     db.session.flush()
     reindex(entity)
+    _remind(entity)
     return changes
 
 

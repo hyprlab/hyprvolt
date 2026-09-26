@@ -1,10 +1,10 @@
 """Software's tabs, installation routes and filters: where each title is
 installed and at which version, and how many seats of each license are used."""
-from datetime import date, timedelta
+from datetime import date
 
 from flask import Blueprint, abort, jsonify, render_template, request
 
-from hyprvolt.core import present, records
+from hyprvolt.core import records, reminders
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity
 from hyprvolt.models import db
@@ -14,9 +14,6 @@ from hyprvolt.registry import current as registry
 from .models import Installation, SoftwareDetail
 
 bp = Blueprint("software", __name__)
-
-SOON_DAYS = 90
-
 
 def _detail(entity_id):
     return db.session.get(SoftwareDetail, entity_id)
@@ -130,9 +127,8 @@ def over_seats(query):
 
 
 def renewal_soon(query):
-    due = db.session.query(SoftwareDetail.entity_id).filter(
-        SoftwareDetail.renews <= date.today() + timedelta(days=SOON_DAYS))
-    return query.filter(Entity.type == "license", Entity.status == "active", Entity.id.in_(due))
+    return reminders.ending_within(query.filter(Entity.type == "license", Entity.status == "active"),
+                                   SoftwareDetail, SoftwareDetail.renews, past=True)
 
 
 def outdated(query):

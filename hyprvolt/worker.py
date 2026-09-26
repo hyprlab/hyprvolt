@@ -25,7 +25,12 @@ def _purge() -> int:
     return purge()
 
 
-CORE_JOBS = (Job("purge", _purge, minutes=60),)
+def _reminders() -> int:
+    from .core.reminders import refresh_all
+    return refresh_all()
+
+
+CORE_JOBS = (Job("purge", _purge, minutes=60), Job("reminders", _reminders, minutes=60))
 
 
 def jobs():

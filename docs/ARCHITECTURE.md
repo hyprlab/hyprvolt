@@ -131,6 +131,11 @@ database, shows its tab only to accounts with `can_see_secrets`, and writes
 every reveal to the record's history. The core hides those history lines
 from everyone else; nothing else in the core knows about secrets.
 
+**Reminders are data, not code.** A module marks a date field `expires`; the
+core keeps a `reminders` table of what falls within the window, updated by
+every save and by the worker's hourly pass, and the dashboard and sidebar
+badge read it. No module writes a reminder job of its own.
+
 **Delete marks, the worker purges.** Deleting stamps `deleted_at`. Undo
 clears it, so the record comes back with the same id, its links, files,
 history and every `/e/<id>` link intact, which re-creating a record could not

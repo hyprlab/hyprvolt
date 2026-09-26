@@ -1,6 +1,6 @@
 {# The home screen: what is documented, what changed lately, and whatever
    the modules add (their widgets). #}
-{% from "partials/macros.html" import type_icon %}
+{% from "partials/macros.html" import entity_link, type_icon %}
 <div class="records dash" id="records-root" data-view="list" data-infinite="0">
   {% set total = tiles|sum(attribute='count') %}
   {% if total == 0 %}
@@ -33,8 +33,25 @@
     </div>
   </section>
 
-  {% if widgets %}
   <section class="dash-section widgets">
+    <div class="card widget widget--wide" id="coming-up">
+      <p class="setting-label">Coming up <span class="count {{ 'count--alert' if due }}">{{ due|length }}</span></p>
+      {% if due %}
+      <ul class="manage-list">
+        {% for d in due %}
+        <li class="manage-item">
+          <div class="manage-meta">
+            <span class="manage-title">{{ entity_link(d.entity.id, d.entity.name) }}</span>
+            <span class="manage-sub">{{ d.etype.label }} · {{ d.field.label }} {{ d.due.isoformat() }}</span>
+          </div>
+          {% if d.days < 0 %}<span class="count count--alert">{{ -d.days }} {{ 'day' if d.days == -1 else 'days' }} ago</span>
+          {% else %}<span class="chip chip--muted">{% if d.days == 0 %}today{% else %}in {{ d.days }} {{ 'day' if d.days == 1 else 'days' }}{% endif %}</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <p class="hint">{% if not due %}Nothing ends or falls due in the next {{ reminder_days }} days. {% endif %}Warranties, licenses, contracts, domains and batteries due within {{ reminder_days }} days, or past due by no more than that.{% if current_user.is_admin %} The window is in Settings > Admin.{% endif %}</p>
+    </div>
     {% for w in widgets %}
     <div class="card widget {{ 'widget--wide' if w.widget.wide }}">
       <p class="setting-label">{{ w.widget.label }}</p>
@@ -42,7 +59,6 @@
     </div>
     {% endfor %}
   </section>
-  {% endif %}
 
   <section class="dash-section">
     <p class="setting-label">Recently changed</p>

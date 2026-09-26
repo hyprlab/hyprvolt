@@ -63,8 +63,10 @@ def test_warranty_filters_and_card(client, h, admin):
     assert ">over<" in over and ">gone<" not in over
     sidebar = client.get("/hardware").data.decode()
     assert "Warranty ending soon" in sidebar and "Out of warranty" in sidebar
-    card = client.get("/").data.decode().split(">Warranties</p>")[1].split("</section>")[0]
-    assert "in 30 days" in card and "ended" in card and ">gone<" not in card and ">later<" not in card
+    page = client.get("/").data.decode()
+    card = page.split('id="coming-up"')[1].split('<div class="card widget')[0]
+    assert "in 30 days" in card and "10 days ago" in card and ">gone<" not in card and ">later<" not in card
+    assert 'class="count count--alert" title="2 dates coming up or just past">2<' in page
 
 
 def test_viewers_read_hardware_but_cannot_change_it(client, h, admin, viewer):

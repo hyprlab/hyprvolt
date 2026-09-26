@@ -75,8 +75,9 @@ def index():
     for m in reg.enabled_modules():
         for w in m.widgets:
             widgets.append({"module": m, "widget": w, "html": Markup(w.render())})
+    from .core import reminders
     return render_template("app.html", page="dashboard", tiles=tiles, recent=present.views(recent),
-                           widgets=widgets, view="list", can_seed=any(m.seed for m in reg.enabled_modules()),
+                           widgets=widgets, due=reminders.due(), reminder_days=reminders.window(), view="list", can_seed=any(m.seed for m in reg.enabled_modules()),
                            **shell.context(special="dashboard"),
                            **_admin_context())
 
@@ -196,6 +197,7 @@ def _admin_context() -> dict:
         "inst_per_page": int_setting("items_per_page", 40),
         "inst_purge_days": int_setting("purge_days", 30),
         "inst_upload_mb": int_setting("max_upload_mb", 25),
+        "inst_reminder_days": int_setting("reminder_days", 90),
         "inst_default_role": default_role(),
         "turnstile": _turnstile_status(),
         **_modules_context(),
@@ -316,6 +318,7 @@ INSTANCE_SETTINGS = {
     "items_per_page": (10, 500, "The page size"),
     "purge_days": (1, 365, "How long deleted records are kept"),
     "max_upload_mb": (1, 2048, "The upload limit"),
+    "reminder_days": (1, 3650, "The reminder window"),
 }
 
 
@@ -333,6 +336,10 @@ def admin_instance():
         if not low <= value <= high:
             return jsonify(error=f"{label} must be between {low} and {high}."), 400
         set_setting(key, str(value))
+        if key == "reminder_days":
+            from .core.reminders import refresh_all
+            refresh_all()
+            db.session.commit()
     if "default_role" in data:
         if data["default_role"] not in ("viewer", "editor"):
             return jsonify(error="New accounts can start as viewers or editors."), 400

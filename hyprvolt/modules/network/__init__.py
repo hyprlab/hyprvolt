@@ -72,7 +72,7 @@ module = Module(
                    statuses=DOMAIN_STATUSES, check=dns.check_domain,
                    fields=(Field("registrar", "Registrar", list=True),
                            Field("dns_provider", "DNS hosted at"),
-                           Field("expires", "Renewal due", "date", card=True, list=True),
+                           Field("expires", "Renewal due", "date", card=True, list=True, expires=True),
                            Field("auto_renew", "Renews by itself", "boolean"),
                            Field("nameservers", "Name servers", "longtext")),
                    tabs=(Tab("records", "DNS records", views.records_tab, count=views.records_count),)),

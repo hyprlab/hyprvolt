@@ -52,7 +52,7 @@ module = Module(
                            Field("extra_seats", "Seats used elsewhere", "integer", min=0, max=1_000_000,
                                  help="Users or accounts that aren't installations recorded here."),
                            Field("purchased", "Bought", "date", group="Term"),
-                           Field("renews", "Renews", "date", card=True, list=True, group="Term"),
+                           Field("renews", "Renews", "date", card=True, list=True, group="Term", expires=True),
                            Field("cost", "Cost", "number", min=0, group="Term")),
                    tabs=(Tab("seats", "Seats", views.license_tab, count=views.license_count),)),
     ),

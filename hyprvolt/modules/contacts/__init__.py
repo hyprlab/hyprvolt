@@ -58,7 +58,7 @@ module = Module(
                            Field("kind", "Kind", "select", options=CONTRACT_KINDS, list=True),
                            Field("number", "Contract number"),
                            Field("starts", "Starts", "date", group="Term"),
-                           Field("ends", "Ends or renews", "date", card=True, list=True, group="Term"),
+                           Field("ends", "Ends or renews", "date", card=True, list=True, group="Term", expires=True),
                            Field("auto_renew", "Renews by itself", "boolean", group="Term"),
                            Field("notice_days", "Notice period", "integer", min=0, max=3650, unit="days",
                                  group="Term", help="How long before the end it must be cancelled."),

@@ -1,9 +1,8 @@
 """Network's tabs, JSON routes, sidebar filters and dashboard widget."""
-from datetime import date, timedelta
 
 from flask import Blueprint, abort, jsonify, render_template, request
 
-from hyprvolt.core import present, records
+from hyprvolt.core import present, records, reminders
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity
 from hyprvolt.models import db
@@ -15,10 +14,6 @@ from . import addresses, dns, ports
 from .models import DNS_TYPES, PORT_KINDS, SPEEDS, Cable, DnsRecord, NetworkDetail, Port
 
 bp = Blueprint("network", __name__)
-
-#: How far ahead a domain renewal counts as soon.
-SOON_DAYS = 90
-
 
 def _detail(entity_id):
     return db.session.get(NetworkDetail, entity_id)
@@ -159,9 +154,8 @@ def ips_without_device(query):
 
 
 def renewal_soon(query):
-    due = db.session.query(NetworkDetail.entity_id).filter(
-        NetworkDetail.expires <= date.today() + timedelta(days=SOON_DAYS))
-    return query.filter(Entity.type == "domain", Entity.status != "retired", Entity.id.in_(due))
+    return reminders.ending_within(query.filter(Entity.type == "domain", Entity.status != "retired"),
+                                   NetworkDetail, NetworkDetail.expires, past=True)
 
 
 def subnets_widget() -> str:

@@ -7,7 +7,7 @@ Where a device is comes from the core's location, and its rack position
 from Locations' form section: the types that go in a rack carry the
 ``rackmount`` trait. Hardware needs Locations for both.
 """
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Widget
+from hyprvolt.manifest import EntityType, Field, ListFilter, Module
 
 from . import demo, views
 from .models import HardwareDetail
@@ -29,7 +29,7 @@ PURCHASE = (
     Field("purchase_date", "Purchased", "date", group="Purchase"),
     Field("price", "Price", "number", min=0, group="Purchase"),
     Field("vendor", "Bought from", group="Purchase"),
-    Field("warranty_until", "Warranty ends", "date", group="Purchase"),
+    Field("warranty_until", "Warranty ends", "date", group="Purchase", expires=True),
 )
 
 CPU = Field("cpu", "CPU", group="Specs", help="As many as it has: 2 × Xeon E5-2680 v4.")
@@ -71,6 +71,7 @@ HOST = ("host",)
 
 def hardware(key, label, plural, icon, specs=(), traits=()):
     return EntityType(key, label, plural, detail=HardwareDetail, statuses=STATUSES, icon=icon, traits=traits,
+                      inactive=views.GONE,
                       fields=IDENTITY + tuple(specs) + PURCHASE)
 
 
@@ -98,7 +99,7 @@ module = Module(
         hardware("ups", "UPS", "UPSes", UPS, traits=RACK, specs=(
             Field("capacity_va", "Capacity", "integer", min=0, max=1_000_000, unit="VA", card=True, group="Specs"),
             Field("runtime_min", "Runtime at load", "integer", min=0, max=10_000, unit="min", group="Specs"),
-            Field("battery_due", "Battery due", "date", group="Specs",
+            Field("battery_due", "Battery due", "date", group="Specs", expires=True,
                   help="When the batteries should be replaced."),
             Field("power_w", "Rated output", "integer", min=0, max=1_000_000, unit="W", group="Specs"))),
         hardware("nas", "NAS", "NAS", NAS, traits=RACK + HOST, specs=(
@@ -115,6 +116,5 @@ module = Module(
     ),
     filters=(ListFilter("warranty_soon", "Warranty ending soon", views.warranty_soon),
              ListFilter("warranty_over", "Out of warranty", views.warranty_over)),
-    widgets=(Widget("warranties", "Warranties", views.warranty_widget),),
     seed=demo.seed,
 )

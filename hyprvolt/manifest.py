@@ -47,6 +47,7 @@ class Field:
     card: bool = False               # a line on the card
     search: bool = True              # part of the search text
     group: str = ""                  # a heading in the form and the Overview
+    expires: bool = False            # date: when something ends or is due; reminded of
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,7 @@ class EntityType:
     traits: tuple = ()               # words other modules look for: ("rackmount",)
     proper: bool = False             # the label starts with a name: "Docker host"
     name_from: str = ""              # a field whose value is the name: an IP's address
+    inactive: tuple = ("retired",)   # statuses that need no reminders
     check: Callable | None = None    # check(entity, detail): rules across fields
     module: str = ""                 # filled in by the registry
 

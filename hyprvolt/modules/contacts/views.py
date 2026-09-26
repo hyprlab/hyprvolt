@@ -4,16 +4,12 @@ from datetime import date, timedelta
 
 from flask import render_template
 
-from hyprvolt.core import present, records, relations
+from hyprvolt.core import present, records, relations, reminders
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity, Relationship
 from hyprvolt.models import db
 
 from .models import ContactDetail
-
-#: How far ahead "ending soon" looks.
-SOON_DAYS = 90
-
 
 def _children(field, parent_id, type_key):
     return (Entity.live().join(ContactDetail, ContactDetail.entity_id == Entity.id)
@@ -112,6 +108,5 @@ def supplier_save(entity, values, user) -> list[dict]:
 # ———— The sidebar ————
 
 def ending_soon(query):
-    due = db.session.query(ContactDetail.entity_id).filter(
-        ContactDetail.ends <= date.today() + timedelta(days=SOON_DAYS))
-    return query.filter(Entity.type == "contract", Entity.status == "active", Entity.id.in_(due))
+    return reminders.ending_within(query.filter(Entity.type == "contract", Entity.status == "active"),
+                                   ContactDetail, ContactDetail.ends, past=True)

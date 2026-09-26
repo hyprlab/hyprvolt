@@ -262,6 +262,11 @@ def _migrate(app: Flask) -> None:
     for module, step in current().migration_steps():
         step.run(Migrator(module.id))
 
+    # After the modules' steps, so their tables are whole: the reminders of
+    # an install from before they existed, without waiting for the worker.
+    from .core.reminders import refresh_all
+    core.once("reminders-first-fill", refresh_all)
+
 
 def _start_worker(app: Flask) -> None:
     """Background thread for periodic work (worker.py).

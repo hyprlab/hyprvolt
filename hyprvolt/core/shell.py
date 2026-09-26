@@ -56,7 +56,9 @@ def context(active_module=None, active_type=None, active_filter=None, active_tag
     deleted = 0
     if current_user.can_edit:
         deleted = Entity.query.filter(Entity.deleted_at.isnot(None), Entity.type.in_(keys)).count()
+    from . import reminders
     return {
+        "nav_due": reminders.count(),
         "nav_groups": groups,
         "nav_total": sum(counts.get(k, 0) for k in keys),
         "nav_deleted": deleted,

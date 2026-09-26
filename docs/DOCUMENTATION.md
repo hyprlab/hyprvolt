@@ -128,6 +128,21 @@ a number, a date, a choice list, a web address, or yes or no. They appear in
 the record's form and Overview, and search finds their values. Removing one
 removes its values too, with Undo.
 
+## The dashboard and reminders
+
+The dashboard counts what each module documents, lists what changed
+lately, and carries the cards modules add (rack space, hypervisors, subnets,
+services). Its Coming up card lists every warranty, license renewal,
+contract end, domain renewal and UPS battery date that falls within the
+reminder window, from that many days before the date until that many days
+after; the Dashboard entry in the sidebar shows how many. The window is 90
+days unless an admin changes it in Settings > Admin ("Remind of dates
+within"). Records that are archived, retired or disposed are left out.
+
+The background worker brings the list up to date every hour as the days go
+by, and saving a record updates its own dates at once. The sidebar filters
+for warranties, renewals and contracts ending soon use the same window.
+
 ## Records
 
 Deleting a record, a link or a file can be undone from the message that

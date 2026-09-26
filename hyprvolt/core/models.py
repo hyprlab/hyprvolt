@@ -76,6 +76,22 @@ class Entity(db.Model):
         return f"<Entity {self.id} {self.type} {self.slug}>"
 
 
+class Reminder(db.Model):
+    """A date coming up or just past on a record (a field marked
+    ``expires``), kept current by the worker and by every save
+    (core/reminders.py). The dashboard and the sidebar badge read these."""
+    __tablename__ = "reminders"
+    __table_args__ = (db.UniqueConstraint("entity_id", "field"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    entity_id = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="CASCADE"), nullable=False, index=True)
+    field = db.Column(db.String(40), nullable=False)
+    due = db.Column(db.Date, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+
+    entity = db.relationship("Entity")
+
+
 class EntityDetail:
     """Base for a module's detail table: its primary key is the entity's id,
     and the row goes when the entity is purged.

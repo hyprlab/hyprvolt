@@ -69,7 +69,7 @@ required.
 | `search` | `search(query, limit)` returning `SearchResult`s for the palette, for things that aren't records (an IP address, a DNS name). Records are searched without it |
 | `filters` | `ListFilter`s: sidebar entries with live counts under the module |
 | `widgets` | `Widget`s on the dashboard |
-| `jobs` | `Job`s the worker runs, each at most every `minutes` |
+| `jobs` | `Job`s the worker runs, each at most every `minutes`. Dates that come due need no job: mark the field `expires` |
 | `settings_pane` | A `Pane` in the settings window, admin-only by default |
 | `relation_kinds` | `RelationKind`s it adds to the core's |
 | `sheet_tabs` | `Tab`s on records of any module, shown where `when(entity)` says |
@@ -115,6 +115,8 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   `addressable` and `cabled` (Network), `host` (Software and Services: where
   software is installed and services run), `supplied` (Contacts: has a
   supplier and a contract), `domain` (Services: a service's domain).
+- `inactive` are the statuses of records that need no reminders, `("retired",)`
+  by default; Hardware's are retired and disposed.
 - `name_from="address"` makes the record's name the shown value of one of
   its fields, and leaves the Name box out of the form: an IP address is
   named by its address.
@@ -146,6 +148,13 @@ choosing it in the form links the VM to the hypervisor, so the Relationships
 tab shows it and the dependency view follows it, and unlinking it there
 empties the field. The detail table needs no column for it, and a type whose
 fields are all kept as links needs no detail table.
+
+A `date` field with `expires=True` is a date something ends or falls due: a
+warranty, a renewal, a contract's end. The core reminds of it: within the
+admin's reminder window either side of today, the record is on the
+dashboard's Coming up card and counts toward the sidebar badge, unless it is
+archived or in an `inactive` status. `reminders.ending_within(query, detail,
+column)` is the sidebar filter for the same window.
 
 A `ref` with `trait="addressable"` instead of `types` points at a record of
 any type with that trait, from whichever modules are installed; the form
