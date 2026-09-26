@@ -82,7 +82,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.tabs`, `.tab`, `.tab-panel` | The sheet's sections. The active tab is underlined in the accent; the row scrolls sideways on a phone |
 | `.crumbs`, `.crumbs-sep` | Where a record is: its locations, outermost first, each a link |
 | `.kv`, `.kv-empty`, `.kv-long` | A record's fields: label and value in two columns, stacked on a phone |
-| `.banner`, `.banner--danger` | A notice at the top of the sheet (archived, deleted, rack conflicts), with its action |
+| `.banner`, `.banner--danger`, `.banner--stack` | A notice at the top of the sheet (archived, deleted, rack conflicts), with its action; `--stack` puts several paragraphs and buttons under each other (a backup's check, a new token) |
 | `.elink` | A link to a record inside text; it opens the record's sheet in place |
 | `.deptree` | The dependency view, nested; a loop and a repeat are marked, not followed |
 | `.linkform`, `.mountform`, `.doc-actions` | Small forms inside a tab: make a link, place something in a rack, add ports, cable them, add a DNS record |

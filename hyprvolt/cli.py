@@ -15,11 +15,10 @@ account; there is no email-based reset, because the app sends no email.
 ``turnstile off`` is the way back in when a Turnstile widget stops working
 (its hostname list changed, Cloudflare is unreachable) and nobody can sign in.
 """
-import sqlite3
 from pathlib import Path
 
 import click
-from flask import Flask, current_app
+from flask import Flask
 from flask.cli import with_appcontext
 from sqlalchemy import func
 
@@ -31,6 +30,7 @@ def register(app: Flask) -> None:
     app.cli.add_command(create_user)
     app.cli.add_command(reset_password)
     app.cli.add_command(backup)
+    app.cli.add_command(restore)
     app.cli.add_command(turnstile)
     app.cli.add_command(seed_demo)
     app.cli.add_command(secrets_group)
@@ -90,54 +90,51 @@ def reset_password(username):
 def backup(destination: Path):
     """Write a consistent copy of the instance, safe while the app runs.
 
-    A name ending in .tar.gz, .tgz or .tar gets an archive of the database and
-    every attachment. A name ending in .db gets the database alone.
-
-    The database copy uses SQLite's online backup API, so a write in progress
-    can't leave a torn copy the way copying the file (and its -wal) by hand can.
+    A name ending in .tar.gz, .tgz or .tar gets the same archive Settings >
+    Backups makes: the database and every attachment. A name ending in .db
+    gets the database alone. Settings > Backups does all of this without a
+    terminal; this is for scripts and for when the app can't be reached.
     """
-    import tarfile
-    import tempfile
-
+    from .core import backups
     from .core.attachments import root as attachments_root
-    uri = current_app.config["SQLALCHEMY_DATABASE_URI"]
-    if not uri.startswith("sqlite:///"):
-        raise click.ClickException("backup only knows how to copy a SQLite database.")
+    from .core.fields import Invalid
     if destination.exists():
         raise click.ClickException(f"{destination} already exists.")
     name = destination.name.lower()
     archive = name.endswith((".tar.gz", ".tgz", ".tar"))
     if not archive and not name.endswith(".db"):
         raise click.ClickException("Name the backup .tar.gz (database and attachments) or .db (database only).")
-
-    def copy_db(target: Path) -> None:
-        src = sqlite3.connect(uri.removeprefix("sqlite:///"))
-        dst = sqlite3.connect(target)
-        try:
-            src.backup(dst)
-        finally:
-            dst.close()
-            src.close()
-
-    files = attachments_root()
-    if not archive:
-        copy_db(destination)
-        if files.is_dir() and any(files.rglob("*")):
-            click.echo("Attachments are not in a .db backup; name it .tar.gz to include them.", err=True)
-    else:
-        with tempfile.TemporaryDirectory() as tmp:
-            db_copy = Path(tmp) / "hyprvolt.db"
-            copy_db(db_copy)
-            mode = "w" if name.endswith(".tar") else "w:gz"
-            with tarfile.open(destination, mode) as tar:
-                tar.add(db_copy, arcname="hyprvolt.db")
-                if files.is_dir():
-                    tar.add(files, arcname="attachments")
+    try:
+        if archive:
+            backups.write_archive(destination, "manual")
+        else:
+            backups.copy_db(destination)
+            files = attachments_root()
+            if files.is_dir() and any(files.rglob("*")):
+                click.echo("Attachments are not in a .db backup; name it .tar.gz to include them.", err=True)
+    except Invalid as err:
+        raise click.ClickException(str(err)) from None
     click.echo(f"Backed up to {destination} ({destination.stat().st_size // 1024} KB).")
     from .modules.vault.models import Secret
     if Secret.query.first() is not None:
         click.echo("The secrets key is not in the backup, on purpose. Keep a copy of it separately "
                    "(`flask secrets status` says where it is).")
+
+
+@click.command("restore")
+@with_appcontext
+@click.argument("source", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+def restore(source: Path):
+    """Replace the instance with a backup archive, as Settings > Backups does.
+    What is there now is saved as a backup first, in the backups folder."""
+    from .core import backups
+    from .core.fields import Invalid
+    try:
+        done = backups.restore(source)
+    except Invalid as err:
+        raise click.ClickException(str(err)) from None
+    click.echo(f"Restored {done['records']} records and {done['files']} files from {source}. "
+               f"What was there before is in {backups.folder() / done['safety']}. Everyone is signed out.")
 
 
 @click.group("turnstile")

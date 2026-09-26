@@ -31,7 +31,13 @@ def _reminders() -> int:
     return refresh_all()
 
 
-CORE_JOBS = (Job("purge", _purge, minutes=60), Job("reminders", _reminders, minutes=60))
+def _backups() -> int:
+    from .core.backups import scheduled
+    return scheduled()
+
+
+CORE_JOBS = (Job("purge", _purge, minutes=60), Job("reminders", _reminders, minutes=60),
+             Job("backup", _backups, minutes=30))
 
 
 def jobs():

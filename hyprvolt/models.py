@@ -39,6 +39,13 @@ class User(UserMixin, db.Model):
     can_see_secrets = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
+    def get_id(self) -> str:
+        """What the session and the remember-me cookie hold: the id and the
+        session epoch. A restore changes the epoch, so a sign-in from before
+        it can't land on whoever has that id in the restored database."""
+        epoch = get_setting("session_epoch")
+        return f"{self.id}.{epoch}" if epoch else str(self.id)
+
     @property
     def is_admin(self) -> bool:
         return self.role == "admin"

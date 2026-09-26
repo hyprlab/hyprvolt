@@ -8,6 +8,7 @@ database alone can't be read without it, and without it neither can the
 instance: losing the key loses the secrets.
 """
 import os
+import time
 from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -53,6 +54,38 @@ def _fernet(create: bool = False) -> Fernet | None:
     with os.fdopen(fd, "wb") as f:
         f.write(key + b"\n")
     return Fernet(key)
+
+
+def current_key() -> str | None:
+    """The key in use, as text, for an admin to keep a copy of."""
+    env = os.environ.get("SECRETS_KEY")
+    if env:
+        return env.strip()
+    path = key_path()
+    return path.read_text().strip() if path.exists() else None
+
+
+def put_back(key: str, ciphertexts: list[str]) -> None:
+    """Make ``key`` the key in use, after checking it is one and that it
+    opens the secrets there are. The key it replaces is kept beside it."""
+    if os.environ.get("SECRETS_KEY"):
+        raise BadKey("The key comes from the SECRETS_KEY environment variable. Change it there.")
+    key = key.strip()
+    try:
+        f = Fernet(key.encode())
+    except (ValueError, TypeError):
+        raise BadKey("That isn't a secrets key. It is a line of 44 letters, digits, - and _, ending in =.") from None
+    if ciphertexts:
+        try:
+            f.decrypt(ciphertexts[0].encode())
+        except InvalidToken:
+            raise BadKey("That key doesn't open the secrets here. It belongs to another instance or backup.") from None
+    path = key_path()
+    if path.exists():
+        path.rename(path.with_name(f"{KEY_FILE}.replaced-{int(time.time())}"))
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w") as out:
+        out.write(key + "\n")
 
 
 def new_key() -> str:

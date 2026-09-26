@@ -1,0 +1,12 @@
+{# What restoring a backup will do, before it does it. #}
+<div class="banner banner--stack">
+  <p><strong>{{ name }}</strong>{% if info.made_at %}, made {{ info.made_at.strftime('%b %-d, %Y %H:%M') }} UTC{% endif %}{% if info.made_by %} by {{ info.made_by }}{% endif %}
+    with Hyprvolt {{ info.app_version }}{% if info.kind in kinds %} ({{ kinds[info.kind]|lower }}){% endif %}.</p>
+  <p>{{ info.records }} {{ 'record' if info.records == 1 else 'records' }}, {{ info.users }} {{ 'account' if info.users == 1 else 'accounts' }}
+    and {{ info.files }} attached {{ 'file' if info.files == 1 else 'files' }}. Admins in it: {{ info.admins|join(', ') }}.</p>
+  <p>Restoring replaces everything here with it: records, accounts, settings and files. What is here now is saved as a backup first, so restoring that brings it back.
+    Everyone is signed out{% if current_user.username in info.admins %}, except you{% else %}, you too: your account isn't an admin in it, so sign in with one that is{% endif %}.</p>
+  <div class="doc-actions">
+    <button type="button" class="btn btn--danger" data-api-post="/admin/backups/{{ name }}/restore" data-then="reload">Restore this backup</button>
+  </div>
+</div>

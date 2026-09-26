@@ -39,6 +39,9 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Any list exports as CSV, as it is filtered and searched
 - Editors import records from a CSV file: match the columns to fields, check what the import will do without saving anything, then import; rows with a problem are left out and said why
 - Settings > Admin and `flask export` export the whole instance as JSON, without password hashes, secret values or token hashes
+- Settings > Backups: make a backup, have one made every day (the newest seven kept), download, delete with Undo, upload one, see what it holds, and restore it; what was there is saved first, so a restore can be undone
+- Settings > Secrets downloads the secrets key to keep apart from the backups, and puts one back after moving to a new server
+- `flask restore`, and `BACKUP_DIR` to keep backups on another disk
 - API tokens: each account makes its own in Settings > API tokens, to use the JSON API from scripts; a token can be limited to reading, never reveals a secret, and is revoked at once
 - A knowledge base of Markdown documents that attach to any record and link to records with [[slug]]
 - Typed links between records in both directions, and a view of what breaks if a record goes down

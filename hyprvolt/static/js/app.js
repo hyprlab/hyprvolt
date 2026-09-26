@@ -357,7 +357,9 @@
    ["inst-perpage", "items_per_page", "Page size saved"],
    ["inst-purge", "purge_days", "Deleted records are kept that long"],
    ["inst-upload", "max_upload_mb", "Upload limit saved"],
-   ["inst-reminders", "reminder_days", "Reminder window saved"]].forEach(function (spec) {
+   ["inst-reminders", "reminder_days", "Reminder window saved"],
+   ["inst-backup-hours", "backup_hours", "Backup schedule saved"],
+   ["inst-backup-keep", "backup_keep", "Saved"]].forEach(function (spec) {
     var input = document.getElementById(spec[0]);
     if (!input) return;
     input.addEventListener("change", function () {

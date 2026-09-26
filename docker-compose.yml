@@ -19,6 +19,9 @@ services:
       # The secrets vault's key. If unset, one is made in the volume; keep a
       # copy of it elsewhere either way: losing it loses the secrets.
       - SECRETS_KEY=${SECRETS_KEY:-}
+      # Where Settings > Backups keeps backups; /data/backups (the data
+      # volume) unless set. Mount another disk and point this at it.
+      - BACKUP_DIR=${BACKUP_DIR:-}
       # Set to 1 when the app is served over HTTPS.
       - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-0}
       # How many reverse proxies sit in front (Cloudflare Tunnel, Caddy...).

@@ -34,7 +34,7 @@ in a single SQLite volume.
 - Viewer, editor and admin roles; the documentation belongs to the instance
 - A JSON API for scripts, with per-user tokens that can be limited to reading
 - A module system, so new kinds of records arrive without changes to the core
-- A demo homelab to try it on, and backups that include the attachments
+- A demo homelab to try it on, and backups made, scheduled, downloaded and restored from Settings
 
 ## Install with Docker Compose
 

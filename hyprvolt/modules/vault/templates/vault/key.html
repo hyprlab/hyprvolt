@@ -1,0 +1,16 @@
+{# Keeping a copy of the key, and putting one back: in Settings > Secrets
+   and in Settings > Backups. #}
+<div class="doc-actions">
+  {% if source != 'none' %}<a class="btn btn--ghost" href="/vault/key" download>Download the secrets key</a>{% endif %}
+  {% if source != 'environment' %}<button type="button" class="btn btn--ghost" data-fill='{}' data-fill-form="key-form">Put a key back</button>{% endif %}
+</div>
+{% if key_saved %}<p class="hint">Last downloaded {{ key_saved }}.</p>{% endif %}
+{% if source != 'environment' %}
+<form class="stack" id="key-form" data-api="/vault/key" enctype="multipart/form-data" data-then="reload" hidden>
+  <p class="hint">After restoring a backup on a new server, put back the key its secrets were saved with. It is checked against them first.</p>
+  <label class="field"><span class="field-label">Key file</span><input type="file" name="file" accept=".key,text/plain"></label>
+  <label class="field"><span class="field-label">Or paste it</span><input name="key" autocomplete="off" spellcheck="false" class="mono" data-fill-focus></label>
+  <button class="btn btn--primary" type="submit">Put it back</button>
+  <p class="form-error" hidden></p>
+</form>
+{% endif %}

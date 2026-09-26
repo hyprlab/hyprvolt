@@ -912,6 +912,8 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   margin-bottom: 18px; padding: 10px 14px; border-radius: var(--radius-sm);
   font-size: 13.5px; background: var(--panel); border: 1px solid var(--line); color: var(--muted);
 }
+.banner--stack { flex-direction: column; align-items: stretch; }
+.banner--stack p { margin: 0; }
 .banner--danger { background: rgb(220 70 60 / .08); border-color: rgb(220 70 60 / .25); color: var(--ink); }
 
 /* Relationships, and the dependency tree under them. */

@@ -16,7 +16,7 @@ The records' own JSON API is ``core/api.py``; the sheet and form fragments
 are ``core/views.py``. Admin routes are grouped at the end, each behind
 ``@role("admin")``.
 """
-from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
 from markupsafe import Markup
 from sqlalchemy import func
@@ -205,10 +205,24 @@ def _admin_context() -> dict:
         "inst_purge_days": int_setting("purge_days", 30),
         "inst_upload_mb": int_setting("max_upload_mb", 25),
         "inst_reminder_days": int_setting("reminder_days", 90),
+        **_backups_context(),
         "inst_default_role": default_role(),
         "turnstile": _turnstile_status(),
         **_modules_context(),
     }
+
+
+def _backups_context() -> dict:
+    """Settings > Backups."""
+    from .core import backups
+    from .core.fields import Invalid
+    try:
+        rows, problem = backups.listing(), ""
+    except (OSError, Invalid) as err:
+        rows, problem = [], str(err)
+    return {"backups": rows, "backup_problem": problem, "backup_folder": current_app.config["BACKUP_DIR"],
+            "backup_hours": int_setting("backup_hours", 24), "backup_keep": int_setting("backup_keep", 7),
+            "backup_kinds": backups.KINDS}
 
 
 CUSTOM_KIND_LABELS = {"text": "Text", "number": "Number", "date": "Date", "select": "Choice list",
@@ -326,6 +340,8 @@ INSTANCE_SETTINGS = {
     "purge_days": (1, 365, "How long deleted records are kept"),
     "max_upload_mb": (1, 2048, "The upload limit"),
     "reminder_days": (1, 3650, "The reminder window"),
+    "backup_hours": (0, 720, "The time between automatic backups"),
+    "backup_keep": (1, 365, "The number of automatic backups kept"),
 }
 
 

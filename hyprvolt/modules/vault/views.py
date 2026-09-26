@@ -199,6 +199,42 @@ def secret_restore(secret_id):
     return jsonify(ok=True, secret=_json(s))
 
 
+# ———— The key, for an admin to keep a copy of and put back ————
+
+@bp.route("/key")
+@role("admin")
+def key_download():
+    """The key as a file. Written to the log, since it opens every secret."""
+    import logging
+
+    from flask import Response
+    key = crypto.current_key()
+    if key is None:
+        abort(404, description="There is no key yet. It is made when the first secret is saved.")
+    logging.getLogger("hyprvolt.vault").warning("secrets key downloaded by %s", current_user.username)
+    from hyprvolt.models import set_setting
+    set_setting("vault:key_saved", f"{utcnow().isoformat(timespec='minutes')}Z {current_user.display_name}")
+    return Response(key + "\n", mimetype="text/plain", headers={
+        "Content-Disposition": 'attachment; filename="hyprvolt-secrets.key"', "Cache-Control": "no-store"})
+
+
+@bp.route("/key", methods=["POST"])
+@role("admin")
+def key_put_back():
+    """A key downloaded earlier, as a file or pasted: checked against the
+    secrets here, then made the key in use."""
+    upload = request.files.get("file")
+    key = upload.read(200).decode("utf-8", "replace") if upload and upload.filename else (request.form.get("key") or "")
+    if not key.strip():
+        return jsonify(error="Choose the key file, or paste the key."), 400
+    sample = [s.ciphertext for s in Secret.query.filter_by(deleted_at=None).order_by(Secret.id).limit(1)]
+    try:
+        crypto.put_back(key, sample)
+    except crypto.BadKey as err:
+        return jsonify(error=str(err)), 400
+    return jsonify(ok=True, message="The key is back. The secrets open with it.")
+
+
 # ———— Settings > Secrets, and the purge ————
 
 def pane() -> str:
@@ -216,7 +252,9 @@ def pane() -> str:
         src = crypto.source()
     except crypto.BadKey:
         src = "environment"
+    from hyprvolt.models import get_setting
     return render_template("vault/pane.html", source=src, path=crypto.key_path(), total=total,
+                           key_saved=get_setting("vault:key_saved"),
                            readable=readable, problem=problem, reveals=reveals,
                            people=User.query.filter((User.role == "admin") | User.can_see_secrets.is_(True))
                            .order_by(User.username).all())

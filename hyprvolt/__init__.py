@@ -75,7 +75,16 @@ def create_app(config_class=Config) -> Flask:
 
     @login_manager.user_loader
     def load_user(user_id):
-        return db.session.get(User, int(user_id))
+        # "7.<epoch>" (User.get_id): a sign-in from before a restore holds
+        # another epoch, and is no longer anyone's.
+        from .models import get_setting
+        raw_id, _, epoch = str(user_id).partition(".")
+        if epoch != (get_setting("session_epoch") or ""):
+            return None
+        try:
+            return db.session.get(User, int(raw_id))
+        except ValueError:
+            return None
 
     @login_manager.unauthorized_handler
     def unauthorized():
@@ -101,6 +110,8 @@ def create_app(config_class=Config) -> Flask:
     app.register_blueprint(transfer.bp)
     from . import tokens
     app.register_blueprint(tokens.bp)
+    from .core import backups
+    app.register_blueprint(backups.bp)
     cli.register(app)
 
 

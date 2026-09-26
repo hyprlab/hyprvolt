@@ -90,4 +90,7 @@ class Config:
 
     # Last, so the class body above still sees the module's Path. Read at
     # runtime from app.config, which follows a reloaded environment.
+    # Where backups made in the app go. The data volume unless set: point it
+    # at another disk so a backup outlives the disk the data is on.
+    BACKUP_DIR = os.environ.get("BACKUP_DIR") or str(DATA_DIR / "backups")
     DATA_DIR = str(DATA_DIR)

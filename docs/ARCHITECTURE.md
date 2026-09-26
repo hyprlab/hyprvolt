@@ -136,6 +136,14 @@ core keeps a `reminders` table of what falls within the window, updated by
 every save and by the worker's hourly pass, and the dashboard and sidebar
 badge read it. No module writes a reminder job of its own.
 
+**A restore is a copy, not a file swap.** Settings > Backups restores by
+copying the backup's database into the live one with SQLite's backup API,
+under SQLite's own locking, then swapping the attachments folder and running
+the migrations for an older backup. It changes the session epoch, which is
+part of every sign-in id (`User.get_id`), so every session and remember-me
+cookie from before stops matching: nobody stays signed in as whoever had
+their user id in the restored database.
+
 **A token is a user for one request.** `tokens.authenticate` runs before the
 CSRF check: a valid `Authorization: Bearer` token sets Flask-Login's user for
 that request only, without a session, so there is no cookie to forge and no
@@ -249,7 +257,7 @@ the database unreadable to the previous version is a MAJOR release.
 
 | | |
 | --- | --- |
-| `DATA_DIR` (`/data` in Docker, `./var` locally) | The SQLite database, the generated `.secret_key`, the secrets vault's `secrets.key` (unless `SECRETS_KEY` is set) and `attachments/` |
+| `DATA_DIR` (`/data` in Docker, `./var` locally) | The SQLite database, the generated `.secret_key`, the secrets vault's `secrets.key` (unless `SECRETS_KEY` is set), `attachments/` and `backups/` (unless `BACKUP_DIR` is set) |
 | `users` | Accounts, their roles and preferences |
 | `settings` | Instance settings, which modules are off, migration markers, when each job last ran |
 | `entities` and the core tables | Every record, its tags, custom values, links, files and history |

@@ -34,6 +34,7 @@ Everything is optional. Put values in a `.env` file next to
 | `APP_TAGLINE` | `IT documentation for on-premise infrastructure.` | The line under the name on the sign-in page and in About |
 | `SECRET_KEY` | generated | Signs sessions. If unset, one is generated and kept in the volume |
 | `SECRETS_KEY` | made in the volume | Encrypts the secrets vault; see [Secrets](#secrets) |
+| `BACKUP_DIR` | `/data/backups` | Where Settings > Backups keeps backups; point it at another disk |
 | `SESSION_COOKIE_SECURE` | `0` | Set to `1` when the app is served over HTTPS |
 | `TRUST_PROXY` | `0` | How many reverse proxies are in front; see below |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | empty | Cloudflare Turnstile keys; see [Turnstile](#turnstile). Usually set in the app instead |
@@ -242,10 +243,11 @@ it. It comes from `SECRETS_KEY`, or else from `secrets.key` in the volume,
 made the first time a secret is saved. **Keep a copy of the key somewhere
 other than this server and its backups. Without it nobody can read the
 secrets, and there is no way to recover them: losing the key loses the
-secrets.** `flask backup` leaves the key out on purpose, so a backup that goes
-astray is no use without it. To move to `SECRETS_KEY`, put the contents of
-`secrets.key` in it; `flask secrets status` says where the key in use is and
-whether it opens every secret.
+secrets.** Backups leave the key out on purpose, so a backup that goes astray
+is no use without it. Settings > Secrets downloads the key to keep a copy,
+and puts one back after a restore on a new server; each download is noted
+there. To move to `SECRETS_KEY`, put the key in it; `flask secrets status`
+says where the key in use is and whether it opens every secret.
 
 ## Turnstile
 
@@ -310,25 +312,42 @@ existing install needs something done by hand; the changelog says what.
 
 ## Backups
 
-Everything is in the volume: the SQLite database, the attachments, the
-generated session key and the secrets key. `flask backup` copies the
-database and attachments, and leaves the secrets key out: keep that apart
-(see [Secrets](#secrets)). For a consistent copy while the app runs:
+Everything is done in Settings > Backups, by an admin; no terminal needed.
 
-```sh
-docker exec hyprvolt flask backup /data/backup-$(date +%F).tar.gz
-docker cp hyprvolt:/data/backup-$(date +%F).tar.gz .
-```
+- **Make a backup now** saves one archive with every record, account,
+  setting and attached file. The database is copied with SQLite's online
+  backup API, so it is consistent while people keep working.
+- **Automatic backups** are made by the background worker every 24 hours,
+  and the newest 7 are kept; both numbers are set there, and 0 hours turns
+  them off. The ones made by hand stay until deleted. Deleting one can be
+  undone.
+- **Download** a backup to keep it somewhere else. Backups live in the data
+  volume's `backups` folder unless `BACKUP_DIR` points at another disk, so
+  on their own they don't survive losing the disk the data is on.
+- **Restore…** shows what a backup holds (when it was made, by which
+  version, how many records, accounts and files, which admins) and what
+  restoring will do. **Restore this backup** then replaces everything with
+  it. What was there before is saved as a backup first, so restoring that
+  one undoes it. Everyone is signed out, except the admin who restored, if
+  their account is an admin in the backup too.
+- **Restore from a file** uploads a backup downloaded earlier, from this
+  instance or another. It is checked first: an archive that isn't a Hyprvolt
+  backup, is damaged, has no admin, or was made by a newer version is
+  refused, and nothing is replaced.
 
-A name ending in `.tar.gz` (or `.tgz`, `.tar`) gets an archive of the
-database (`hyprvolt.db`) and every attachment (`attachments/`). A name ending
-in `.db` gets the database alone, without the files. `flask backup` uses
-SQLite's online backup API; copying the `.db` file by hand while the app
-writes can produce a torn copy.
+**Moving to a new server:** install there, sign in with the account the
+setup wizard makes, upload the backup in Settings > Backups and restore it,
+then sign in with an admin account from the backup. If there are secrets,
+put their key back in Settings > Secrets (below).
 
-To restore, stop the container, unpack the archive into the volume so that
-`hyprvolt.db` and `attachments/` replace what is there (remove any `-wal` and
-`-shm` files beside the database), and start it again.
+**The secrets key is never in a backup**, on purpose: a backup that goes
+astray is no use without it. Download it once from Settings > Secrets and
+keep it apart from the backups. After restoring on a new server, **Put a key
+back** there; it is checked against the secrets before it is used.
+
+From the server, `flask backup PATH` writes the same archive (`.db` for the
+database alone) and `flask restore PATH` restores one, for scripts or for
+when the app can't be reached.
 
 ## Commands
 
@@ -338,7 +357,8 @@ Run inside the container:
 | --- | --- |
 | `flask create-user EMAIL [--role viewer\|editor\|admin] [--admin] [--secrets] [--name NAME]` | Create an account; asks for the password. `--admin` is `--role admin`; `--secrets` gives it access to secrets |
 | `flask reset-password EMAIL` | Set a new password; the way back in for a locked-out admin |
-| `flask backup PATH` | Write a consistent copy: `.tar.gz` for the database and attachments, `.db` for the database alone |
+| `flask backup PATH` | Write a consistent copy: `.tar.gz` for the database and attachments, `.db` for the database alone. Settings > Backups does this in the app |
+| `flask restore PATH` | Replace the instance with a backup archive, saving what is there first. Settings > Backups does this in the app |
 | `flask seed-demo [--force]` | Fill an empty instance with a small demo homelab |
 | `flask turnstile status`, `flask turnstile off` | Show whether Turnstile is on; turn it off when nobody can sign in |
 | `flask secrets status` | Say where the secrets key is and whether it opens every secret |
