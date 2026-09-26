@@ -39,7 +39,10 @@ Set on `:root` and per theme on `html[data-theme="light"|"dark"]`.
 | `--sidebar-w`, `--topbar-h` | Shell dimensions |
 
 To rebrand, change the three accent tokens in both themes (the dark theme uses
-a slightly different accent for contrast) and redraw the mark.
+a slightly different accent for contrast) and replace the app icon:
+`static/img/logo.svg` is the mark on every page and the favicon, and
+`favicon-32.png` and `apple-touch-icon.png` are rendered from it (the touch
+icon on a dark square, since iOS fills transparency with black).
 
 ## Type
 

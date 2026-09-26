@@ -100,8 +100,8 @@ img { max-width: 100%; }
 
 /* ————— Icons & brand ————— */
 svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-.mark { fill: var(--accent); stroke: none; width: 22px; height: 22px; filter: drop-shadow(0 1px 6px var(--accent-glow)); }
-.mark--xl { width: 56px; height: 56px; }
+.mark { display: block; flex: none; width: 28px; height: auto; }
+.mark--xl { width: 72px; }
 .wordmark { font-size: 19px; font-weight: 800; letter-spacing: -0.03em; }
 .brand { display: inline-flex; align-items: center; gap: 9px; }
 
@@ -680,7 +680,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 html[data-theme="dark"] .about-hero-bg { opacity: .2; filter: saturate(.55); }
 .about-hero > :not(.about-hero-bg) { position: relative; z-index: 1; min-width: 0; }
 .about-brand { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; }
-.mark--about { width: 42px; height: 42px; margin-bottom: 8px; }
+.mark--about { width: 54px; margin-bottom: 8px; }
 .about-name { font-size: 18px; font-weight: 800; letter-spacing: -0.03em; }
 .about-version { font-size: 12.5px; font-weight: 550; color: var(--muted); }
 .about-tagline { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin-top: 8px; }
@@ -1100,7 +1100,7 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
   padding: clamp(26px, 5vw, 40px);
 }
 .auth-mark { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 26px; text-align: center; }
-.auth-mark .mark { width: 42px; height: 42px; margin-bottom: 4px; }
+.auth-mark .mark { width: 56px; margin-bottom: 4px; }
 .auth-mark .wordmark { font-size: 26px; }
 .auth-tag { font-size: 14px; color: var(--muted); }
 .auth-form { display: flex; flex-direction: column; gap: 15px; }
