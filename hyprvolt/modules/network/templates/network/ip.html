@@ -1,0 +1,7 @@
+{% from "partials/macros.html" import entity_link %}
+<dl class="kv">
+  <div><dt>Subnet</dt><dd>{% if subnet %}{{ entity_link(subnet.id, subnet.name) }} <span class="hint">{{ sd.cidr }}</span>{% else %}<span class="kv-empty">None recorded holds it</span>{% endif %}</dd></div>
+  <div><dt>VLAN</dt><dd>{% if vlan %}{{ entity_link(vlan.id, vlan.name) }}{% else %}<span class="kv-empty">Not set</span>{% endif %}</dd></div>
+  <div><dt>Gateway</dt><dd>{% if sd and sd.gateway %}{{ sd.gateway }}{% else %}<span class="kv-empty">Not set</span>{% endif %}</dd></div>
+  <div><dt>DNS names</dt><dd>{% if names %}{{ names|join(', ') }}{% else %}<span class="kv-empty">No A or AAAA record points here</span>{% endif %}</dd></div>
+</dl>

@@ -1,0 +1,29 @@
+{% from "partials/macros.html" import entity_link %}
+{% if subnets %}
+<ul class="meters">
+  {% for v, u in subnets %}
+  <li>
+    <span class="meters-name">{{ entity_link(v.id, v.name) }}</span>
+    <span class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ u.percent if u else 0 }}"
+          aria-label="{{ v.name }}"><span style="width: {{ u.percent if u else 0 }}%"></span></span>
+    <span class="meters-value">{% if u %}{{ u.net }} · {{ u.used }} used{% endif %}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No subnet is on this VLAN yet. Choose the VLAN in a subnet's form.</p>
+{% endif %}
+
+<p class="setting-label setting-label--spaced">Ports on this VLAN <span class="count">{{ ports|length }}</span></p>
+{% if ports %}
+<ul class="manage-list">
+  {% for p in ports %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(p.device.id, p.device.name) }} {{ p.name }}</span>
+    <span class="manage-sub">Untagged{% if p.tagged %} · tagged {{ p.tagged }}{% endif %}{% if p.description %} · {{ p.description }}{% endif %}</span>
+  </div></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No port has this VLAN untagged. Set it in a device's Ports tab.</p>
+{% endif %}

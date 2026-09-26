@@ -60,11 +60,14 @@ WORKSTATION = '<rect x="3.5" y="4.5" width="17" height="11" rx="1"/><path d="M9 
 PRINTER = '<path d="M7 9V4.5h10V9"/><rect x="3.5" y="9" width="17" height="7" rx="1"/><path d="M7 14h10v5.5H7z"/>'
 PERIPHERAL = '<rect x="3" y="8" width="18" height="9" rx="1.2"/><path d="M6.5 11h.1M9.5 11h.1M12.5 11h.1M15.5 11h.1M8 14h8"/>'
 
-RACK = ("rackmount",)
+#: Every hardware type has network ports and can hold an IP address (the
+#: Network module looks for these); those that go in a rack say so too.
+NET = ("addressable", "cabled")
+RACK = ("rackmount",) + NET
 
 
 def hardware(key, label, plural, icon, specs=(), traits=()):
-    return EntityType(key, label, plural, detail=HardwareDetail, statuses=STATUSES, icon=icon, traits=traits,
+    return EntityType(key, label, plural, detail=HardwareDetail, statuses=STATUSES, icon=icon, traits=traits or NET,
                       fields=IDENTITY + tuple(specs) + PURCHASE)
 
 

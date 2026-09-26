@@ -1,0 +1,36 @@
+{% from "partials/macros.html" import entity_link %}
+<p class="setting-label">VLANs <span class="count">{{ vlans|length }}</span></p>
+{% if vlans %}
+<ul class="manage-list">
+  {% for v in vlans %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+    <span class="manage-sub">{% for label, shown in v.list_facts %}{{ ' · ' if not loop.first }}{{ shown }}{% endfor %}</span>
+  </div></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No VLAN is in this network yet.</p>
+{% endif %}
+
+<p class="setting-label setting-label--spaced">Subnets <span class="count">{{ subnets|length }}</span></p>
+{% if subnets %}
+<ul class="meters">
+  {% for v, u in subnets %}
+  <li>
+    <span class="meters-name">{{ entity_link(v.id, v.name) }}</span>
+    <span class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ u.percent if u else 0 }}"
+          aria-label="{{ v.name }}"><span style="width: {{ u.percent if u else 0 }}%"></span></span>
+    <span class="meters-value">{% if u %}{{ u.net }} · {{ u.used }} used{% endif %}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No subnet is in this network yet.</p>
+{% endif %}
+{% if current_user.can_edit %}
+<div class="doc-actions">
+  <button type="button" class="btn btn--primary" data-new-type="vlan" data-new-fields='{"network": {{ network.id }}}'>New VLAN</button>
+  <button type="button" class="btn btn--ghost" data-new-type="subnet" data-new-fields='{"network": {{ network.id }}}'>New subnet</button>
+</div>
+{% endif %}

@@ -8,7 +8,7 @@ a hypervisor's cluster and a container's stack are "part of" links. So the
 form, the Relationships tab and the dependency view all say the same thing,
 and "what breaks if this server goes down" reaches every container on it.
 """
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, RelationKind, Tab, Widget
+from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Tab, Widget
 
 from . import demo, views
 from .models import VirtualDetail
@@ -19,6 +19,8 @@ GUEST_STATUSES = (("running", "Running"), ("stopped", "Stopped"), ("template", "
                   ("planned", "Planned"), ("retired", "Retired"))
 RUN_STATUSES = (("running", "Running"), ("stopped", "Stopped"), ("planned", "Planned"), ("retired", "Retired"))
 MACHINES = ("server", "workstation", "nas")
+#: The Network module gives these an IP addresses section and tab.
+ADDRESSABLE = ("addressable",)
 
 # ———— Fields ————
 
@@ -28,7 +30,6 @@ MANAGEMENT = Field("management_url", "Management", "url", help="Where its web in
 OS = Field("os", "Operating system", list=True)
 MEMORY = Field("memory_gb", "Memory", "number", min=0, max=100_000, unit="GB", card=True, group="Resources")
 DISK = Field("disk_gb", "Disk", "number", min=0, max=10_000_000, unit="GB", group="Resources")
-IPS = Field("ip_addresses", "IP addresses", group="Network", help="Separated by commas.")
 AUTOSTART = Field("autostart", "Starts with its host", "boolean")
 
 
@@ -56,12 +57,12 @@ module = Module(
     order=30,
     requires=("hardware",),
     models=(VirtualDetail,),
-    relation_kinds=(RelationKind("part_of", "part of", "includes", impact="none"),),
     types=(
         EntityType("cluster", "Cluster", "Clusters", detail=VirtualDetail, located_in=(), icon=CLUSTER,
                    fields=(PLATFORM, VERSION, MANAGEMENT),
                    tabs=(Tab("guests", "Guests", views.cluster_tab, count=views.cluster_count),)),
         EntityType("hypervisor", "Hypervisor", "Hypervisors", detail=VirtualDetail, located_in=(), icon=HYPERVISOR,
+                   traits=ADDRESSABLE,
                    fields=(PLATFORM, VERSION,
                            host("Runs on", MACHINES, card=True, list=True,
                                 help="The hardware it is installed on."),
@@ -69,19 +70,19 @@ module = Module(
                            MANAGEMENT),
                    tabs=(Tab("guests", "Guests", views.guests_tab, count=views.guest_count),)),
         EntityType("vm", "Virtual machine", "Virtual machines", detail=VirtualDetail, located_in=(), icon=VM,
-                   statuses=GUEST_STATUSES,
+                   statuses=GUEST_STATUSES, traits=ADDRESSABLE,
                    fields=(host("Host", ("hypervisor",), card=True, list=True), OS,
                            Field("vmid", "VM ID", "integer", min=0, help="The hypervisor's number for it: 101."),
                            AUTOSTART,
                            Field("vcpus", "vCPUs", "integer", min=1, max=4096, card=True, group="Resources"),
-                           MEMORY, DISK, IPS)),
+                           MEMORY, DISK)),
         EntityType("lxc", "LXC container", "LXC containers", detail=VirtualDetail, located_in=(), icon=LXC,
-                   statuses=GUEST_STATUSES,
+                   statuses=GUEST_STATUSES, traits=ADDRESSABLE,
                    fields=(host("Host", ("hypervisor",), card=True, list=True), OS,
                            Field("vmid", "Container ID", "integer", min=0, help="The hypervisor's number for it: 200."),
                            AUTOSTART,
                            Field("vcpus", "Cores", "integer", min=1, max=4096, card=True, group="Resources"),
-                           MEMORY, DISK, IPS)),
+                           MEMORY, DISK)),
         EntityType("docker_host", "Docker host", "Docker hosts", detail=VirtualDetail, located_in=(), icon=DOCKER,
                    proper=True,
                    fields=(host("Runs on", ("vm", "lxc") + MACHINES, card=True, list=True),
@@ -96,7 +97,7 @@ module = Module(
                            Field("compose", "Compose file", "longtext")),
                    tabs=(Tab("containers", "Containers", views.containers_tab, count=views.container_count),)),
         EntityType("container", "Container", "Containers", detail=VirtualDetail, located_in=(), icon=CONTAINER,
-                   statuses=RUN_STATUSES,
+                   statuses=RUN_STATUSES, traits=ADDRESSABLE,
                    fields=(host("Docker host", ("docker_host",), list=True),
                            Field("stack", "Stack", "ref", types=("stack",), relation="part_of", card=True, list=True),
                            Field("image", "Image", card=True, list=True, help="nginx:1.27"),

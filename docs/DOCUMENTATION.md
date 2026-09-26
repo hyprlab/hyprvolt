@@ -63,11 +63,12 @@ change their own role or delete themselves, so there is always one left.
 
 ## Modules and custom fields
 
-What Hyprvolt documents comes in modules: Locations, Hardware, Virtual and
-the knowledge base so far. Settings > Modules turns a module off; it then
+What Hyprvolt documents comes in modules: Locations, Hardware, Virtual,
+Network and the knowledge base. Settings > Modules turns a module off; it then
 disappears from the sidebar, search and the dashboard, and its records stay
 in the database until it is turned back on. A module that needs another is
-off while that one is: Hardware needs Locations, and Virtual needs Hardware.
+off while that one is: Hardware needs Locations, and Virtual and Network
+need Hardware.
 The knowledge base is built in.
 
 Hardware's status is where a device is in its life: deployed, ordered, in
@@ -85,6 +86,21 @@ Guests tab adds up the vCPUs and memory of its running guests against the
 cores and memory recorded for its hardware, and a cluster's does the same
 for all its hypervisors. The sidebar lists VMs, containers and the rest that
 have no host yet.
+
+In Network, a device's or a VM's IP addresses are typed into its own form,
+separated by commas; each becomes an IP address record in the subnet that
+holds it, and one taken off the list is deleted (it can be restored from
+Recently deleted), or only unassigned if it has notes or tags. An address can
+belong to one record at a time. A subnet's Addresses tab draws an IPv4 subnet
+up to a /22 as a grid: used, reserved, held for DHCP or free. Choosing a free
+address records it. Anything with network ports has a Ports tab: add ports
+in a run (Port 1 to 24, or a patch panel's Front and Rear pairs), set a
+port's VLANs, and cable it to another device's port; a cabled port's path
+can be traced to the far end through patch panels. A domain's DNS records
+are written down by hand in its DNS records tab, and an A record or a CNAME
+that leads to a recorded address links to the device holding it. The
+palette finds DNS names and MAC addresses. The sidebar lists addresses with
+no device and domains due for renewal within 90 days.
 
 Settings > Custom fields adds fields of your own to any kind of record: text,
 a number, a date, a choice list, a web address, or yes or no. They appear in

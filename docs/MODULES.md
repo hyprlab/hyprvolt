@@ -111,7 +111,15 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
 - `traits` are words other modules look for, so a type can take part in
   what another module adds without either naming the other: Hardware marks a
   server `("rackmount",)`, and Locations adds a rack position to the form of
-  every type with that trait.
+  every type with that trait. The ones in use: `rackmount` (Locations),
+  `addressable` and `cabled` (Network).
+- `name_from="address"` makes the record's name the shown value of one of
+  its fields, and leaves the Name box out of the form: an IP address is
+  named by its address.
+- `check(entity, detail)` runs on every save after the fields are set, for
+  rules that span fields or records: a gateway inside its subnet, a VLAN ID
+  used once per network. It raises `Invalid` to refuse the save, and may
+  tidy values (Network lower-cases a domain's name).
 
 A `Field` has a `key` that must be a column of the detail table, a `label`,
 and a `kind`:
@@ -125,7 +133,9 @@ and a `kind`:
 | `date` | a date | `2026-09-25` |
 | `select` | one of `options`, as (value, label) pairs | its label |
 | `boolean` | true or false | Yes or No |
-| `ref` | the id of a record of one of `types`, or a relationship (below) | a link to it |
+| `ref` | the id of a record of one of `types` or of any type with `trait`, or a relationship (below) | a link to it |
+| `ip` | an IPv4 or IPv6 address, in its short form | the address |
+| `cidr` | a subnet, host bits dropped: `10.0.20.7/24` is `10.0.20.0/24` | the subnet |
 
 A `ref` with `relation="runs_on"` is kept as a relationship of that kind from
 this record to the chosen one, instead of in a column. A VM's host is one:
@@ -133,6 +143,10 @@ choosing it in the form links the VM to the hypervisor, so the Relationships
 tab shows it and the dependency view follows it, and unlinking it there
 empties the field. The detail table needs no column for it, and a type whose
 fields are all kept as links needs no detail table.
+
+A `ref` with `trait="addressable"` instead of `types` points at a record of
+any type with that trait, from whichever modules are installed; the form
+names each choice's type.
 
 `required`, `default`, `help`, `unit` and `group` (a heading in the form and
 the Overview) do what they say. `list=True` puts the value in the list row,
@@ -269,5 +283,5 @@ These are not built. Each fits the manifest as it is:
 | **Certificates** | A `certificate` type with issuer, names and an expiry `date`; a `job` that checks expiry (and can fetch certificates from hosts); a `ListFilter` "Expiring soon" with a count; a `widget`; a `search` provider for host names; a `RelationKind` "secures" |
 | **Backup jobs** | A `backup_job` type with its schedule, retention and last success; the core's `backs_up` link to what it backs up; a `job` that marks stale ones; a `ListFilter` "Failing or stale"; a `widget` |
 | **Maintenance windows and change log** | `maintenance` and `change` types with start and end dates and a Markdown description; a `RelationKind` "affects"; a `sheet_tab` on any record listing its windows and changes; `relations.walk()` to list what a window takes down; a `widget` of what is coming up. The core's history already logs every edit; this module is for changes people describe |
-| **Network diagram** | A blueprint page that draws an SVG on the server from `relations` and Network's port connections, and a `sheet_tab` showing the neighborhood of one record. No script needed |
+| **Network diagram** | A blueprint page that draws an SVG on the server from `relations` and Network's cables (`network_cables`, port to port), and a `sheet_tab` showing the neighborhood of one record. `requires=("network",)`. No script needed |
 | **Asset labels** | A blueprint page of printable labels, each with a QR code linking to `/e/<id>` (which opens `?open=<id>` in the right module), reached from a `ListFilter` or a `sheet_tab`. It needs a QR encoder: a small dependency or a hand-written one, to be decided then, and print styles added to `app.css` as a shared component |

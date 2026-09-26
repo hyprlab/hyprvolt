@@ -18,6 +18,7 @@ CORE_KINDS = (
     RelationKind("powered_by", "powered by", "powers", impact="source"),
     RelationKind("managed_by", "managed by", "manages", impact="none"),
     RelationKind("documented_by", "documented by", "documents", impact="none"),
+    RelationKind("part_of", "part of", "includes", impact="none"),
 )
 
 

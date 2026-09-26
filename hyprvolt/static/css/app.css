@@ -1005,6 +1005,36 @@ button.rack-slot:hover, button.rack-slot:focus-visible { background: var(--wash)
   .mountform-what, .mountform-label { grid-column: 1 / -1; }
 }
 
+/* A subnet's addresses, one cell each, sixteen to a row. Used is solid ink,
+   reserved hatched, DHCP a filled field, free an outline. */
+.ipgrid { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 3px; margin: 10px 0 6px; }
+.ipcell {
+  display: grid; place-items: center; aspect-ratio: 1; min-width: 0; padding: 0; border-radius: 5px;
+  border: 1px solid var(--line); background: transparent; color: var(--faint);
+  font: 600 10px/1 var(--font); font-variant-numeric: tabular-nums; text-decoration: none;
+}
+.ipcell.is-used, .ipcell.is-gateway { background: var(--ink); border-color: var(--ink); color: var(--panel); opacity: .8; }
+.ipcell.is-reserved {
+  color: var(--ink);
+  background: repeating-linear-gradient(45deg, transparent 0 3px, var(--line-strong) 3px 4.5px);
+}
+.ipcell.is-dhcp { background: var(--field); border-color: var(--field); }
+a.ipcell:hover, button.ipcell:hover { border-color: var(--ink); opacity: 1; }
+button.ipcell { cursor: pointer; }
+.iplegend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; font-size: 12px; color: var(--muted); }
+.iplegend span { display: inline-flex; align-items: center; gap: 6px; }
+.iplegend .ipcell { width: 14px; aspect-ratio: 1; }
+@media (max-width: 700px) { .ipcell { font-size: 0; border-radius: 3px; } .ipgrid { gap: 2px; } }
+
+/* A cable path, hop by hop, inside a port's row. */
+.trace { margin-top: 4px; font-size: 12.5px; }
+.trace summary { cursor: pointer; color: var(--muted); width: max-content; }
+.trace-path { list-style: none; margin: 8px 0 2px; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.trace-hop { padding: 3px 9px; border: 1px solid var(--line); border-radius: 99px; background: var(--panel); white-space: nowrap; }
+.trace-link { color: var(--faint); font-size: 11.5px; }
+.trace-link::before { content: "— "; }
+.trace-link::after { content: " —"; }
+
 /* A horizontal meter: how much of something is used. */
 .meters { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .meters li { display: grid; grid-template-columns: minmax(0, 1fr) 2fr max-content; gap: 12px; align-items: center; font-size: 13.5px; }

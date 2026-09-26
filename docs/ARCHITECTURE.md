@@ -94,6 +94,14 @@ keyed by the entity's id. Because everything has an id in one table,
 relationships, custom fields, attachments, documents and history work for
 every type, including ones written later.
 
+**Not everything is a record.** What comes by the dozen and only matters
+as part of something else lives in its module's own tables: rack mounts,
+the ports on a device, the cables between them, a domain's DNS records.
+They are shown and changed in a tab of the record they belong to, and each
+change is written to that record's history. An IP address is a record,
+because it is searched for, linked to and given notes on its own; which
+addresses of a subnet are free is worked out, not stored.
+
 **A location is an entity.** `entities.location_id` points at a record of a
 location type (a site, a room, a rack), and a location's own location is its
 parent. One column gives every record its breadcrumbs, and the Locations

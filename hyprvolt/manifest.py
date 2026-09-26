@@ -16,7 +16,7 @@ from typing import Any, Callable
 #: Field kinds a module may use. The core parses, validates, renders and
 #: indexes each one (core/fields.py).
 FIELD_KINDS = ("text", "longtext", "markdown", "integer", "number", "date", "select",
-               "url", "email", "boolean", "ref")
+               "url", "email", "boolean", "ref", "ip", "cidr")
 #: The subset an admin can add as a custom field, without code.
 CUSTOM_KINDS = ("text", "number", "date", "select", "url", "boolean")
 
@@ -37,6 +37,7 @@ class Field:
     default: Any = None
     options: tuple = ()              # select: ((value, label), ...)
     types: tuple = ()                # ref: entity types it may point at
+    trait: str = ""                  # ref: or any type with this trait
     relation: str = ""               # ref: kept as a link of this kind, not a column
     help: str = ""
     unit: str = ""                   # shown after the value: "U", "W", "GB"
@@ -74,6 +75,8 @@ class EntityType:
     icon: str = ""                   # SVG paths; the module's icon if empty
     traits: tuple = ()               # words other modules look for: ("rackmount",)
     proper: bool = False             # the label starts with a name: "Docker host"
+    name_from: str = ""              # a field whose value is the name: an IP's address
+    check: Callable | None = None    # check(entity, detail): rules across fields
     module: str = ""                 # filled in by the registry
 
     def text(self, plural: bool = False) -> str:

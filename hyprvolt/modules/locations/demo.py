@@ -26,7 +26,6 @@ def seed(demo):
         db.session.add(RackMount(rack_id=rack.id, entity_id=entity.id if entity else None,
                                  label="" if entity else label, position_u=position, height_u=height, face=face))
 
-    mount("Patch panel, 24 ports", 24, 1)
     mount("Cable manager", 23, 1)
     mount("Blanking plate", 19, 1)
     mount(None, 9, 2, "full", entity=shelf)

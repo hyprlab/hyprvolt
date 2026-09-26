@@ -1,0 +1,37 @@
+{# A domain's DNS records, as written down, and what each points at. #}
+{% from "partials/macros.html" import entity_link %}
+{% if rows %}
+<ul class="manage-list">
+  {% for r in rows %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ r.fqdn }} <span class="chip chip--muted">{{ r.type }}</span></span>
+      <span class="manage-sub">{% if r.priority is not none %}{{ r.priority }} {% endif %}{{ r.value }}{% if targets.get(r.id) %} · {{ entity_link(targets[r.id].id, targets[r.id].name) }}{% endif %}{% if r.ttl %} · TTL {{ r.ttl }}{% endif %}{% if r.note %} · {{ r.note }}{% endif %}</span>
+    </div>
+    {% if current_user.can_edit %}
+    <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/network/records/{{ r.id }}/delete" data-then="sheet"
+            data-done="Record removed" aria-label="Remove {{ r.fqdn }} {{ r.type }}" title="Remove this record">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No DNS records written down for {{ domain.name }} yet.</p>
+{% endif %}
+
+{% if current_user.can_edit %}
+<form class="mountform" data-api="/network/domains/{{ domain.id }}/records" data-then="sheet" data-done="Record added">
+  <p class="setting-label">Add a record</p>
+  <label class="field"><span class="field-label">Name</span><input name="name" value="@" maxlength="253" spellcheck="false" autocomplete="off"></label>
+  <label class="field"><span class="field-label">Type</span>
+    <select name="type">{% for t in types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select></label>
+  <label class="field mountform-label"><span class="field-label">Value</span><input name="value" maxlength="1000" spellcheck="false" autocomplete="off" required></label>
+  <label class="field"><span class="field-label">Priority</span><input type="number" name="priority" min="0" max="65535" placeholder="MX, SRV"></label>
+  <label class="field"><span class="field-label">TTL</span><input type="number" name="ttl" min="1" placeholder="Seconds"></label>
+  <label class="field"><span class="field-label">Note</span><input name="note" maxlength="200"></label>
+  <button class="btn btn--primary" type="submit">Add</button>
+  <p class="form-error" hidden></p>
+</form>
+{% endif %}

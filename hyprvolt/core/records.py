@@ -10,6 +10,7 @@ Callers commit; a raised ``Invalid`` means nothing should be.
 import json
 import re
 import unicodedata
+import uuid
 
 from flask_login import current_user
 from sqlalchemy import delete as sql_delete
@@ -251,7 +252,10 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
         if old != new and not (creating and new == ""):
             changes.append({"field": key, "label": label, "old": old, "new": new})
 
-    if creating or "name" in data:
+    if etype.name_from:
+        if creating:
+            entity.name = ""     # set from the field below
+    elif creating or "name" in data:
         name = (data.get("name") or "").strip()
         if not name:
             raise Invalid("Give it a name.")
@@ -271,7 +275,8 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
             note("slug", LABELS["slug"], entity.slug, slug)
         entity.slug = slug
     elif creating:
-        entity.slug = unique_slug(entity.name)
+        # A name that comes from a field isn't known yet: a stand-in until then.
+        entity.slug = unique_slug(entity.name) if not etype.name_from else "~" + uuid.uuid4().hex
 
     if "status" in data and data["status"] not in (None, ""):
         values = dict(etype.statuses)
@@ -338,6 +343,20 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
                 db.session.add(CustomValue(entity_id=entity.id, field_id=cf.id, value=text))
             else:
                 row.value = text
+
+    if etype.name_from:
+        f = next(f for f in etype.fields if f.key == etype.name_from)
+        name = F.display(f, own_values(entity).get(f.key), live)
+        if not name:
+            raise Invalid(f"{f.label} is required.")
+        if name != entity.name:
+            if not creating:
+                note("name", LABELS["name"], entity.name, name)
+            entity.name = name
+        if entity.slug.startswith("~"):
+            entity.slug = unique_slug(name)
+    if etype.check is not None:
+        etype.check(entity, detail_of(entity))
 
     given = data.get("sections") or {}
     for section in registry().form_sections(etype):

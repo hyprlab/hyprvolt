@@ -30,7 +30,9 @@
   <input type="date" name="{{ item.name }}" value="{{ v.isoformat() if v else '' }}" {{ 'required' if f.required }}>
   {% else %}
   <input type="{{ 'email' if f.kind == 'email' else 'text' }}" name="{{ item.name }}" value="{{ v or '' }}"
-         maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https://" spellcheck="false"{% endif %}>
+         maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https://" spellcheck="false"{% endif %}
+         {%- if f.kind in ('ip', 'cidr') %} spellcheck="false" autocomplete="off" placeholder="{{ '10.0.20.11' if f.kind == 'ip' else '10.0.20.0/24' }}"{% endif %}
+         {%- if etype.name_from == f.key %} autofocus{% endif %}>
   {% endif %}
   {% if f.help %}<span class="hint">{{ f.help }}</span>{% endif %}
 </label>
@@ -42,10 +44,12 @@
   <input type="hidden" name="type" value="{{ etype.key }}">
   {% if attach_to %}<input type="hidden" name="attach_to" value="{{ attach_to }}">{% endif %}
   <div class="form-grid">
+    {% if not etype.name_from %}
     <label class="field form-wide">
       <span class="field-label">Name <span class="req" aria-label="required">*</span></span>
       <input name="name" maxlength="200" required autocomplete="off" value="{{ entity.name if entity else name }}" autofocus>
     </label>
+    {% endif %}
     <label class="field">
       <span class="field-label">Status</span>
       <select name="status">
@@ -72,7 +76,7 @@
     <label class="field">
       <span class="field-label">Slug</span>
       <input name="slug" value="{{ entity.slug if entity else '' }}" maxlength="119" spellcheck="false" autocomplete="off"
-             placeholder="Made from the name" pattern="[a-z0-9][a-z0-9-]*">
+             placeholder="Made from the {{ (etype.fields|selectattr('key', 'equalto', etype.name_from)|first).label|lower if etype.name_from else 'name' }}" pattern="[a-z0-9][a-z0-9-]*">
     </label>
   </div>
 

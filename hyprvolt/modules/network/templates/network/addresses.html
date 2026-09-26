@@ -1,0 +1,14 @@
+{% from "partials/macros.html" import entity_link %}
+{% if rows %}
+<ul class="manage-list">
+  {% for r in rows %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(r.ip.id, r.address) }}</span>
+    <span class="manage-sub">{% if r.subnet %}{{ r.subnet.name }} ({{ r.cidr }}){% else %}In no recorded subnet{% endif %}{% if r.vlan %} · {{ r.vlan.name }}{% endif %}{% for n in r.names %} · {{ n }}{% endfor %}{% if r.mac %} · {{ r.mac }}{% endif %}</span>
+  </div></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No IP address is recorded for it.</p>
+{% endif %}
+{% if current_user.can_edit %}<p class="hint sheet-foot">Edit it to change its addresses.</p>{% endif %}

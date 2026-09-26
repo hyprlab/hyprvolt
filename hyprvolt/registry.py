@@ -131,6 +131,14 @@ class Registry:
             tabs += [(m, t) for t in m.sheet_tabs]
         return [(m, t) for m, t in tabs if t.when is None or t.when(entity)]
 
+    def ref_types(self, f: Field) -> list[str]:
+        """The type keys a ref field may point at: its types, then every
+        type with its trait."""
+        keys = list(f.types)
+        if f.trait:
+            keys += [k for k, t in self.types.items() if f.trait in t.traits and k not in keys]
+        return keys
+
     def form_sections(self, etype: EntityType) -> list[FormSection]:
         """What turned-on modules add to the form of ``etype``."""
         return [s for m in self.enabled_modules() for s in m.form_sections
@@ -317,6 +325,10 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
         p.append(f"the type {t.key!r} has fields but no detail model to keep them in")
     if not isinstance(t.traits, tuple) or not all(isinstance(x, str) for x in t.traits):
         p.append(f"the traits of {t.key!r} must be a tuple of words")
+    if t.name_from and t.name_from not in {getattr(f, "key", None) for f in t.fields}:
+        p.append(f"the type {t.key!r} takes its name from {t.name_from!r}, which is not one of its fields")
+    if t.check is not None and not callable(t.check):
+        p.append(f"the check of {t.key!r} is not callable")
     columns = set()
     if t.detail is not None:
         table = getattr(t.detail, "__table__", None)
@@ -341,8 +353,8 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
             p.append(f"{where} has the unknown kind {f.kind!r}")
         if f.kind == "select" and not f.options:
             p.append(f"{where} is a select with no options")
-        if f.kind == "ref" and not f.types:
-            p.append(f"{where} is a ref that names no types")
+        if f.kind == "ref" and not f.types and not f.trait:
+            p.append(f"{where} is a ref that names no types and no trait")
         if f.relation and f.kind != "ref":
             p.append(f"{where} is kept as a link, so it must be a ref")
         if columns and f.key not in columns and not f.relation:

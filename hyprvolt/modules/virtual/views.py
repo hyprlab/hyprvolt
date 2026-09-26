@@ -77,8 +77,6 @@ def _guest_rows(guests, details, hosts_by_guest=None) -> list[dict]:
                 facts.append(f"{_num(d.memory_gb)} GB")
             if d.disk_gb:
                 facts.append(f"{_num(d.disk_gb)} GB disk")
-            if d.ip_addresses:
-                facts.append(d.ip_addresses)
         rows.append({"view": v, "facts": facts, "host": (hosts_by_guest or {}).get(v.id)})
     return rows
 

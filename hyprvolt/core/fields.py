@@ -4,6 +4,7 @@ and turned into text for search and custom-field storage.
 One set of rules serves the fields a module declares and the custom fields
 an admin adds, so both behave the same everywhere.
 """
+import ipaddress
 import re
 from datetime import date
 
@@ -102,11 +103,36 @@ def parse(f: Field, raw, lookup=None):
         except (TypeError, ValueError):
             raise Invalid(f"{f.label} must be a record.") from None
         target = lookup(ref_id) if lookup else None
-        if target is None or (f.types and target.type not in f.types):
+        if target is None or not ref_allows(f, target.type):
             raise Invalid(f"{f.label} must point at an existing record of the right type.")
         return ref_id
 
+    if kind == "ip":
+        try:
+            return str(ipaddress.ip_address(str(raw)))
+        except ValueError:
+            raise Invalid(f"{f.label} must be an IP address, such as 10.0.20.11 or fd00::11.") from None
+
+    if kind == "cidr":
+        try:
+            # Host bits are dropped: 10.0.20.7/24 is the subnet 10.0.20.0/24.
+            return str(ipaddress.ip_network(str(raw), strict=False))
+        except ValueError:
+            raise Invalid(f"{f.label} must be a subnet with its prefix, such as 10.0.20.0/24.") from None
+
     raise Invalid(f"{f.label} has a kind the app doesn't know.")
+
+
+def ref_allows(f: Field, type_key: str) -> bool:
+    """Whether a ref field may point at a record of ``type_key``: one of its
+    types, or a type with its trait."""
+    if type_key in f.types:
+        return True
+    if f.trait:
+        from ..registry import current as registry
+        etype = registry().type(type_key)
+        return etype is not None and f.trait in etype.traits
+    return False
 
 
 def _num(value) -> str:

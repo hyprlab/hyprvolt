@@ -70,6 +70,8 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.card`, `.row`, `.kicker`, `.kicker-icon`, `.facts`, `.is-archived` | Records as cards or list rows. The row's first cell is the type's icon; `.facts` are a card's key fields; archived and deleted records step back with `.is-archived` |
 | `.tiles`, `.tile`, `.widget` | The dashboard: one tile per module with its count, and module widgets as cards |
 | `.meters`, `.meter` | How much of something is used (rack units), as a bar with the number beside it |
+| `.ipgrid`, `.ipcell`, `.iplegend` | A subnet's addresses, sixteen to a row: used in solid ink, reserved hatched, DHCP filled, free an outline. A used cell opens its record; a free one, for an editor, records it |
+| `.trace`, `.trace-path`, `.trace-hop`, `.trace-link` | A cable path inside a port's row, opened from a `<details>`: each port a pill, the cables and patch panels between them in small text |
 | `.empty`, `.pager`, `.pager-end` | Empty states and paging |
 | `.modal`, `.modal--wide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>` |
 | `.form-grid`, `.form-wide`, `.form-check`, `.req` | The record form: two columns, long text across both, a required mark |
@@ -82,7 +84,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.banner`, `.banner--danger` | A notice at the top of the sheet (archived, deleted, rack conflicts), with its action |
 | `.elink` | A link to a record inside text; it opens the record's sheet in place |
 | `.deptree` | The dependency view, nested; a loop and a repeat are marked, not followed |
-| `.linkform`, `.mountform`, `.doc-actions` | Small forms inside a tab: make a link, place something in a rack |
+| `.linkform`, `.mountform`, `.doc-actions` | Small forms inside a tab: make a link, place something in a rack, add ports, cable them, add a DNS record |
 | `.dropzone`, `.file-thumb` | Where files are dropped or chosen, and an attachment's preview |
 | `.history`, `.changes` | Who changed what: a line per change, old value struck through, new value after |
 | `.elevation`, `.rack-grid`, `.rack-u`, `.rack-slot`, `.rack-item` | A rack, front and rear, one grid row per unit. An empty unit is a button; overlapping items share the width, and a conflict is drawn in the danger color |

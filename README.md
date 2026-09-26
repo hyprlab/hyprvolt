@@ -12,7 +12,8 @@
 
 Hyprvolt documents what an on-premise business, organization or homelab
 runs: where each box is, what sits in which rack unit, when its warranty
-ends, how things depend on each other, and the runbooks that explain them.
+ends, which IP is free on which VLAN, how things depend on each other, and
+the runbooks that explain them.
 It is a self-hosted web app that runs in one Docker container with its data
 in a single SQLite volume.
 
@@ -21,6 +22,7 @@ in a single SQLite volume.
 - Sites, buildings, rooms, racks and shelves, with breadcrumbs on everything
 - Servers, network gear, UPSes, storage and desks, with serials, asset tags, warranties, specs and a lifecycle
 - Hypervisors, VMs, LXC and Docker containers and compose stacks, and what each runs on
+- VLANs, subnets with a map of used and free addresses, ports and cables traced end to end, and DNS records
 - Rack elevations, front and rear, that flag overlaps and anything that no longer fits
 - A Markdown knowledge base whose documents attach to records and link to them with `[[slug]]`
 - Typed links between any two records, and a view of what breaks if one goes down

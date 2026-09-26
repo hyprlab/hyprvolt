@@ -1,0 +1,53 @@
+{# A subnet's addresses: a grid for IPv4 up to a /22, and the documented
+   addresses as a list. #}
+{% from "partials/macros.html" import entity_link %}
+{% if not u %}
+<p class="hint">Give the subnet its range, such as 10.0.20.0/24, to see its addresses.</p>
+{% else %}
+<ul class="meters">
+  <li>
+    <span class="meters-name">Taken</span>
+    <span class="meter" role="meter" aria-valuemin="0" aria-valuemax="{{ u.hosts }}" aria-valuenow="{{ u.used + u.pool }}"
+          aria-label="{{ u.used }} used, {{ u.pool }} for DHCP, of {{ u.hosts }}"><span style="width: {{ u.percent }}%"></span></span>
+    <span class="meters-value">{{ u.used }} used{% if u.pool %} · {{ u.pool }} DHCP{% endif %} · {{ u.free }} free</span>
+  </li>
+</ul>
+<p class="hint">{% if u.detail.gateway %}Gateway {{ u.detail.gateway }}.{% endif %}{% if u.detail.dns_servers %} DNS {{ u.detail.dns_servers }}.{% endif %}{% if u.detail.dhcp_range %} DHCP {{ u.detail.dhcp_range }}.{% endif %}</p>
+
+{% if u.grid %}
+<div class="iplegend" aria-hidden="true">
+  <span><i class="ipcell is-used"></i>In use</span><span><i class="ipcell is-reserved"></i>Reserved</span>
+  <span><i class="ipcell is-dhcp"></i>DHCP</span><span><i class="ipcell"></i>Free</span>
+</div>
+<div class="ipgrid" role="list" aria-label="Addresses of {{ u.net }}">
+  {%- for c in u.grid %}
+  {%- set title = c.address ~ ((' · ' ~ (c.owner.name if c.owner else (c.ip.name if c.ip else ''))) if c.ip else (' · gateway' if c.state == 'gateway' else (' · DHCP' if c.state == 'dhcp' else ' · free'))) %}
+  {%- if c.ip %}
+  <a role="listitem" class="ipcell is-{{ c.state }}" href="/e/{{ c.owner.id if c.owner else c.ip.id }}" data-entity="{{ c.owner.id if c.owner else c.ip.id }}" title="{{ title }}">{{ c.last }}</a>
+  {%- elif current_user.can_edit and c.state != 'dhcp' %}
+  <button role="listitem" type="button" class="ipcell is-{{ c.state }}" title="{{ title }}. Record it" aria-label="Record {{ c.address }}"
+          data-new-type="ip_address" data-new-fields='{"address": "{{ c.address }}"}'>{{ c.last }}</button>
+  {%- else %}
+  <span role="listitem" class="ipcell is-{{ c.state }}" title="{{ title }}">{{ c.last }}</span>
+  {%- endif %}
+  {%- endfor %}
+</div>
+{% if current_user.can_edit %}<p class="hint">Choose a free address to record it.</p>{% endif %}
+{% endif %}
+
+<p class="setting-label setting-label--spaced">Recorded addresses <span class="count">{{ u.rows|length }}</span></p>
+{% if u.rows %}
+<ul class="manage-list">
+  {% for r in u.rows %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(r.ip.id, r.address) }}{% if r.owner %} · {{ entity_link(r.owner.id, r.owner.name) }}{% endif %}</span>
+      <span class="manage-sub">{{ {'reserved': 'Reserved', 'retired': 'Retired'}.get(r.state, 'In use') }}{% for n in r.names %} · {{ n }}{% endfor %}</span>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No address in {{ u.net }} is recorded yet.</p>
+{% endif %}
+{% endif %}

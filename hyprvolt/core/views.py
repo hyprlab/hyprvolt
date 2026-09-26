@@ -175,9 +175,13 @@ def _preset(f):
 
 
 def _ref_choices(f, entity=None) -> list[tuple[int, str]]:
-    keys = [k for k in f.types if k in registry().enabled_type_keys()]
+    reg = registry()
+    keys = [k for k in reg.ref_types(f) if k in reg.enabled_type_keys()]
     rows = Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name).all()
-    return [(e.id, e.name) for e in rows if entity is None or e.id != entity.id]
+    # Several kinds of record in one list: say which each is.
+    def label(e):
+        return f"{e.name} · {reg.type(e.type).label}" if len(keys) > 1 else e.name
+    return [(e.id, label(e)) for e in rows if entity is None or e.id != entity.id]
 
 
 @bp.route("/e/form")

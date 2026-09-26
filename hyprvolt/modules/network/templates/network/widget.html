@@ -1,0 +1,16 @@
+{% from "partials/macros.html" import entity_link %}
+{% if rows %}
+<ul class="meters">
+  {% for r in rows %}
+  <li>
+    <span class="meters-name">{{ entity_link(r.subnet.id, r.subnet.name) }}</span>
+    <span class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ r.u.percent }}"
+          aria-label="{{ r.u.used + r.u.pool }} of {{ r.u.hosts }} taken"><span style="width: {{ r.u.percent }}%"></span></span>
+    <span class="meters-value">{{ r.u.used + r.u.pool }}/{{ r.u.hosts }}</span>
+  </li>
+  {% endfor %}
+</ul>
+<p class="hint">Addresses recorded or held for DHCP.</p>
+{% else %}
+<p class="hint">No subnets yet.</p>
+{% endif %}

@@ -14,10 +14,16 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Hardware: servers, network gear, firewalls, access points, UPSes, NAS, workstations, printers and peripherals, with make, model, serial, asset tag, purchase, warranty, specs and a lifecycle status from ordered to disposed
 - Sidebar filters list hardware whose warranty ends within 90 days or is over, and a dashboard card shows both
 - A module that needs another is off while that one is, and Settings > Modules says why
-- Virtual: clusters, hypervisors, virtual machines, LXC containers, Docker hosts, compose stacks and containers, with resources, operating system, IP addresses, and what each runs on
+- Virtual: clusters, hypervisors, virtual machines, LXC containers, Docker hosts, compose stacks and containers, with resources, operating system, and what each runs on
 - What something runs on, chosen in its form, is also a link, so the dependency view reaches from a server down to the containers on it
 - A hypervisor's Guests tab, and a cluster's, weigh the vCPUs and memory given to running guests against the hardware; the dashboard shows each hypervisor's memory
 - Buttons in a hypervisor's or Docker host's tabs open the form for a new VM, container or stack with its host filled in
+- Network: networks, VLANs, subnets, IP addresses and domains
+- A device's or a VM's IP addresses are typed into its own form, and each becomes an IP address record in its subnet
+- A subnet's Addresses tab shows every address as used, reserved, held for DHCP or free, and a free one can be recorded from there
+- Devices have ports, set with their speed, PoE and VLANs, cabled to other devices' ports; a cable path is traced through patch panels to the far end
+- Domains hold DNS records written down by hand, linked to the devices their addresses belong to; the palette finds DNS names and MAC addresses
+- Sidebar filters list IP addresses with no device and domains due for renewal, and a dashboard card shows how full each subnet is
 - A knowledge base of Markdown documents that attach to any record and link to records with [[slug]]
 - Typed links between records in both directions, and a view of what breaks if a record goes down
 - Files attached to any record, included in `flask backup` when the backup is named `.tar.gz`

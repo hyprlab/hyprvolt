@@ -79,6 +79,11 @@ def test_a_good_manifest_passes():
     (Module(id="tools", name="x", types=(EntityType("tool", "Tool", "Tools", traits="rackmount"),)), "traits"),
     (Module(id="tools", name="x", form_sections=(FormSection("Bad Key", "x", str, str),)), "form section key"),
     (Module(id="tools", name="x", form_sections=(FormSection("extra", "x", str, None),)), "render and save"),
+    (Module(id="tools", name="x", types=(EntityType("tool", "Tool", "Tools", detail=ToolDetail, name_from="weight",
+                                                    fields=(Field("size", "Size", "integer"),)),)), "takes its name"),
+    (Module(id="tools", name="x", types=(EntityType("tool", "Tool", "Tools", check="yes"),)), "not callable"),
+    (Module(id="tools", name="x", types=(EntityType("tool", "Tool", "Tools", detail=ToolDetail,
+                                                    fields=(Field("size", "Size", "ref"),)),)), "no types and no trait"),
 ])
 def test_bad_manifests_are_refused(module, expected):
     found = problems(module)
@@ -127,6 +132,15 @@ def test_a_ref_field_must_point_at_a_known_type():
                    fields=(Field("size", "Size", "ref", types=("spaceship",)),)),))
     reg = reg_mod.load(fresh(), [m])
     assert "spaceship" in reg.errors["tools"]
+
+
+def test_a_ref_may_name_a_trait_instead_of_types(app):
+    reg = app.extensions[reg_mod.EXTENSION]
+    f = Field("owner", "Owner", "ref", trait="sticky")
+    assert problems(Module(id="tools", name="Tools", types=(
+        EntityType("tool", "Tool", "Tools", detail=ToolDetail, fields=(Field("size", "Size", "ref", trait="x"),)),))) == []
+    assert reg.ref_types(f) == ["gadget"]
+    assert reg.ref_types(Field("x", "X", "ref", types=("crate",), trait="sticky")) == ["crate", "gadget"]
 
 
 def test_a_field_kept_as_a_link_needs_no_column_but_a_known_kind():

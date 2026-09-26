@@ -14,30 +14,35 @@ COMPOSE = """services:
 """
 
 
+def addresses(ip):
+    """The Network module's form section, if it is on."""
+    return {"addresses": {"list": ip}} if ip else None
+
+
 def seed(demo):
     demo.add("cluster", "homelab", key="cluster", platform="proxmox", version="8.2",
              management_url="https://pve1.lab.home:8006")
     demo.add("hypervisor", "pve1", tags=["lab"], platform="proxmox", version="8.2.4", host="srv1",
-             cluster="cluster", management_url="https://pve1.lab.home:8006",
+             cluster="cluster", management_url="https://pve1.lab.home:8006", sections=addresses("10.0.20.5"),
              notes="Runs NUT for the UPS: at 5 minutes left it shuts the guests down, then itself.")
     demo.add("hypervisor", "pve2", tags=["lab"], platform="proxmox", version="8.2.4", host="nuc1",
-             cluster="cluster", management_url="https://pve2.lab.home:8006")
+             cluster="cluster", management_url="https://pve2.lab.home:8006", sections=addresses("10.0.20.6"))
 
-    def guest(type_key, name, on, **fields):
-        return demo.add(type_key, name, host=on, **fields)
+    def guest(type_key, name, on, ip=None, **fields):
+        return demo.add(type_key, name, host=on, sections=addresses(ip), **fields)
 
     guest("vm", "docker1", "pve1", tags=["lab"], os="Debian 12", vmid=101, autostart=True, vcpus=6, memory_gb=24,
-          disk_gb=200, ip_addresses="10.0.20.11")
+          disk_gb=200, ip="10.0.20.11")
     guest("vm", "homeassistant", "pve1", os="Home Assistant OS 13", vmid=102, autostart=True, vcpus=2,
-          memory_gb=4, disk_gb=32, ip_addresses="10.0.20.12")
+          memory_gb=4, disk_gb=32, ip="10.0.20.12")
     guest("vm", "win11", "pve1", status="stopped", os="Windows 11 Pro", vmid=103, vcpus=4, memory_gb=8,
           disk_gb=80, notes="Started when a Windows-only tool is needed.")
     guest("vm", "debian-12-template", "pve1", status="template", os="Debian 12, cloud-init", vmid=9000,
           vcpus=2, memory_gb=2, disk_gb=16)
     guest("lxc", "pihole", "pve2", tags=["network"], os="Debian 12", vmid=200, autostart=True, vcpus=1,
-          memory_gb=0.5, disk_gb=8, ip_addresses="10.0.20.2")
+          memory_gb=0.5, disk_gb=8, ip="10.0.20.2")
     guest("lxc", "unifi", "pve2", tags=["network"], os="Debian 12", vmid=201, autostart=True, vcpus=2,
-          memory_gb=2, disk_gb=16, ip_addresses="10.0.20.3", notes="The controller for sw-core and ap-office.")
+          memory_gb=2, disk_gb=16, ip="10.0.20.3", notes="The controller for sw-core and ap-office.")
 
     demo.add("docker_host", "Docker on docker1", key="docker", host="docker1", version="27.1",
              management_url="https://docker1.lab.home:9443")

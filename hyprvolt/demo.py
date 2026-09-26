@@ -21,8 +21,9 @@ class DemoError(Exception):
 
 
 class Demo:
-    def __init__(self, user=None):
+    def __init__(self, user=None, force: bool = False):
         self.user = user
+        self.force = force
         self.made: dict[str, Entity] = {}
 
     def add(self, type_key: str, name: str, key: str | None = None, location=None, tags=(), notes: str = "",
@@ -45,7 +46,22 @@ class Demo:
         loc = self.get(location) if isinstance(location, str) else location
         if loc is not None:
             data["location_id"] = loc.id
-        entity = records.create(type_key, data, self.user)
+        if self.force:
+            # Added to an instance that has records: what it can't take (an
+            # address already recorded) is left out, first the other modules'
+            # sections, then the record, rather than stopping the demo.
+            entity = None
+            for attempt in ((data, {**data, "sections": {}}) if data["sections"] else (data,)):
+                try:
+                    with db.session.begin_nested():
+                        entity = records.create(type_key, attempt, self.user)
+                    break
+                except Invalid:
+                    continue
+            if entity is None:
+                return None
+        else:
+            entity = records.create(type_key, data, self.user)
         self.made[key or records.slugify(name)] = entity
         return entity
 
@@ -77,7 +93,7 @@ def seed(user=None, force: bool = False) -> int:
         raise DemoError("The demo only goes into an empty instance.")
     if user is None:
         user = User.query.filter_by(role="admin").order_by(User.id).first()
-    demo = Demo(user)
+    demo = Demo(user, force=force)
     try:
         # Migration order, built-in modules last: the knowledge base
         # documents everything else, so everything else must exist first.

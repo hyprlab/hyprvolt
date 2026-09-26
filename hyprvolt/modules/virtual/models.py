@@ -16,7 +16,6 @@ class VirtualDetail(EntityDetail, db.Model):
     vcpus = db.Column(db.Integer)
     memory_gb = db.Column(db.Float)
     disk_gb = db.Column(db.Float)
-    ip_addresses = db.Column(db.String(500))
     autostart = db.Column(db.Boolean)
     image = db.Column(db.String(300))          # containers
     ports = db.Column(db.String(300))          # containers: published ports
