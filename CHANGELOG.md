@@ -12,7 +12,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Rack elevations show what occupies each unit on the front and rear, and flag overlaps and anything that no longer fits; a sidebar filter lists the racks with conflicts
 - The form of anything that goes in a rack has its rack position: the rack, the lowest unit, the height and the face
 - Hardware: servers, network gear, firewalls, access points, UPSes, NAS, workstations, printers and peripherals, with make, model, serial, asset tag, purchase, warranty, specs and a lifecycle status from ordered to disposed
-- Sidebar filters list hardware whose warranty ends within 90 days or is over, and a dashboard card shows both
+- Sidebar filters list hardware whose warranty ends soon or is over
 - A module that needs another is off while that one is, and Settings > Modules says why
 - Virtual: clusters, hypervisors, virtual machines, LXC containers, Docker hosts, compose stacks and containers, with resources, operating system, and what each runs on
 - What something runs on, chosen in its form, is also a link, so the dependency view reaches from a server down to the containers on it
@@ -34,7 +34,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - A secrets vault: passwords, API keys, SSH keys and license keys in a Secrets tab on any record, encrypted with a key kept outside the database, shown or copied on request, each time written to the history
 - Admins always see secrets; viewers and editors see them when an admin gives them access in Settings > Admin. Settings > Secrets says where the key is and who revealed what lately
 - `flask secrets status` and `flask secrets new-key`; `flask create-user --secrets`
-- The dashboard's Coming up card lists warranties, license renewals, contract ends, domain renewals and UPS battery dates near their date, and the sidebar counts them
+- The dashboard's Coming up card lists the soonest warranties, license renewals, contract ends, domain renewals and UPS battery dates near their date, with a link to all of them, and the sidebar counts them
 - Settings > Admin sets how many days ahead and behind reminders reach, 90 by default; the sidebar filters for things ending soon follow it
 - Any list exports as CSV, as it is filtered and searched
 - Editors import records from a CSV file: match the columns to fields, check what the import will do without saving anything, then import; rows with a problem are left out and said why
@@ -46,7 +46,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - API tokens: each account makes its own in Settings > API tokens, to use the JSON API from scripts; a token can be limited to reading, never reveals a secret, and is revoked at once
 - A knowledge base of Markdown documents that attach to any record and link to records with [[slug]]
 - Typed links between records in both directions, and a view of what breaks if a record goes down
-- Files attached to any record, included in `flask backup` when the backup is named `.tar.gz`
+- Files attached to any record, included in every backup
 - Tags shared by every module, custom fields an admin adds to any kind of record, and a history of every change
 - `flask seed-demo`, or Load a demo homelab on an empty dashboard, fills a new instance with a small homelab to try the app on
 - Settings has a Modules section to turn modules on and off (a module that is off keeps its records) and a Custom fields section

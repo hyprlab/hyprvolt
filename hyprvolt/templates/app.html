@@ -375,7 +375,7 @@
       <p class="hint">Viewers read everything; editors also change the documentation; admins also manage users, modules and these settings.</p>
       <p class="hint admin-stats">{{ admin_stats.users }} {{ 'user' if admin_stats.users == 1 else 'users' }} · {{ admin_stats.records }} {{ 'record' if admin_stats.records == 1 else 'records' }}</p>
       <p class="setting-label setting-label--spaced">Export</p>
-      <p class="hint">Everything in the instance as one JSON file: every record, link, history line and setting, and the modules' own tables. Password hashes, secret values, API token hashes and attached files are left out; <code>flask backup</code> is for restoring.</p>
+      <p class="hint">Everything in the instance as one JSON file: every record, link, history line and setting, and the modules' own tables. Password hashes, secret values, API token hashes and attached files are left out. It is for reading elsewhere; to restore, use a backup (Backups).</p>
       <div class="doc-actions"><a class="btn btn--ghost" href="{{ url_for('transfer.export_json') }}" download>Export everything as JSON</a></div>
 
       <p class="setting-label">Users</p>

@@ -58,22 +58,27 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.btn` + `--primary`, `--ghost`, `--danger`, `--block`, `--xs` | Buttons. One primary per view. |
 | `.iconbtn` + `--sm`, `--danger`, `.is-busy`, `[aria-pressed="true"]` | Square icon buttons; `.is-busy` spins the icon; pressed is a switch that is on (a user's access to secrets) |
 | `.field`, `.field-label`, `.check`, `.hint`, `.form-error` | Form parts |
+| `.field--narrow`, `.inline-form`, `.inst-grid`, `.stack` | A short input; a field and its button on one line; the Admin settings' grid of number fields; a form whose parts stack with even gaps |
+| `.setting-label`, `.setting-label--spaced` | The small capitals heading a group in a tab, pane or card; `--spaced` puts room above one that follows content |
+| `.manage-list`, `.manage-item`, `.manage-meta`, `.manage-title`, `.manage-sub` | Rows of things with their actions: users, backups, tokens, and most module tabs (ports, installations, secrets, DNS records). The title is one line, the sub line is quieter and cut with an ellipsis |
+| `.link`, `.mono`, `.avatar` | A link in running text, underlined in the accent on hover; monospaced text (keys, compose files); a user's initial in a circle |
 | `.seg`, `.seg--xs` | Segmented control over radio inputs; `--xs` inside a list row (a user's role) |
 | `.switch`, `.switch-track` | An on/off switch over a checkbox, for something that takes effect at once (a module) |
 | `.theme-picker`, `.theme-chip` | Chip-style radio group |
-| `.chip`, `.chip--muted`, `.count`, `.count--accent`, `.count--alert`, `.title-chip` | Small labels and counters. `--alert` is a count that needs attention (conflicts); a `.title-chip` link clears a filter |
+| `.chip`, `.chip--muted`, `.count`, `.count--alert`, `.title-chip` | Small labels and counters. `--alert` is a count that needs attention (conflicts); a `.title-chip` link clears a filter |
 | `.tagchip`, `.tagdot` | A tag, the same in every module; a link where it filters. The dot marks tags in the sidebar |
 | `.shell`, `.sidebar`, `.sidebar-head/-scroll/-foot` | The layout. The head and foot stay pinned; only the middle scrolls. |
 | `.navitem`, `.sidebar-label`, `.sidelist`, `.sidelist--nested`, `.sideitem` | Sidebar rows: a module is a `.navitem`; the open module's types and filters are a nested list under it. `.is-active` adds the wash and an inset accent bar. |
 | `.topbar`, `.context-title`, `.topbar-actions` | The sticky, blurred bar over the content |
 | `.searchpill`, `.viewswitch`, `.menu`/`.menubtn`/`.menupop`/`.menuopt` | Topbar controls |
 | `.card`, `.row`, `.kicker`, `.kicker-icon`, `.facts`, `.is-archived` | Records as cards or list rows. The row's first cell is the type's icon; `.facts` are a card's key fields; archived and deleted records step back with `.is-archived` |
-| `.tiles`, `.tile`, `.widget` | The dashboard: one tile per module with its count, and module widgets as cards |
+| `.dash`, `.dash-section`, `.tiles`, `.tile`, `.widgets`, `.widget`, `.widget--wide` | The dashboard: one tile per module with its count, then the cards (Coming up and the modules' widgets), `--wide` across the row |
 | `.meters`, `.meter` | How much of something is used (rack units), as a bar with the number beside it |
 | `.ipgrid`, `.ipcell`, `.iplegend` | A subnet's addresses, sixteen to a row: used in solid ink, reserved hatched, DHCP filled, free an outline. A used cell opens its record; a free one, for an editor, records it |
+| `.secret-row`, `.secret-field` | A secret's row, whose buttons wrap under it on a phone; a form field that spans the small form |
 | `.secret-value` | A secret's value in its row: a mask until Show, then the value as typed, lines kept, selectable in one click |
 | `.trace`, `.trace-path`, `.trace-hop`, `.trace-link` | A cable path inside a port's row, opened from a `<details>`: each port a pill, the cables and patch panels between them in small text |
-| `.empty`, `.pager`, `.pager-end` | Empty states and paging |
+| `.empty`, `.empty--onboard`, `.pager`, `.pager-end` | Empty states and paging; `--onboard` is the first-run dashboard with the mark |
 | `.modal`, `.modal--wide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>` |
 | `.form-grid`, `.form-wide`, `.form-check`, `.req` | The record form: two columns, long text across both, a required mark |
 | `.pickbtn` | A button standing in for a field: it opens the palette to choose a record |
@@ -84,11 +89,11 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.kv`, `.kv-empty`, `.kv-long` | A record's fields: label and value in two columns, stacked on a phone |
 | `.banner`, `.banner--danger`, `.banner--stack` | A notice at the top of the sheet (archived, deleted, rack conflicts), with its action; `--stack` puts several paragraphs and buttons under each other (a backup's check, a new token) |
 | `.elink` | A link to a record inside text; it opens the record's sheet in place |
-| `.deptree` | The dependency view, nested; a loop and a repeat are marked, not followed |
+| `.deps`, `.deptree` | The dependency view, both directions side by side, each nested; a loop and a repeat are marked, not followed |
 | `.linkform`, `.mountform`, `.doc-actions` | Small forms inside a tab: make a link, place something in a rack, add ports, cable them, add a DNS record |
 | `.dropzone`, `.file-thumb` | Where files are dropped or chosen, and an attachment's preview |
 | `.history`, `.changes` | Who changed what: a line per change, old value struck through, new value after |
-| `.elevation`, `.rack-grid`, `.rack-u`, `.rack-slot`, `.rack-item` | A rack, front and rear, one grid row per unit. An empty unit is a button; overlapping items share the width, and a conflict is drawn in the danger color |
+| `.elevation`, `.rack-grid`, `.rack-u`, `.rack-slot`, `.rack-item`, `.rack-summary`, `.rack-problems` | A rack, front and rear, one grid row per unit. An empty unit is a button; overlapping items share the width, and a conflict is drawn in the danger color |
 | `.palette` and its parts | The Ctrl/Cmd+K search |
 | `.toast`, `.toast--error`, `.toast-action` | Confirmations under the topbar, with an optional action such as Undo |
 | `.about-hero`, `.tech-stack`, `.release-list` | The About section |

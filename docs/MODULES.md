@@ -57,24 +57,24 @@ required.
 
 | Field | What it is |
 | --- | --- |
-| `id` | Lower-case letters, digits and underscores; the URL (`/<id>`) and the name of its settings. Can't be a word the core uses (`all`, `api`, `admin`, `search`, …) |
+| `id` | 2 to 31 lower-case letters, digits and underscores, starting with a letter; the URL (`/<id>`) and the name of its settings. Can't be a word the core uses (`all`, `api`, `admin`, `search`, …) |
 | `name`, `description`, `icon` | What the sidebar, dashboard and Settings > Modules show. `icon` is the inside of a 24×24 stroked `<svg>`, like every icon in the app |
 | `group`, `order` | Where it sits in the sidebar: under the `group` heading, sorted by `order` |
 | `requires` | Ids of modules it builds on. They migrate and seed first; a module whose requirement is missing is left out, and one whose requirement is turned off is off too. A module that only takes part through traits (Services pointing at hosts) needs no requirement |
-| `core` | Built in; it can't be turned off. Only the knowledge base is |
+| `core` | Built in; it can't be turned off. The knowledge base and Secrets are |
 | `models` | Its SQLAlchemy models, for the record; importing the package is what registers them |
 | `migrations` | Its `Step`s, in order. See [Migrations](#migrations) |
 | `blueprint` | A Flask blueprint named like the module, mounted at `/<id>`. Optional |
 | `types` | Its `EntityType`s. See [Entity types and fields](#entity-types-and-fields) |
 | `search` | `search(query, limit)` returning `SearchResult`s for the palette, for things that aren't records (an IP address, a DNS name). Records are searched without it |
-| `filters` | `ListFilter`s: sidebar entries with live counts under the module |
-| `widgets` | `Widget`s on the dashboard |
+| `filters` | `ListFilter(key, label, apply)`s: sidebar entries with live counts under the module. `apply(query)` narrows a query of the module's live records |
+| `widgets` | `Widget(key, label, render, wide=False)`s on the dashboard; `wide` spans the row |
 | `jobs` | `Job`s the worker runs, each at most every `minutes`. Dates that come due need no job: mark the field `expires` |
-| `settings_pane` | A `Pane` in the settings window, admin-only by default |
-| `relation_kinds` | `RelationKind`s it adds to the core's |
-| `sheet_tabs` | `Tab`s on records of any module, shown where `when(entity)` says |
+| `settings_pane` | A `Pane(key, label, render, icon="", admin=True)` in the settings window; `admin=False` shows it to everyone |
+| `relation_kinds` | `RelationKind(key, label, reverse, impact)`s it adds to the core's: `label` reads from source to target ("runs on"), `reverse` the other way ("runs"), and `impact` is `source` (the source stops when the target goes down), `target`, or `none` (only a link); the dependency view follows only those with an impact |
+| `sheet_tabs` | `Tab(key, label, render, when=None, count=None)`s on records of any module, shown where `when(entity)` says; `count(entity)` puts a number beside the label |
 | `form_sections` | `FormSection`s in the record form of any module's types. See [Adding to other modules' forms](#adding-to-other-modules-forms) |
-| `seed` | `seed(demo)`, its part of `flask seed-demo`. Seeds run in sidebar order, each after the modules it requires, the knowledge base last, so a module later in the sidebar finds the records it links to |
+| `seed` | `seed(demo)`, its part of `flask seed-demo`. Seeds run in sidebar order, each after the modules it requires, built-in modules last, so a module later in the sidebar finds the records it links to |
 
 A manifest that fails validation is left out, logged, and listed in
 Settings > Modules with the reason. With `MODULES_STRICT=1` (the tests set it)
@@ -154,7 +154,8 @@ warranty, a renewal, a contract's end. The core reminds of it: within the
 admin's reminder window either side of today, the record is on the
 dashboard's Coming up card and counts toward the sidebar badge, unless it is
 archived or in an `inactive` status. `reminders.ending_within(query, detail,
-column)` is the sidebar filter for the same window.
+column)` is the sidebar filter for the window ahead; with `past=True` it also
+takes in the window behind (a renewal missed).
 
 A `ref` with `trait="addressable"` instead of `types` points at a record of
 any type with that trait, from whichever modules are installed; the form
@@ -227,13 +228,16 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `form[data-api="/url"]` | Submitting posts its fields as JSON (as multipart with `enctype="multipart/form-data"`) |
 | `[data-api-post="/url"]`, `data-body='{…}'` | A click posts the body |
 | `data-then="sheet"`, `"reload"` or `"remove"` | Afterwards: re-render the open sheet, reload the page, or remove the closest `[data-row]` |
-| `data-done="Message"` | The toast; with Undo when the response has `undo` |
-| `[data-pick]`, `data-pick-types`, `data-pick-into` | Opens the palette to choose a record; its id goes into the form field named by `data-pick-into` (`other_id` by default) and its name into `[data-pick-label]` |
-| `[data-fill='{"field": value}']`, `data-fill-form="id"` | Fills fields of a form and shows it |
-| `[data-new-type="rack"]`, `data-new-location`, `data-new-attach`, `data-new-fields='{"host": 12}'` | Opens the form for a new record, placed somewhere, attached as a document, or with fields filled in |
+| `data-then="replace"`, `data-replace="id"` | Afterwards: the answer's `html` goes into that element (the next step of a flow, a check's result) |
+| `data-done="Message"` | The toast; with Undo when the response has `undo`. An answer's own `message` takes its place |
+| `[data-pick]`, `data-pick-types`, `data-pick-into` | Opens the palette to choose a record; its id goes into the form field named by `data-pick-into` (`other_id` by default) and its name into `[data-pick-label]`. `data-pick-exclude="id"` leaves a record out; `data-pick-submit` submits the form once one is chosen |
+| `[data-fill='{"field": value}']`, `data-fill-form="id"` | Fills fields of a form and shows it; the field marked `data-fill-focus` gets the focus |
+| `[data-new-type="rack"]`, `data-new-location`, `data-new-attach`, `data-new-name`, `data-new-fields='{"host": 12}'` | Opens the form for a new record, placed somewhere, attached as a document, with a name, or with fields filled in |
+| `[data-open="dialog-id"]`, `[data-close]` | Opens a dialog; closes the one it is in |
+| `form.dropzone` | Files dropped on it go in through its file input and the form is submitted |
 | `a[data-entity="id"]` | Opens that record's sheet in place (`entity_link` makes these) |
 | `input[data-autosubmit]` | Submits its form when it changes |
-| `[data-reveal="/url"]`, `data-reveal-into="id"` | Posts to the URL and shows the answer's `value` in that element, until a second click or 30 seconds (the vault's Show) |
+| `[data-reveal="/url"]`, `data-reveal-into="id"` | Posts to the URL and shows the answer's `value` in that element, until a second click or 30 seconds (the vault's Show); the element's `data-mask` is what it shows otherwise |
 | `[data-copy="text"]`, `[data-copy-url="/url"]` | Copies the text, or posts to the URL and copies the answer's `value` |
 
 Routes live on the module's blueprint, which must be named like the module
@@ -293,8 +297,8 @@ These are not built. Each fits the manifest as it is:
 
 | Module | Hooks |
 | --- | --- |
-| **Discovery and sync** (Proxmox, Portainer, pfSense) | A `settings_pane` for the API address and token (the token in the secrets vault, Phase 5); a `job` that pulls on a schedule and writes through `records.create` and `records.update`, so every change it makes is in the history; a table of its own mapping outside ids to record ids; a blueprint route for "Sync now"; a `widget` with the last run; the core's `runs_on` and `hosted_by` links |
-| **Certificates** | A `certificate` type with issuer, names and an expiry `date`; a `job` that checks expiry (and can fetch certificates from hosts); a `ListFilter` "Expiring soon" with a count; a `widget`; a `search` provider for host names; a `RelationKind` "secures" |
+| **Discovery and sync** (Proxmox, Portainer, pfSense) | A `settings_pane` for the API address and token (the token kept in the secrets vault); a `job` that pulls on a schedule and writes through `records.create` and `records.update`, so every change it makes is in the history; a table of its own mapping outside ids to record ids; a blueprint route for "Sync now"; a `widget` with the last run; the core's `runs_on` and `hosted_by` links |
+| **Certificates** | A `certificate` type with issuer, names and an expiry `date` marked `expires`, so the Coming up card and the badge remind of it with no job; a `ListFilter` "Expiring soon" built on `reminders.ending_within`; a `job` only to fetch certificates from hosts; a `search` provider for host names; a `RelationKind` "secures" |
 | **Backup jobs** | A `backup_job` type with its schedule, retention and last success; the core's `backs_up` link to what it backs up; a `job` that marks stale ones; a `ListFilter` "Failing or stale"; a `widget` |
 | **Maintenance windows and change log** | `maintenance` and `change` types with start and end dates and a Markdown description; a `RelationKind` "affects"; a `sheet_tab` on any record listing its windows and changes; `relations.walk()` to list what a window takes down; a `widget` of what is coming up. The core's history already logs every edit; this module is for changes people describe |
 | **Network diagram** | A blueprint page that draws an SVG on the server from `relations` and Network's cables (`network_cables`, port to port), and a `sheet_tab` showing the neighborhood of one record. `requires=("network",)`. No script needed |

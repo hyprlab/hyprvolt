@@ -49,4 +49,4 @@ Only the latest stable release receives security fixes.
   setting; whoever can read the volume can read it. It is never sent to a
   browser.
 - Documentation is readable by every signed-in account. Keep credentials out
-  of notes and documents; the secrets vault (planned) is where they will go.
+  of notes and documents: they go in a record's Secrets tab.

@@ -13,7 +13,8 @@ hyprvolt/
                    gate, headers, error pages, template globals, migrations,
                    worker
   config.py        every environment variable, each with a working default
-  models.py        users and runtime settings
+  models.py        users, API tokens and runtime settings
+  tokens.py        API tokens: Bearer authentication for scripts
   permissions.py   roles, and the @role decorator every route carries
   manifest.py      what a module declares: Module, EntityType, Field, Tab, …
   registry.py      finds the modules, checks them, orders them, mounts them
@@ -21,7 +22,8 @@ hyprvolt/
   auth.py          sign in, sign up, sign out, Turnstile, the sign-in throttle
   setup.py         the first-run wizard
   main.py          the dashboard, the lists, palette search, account and admin
-  cli.py           flask commands: create-user, reset-password, backup, seed-demo
+  cli.py           flask commands: create-user, reset-password, backup,
+                   restore, export, seed-demo, secrets, turnstile
   demo.py          the demo homelab, gathered from the modules' seeds
   worker.py        the background jobs: the core's and the modules'
   core/
@@ -37,9 +39,19 @@ hyprvolt/
     views.py       the detail sheet and the form, as HTML fragments
     shell.py       the sidebar and what surrounds every page
     present.py     how a record shows in a card or a row
+    reminders.py   dates coming up, for the dashboard and the badge
+    transfer.py    CSV export and import, the JSON export
+    backups.py     backups and restores, made and scheduled in Settings
   modules/
     documents/     the knowledge base (built in)
+    vault/         secrets, encrypted (built in)
     locations/     sites, buildings, rooms, racks and shelves
+    hardware/      servers, network gear, UPSes and the rest
+    virtual/       clusters, hypervisors, VMs, containers, stacks
+    network/       networks, VLANs, subnets, IP addresses, ports, DNS
+    services/      what people use, and what it runs on
+    software/      titles, installations and licenses
+    contacts/      vendors, people and contracts
   about_docs.py    parses CHANGELOG.md for the About section
   sanitize.py      allowlist HTML sanitizer, stdlib only
   static/          css, js, fonts, images
@@ -127,7 +139,8 @@ dependency view can never disagree.
 
 **Secrets are a built-in module with a permission of their own.** The vault
 (`modules/vault`) keeps its values encrypted with a key outside the
-database, shows its tab only to accounts with `can_see_secrets`, and writes
+database, shows its tab only to admins and accounts given `can_see_secrets`
+(`User.sees_secrets`), and writes
 every reveal to the record's history. The core hides those history lines
 from everyone else; nothing else in the core knows about secrets.
 
@@ -257,7 +270,7 @@ the database unreadable to the previous version is a MAJOR release.
 
 | | |
 | --- | --- |
-| `DATA_DIR` (`/data` in Docker, `./var` locally) | The SQLite database, the generated `.secret_key`, the secrets vault's `secrets.key` (unless `SECRETS_KEY` is set), `attachments/` and `backups/` (unless `BACKUP_DIR` is set) |
+| `DATA_DIR` (`/data` in Docker, `./var` locally) | The SQLite database, the generated `.secret_key`, the secrets vault's `secrets.key` (unless `SECRETS_KEY` is set), `attachments/`, `backups/` (unless `BACKUP_DIR` is set) and `imports/`, uploads between an import's steps, cleared after a day |
 | `users` | Accounts, their roles and preferences |
 | `settings` | Instance settings, which modules are off, migration markers, when each job last ran |
 | `entities` and the core tables | Every record, its tags, custom values, links, files and history |

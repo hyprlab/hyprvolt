@@ -24,7 +24,7 @@ automatically.
 ## Configuration
 
 Everything is optional. Put values in a `.env` file next to
-`docker-compose.yml` (`.env.example` lists them all), then
+`docker-compose.yml` (`.env.example` has the common ones), then
 `docker compose up -d` to apply.
 
 | Variable | Default | What it does |
@@ -38,15 +38,18 @@ Everything is optional. Put values in a `.env` file next to
 | `SESSION_COOKIE_SECURE` | `0` | Set to `1` when the app is served over HTTPS |
 | `TRUST_PROXY` | `0` | How many reverse proxies are in front; see below |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | empty | Cloudflare Turnstile keys; see [Turnstile](#turnstile). Usually set in the app instead |
-| `ALLOW_REGISTRATION` | `0` | Whether anyone can create an account. New accounts get the default role (viewer unless an admin changes it) |
-| `WORKER_MINUTES` | `15` | How often background work runs; `0` turns it off |
+| `ALLOW_REGISTRATION` | `0` | Whether anyone can create an account. The setup wizard asks and saves the answer, which wins from then on |
+| `WORKER_MINUTES` | `15` | How often background work runs. The setup wizard saves 15, which Settings > Admin changes; `0` here keeps the worker from starting at all |
 | `ITEMS_PER_PAGE` | `40` | Records per page |
 | `DATA_DIR` | `/data` | Where the database and attachments live inside the container |
 | `MODULES_STRICT` | `0` | Stop at startup when a module's manifest is broken, instead of leaving the module out |
+| `DATABASE_URL` | the SQLite file in `DATA_DIR` | Where the database is. Only SQLite is supported; backups copy it with SQLite's own API |
+| `SOURCE_URL` | the GitHub repository | Where About links to the source code |
 
-`ALLOW_REGISTRATION`, `WORKER_MINUTES`, `ITEMS_PER_PAGE` and the Turnstile
-keys are only defaults for a fresh install. Once they are changed in Settings
-(under Admin or Security), what is saved there wins.
+`ITEMS_PER_PAGE` and the Turnstile keys are only defaults for a fresh
+install, and the setup wizard saves its own answers for sign-up and the
+worker. Once a setting is saved in Settings (under Admin or Security), what
+is saved there wins.
 
 ## Accounts and roles
 
@@ -74,15 +77,15 @@ Network, Services, Software, Contacts and vendors, and the knowledge base. Setti
 disappears from the sidebar, search and the dashboard, and its records stay
 in the database until it is turned back on. A module that needs another is
 off while that one is: Hardware needs Locations, and Virtual and Network
-need Hardware.
-The knowledge base is built in.
+need Hardware. The knowledge base and Secrets are built in, and stay on.
 
 Hardware's status is where a device is in its life: deployed, ordered, in
 stock, in repair, retired or disposed. Anything that goes in a rack has its
 rack, units and face in its own form, and choosing a rack there makes the
-rack its location. The sidebar lists hardware whose warranty ends within 90
-days and hardware out of warranty (retired and disposed hardware is left out
-of both), and the dashboard's Warranties card shows the same.
+rack its location. The sidebar lists hardware whose warranty ends within the
+reminder window and hardware out of warranty (retired and disposed hardware
+is left out of both), and the dashboard's Coming up card shows warranties
+near their end.
 
 In Virtual, what something runs on is a field in its form: a VM's host, a
 hypervisor's hardware, a container's Docker host and stack. Each is also a
@@ -106,7 +109,8 @@ can be traced to the far end through patch panels. A domain's DNS records
 are written down by hand in its DNS records tab, and an A record or a CNAME
 that leads to a recorded address links to the device holding it. The
 palette finds DNS names and MAC addresses. The sidebar lists addresses with
-no device and domains due for renewal within 90 days.
+no device and domains due for renewal within the reminder window, or
+overdue by no more than it.
 
 A service is what people use: its address, ports, who uses it, how much it
 matters, what it runs on and the domain it is under. The last two are also
@@ -125,7 +129,8 @@ Vendors hold support numbers and account numbers, people work at them, and
 contracts are with them. Hardware, software, services, networks and domains
 have a Supplier section in their form: the vendor and the contract that
 covers them. A vendor's Supplies tab and a contract's Covers tab list what
-is linked; the sidebar lists contracts ending within 90 days. Phone numbers
+is linked; the sidebar lists contracts ending within the reminder window, or
+ended by no more than it. Phone numbers
 and email addresses are links.
 
 Settings > Custom fields adds fields of your own to any kind of record: text,
@@ -175,8 +180,9 @@ with a header row, up to 5 MB and 5,000 rows) becomes records of one kind:
 Settings > Admin exports the whole instance as one JSON file: every table
 and row, the modules' own included, with password hashes, secret values, API
 token hashes and the Turnstile secret left out. Attached files are listed but
-not included. It is for reading elsewhere, not for restoring; `flask backup`
-is. `flask export PATH` writes the same file from the server.
+not included. It is for reading elsewhere, not for restoring: a backup from
+Settings > Backups is. `flask export PATH` writes the same file from the
+server.
 
 ## The API
 
@@ -200,7 +206,7 @@ them all. Errors are
 
 | Route | What it does |
 | --- | --- |
-| `GET /api/entities` | Records, newest change first; filter with `type`, `module`, `tag`, `location`, `q`; page with `limit` (up to 500) and `offset` |
+| `GET /api/entities` | Records, newest change first; filter with `type`, `module`, `tag`, `location`, `q`, and `archived=1` (or `all`) for archived ones; page with `limit` (100 unless given, up to 500) and `offset` |
 | `GET /api/entities/<id>` | One record with its fields, custom fields and location path |
 | `POST /api/entities` | Make one: `type`, `name`, `status`, `location_id`, `tags`, `notes`, `fields`, `custom`, and `sections` for what other modules add (`{"rack": {...}}`, `{"addresses": {"list": "10.0.20.5"}}`) |
 | `POST /api/entities/<id>` | Change one; only what the body names changes |
@@ -208,6 +214,9 @@ them all. Errors are
 | `GET /api/entities/<id>/history`, `/relationships`, `/dependencies` | Its history, its links, what depends on it (`direction=dependencies` for the other way) |
 | `POST /api/relationships`, `POST /api/relationships/<id>/delete` | Link two records (`kind`, `source_id`, `target_id`), unlink |
 | `GET /api/tags`, `GET /api/custom-fields` | Tags in use, custom field definitions |
+| `GET /api/entities/<id>/attachments`, `POST` the same | A record's files; upload with multipart `file` parts |
+| `POST /api/attachments/<id>/delete`, `/restore` | Remove a file (kept until the purge), bring it back |
+| `GET /attachments/<id>` | The file itself |
 | `GET /export/<module>.csv` | A module's records as CSV, with the list's filters |
 | `GET /locations/racks/<id>/elevation` | A rack's units and what occupies them |
 | `GET /network/subnets/<id>/addresses` | A subnet's recorded addresses and how many are free |
