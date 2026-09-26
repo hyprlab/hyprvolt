@@ -207,6 +207,14 @@ def _date(data):
         raise Invalid("The install date must be a date, such as 2026-09-25.") from None
 
 
+def _installation(install_id) -> Installation:
+    """An installation whose title and host are both live, of turned-on modules."""
+    i = db.session.get(Installation, install_id)
+    if i is None or records.live(i.software_id) is None or records.live(i.host_id) is None:
+        abort(404, description="There is no such installation.")
+    return i
+
+
 def install_json(i: Installation) -> dict:
     return {"id": i.id, "software_id": i.software_id, "software": i.software.name, "host_id": i.host_id,
             "host": i.host.name, "version": i.version, "license_id": i.license_id,
@@ -267,8 +275,9 @@ def install_create():
 @role("editor")
 def install_edit():
     data = _body()
-    i = db.session.get(Installation, int(data.get("installation_id") or 0))
-    if i is None:
+    try:
+        i = _installation(int(data.get("installation_id") or 0))
+    except (TypeError, ValueError):
         abort(404, description="There is no such installation.")
     try:
         before = (i.version, i.license_id)
@@ -296,7 +305,7 @@ def install_edit():
 @bp.route("/installations/<int:install_id>/delete", methods=["POST"])
 @role("editor")
 def install_delete(install_id):
-    i = db.get_or_404(Installation, install_id)
+    i = _installation(install_id)
     snapshot = {k: v for k, v in install_json(i).items() if k not in ("id", "software", "host")}
     _audit(i, "uninstalled", [("", _was(i.version), "")])
     db.session.delete(i)

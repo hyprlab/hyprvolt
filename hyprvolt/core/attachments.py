@@ -8,6 +8,7 @@ database.
 """
 import hashlib
 import os
+import re
 import secrets
 from pathlib import Path
 
@@ -26,8 +27,17 @@ def root() -> Path:
     return Path(current_app.config.get("ATTACHMENTS_DIR") or Path(current_app.config["DATA_DIR"]) / "attachments")
 
 
+STORED_RE = re.compile(r"^[0-9a-f]{32}$")
+
+
 def path_for(att: Attachment) -> Path:
-    return root() / att.stored_as[:2] / att.stored_as
+    """Where the file is. ``stored_as`` is always a name the app made (32 hex
+    digits); anything else (a restored database someone edited) points
+    nowhere, rather than at another file on the server."""
+    name = att.stored_as or ""
+    if not STORED_RE.match(name):
+        return root() / "missing" / "missing"
+    return root() / name[:2] / name
 
 
 def max_bytes() -> int:

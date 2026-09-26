@@ -23,6 +23,7 @@ MAX_TOKENS = 20
 #: last_used_at is written at most this often, so reading doesn't mean writing.
 TOUCH_EVERY = timedelta(minutes=1)
 SAFE = ("GET", "HEAD", "OPTIONS")
+UNDO_WINDOW = timedelta(minutes=10)
 
 
 def _hash(token: str) -> str:
@@ -124,6 +125,9 @@ def token_restore(token_id):
     t = _own(token_id)
     if t is None:
         return jsonify(error="There is no such token."), 404
+    # Undo is for a slip, right after: a token revoked a while ago stays so.
+    if t.revoked_at is not None and utcnow() - t.revoked_at > UNDO_WINDOW:
+        return jsonify(error="That token was revoked too long ago to bring back. Make a new one."), 400
     t.revoked_at = None
     db.session.commit()
     return jsonify(ok=True, api_token=token_json(t))

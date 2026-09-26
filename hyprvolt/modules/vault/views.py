@@ -14,7 +14,7 @@ from hyprvolt.core import records
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import AuditLog, Entity
 from hyprvolt.models import User, db, int_setting, utcnow
-from hyprvolt.permissions import role
+from hyprvolt.permissions import role, session_only
 
 from . import crypto
 from .models import KINDS, Secret
@@ -76,6 +76,8 @@ def _apply(s: Secret, data: dict, creating: bool) -> None:
     for key, limit in (("username", 200), ("url", 500), ("note", 500)):
         if creating or key in data:
             setattr(s, key, _clean(data, key, limit))
+    if s.url and not s.url.lower().startswith(("http://", "https://")):
+        raise Invalid("The sign-in address must start with http:// or https://.")
     value = data.get("value")
     if value not in (None, ""):
         value = str(value)
@@ -146,7 +148,7 @@ def secret_edit():
     data = request.get_json(silent=True) or {}
     try:
         s = _secret(int(data.get("secret_id") or 0))
-    except ValueError:
+    except (TypeError, ValueError):
         abort(404, description="There is no such secret.")
     old = s.name
     try:
@@ -203,6 +205,7 @@ def secret_restore(secret_id):
 
 @bp.route("/key")
 @role("admin")
+@session_only
 def key_download():
     """The key as a file. Written to the log, since it opens every secret."""
     import logging
@@ -220,6 +223,7 @@ def key_download():
 
 @bp.route("/key", methods=["POST"])
 @role("admin")
+@session_only
 def key_put_back():
     """A key downloaded earlier, as a file or pasted: checked against the
     secrets here, then made the key in use."""

@@ -75,16 +75,17 @@ def create_app(config_class=Config) -> Flask:
 
     @login_manager.user_loader
     def load_user(user_id):
-        # "7.<epoch>" (User.get_id): a sign-in from before a restore holds
-        # another epoch, and is no longer anyone's.
+        # "7.<epoch>.<password stamp>" (User.get_id): a sign-in from before a
+        # restore, or from before the password changed, is no longer anyone's.
         from .models import get_setting
-        raw_id, _, epoch = str(user_id).partition(".")
-        if epoch != (get_setting("session_epoch") or ""):
+        parts = str(user_id).split(".")
+        if len(parts) != 3 or parts[1] != (get_setting("session_epoch") or ""):
             return None
         try:
-            return db.session.get(User, int(raw_id))
+            user = db.session.get(User, int(parts[0]))
         except ValueError:
             return None
+        return user if user is not None and user.password_stamp == parts[2] else None
 
     @login_manager.unauthorized_handler
     def unauthorized():

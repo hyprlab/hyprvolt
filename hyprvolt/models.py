@@ -4,6 +4,7 @@ Schema changes go through ``_migrate()`` in ``__init__.py``: ``ALTER TABLE``
 guarded by a column check, no migration framework. SQLite in one volume is the
 whole storage story (see docs/ARCHITECTURE.md).
 """
+import hashlib
 from datetime import datetime, timezone
 
 from flask_login import UserMixin
@@ -40,11 +41,16 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
     def get_id(self) -> str:
-        """What the session and the remember-me cookie hold: the id and the
-        session epoch. A restore changes the epoch, so a sign-in from before
-        it can't land on whoever has that id in the restored database."""
-        epoch = get_setting("session_epoch")
-        return f"{self.id}.{epoch}" if epoch else str(self.id)
+        """What the session and the remember-me cookie hold: the id, the
+        session epoch and a stamp of the password. A restore changes the
+        epoch, so a sign-in from before it can't land on whoever has that id
+        in the restored database; a new password changes the stamp, so every
+        other session and remember-me cookie of the account ends."""
+        return f"{self.id}.{get_setting('session_epoch') or ''}.{self.password_stamp}"
+
+    @property
+    def password_stamp(self) -> str:
+        return hashlib.sha256(self.password_hash.encode()).hexdigest()[:12]
 
     @property
     def is_admin(self) -> bool:

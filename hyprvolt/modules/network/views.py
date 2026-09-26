@@ -184,10 +184,18 @@ def _device(entity_id):
 
 
 def _port(port_id):
+    """A port on a live record of a turned-on module."""
     port = db.session.get(Port, port_id)
-    if port is None or port.device.deleted_at is not None:
+    if port is None or records.live(port.device_id) is None:
         abort(404, description="There is no such port.")
     return port
+
+
+def _id(data, key) -> int:
+    try:
+        return int(data.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _body():
@@ -237,10 +245,7 @@ def port_restore(device_id):
 def port_edit(port_id=None):
     """Change a port. The sheet's one edit form names the port as ``port_id``."""
     data = _body()
-    try:
-        port = _port(port_id or int(data.get("port_id") or 0))
-    except ValueError:
-        abort(404, description="There is no such port.")
+    port = _port(port_id or _id(data, "port_id"))
     try:
         ports.edit_port(port, {k: v for k, v in data.items() if k != "port_id"})
     except Invalid as err:
@@ -285,7 +290,7 @@ def cable_create():
     try:
         if not data.get("other_id"):
             raise Invalid("Choose the port at the other end.")
-        port, other = _port(int(data.get("port_id") or 0)), _port(int(data["other_id"]))
+        port, other = _port(_id(data, "port_id")), _port(_id(data, "other_id"))
         cable = ports.connect(port, other, data)
     except Invalid as err:
         return _fail(err)
@@ -297,6 +302,7 @@ def cable_create():
 @role("editor")
 def cable_delete(cable_id):
     cable = db.get_or_404(Cable, cable_id)
+    _port(cable.a_id), _port(cable.b_id)
     snapshot = ports.disconnect(cable)
     db.session.commit()
     return jsonify(ok=True, undo={"url": "/network/cables", "body": snapshot})
@@ -328,6 +334,7 @@ def dns_add(domain_id):
 @role("editor")
 def dns_delete(record_id):
     record = db.get_or_404(DnsRecord, record_id)
+    _domain(record.domain_id)
     domain_id = record.domain_id
     snapshot = dns.remove_record(record)
     db.session.commit()

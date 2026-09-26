@@ -16,7 +16,6 @@ from datetime import date, datetime
 from pathlib import Path
 
 from flask import Blueprint, Response, abort, current_app, jsonify, render_template, request
-from flask_login import current_user
 from sqlalchemy import func
 
 from .. import __version__
@@ -259,12 +258,15 @@ def import_upload():
         options=targets(etype), chosen=suggest(header, etype), rows=len(body), filename=upload.filename))
 
 
-def _mapping(data, header) -> dict[int, str]:
+def _mapping(data, header, etype) -> dict[int, str]:
+    allowed = {t for t, _ in targets(etype)}
     out, seen = {}, set()
     for i in range(len(header)):
         target = data.get(f"col{i}") or ""
         if not target:
             continue
+        if target not in allowed:
+            raise Invalid(f"“{header[i]}” goes into a field that {etype.text(True)} don't have. Choose again.")
         if target in seen:
             raise Invalid(f"Two columns go into the same field. Choose one for “{header[i]}”.")
         seen.add(target)
@@ -400,7 +402,7 @@ def _import_args():
     data = request.get_json(silent=True) or {}
     etype = _etype_or_invalid(data.get("type"))
     header, body = _read(data.get("token"))
-    mapping = _mapping(data, header)
+    mapping = _mapping(data, header, etype)
     if not mapping:
         raise Invalid("Choose where at least one column goes.")
     if not etype.name_from and "name" not in mapping.values() and data.get("match") != "slug":

@@ -32,9 +32,10 @@ Only the latest stable release receives security fixes.
 | Stale pages | HTML is served `no-store` |
 | Running as root | The container runs as an unprivileged user |
 | A sign-in outliving a restore | A restore changes the session epoch in every sign-in id, so sessions and remember-me cookies from before it end, and nobody lands on another account with the same id |
-| A hostile backup upload | Admins only; the archive is checked before anything is replaced: no paths outside its folder, extracted with Python's `data` filter, a SQLite integrity check, an admin account required |
+| A hostile backup upload | Admins only; the archive is checked before anything is replaced: no paths outside its folder, no links or devices, extracted with Python's `data` filter, a SQLite integrity check, an admin account required; an attachment is only ever read from a name the app made, so an edited database can't point one at another file |
 | A stolen database or backup | Secrets are encrypted (Fernet: AES-128-CBC with an HMAC) with a key that is not in the database and not in `flask backup`'s archive |
-| A leaked API token | Only a SHA-256 of each token is stored; a token can be limited to reading, can't reveal secrets or make tokens, and is revoked at once in Settings |
+| A leaked API token | Only a SHA-256 of each token is stored; a token can be limited to reading, and whatever its role can't reveal a secret, download the secrets key or a backup, restore, or make tokens; it is revoked at once in Settings, a revoked one can be brought back only within ten minutes, and a restore revokes them all |
+| A stolen session or remember-me cookie | Sign-in ids carry a stamp of the password: changing or resetting it ends every other session and cookie of the account |
 | Seeing a password without cause | Beyond admins, secrets are a permission given per account; each reveal and copy is written to the record's history with who and when; API tokens can't read them |
 
 ## Out of scope

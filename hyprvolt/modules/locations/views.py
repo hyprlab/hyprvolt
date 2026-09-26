@@ -252,6 +252,7 @@ def mount_create(rack_id):
 @role("editor")
 def mount_delete(mount_id):
     mount = db.get_or_404(RackMount, mount_id)
+    _rack_or_404(mount.rack_id)
     snapshot = {k: v for k, v in _mount_json(mount).items() if k not in ("id", "rack_id", "name")}
     text = _position_text(mount)
     records.audit(mount.rack, "unmounted", [{"field": "rack", "label": "Rack position",

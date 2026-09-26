@@ -51,6 +51,19 @@ def role(needed: str):
     return decorate
 
 
+def session_only(view):
+    """Refused to an API token, whatever its user's role: for what hands
+    over the keys to everything (the secrets key, a backup, a restore). Put
+    it under ``@role(...)``."""
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        from flask import g
+        if g.get("api_token") is not None:
+            abort(403, description="That can't be done with an API token. Sign in to the app to do it.")
+        return view(*args, **kwargs)
+    return wrapper
+
+
 def public(view):
     """Open to anyone: sign-in, setup, the health check."""
     view.required_role = "public"

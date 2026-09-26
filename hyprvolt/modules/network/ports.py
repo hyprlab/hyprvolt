@@ -84,6 +84,13 @@ def trace_text(port: Port) -> str:
 
 # ———— Changes, each written to the history of the devices it touches ————
 
+def _int_or_none(value):
+    try:
+        return int(value) if value not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
 def _bool(value) -> bool:
     return str(value).lower() in ("1", "true", "on", "yes") if not isinstance(value, bool) else value
 
@@ -281,20 +288,25 @@ def remove_port(port: Port) -> dict:
 def restore_port(device: Entity, data: dict) -> Port:
     if any(p.name.lower() == str(data.get("name") or "").lower() for p in ports_of(device.id)):
         raise Invalid(f"{device.name} has a port called {data.get('name')} again.")
-    port = Port(device_id=device.id, name=_text(data, "name", 60) or "Port", position=int(data.get("position") or 0),
+    try:
+        position = int(data.get("position") or 0)
+    except (TypeError, ValueError):
+        position = 0
+    port = Port(device_id=device.id, name=_text(data, "name", 60) or "Port", position=position,
                 kind=_kind(data), speed_mbps=_speed(data), poe=_bool(data.get("poe") or False),
                 mac=_text(data, "mac", 17), vlan_id=_vlan(data), tagged=_text(data, "tagged", 200),
                 description=_text(data, "description", 200))
-    if data.get("id") and db.session.get(Port, int(data["id"])) is None:
-        port.id = int(data["id"])      # the same id, so links and a trace read as before
+    same = _int_or_none(data.get("id"))
+    if same and db.session.get(Port, same) is None:
+        port.id = same                 # the same id, so links and a trace read as before
     db.session.add(port)
     db.session.flush()
-    pair = db.session.get(Port, int(data["pair_id"])) if data.get("pair_id") else None
+    pair = db.session.get(Port, _int_or_none(data.get("pair_id")) or 0)
     if pair is not None and pair.device_id == device.id and pair.pair_id is None:
         port.pair_id, pair.pair_id = pair.id, port.id
-    cable = data.get("cable") or {}
-    other = db.session.get(Port, int(cable["other_id"])) if cable.get("other_id") else None
-    if other is not None and cable_of(other) is None:
+    cable = data.get("cable") if isinstance(data.get("cable"), dict) else {}
+    other = db.session.get(Port, _int_or_none(cable.get("other_id")) or 0)
+    if other is not None and records.live(other.device_id) is not None and cable_of(other) is None:
         connect(port, other, cable)
     records.audit(device, "added ports", [{"field": "ports", "label": "Ports", "old": "", "new": port.name}])
     return port

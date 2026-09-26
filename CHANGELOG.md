@@ -42,6 +42,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Settings > Backups: make a backup, have one made every day (the newest seven kept), download, delete with Undo, upload one, see what it holds, and restore it; what was there is saved first, so a restore can be undone
 - Settings > Secrets downloads the secrets key to keep apart from the backups, and puts one back after moving to a new server
 - `flask restore`, and `BACKUP_DIR` to keep backups on another disk
+- Changing a password signs the account out everywhere else
 - API tokens: each account makes its own in Settings > API tokens, to use the JSON API from scripts; a token can be limited to reading, never reveals a secret, and is revoked at once
 - A knowledge base of Markdown documents that attach to any record and link to records with [[slug]]
 - Typed links between records in both directions, and a view of what breaks if a record goes down

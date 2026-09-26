@@ -9,7 +9,7 @@
       <span class="manage-title">{{ s.name }} <span class="chip chip--muted">{{ dict(kinds)[s.kind] }}</span></span>
       {% if s.username %}<span class="manage-sub">User {{ s.username }}</span>{% endif %}
       <code class="secret-value" id="secret-{{ s.id }}" data-mask="{{ mask }}">{{ mask }}</code>
-      <span class="manage-sub">{% if s.url %}<a class="link" href="{{ s.url }}" target="_blank" rel="noopener noreferrer">{{ s.url }}</a> · {% endif %}changed {{ s.updated_at|ago }}{% if s.updated_by %} by {{ s.updated_by.display_name }}{% endif %}{% if s.note %} · {{ s.note }}{% endif %}</span>
+      <span class="manage-sub">{% if s.url and s.url.lower().startswith(('http://', 'https://')) %}<a class="link" href="{{ s.url }}" target="_blank" rel="noopener noreferrer">{{ s.url }}</a> · {% endif %}changed {{ s.updated_at|ago }}{% if s.updated_by %} by {{ s.updated_by.display_name }}{% endif %}{% if s.note %} · {{ s.note }}{% endif %}</span>
     </div>
     <button type="button" class="btn btn--xs btn--ghost" data-reveal="/vault/secrets/{{ s.id }}/reveal" data-reveal-into="secret-{{ s.id }}" aria-pressed="false">Show</button>
     <button type="button" class="iconbtn iconbtn--sm" data-copy-url="/vault/secrets/{{ s.id }}/reveal" data-done="Copied. The history says so." aria-label="Copy {{ s.name }}" title="Copy the secret">

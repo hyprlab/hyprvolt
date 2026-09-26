@@ -33,8 +33,8 @@ from flask import Blueprint, abort, current_app, jsonify, render_template, reque
 from flask_login import current_user, login_user
 
 from .. import __version__
-from ..models import User, db, int_setting, set_setting, utcnow
-from ..permissions import role
+from ..models import ApiToken, User, db, int_setting, set_setting, utcnow
+from ..permissions import role, session_only
 from . import attachments as files
 from .fields import Invalid
 
@@ -193,9 +193,11 @@ def inspect(path: Path) -> dict:
         raise Invalid("This isn't a backup Hyprvolt can read: it isn't a .tar.gz archive.") from None
     with tar, tempfile.TemporaryDirectory() as tmp:
         names = tar.getnames()
-        for n in names:
-            if n.startswith("/") or ".." in Path(n).parts:
+        for m in tar.getmembers():
+            if m.name.startswith("/") or ".." in Path(m.name).parts:
                 raise Invalid("This archive has files outside its own folder, so it won't be restored.")
+            if not (m.isfile() or m.isdir()):
+                raise Invalid("This archive has links or devices in it, which a Hyprvolt backup never has.")
         if DB_NAME not in names:
             raise Invalid(f"This isn't a Hyprvolt backup: it has no {DB_NAME}.")
         manifest = manifest_of(path) or {}
@@ -270,6 +272,10 @@ def restore(path: Path, user=None) -> dict:
     refresh_all()
     db.session.commit()
     set_setting("session_epoch", _secrets.token_hex(8))
+    # The restored tokens are the backup's: one revoked since would be back.
+    # A restore revokes them all; people make new ones.
+    ApiToken.query.filter(ApiToken.revoked_at.is_(None)).update({"revoked_at": utcnow()})
+    db.session.commit()
     setup_module._completed["done"] = False
     return {**info, "safety": safety.name}
 
@@ -309,12 +315,14 @@ def _json(b: dict) -> dict:
 
 @bp.route("/admin/backups")
 @role("admin")
+@session_only
 def backup_list():
     return jsonify(backups=[_json(b) for b in listing()], folder=str(folder()))
 
 
 @bp.route("/admin/backups", methods=["POST"])
 @role("admin")
+@session_only
 def backup_make():
     try:
         path = make("manual", current_user)
@@ -325,6 +333,7 @@ def backup_make():
 
 @bp.route("/admin/backups/<name>")
 @role("admin")
+@session_only
 def backup_download(name):
     return send_file(path_of(name), mimetype="application/gzip", as_attachment=True, download_name=name,
                      max_age=0)
@@ -332,6 +341,7 @@ def backup_download(name):
 
 @bp.route("/admin/backups/<name>/check", methods=["POST"])
 @role("admin")
+@session_only
 def backup_check(name):
     """What restoring this backup would do, as HTML for Settings > Backups."""
     try:
@@ -344,6 +354,7 @@ def backup_check(name):
 
 @bp.route("/admin/backups/upload", methods=["POST"])
 @role("admin")
+@session_only
 def backup_upload():
     """A backup downloaded earlier, or from another instance: kept in the
     backups folder once it checks out, and answered with its check."""
@@ -367,6 +378,7 @@ def backup_upload():
 
 @bp.route("/admin/backups/<name>/restore", methods=["POST"])
 @role("admin")
+@session_only
 def backup_restore(name):
     path = path_of(name)
     username = current_user.username
@@ -391,6 +403,7 @@ def backup_restore(name):
 
 @bp.route("/admin/backups/<name>/delete", methods=["POST"])
 @role("admin")
+@session_only
 def backup_delete(name):
     path = path_of(name)
     path.rename(_trash() / name)
@@ -399,6 +412,7 @@ def backup_delete(name):
 
 @bp.route("/admin/backups/<name>/undelete", methods=["POST"])
 @role("admin")
+@session_only
 def backup_undelete(name):
     path = path_of(name, trashed=True)
     path.rename(folder() / name)

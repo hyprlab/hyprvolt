@@ -16,8 +16,8 @@ The records' own JSON API is ``core/api.py``; the sheet and form fragments
 are ``core/views.py``. Admin routes are grouped at the end, each behind
 ``@role("admin")``.
 """
-from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, url_for
-from flask_login import current_user
+from flask import Blueprint, abort, current_app, jsonify, redirect, render_template, request, session, url_for
+from flask_login import current_user, login_user
 from markupsafe import Markup
 from sqlalchemy import func
 
@@ -329,8 +329,15 @@ def change_password():
     new = data.get("new", "")
     if len(new) < MIN_PASSWORD:
         return jsonify(error=f"New passwords need at least {MIN_PASSWORD} characters."), 400
-    current_user.set_password(new)
+    user = current_user._get_current_object()
+    user.set_password(new)
     db.session.commit()
+    # Every other session of this account ends with the old password; this
+    # one carries on under the new one.
+    csrf = session.get("_csrf")
+    login_user(user, remember=bool(request.cookies.get("remember_token")))
+    if csrf:
+        session["_csrf"] = csrf
     return jsonify(ok=True)
 
 

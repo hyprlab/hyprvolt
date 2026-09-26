@@ -63,6 +63,10 @@ role in Settings > Admin, and the role accounts from sign-up start with
 (viewer unless changed). Sign-up is off on a fresh install. An admin can't
 change their own role or delete themselves, so there is always one left.
 
+Changing a password, in Settings > Account or by an admin's reset, signs the
+account out everywhere else, remember-me cookies included; the session that
+changed it stays signed in.
+
 ## Modules and custom fields
 
 What Hyprvolt documents comes in modules: Locations, Hardware, Virtual,
@@ -188,8 +192,10 @@ curl -H "Authorization: Bearer hv_…" -H "Content-Type: application/json" \
 
 A token acts as the account that made it, with its role, and is shown once
 when it is made; only a hash of it is kept. One made to "only read" is
-refused anything but reading. No token can reveal a secret or make or revoke
-tokens. Revoking one takes effect at once. Errors are
+refused anything but reading. No token can reveal a secret, download the
+secrets key or a backup, restore one, or make or revoke tokens; those need
+someone signed in. Revoking one takes effect at once, and a restore revokes
+them all. Errors are
 `{"error": "..."}`, with a sentence meant for a person.
 
 | Route | What it does |
