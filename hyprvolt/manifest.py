@@ -73,7 +73,16 @@ class EntityType:
     tabs: tuple = ()
     icon: str = ""                   # SVG paths; the module's icon if empty
     traits: tuple = ()               # words other modules look for: ("rackmount",)
+    proper: bool = False             # the label starts with a name: "Docker host"
     module: str = ""                 # filled in by the registry
+
+    def text(self, plural: bool = False) -> str:
+        """The label inside a sentence: "New virtual machine", but "New NAS"
+        and "New Docker host". Lower case, unless it starts with an acronym
+        or the type is ``proper``."""
+        label = self.plural if plural else self.label
+        first = label.split(" ", 1)[0]
+        return label if self.proper or (len(first) > 1 and first.isupper()) else label.lower()
 
 
 @dataclass(frozen=True)

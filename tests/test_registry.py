@@ -230,3 +230,11 @@ def test_module_steps_run_after_the_core_in_order(app):
     with app.app_context():
         _migrate(app)
     assert ran == [("zz", "zz"), ("aa", "aa")]
+
+
+def test_a_type_label_inside_a_sentence():
+    assert EntityType("vm", "Virtual machine", "Virtual machines").text() == "virtual machine"
+    assert EntityType("nas", "NAS", "NAS").text(plural=True) == "NAS"
+    assert EntityType("lxc", "LXC container", "LXC containers").text() == "LXC container"
+    assert EntityType("docker_host", "Docker host", "Docker hosts", proper=True).text(True) == "Docker hosts"
+    assert EntityType("a", "A", "As").text() == "a"

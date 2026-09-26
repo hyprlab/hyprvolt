@@ -63,12 +63,12 @@ change their own role or delete themselves, so there is always one left.
 
 ## Modules and custom fields
 
-What Hyprvolt documents comes in modules: Locations, Hardware and the
-knowledge base so far. Settings > Modules turns a module off; it then
+What Hyprvolt documents comes in modules: Locations, Hardware, Virtual and
+the knowledge base so far. Settings > Modules turns a module off; it then
 disappears from the sidebar, search and the dashboard, and its records stay
 in the database until it is turned back on. A module that needs another is
-off while that one is: Hardware needs Locations. The knowledge base is built
-in.
+off while that one is: Hardware needs Locations, and Virtual needs Hardware.
+The knowledge base is built in.
 
 Hardware's status is where a device is in its life: deployed, ordered, in
 stock, in repair, retired or disposed. Anything that goes in a rack has its
@@ -76,6 +76,15 @@ rack, units and face in its own form, and choosing a rack there makes the
 rack its location. The sidebar lists hardware whose warranty ends within 90
 days and hardware out of warranty (retired and disposed hardware is left out
 of both), and the dashboard's Warranties card shows the same.
+
+In Virtual, what something runs on is a field in its form: a VM's host, a
+hypervisor's hardware, a container's Docker host and stack. Each is also a
+link in the Relationships tab, so the dependency view goes from a server
+through its hypervisor and VMs down to the containers. A hypervisor's
+Guests tab adds up the vCPUs and memory of its running guests against the
+cores and memory recorded for its hardware, and a cluster's does the same
+for all its hypervisors. The sidebar lists VMs, containers and the rest that
+have no host yet.
 
 Settings > Custom fields adds fields of your own to any kind of record: text,
 a number, a date, a choice list, a web address, or yes or no. They appear in

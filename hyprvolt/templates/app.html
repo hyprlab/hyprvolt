@@ -65,7 +65,7 @@
         {% if new_menu %}
         {% set only = new_menu|length == 1 and new_menu[0].types|length == 1 %}
         {% if only %}
-        <button class="iconbtn" data-new-type="{{ new_menu[0].types[0].key }}" aria-label="New {{ new_menu[0].types[0].label|lower }}" title="New {{ new_menu[0].types[0].label|lower }} (n)" id="new-btn">
+        <button class="iconbtn" data-new-type="{{ new_menu[0].types[0].key }}" aria-label="New {{ new_menu[0].types[0].text() }}" title="New {{ new_menu[0].types[0].text() }} (n)" id="new-btn">
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         </button>
         {% else %}

@@ -119,7 +119,7 @@ def place(entity: Entity, rack: Entity, position: int, size: int, face: str, not
     changed) and the changes for the record's history; the rack's own
     history is written here."""
     if entity.type in NOT_MOUNTABLE:
-        raise Invalid(f"A {registry().type(entity.type).label.lower()} doesn't go in a rack.")
+        raise Invalid(f"A {registry().type(entity.type).text()} doesn't go in a rack.")
     old = RackMount.query.filter_by(entity_id=entity.id).first()
     if old is not None and (old.rack_id, old.position_u, old.height_u, old.face) == (rack.id, position, size, face):
         return None, []

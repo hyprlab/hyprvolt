@@ -12,7 +12,7 @@
     {% if current_user.can_edit %}
     <div class="empty-actions">
       {% for t in tiles %}{% if loop.first %}
-      <button class="btn btn--primary" data-new-type="{{ t.types[0][0].key }}">New {{ t.types[0][0].label|lower }}</button>
+      <button class="btn btn--primary" data-new-type="{{ t.types[0][0].key }}">New {{ t.types[0][0].text() }}</button>
       {% endif %}{% endfor %}
       {% if current_user.is_admin and can_seed %}
       <button class="btn btn--ghost" data-api-post="/admin/seed-demo" data-then="reload" data-done="The demo homelab is loaded">Load a demo homelab</button>
@@ -27,7 +27,7 @@
       <a class="tile" href="{{ url_for('main.module_list', module_id=t.module.id) }}">
         <span class="tile-head">{{ type_icon(t.module.icon) }}<span>{{ t.module.name }}</span></span>
         <span class="tile-num">{{ t.count }}</span>
-        <span class="tile-sub">{% for etype, n in t.types if n %}{{ n }} {{ etype.plural|lower if n != 1 else etype.label|lower }}{{ ', ' if not loop.last }}{% else %}Nothing yet{% endfor %}</span>
+        <span class="tile-sub">{% for etype, n in t.types if n %}{{ n }} {{ etype.text(n != 1) }}{{ ', ' if not loop.last }}{% else %}Nothing yet{% endfor %}</span>
       </a>
       {% endfor %}
     </div>

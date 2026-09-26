@@ -1,0 +1,41 @@
+{# What runs on a hypervisor, or on every host of a cluster, and how much of
+   the hardware it is given. #}
+{% from "partials/macros.html" import entity_link %}
+<p class="setting-label">Given to running guests</p>
+<ul class="meters">
+  {% for m in cap.meters %}
+  <li>
+    <span class="meters-name">{{ m.label }}{% if m.over %} <span class="count count--alert" title="More than the hardware has">over</span>{% endif %}</span>
+    <span class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ m.percent }}"
+          aria-label="{{ m.label }}: {{ m.used }}{% if m.total %} of {{ m.total }} {{ m.unit }}{% endif %}"><span style="width: {{ m.percent }}%"></span></span>
+    <span class="meters-value">{{ m.used }}{% if m.total %}/{{ m.total }} {{ m.unit }}{% endif %}</span>
+  </li>
+  {% endfor %}
+</ul>
+<p class="hint">{{ cap.running }} of {{ cap.guests|length }} running.
+  {%- if machine %} Against what {{ entity_link(machine.id, machine.name) }} has.{% endif %}
+  {%- if cluster %} {% if hosts %}Against what the hardware of {% for v in hosts %}{{ entity_link(v.id, v.name) }}{{ ', ' if not loop.last }}{% endfor %} has.{% else %}No hypervisor is part of this cluster yet; choose the cluster in a hypervisor's form.{% endif %}{% endif %}
+  {%- if not cap.meters[0].total %} The cores and memory of the hardware underneath aren't recorded.{% endif %}</p>
+
+<p class="setting-label setting-label--spaced">Guests</p>
+{% if rows %}
+<ul class="manage-list">
+  {% for r in rows %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(r.view.id, r.view.name) }}</span>
+      <span class="manage-sub">{{ r.view.type_label }} · {{ r.view.status }}{% if r.host %} · on {{ r.host.name }}{% endif %}{% for f in r.facts %} · {{ f }}{% endfor %}</span>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">Nothing runs here yet.</p>
+{% endif %}
+
+{% if current_user.can_edit and not cluster %}
+<div class="doc-actions">
+  <button type="button" class="btn btn--primary" data-new-type="vm" data-new-fields='{"host": {{ host.id }}}'>New VM</button>
+  <button type="button" class="btn btn--ghost" data-new-type="lxc" data-new-fields='{"host": {{ host.id }}}'>New LXC container</button>
+</div>
+{% endif %}

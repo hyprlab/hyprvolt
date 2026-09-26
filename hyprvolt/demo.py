@@ -27,13 +27,17 @@ class Demo:
 
     def add(self, type_key: str, name: str, key: str | None = None, location=None, tags=(), notes: str = "",
             status: str | None = None, sections: dict | None = None, **fields) -> Entity | None:
-        """Create a record; ``key`` (default: its slug) finds it again.
-        ``location`` is a key or an entity. ``sections`` are values for other
+        """Create a record; ``key`` (default: its name as a slug) finds it again.
+        ``location``, and the value of a ref field, is a key or an entity.
+        ``sections`` are values for other
         modules' form sections: ``{"rack": {"rack_id": ..., ...}}``, where an
         entity or a key stands for its id. Returns None if the type's module
         is turned off, so seeds need not check."""
         if registry().type(type_key) is None or not registry().is_enabled(registry().type(type_key).module):
             return None
+        for f in registry().type(type_key).fields:
+            if f.kind == "ref" and f.key in fields:
+                fields[f.key] = self._id(fields[f.key])
         data = {"name": name, "tags": list(tags), "notes": notes, "fields": fields,
                 "sections": {k: {n: self._id(v) for n, v in values.items()} for k, values in (sections or {}).items()}}
         if status:
@@ -42,7 +46,7 @@ class Demo:
         if loc is not None:
             data["location_id"] = loc.id
         entity = records.create(type_key, data, self.user)
-        self.made[key or entity.slug] = entity
+        self.made[key or records.slugify(name)] = entity
         return entity
 
     def get(self, key: str) -> Entity | None:

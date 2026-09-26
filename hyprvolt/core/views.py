@@ -163,6 +163,17 @@ def _inside(loc: Entity, entity: Entity) -> bool:
     return False
 
 
+def _preset(f):
+    """A new record's value: ``f.<key>`` in the query string (a button that
+    opens the form for a VM on this host), else the field's default."""
+    raw = request.args.get("f." + f.key)
+    if raw is None:
+        return f.default
+    if f.kind in ("ref", "integer"):
+        return request.args.get("f." + f.key, type=int)
+    return raw
+
+
 def _ref_choices(f, entity=None) -> list[tuple[int, str]]:
     keys = [k for k in f.types if k in registry().enabled_type_keys()]
     rows = Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name).all()
@@ -182,7 +193,7 @@ def form(entity_id=None):
     values = records.custom_values(entity) if entity else {}
     fields = []
     for f in etype.fields:
-        value = own.get(f.key) if entity else f.default
+        value = own.get(f.key) if entity else _preset(f)
         if f.kind == "number" and isinstance(value, float) and value.is_integer():
             value = int(value)   # 850, not 850.0
         fields.append({"field": f, "name": "f." + f.key, "value": value,

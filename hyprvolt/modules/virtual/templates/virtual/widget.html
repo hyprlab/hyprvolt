@@ -1,0 +1,17 @@
+{% from "partials/macros.html" import entity_link %}
+{% if rows %}
+<ul class="meters">
+  {% for r in rows %}
+  {% set m = r.memory %}
+  <li>
+    <span class="meters-name">{{ entity_link(r.host.id, r.host.name) }}{% if m.over %} <span class="count count--alert" title="More memory handed out than the hardware has">over</span>{% endif %}</span>
+    <span class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ m.percent }}"
+          aria-label="Memory: {{ m.used }}{% if m.total %} of {{ m.total }}{% endif %} GB"><span style="width: {{ m.percent }}%"></span></span>
+    <span class="meters-value">{{ m.used }}{% if m.total %}/{{ m.total }}{% endif %} GB</span>
+  </li>
+  {% endfor %}
+</ul>
+<p class="hint">Memory given to running guests.</p>
+{% else %}
+<p class="hint">No hypervisors yet.</p>
+{% endif %}

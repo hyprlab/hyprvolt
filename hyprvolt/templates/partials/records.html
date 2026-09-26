@@ -71,7 +71,7 @@
       {% if current_user.can_edit %}
       <div class="empty-actions">
         {% for t in ([etype] if etype else module.types) %}
-        <button class="btn {{ 'btn--primary' if loop.first else 'btn--ghost' }}" data-new-type="{{ t.key }}">New {{ t.label|lower }}</button>
+        <button class="btn {{ 'btn--primary' if loop.first else 'btn--ghost' }}" data-new-type="{{ t.key }}">New {{ t.text() }}</button>
         {% endfor %}
       </div>
       {% endif %}

@@ -1,0 +1,32 @@
+{# A Docker host's stacks and containers, or a stack's containers. #}
+{% from "partials/macros.html" import entity_link %}
+{% for g in groups %}
+{% if g.stack %}<p class="setting-label {{ 'setting-label--spaced' if not loop.first }}">{{ entity_link(g.stack.id, g.stack.name) }} <span class="count">{{ g['items']|length }}</span></p>
+{% elif groups|length > 1 %}<p class="setting-label setting-label--spaced">Not in a stack <span class="count">{{ g['items']|length }}</span></p>{% endif %}
+{% if g['items'] %}
+<ul class="manage-list">
+  {% for r in g['items'] %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(r.view.id, r.view.name) }}</span>
+      <span class="manage-sub">{{ r.view.status }}{% for f in r.facts %} · {{ f }}{% endfor %}</span>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% elif g.stack %}
+<p class="hint">No containers in this stack yet.</p>
+{% endif %}
+{% endfor %}
+{% if not total and not groups|selectattr('stack')|list %}
+<p class="hint">No containers here yet.</p>
+{% endif %}
+
+{% if current_user.can_edit %}
+<div class="doc-actions">
+  <button type="button" class="btn btn--primary" data-new-type="container" data-new-fields='{{ preset|tojson }}'>New container</button>
+  {% if entity.type == 'docker_host' %}
+  <button type="button" class="btn btn--ghost" data-new-type="stack" data-new-fields='{"host": {{ entity.id }}}'>New stack</button>
+  {% endif %}
+</div>
+{% endif %}

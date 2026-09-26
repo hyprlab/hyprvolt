@@ -92,11 +92,11 @@ def test_the_demo_puts_the_equipment_in_the_rack(client, h, admin):
     rack = client.get("/api/entities?type=rack").get_json()["entities"][0]
     elevation = client.get(f"/locations/racks/{rack['id']}/elevation").get_json()
     names = {m["name"] for m in elevation["mounts"]}
-    assert {"ups1", "pdu1", "sw-core", "edge-fw", "pve1", "nas1", "Rack shelf"} <= names
+    assert {"ups1", "pdu1", "sw-core", "edge-fw", "srv1", "nas1", "Rack shelf"} <= names
     assert elevation["conflicts"] == []
     ups = client.get("/api/entities?type=ups").get_json()["entities"][0]
     tree = client.get(f"/api/entities/{ups['id']}/dependencies").get_json()["tree"]
-    assert {"pve1", "nas1", "sw-core"} <= {n["name"] for n in tree}
+    assert {"srv1", "nas1", "sw-core"} <= {n["name"] for n in tree}
     outage = client.get("/api/entities?type=document&q=outage").get_json()["entities"][0]
     assert "<s>" not in client.get(f"/e/{outage['id']}/sheet").data.decode()
 

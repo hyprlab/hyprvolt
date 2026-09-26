@@ -20,7 +20,7 @@
 {% if current_user.can_edit and addable %}
 <div class="doc-actions">
   {% for t in addable %}
-  <button type="button" class="btn {{ 'btn--primary' if loop.first else 'btn--ghost' }}" data-new-type="{{ t.key }}" data-new-location="{{ place.id }}">Add a {{ t.label|lower }}</button>
+  <button type="button" class="btn {{ 'btn--primary' if loop.first else 'btn--ghost' }}" data-new-type="{{ t.key }}" data-new-location="{{ place.id }}">Add a {{ t.text() }}</button>
   {% endfor %}
 </div>
 {% endif %}

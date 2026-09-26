@@ -418,15 +418,15 @@ def _check_location(entity: Entity, etype, raw) -> Entity | None:
     if raw in (None, "", 0, "0"):
         return None
     if etype.located_in == ():
-        raise Invalid(f"A {etype.label.lower()} has no location.")
+        raise Invalid(f"A {etype.text()} has no location.")
     target = live(raw)
     reg = registry()
     ttype = reg.type(target.type) if target else None
     if target is None or ttype is None or not ttype.location:
         raise Invalid("Choose a location that exists.")
     if etype.located_in is not None and target.type not in etype.located_in:
-        allowed = ", ".join(reg.type(t).label.lower() for t in etype.located_in if reg.type(t))
-        raise Invalid(f"A {etype.label.lower()} can only be in a {allowed}.")
+        allowed = ", ".join(reg.type(t).text() for t in etype.located_in if reg.type(t))
+        raise Invalid(f"A {etype.text()} can only be in a {allowed}.")
     # Walk up from the new location: meeting this entity means a loop.
     seen, loc = set(), target
     while loc is not None and loc.id not in seen:

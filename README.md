@@ -20,6 +20,7 @@ in a single SQLite volume.
 
 - Sites, buildings, rooms, racks and shelves, with breadcrumbs on everything
 - Servers, network gear, UPSes, storage and desks, with serials, asset tags, warranties, specs and a lifecycle
+- Hypervisors, VMs, LXC and Docker containers and compose stacks, and what each runs on
 - Rack elevations, front and rear, that flag overlaps and anything that no longer fits
 - A Markdown knowledge base whose documents attach to records and link to them with `[[slug]]`
 - Typed links between any two records, and a view of what breaks if one goes down

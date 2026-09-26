@@ -38,7 +38,7 @@
 {% endmacro %}
 
 <form class="entity-form" id="entity-form" data-id="{{ entity.id if entity else '' }}" data-type="{{ etype.key }}"
-      data-title="{{ ('Edit ' ~ entity.name) if entity else ('New ' ~ etype.label|lower) }}" novalidate>
+      data-title="{{ ('Edit ' ~ entity.name) if entity else ('New ' ~ etype.text()) }}" novalidate>
   <input type="hidden" name="type" value="{{ etype.key }}">
   {% if attach_to %}<input type="hidden" name="attach_to" value="{{ attach_to }}">{% endif %}
   <div class="form-grid">

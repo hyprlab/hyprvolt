@@ -749,6 +749,13 @@
     if (btn.getAttribute("data-new-location")) params.set("location_id", btn.getAttribute("data-new-location"));
     if (btn.getAttribute("data-new-attach")) params.set("attach_to", btn.getAttribute("data-new-attach"));
     if (btn.getAttribute("data-new-name")) params.set("name", btn.getAttribute("data-new-name"));
+    var preset = btn.getAttribute("data-new-fields");
+    if (preset) {
+      try {
+        var values = JSON.parse(preset);
+        Object.keys(values).forEach(function (key) { params.set("f." + key, values[key]); });
+      } catch (err) { /* a template mistake; open the form without them */ }
+    }
     setSidebar(false);
     openEntityForm("/e/form?" + params.toString());
   });

@@ -104,6 +104,10 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   location type, `()` is none at all, or a tuple of type keys.
 - `tabs` are sheet tabs for this type only. They follow Overview.
 - `icon` overrides the module's icon for this type.
+- `proper=True` keeps the label's capital inside a sentence ("New Docker
+  host"). Without it, "New virtual machine"; a label that starts with an
+  acronym keeps its case anyway ("New NAS"). `etype.text()` and
+  `etype.text(plural=True)` give that form.
 - `traits` are words other modules look for, so a type can take part in
   what another module adds without either naming the other: Hardware marks a
   server `("rackmount",)`, and Locations adds a rack position to the form of
@@ -200,7 +204,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `data-done="Message"` | The toast; with Undo when the response has `undo` |
 | `[data-pick]`, `data-pick-types`, `data-pick-into` | Opens the palette to choose a record; its id goes into the form field named by `data-pick-into` (`other_id` by default) and its name into `[data-pick-label]` |
 | `[data-fill='{"field": value}']`, `data-fill-form="id"` | Fills fields of a form and shows it |
-| `[data-new-type="rack"]`, `data-new-location`, `data-new-attach` | Opens the form for a new record, placed somewhere or attached as a document |
+| `[data-new-type="rack"]`, `data-new-location`, `data-new-attach`, `data-new-fields='{"host": 12}'` | Opens the form for a new record, placed somewhere, attached as a document, or with fields filled in |
 | `a[data-entity="id"]` | Opens that record's sheet in place (`entity_link` makes these) |
 | `input[data-autosubmit]` | Submits its form when it changes |
 
