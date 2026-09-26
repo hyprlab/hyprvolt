@@ -3,7 +3,7 @@ addresses of a subnet are used, reserved, handed out by DHCP or free, and
 the IP addresses section other records get in their form."""
 import ipaddress
 
-from flask import render_template
+from flask import g, render_template
 
 from hyprvolt.core import records
 from hyprvolt.core.fields import Invalid
@@ -96,13 +96,17 @@ def check_vlan(entity, detail):
 # ———— Subnets ————
 
 def all_ips():
-    """[(ip entity, detail, address)] for every live IP address record."""
+    """[(ip entity, detail, address)] for every live IP address record, read
+    once per request: a page of subnets shares it."""
+    if "_all_ips" in g:
+        return g._all_ips
     out = []
     for e, d in _live_details("ip_address"):
         try:
             out.append((e, d, ipaddress.ip_address(d.address)))
         except (TypeError, ValueError):
             continue
+    g._all_ips = out
     return out
 
 
@@ -119,12 +123,49 @@ def dns_names(addresses) -> dict[str, list[str]]:
     return out
 
 
-def usage(subnet: Entity) -> dict | None:
+def _states():
+    """[(address, status)] of every live IP address record, as plain rows,
+    once per request: what a count needs, without loading records."""
+    if "_ip_states" not in g:
+        out = []
+        for address, status in (db.session.query(NetworkDetail.address, Entity.status)
+                                .join(Entity, Entity.id == NetworkDetail.entity_id)
+                                .filter(Entity.type == "ip_address", Entity.deleted_at.is_(None))):
+            try:
+                out.append((ipaddress.ip_address(address), status))
+            except (TypeError, ValueError):
+                continue
+        g._ip_states = out
+    return g._ip_states
+
+
+def _summary(net, detail, hosts) -> dict:
+    """The counts of a subnet, for a card or a row: no records loaded."""
+    taken = {a: status for a, status in _states() if a in net}
+    try:
+        dhcp = dhcp_bounds(detail.dhcp_range or "")
+    except ValueError:
+        dhcp = None
+    gateway = ipaddress.ip_address(detail.gateway) if detail.gateway else None
+    used = sum(1 for s in taken.values() if s in ("active", "reserved")) + \
+        (1 if gateway is not None and gateway in net and gateway not in taken else 0)
+    pool = int(dhcp[1]) - int(dhcp[0]) + 1 if dhcp else 0
+    return {"net": net, "detail": detail, "hosts": hosts, "rows": None, "grid": None, "documented": len(taken),
+            "used": used, "pool": pool, "free": max(hosts - used - pool, 0),
+            "percent": min(100, round(100 * (used + pool) / hosts)) if hosts else 0}
+
+
+def usage(subnet: Entity, grid: bool = True) -> dict | None:
+    """What is used, reserved, held for DHCP and free in a subnet. ``grid``
+    also lists and lays out every address, for the subnet's own tab; a card
+    that only counts leaves it out, and loads no records."""
     detail = db.session.get(NetworkDetail, subnet.id)
     if not detail or not detail.cidr:
         return None
     net = ipaddress.ip_network(detail.cidr)
     hosts = net.num_addresses - (2 if net.version == 4 and net.prefixlen <= 30 else 0)
+    if not grid:
+        return _summary(net, detail, hosts)
     documented = sorted(((e, d, a) for e, d, a in all_ips() if a in net), key=lambda x: (x[2].version, int(x[2])))
     try:
         dhcp = dhcp_bounds(detail.dhcp_range or "")
@@ -150,7 +191,7 @@ def usage(subnet: Entity) -> dict | None:
     for e, d, a in documented:
         rows.append({"ip": e, "address": str(a), "state": state(a), "owner": owners.get(d.assigned),
                      "names": names.get(str(a), [])})
-    grid = None
+    cells_out = None
     if net.version == 4 and net.num_addresses <= GRID_MAX:
         cells = []
         for a in (net.hosts() if net.prefixlen <= 30 else net):
@@ -158,11 +199,12 @@ def usage(subnet: Entity) -> dict | None:
             e = by_address.get(a, (None, None))[0]
             owner = owners.get(by_address[a][1].assigned) if a in by_address else None
             cells.append({"address": str(a), "last": str(a).rsplit(".", 1)[1], "state": s, "ip": e, "owner": owner})
-        grid = cells
+        cells_out = cells
     used = sum(1 for r in rows if r["state"] in ("used", "reserved")) + \
         (1 if gateway is not None and gateway in net and gateway not in by_address else 0)
     pool = int(dhcp[1]) - int(dhcp[0]) + 1 if dhcp else 0
-    return {"net": net, "detail": detail, "hosts": hosts, "rows": rows, "grid": grid, "used": used,
+    return {"net": net, "detail": detail, "hosts": hosts, "rows": rows, "grid": cells_out,
+            "documented": len(rows), "used": used,
             "pool": pool, "free": max(hosts - used - pool, 0),
             "percent": min(100, round(100 * (used + pool) / hosts)) if hosts else 0}
 

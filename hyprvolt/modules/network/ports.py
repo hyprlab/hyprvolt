@@ -1,5 +1,7 @@
 """Ports on devices and the cables between them, and tracing a cable path
 from one end to the other through any patch panels on the way."""
+from sqlalchemy.orm import joinedload
+
 from hyprvolt.core import records
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity
@@ -15,7 +17,8 @@ def is_cabled(etype) -> bool:
 
 
 def ports_of(device_id: int) -> list[Port]:
-    return Port.query.filter_by(device_id=device_id).order_by(Port.position, Port.id).all()
+    return (Port.query.filter_by(device_id=device_id).options(joinedload(Port.vlan), joinedload(Port.pair))
+            .order_by(Port.position, Port.id).all())
 
 
 def cable_of(port: Port) -> Cable | None:
@@ -28,7 +31,8 @@ def cables_for(ports) -> dict[int, Cable]:
     if not ids:
         return {}
     out = {}
-    for c in Cable.query.filter(Cable.a_id.in_(ids) | Cable.b_id.in_(ids)):
+    eager = (joinedload(Cable.a).joinedload(Port.device), joinedload(Cable.b).joinedload(Port.device))
+    for c in Cable.query.filter(Cable.a_id.in_(ids) | Cable.b_id.in_(ids)).options(*eager):
         out[c.a_id] = c
         out[c.b_id] = c
     return out

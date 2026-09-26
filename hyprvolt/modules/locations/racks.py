@@ -4,6 +4,8 @@ things claim the same unit or something doesn't fit.
 A full-depth mount occupies its units on both faces. Units are numbered
 from the bottom (U1 at the bottom) unless the rack says "top".
 """
+from sqlalchemy.orm import contains_eager
+
 from hyprvolt.core.models import Entity
 from hyprvolt.models import db
 
@@ -18,11 +20,14 @@ def faces_of(mount) -> tuple[str, ...]:
 
 def visible_mounts(rack_id: int) -> list[RackMount]:
     """Mounts whose record isn't deleted (a label has none)."""
-    rows = (RackMount.query.filter_by(rack_id=rack_id)
-            .outerjoin(Entity, Entity.id == RackMount.entity_id)
+    return _visible().filter(RackMount.rack_id == rack_id).all()
+
+
+def _visible():
+    return (RackMount.query.outerjoin(Entity, Entity.id == RackMount.entity_id)
+            .options(contains_eager(RackMount.entity))
             .filter((RackMount.entity_id.is_(None)) | (Entity.deleted_at.is_(None)))
-            .order_by(RackMount.position_u.desc(), RackMount.id).all())
-    return rows
+            .order_by(RackMount.position_u.desc(), RackMount.id))
 
 
 def height_of(rack_id: int) -> int:
@@ -113,10 +118,10 @@ def _lanes(blocks: list[dict]) -> None:
 
 def conflicted_rack_ids() -> set[int]:
     """Racks where something overlaps or doesn't fit, for the sidebar filter."""
-    out = set()
-    racks = db.session.query(Entity.id).filter(Entity.type == "rack", Entity.deleted_at.is_(None)).all()
-    for (rack_id,) in racks:
-        height, _ = height_of(rack_id)
-        if conflicts(height, visible_mounts(rack_id)):
-            out.add(rack_id)
-    return out
+    racks = {i for (i,) in db.session.query(Entity.id).filter(Entity.type == "rack", Entity.deleted_at.is_(None))}
+    heights = {d.entity_id: d.height_u for d in LocationDetail.query.filter(LocationDetail.entity_id.in_(racks))}
+    by_rack: dict[int, list[RackMount]] = {}
+    for m in _visible().filter(RackMount.rack_id.in_(racks)):
+        by_rack.setdefault(m.rack_id, []).append(m)
+    return {rack_id for rack_id, mounts in by_rack.items()
+            if conflicts(heights.get(rack_id) or DEFAULT_HEIGHT, mounts)}

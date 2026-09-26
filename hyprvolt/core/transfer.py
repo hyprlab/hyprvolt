@@ -68,33 +68,44 @@ def _plain(f, value) -> str:
 
 
 def csv_rows(entities, etypes) -> tuple[list[str], list[list[str]]]:
-    """The header and rows for ``entities``, with the fields of ``etypes``."""
+    """The header and rows for ``entities``, with the fields of ``etypes``.
+    Every value is read in a few queries per kind of record, not per row."""
+    from .models import CustomValue
+    reg = registry()
+    fields_of = {t.key: records.custom_fields(t.key) for t in etypes}
     columns, seen = [], set()
     for t in etypes:
         for f in t.fields:
             if f.key not in seen:
                 seen.add(f.key)
                 columns.append(("f", f))
-        for cf in records.custom_fields(t.key):
+        for cf in fields_of[t.key]:
             if ("c", cf.key) not in seen:
                 seen.add(("c", cf.key))
                 columns.append(("c", F.custom_field(cf)))
     header = ["id", "type", "name", "slug", "status", "location", "tags"] + [f.label for _, f in columns] + \
         ["notes", "created", "updated", "link"]
-    reg, rows = registry(), []
+    ids = [e.id for e in entities]
+    details = present.details_for(entities)
+    linked: dict[int, dict] = {}
+    for t in etypes:
+        linked.update(records.linked_values([e.id for e in entities if e.type == t.key], t))
+    stored: dict[int, dict[int, str]] = {}
+    for v in CustomValue.query.filter(CustomValue.entity_id.in_(ids)) if ids else ():
+        stored.setdefault(v.entity_id, {})[v.field_id] = v.value
+    rows = []
     base = request.host_url.rstrip("/")
     for e in entities:
         etype = reg.type(e.type)
-        own = records.own_values(e)
-        stored = records.custom_values(e)
-        custom = {cf.key: F.from_text(F.custom_field(cf), stored.get(cf.id, ""))
-                  for cf in records.custom_fields(e.type)}
+        own_keys = {f.key for f in etype.fields} if etype else set()
+        own = records.own_values(e, details.get(e.id), linked.get(e.id, {})) if etype else {}
+        custom = {cf.key: F.from_text(F.custom_field(cf), stored.get(e.id, {}).get(cf.id, ""))
+                  for cf in (fields_of[e.type] if e.type in fields_of else records.custom_fields(e.type))}
         loc = present.path_label(e.location_id, " > ") if e.location_id else ""
         row = [str(e.id), etype.label if etype else e.type, e.name, e.slug, records.status_label(e), loc,
                ", ".join(e.tag_names)]
         for kind, f in columns:
-            has = (kind == "f" and etype is not None and any(x.key == f.key for x in etype.fields)) or \
-                  (kind == "c" and f.key in custom)
+            has = (kind == "f" and f.key in own_keys) or (kind == "c" and f.key in custom)
             row.append(_plain(f, own.get(f.key) if kind == "f" else custom.get(f.key)) if has else "")
         row += [e.notes or "", e.created_at.isoformat(timespec="seconds") + "Z",
                 e.updated_at.isoformat(timespec="seconds") + "Z", f"{base}/e/{e.id}"]

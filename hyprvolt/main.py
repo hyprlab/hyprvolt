@@ -103,6 +103,7 @@ def _list_args(module=None):
         "q": (args.get("q") or "").strip()[:200] or None,
         "status": (args.get("status") or "").strip() or None,
         "location": args.get("location", type=int),
+        "due": args.get("due") == "1",
         "archived": args.get("archived") == "1",
         "deleted": args.get("deleted") == "1" and current_user.can_edit,
         "page_no": max(1, args.get("page", type=int) or 1),
@@ -127,6 +128,13 @@ def _list_query(module, a):
         query = query.filter(Entity.status == a["status"])
     if a["location"]:
         query = query.filter(Entity.location_id == a["location"])
+    if a["due"]:
+        # Soonest first, whatever the sort says: it is a list of dates.
+        from .core.models import Reminder
+        soonest = (db.session.query(Reminder.entity_id, func.min(Reminder.due).label("due"))
+                   .group_by(Reminder.entity_id).subquery())
+        query = query.join(soonest, soonest.c.entity_id == Entity.id)
+        return query.order_by(soonest.c.due, Entity.id)
     if a["q"]:
         query = query.filter(Entity.search_text.like(like(a["q"]), escape="\\"))
     order = Entity.deleted_at.desc() if a["deleted"] else SORTS[a["sort"]][1]()
@@ -155,6 +163,8 @@ def _render_list(module):
         title = "Archived " + (title.lower() if module or a["etype"] else "records")
     if a["filter"]:
         title = a["filter"].label
+    if a["due"]:
+        title = "Coming up"
     context["title"] = title
     context["location_entity"] = db.session.get(Entity, a["location"]) if a["location"] else None
     special = "deleted" if a["deleted"] else ("all" if module is None and not a["tag"] else None)

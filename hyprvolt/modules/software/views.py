@@ -4,6 +4,9 @@ from datetime import date
 
 from flask import Blueprint, abort, jsonify, render_template, request
 
+from sqlalchemy import func
+from sqlalchemy.orm import aliased, contains_eager, joinedload
+
 from hyprvolt.core import records, reminders
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity
@@ -28,16 +31,35 @@ def has_software_tab(entity: Entity) -> bool:
     return etype is not None and is_host(etype)
 
 
+def _live():
+    """Installations whose title and host are both live, with both loaded
+    in the same query."""
+    host, title = aliased(Entity), aliased(Entity)
+    return (Installation.query.join(host, host.id == Installation.host_id)
+            .join(title, title.id == Installation.software_id)
+            .filter(host.deleted_at.is_(None), title.deleted_at.is_(None))
+            .options(contains_eager(Installation.host.of_type(host)),
+                     contains_eager(Installation.software.of_type(title)), joinedload(Installation.license)))
+
+
 def installs(software_id=None, host_id=None, license_id=None) -> list[Installation]:
-    """Installations whose title and host are both live."""
-    q = Installation.query
+    q = _live()
     if software_id is not None:
         q = q.filter(Installation.software_id == software_id)
     if host_id is not None:
         q = q.filter(Installation.host_id == host_id)
     if license_id is not None:
         q = q.filter(Installation.license_id == license_id)
-    return [i for i in q if i.software.deleted_at is None and i.host.deleted_at is None]
+    return q.all()
+
+
+def _used_seats():
+    """license id -> installations on it, as a subquery."""
+    host, title = aliased(Entity), aliased(Entity)
+    return (db.session.query(Installation.license_id, func.count(Installation.id).label("n"))
+            .join(host, host.id == Installation.host_id).join(title, title.id == Installation.software_id)
+            .filter(host.deleted_at.is_(None), title.deleted_at.is_(None), Installation.license_id.isnot(None))
+            .group_by(Installation.license_id).subquery())
 
 
 def behind(i: Installation, current: str | None) -> bool:
@@ -46,7 +68,8 @@ def behind(i: Installation, current: str | None) -> bool:
 
 def seats(license_: Entity) -> dict:
     d = _detail(license_.id)
-    used_here = len(installs(license_id=license_.id))
+    used = _used_seats()
+    used_here = db.session.query(used.c.n).filter(used.c.license_id == license_.id).scalar() or 0
     used = used_here + (d.extra_seats or 0 if d else 0)
     owned = d.seats if d else None
     return {"owned": owned, "used": used, "here": used_here, "extra": (d.extra_seats or 0) if d else 0,
@@ -92,8 +115,9 @@ def software_count(title: Entity):
 def host_tab(host: Entity) -> str:
     rows = sorted(installs(host_id=host.id), key=lambda i: i.software.name.lower())
     titles = Entity.live().filter(Entity.type == "software").order_by(Entity.name).all()
-    currents = {i.software_id: (_detail(i.software_id).current_version if _detail(i.software_id) else None)
-                for i in rows}
+    ids = {i.software_id for i in rows}
+    currents = {d.entity_id: d.current_version
+                for d in SoftwareDetail.query.filter(SoftwareDetail.entity_id.in_(ids))} if ids else {}
     all_licenses = []
     for lic in Entity.live().filter(Entity.type == "license").order_by(Entity.name):
         d = _detail(lic.id)
@@ -122,8 +146,11 @@ def license_count(license_: Entity):
 # ———— Filters ————
 
 def over_seats(query):
-    ids = [e.id for e in Entity.live().filter(Entity.type == "license") if seats(e)["over"]]
-    return query.filter(Entity.id.in_(ids))
+    used = _used_seats()
+    ids = (db.session.query(SoftwareDetail.entity_id).outerjoin(used, used.c.license_id == SoftwareDetail.entity_id)
+           .filter(SoftwareDetail.seats.isnot(None),
+                   func.coalesce(used.c.n, 0) + func.coalesce(SoftwareDetail.extra_seats, 0) > SoftwareDetail.seats))
+    return query.filter(Entity.type == "license", Entity.id.in_(ids))
 
 
 def renewal_soon(query):
@@ -132,11 +159,12 @@ def renewal_soon(query):
 
 
 def outdated(query):
-    ids = set()
-    for i in Installation.query:
-        d = _detail(i.software_id)
-        if d and behind(i, d.current_version) and i.host.deleted_at is None:
-            ids.add(i.software_id)
+    host = aliased(Entity)
+    ids = (db.session.query(Installation.software_id)
+           .join(SoftwareDetail, SoftwareDetail.entity_id == Installation.software_id)
+           .join(host, host.id == Installation.host_id)
+           .filter(host.deleted_at.is_(None), func.coalesce(SoftwareDetail.current_version, "") != "",
+                   Installation.version != "", Installation.version != SoftwareDetail.current_version))
     return query.filter(Entity.type == "software", Entity.id.in_(ids))
 
 

@@ -38,7 +38,7 @@
       <p class="setting-label">Coming up <span class="count {{ 'count--alert' if due }}">{{ due|length }}</span></p>
       {% if due %}
       <ul class="manage-list">
-        {% for d in due %}
+        {% for d in due[:12] %}
         <li class="manage-item">
           <div class="manage-meta">
             <span class="manage-title">{{ entity_link(d.entity.id, d.entity.name) }}</span>
@@ -50,6 +50,7 @@
         {% endfor %}
       </ul>
       {% endif %}
+      {% if due|length > 12 %}<p class="hint"><a class="link" href="{{ url_for('main.all_records', due=1) }}">All {{ due|length }} coming up</a></p>{% endif %}
       <p class="hint">{% if not due %}Nothing ends or falls due in the next {{ reminder_days }} days. {% endif %}Warranties, licenses, contracts, domains and batteries due within {{ reminder_days }} days, or past due by no more than that.{% if current_user.is_admin %} The window is in Settings > Admin.{% endif %}</p>
     </div>
     {% for w in widgets %}

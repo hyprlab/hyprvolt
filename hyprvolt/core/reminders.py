@@ -10,6 +10,8 @@ rows at once, so an edited date shows on the dashboard straight away.
 """
 from datetime import date, timedelta
 
+from sqlalchemy.orm import contains_eager
+
 from ..models import db, int_setting
 from ..registry import current as registry
 from .models import Entity, Reminder
@@ -100,7 +102,7 @@ def due() -> list[dict]:
     (days is negative once the date has passed). Only turned-on modules."""
     reg = registry()
     keys = reg.enabled_type_keys()
-    rows = (Reminder.query.join(Entity, Entity.id == Reminder.entity_id)
+    rows = (Reminder.query.join(Entity, Entity.id == Reminder.entity_id).options(contains_eager(Reminder.entity))
             .filter(Entity.type.in_(keys), Entity.deleted_at.is_(None)).order_by(Reminder.due, Entity.name).all())
     today = date.today()
     out = []
@@ -111,6 +113,11 @@ def due() -> list[dict]:
             continue
         out.append({"entity": r.entity, "etype": etype, "field": f, "due": r.due, "days": (r.due - today).days})
     return out
+
+
+def entity_ids():
+    """The records with a date due, as a subquery: the "Coming up" list."""
+    return db.session.query(Reminder.entity_id)
 
 
 def count() -> int:

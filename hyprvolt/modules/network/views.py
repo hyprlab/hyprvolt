@@ -2,6 +2,8 @@
 
 from flask import Blueprint, abort, jsonify, render_template, request
 
+from sqlalchemy.orm import contains_eager
+
 from hyprvolt.core import present, records, reminders
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity
@@ -31,8 +33,8 @@ def subnet_tab(subnet: Entity) -> str:
 
 
 def subnet_count(subnet: Entity):
-    u = addresses.usage(subnet)
-    return len(u["rows"]) or None if u else None
+    u = addresses.usage(subnet, grid=False)
+    return (u["documented"] or None) if u else None
 
 
 def vlan_tab(vlan: Entity) -> str:
@@ -41,7 +43,7 @@ def vlan_tab(vlan: Entity) -> str:
                 .filter(Port.vlan_id == vlan.id, Entity.deleted_at.is_(None))
                 .order_by(Entity.name, Port.position).all())
     return render_template("network/vlan.html", vlan=vlan,
-                           subnets=[(v, addresses.usage(v.entity)) for v in present.views(subnets)], ports=on_ports)
+                           subnets=[(v, addresses.usage(v.entity, grid=False)) for v in present.views(subnets)], ports=on_ports)
 
 
 def vlan_count(vlan: Entity):
@@ -52,7 +54,7 @@ def network_tab(network: Entity) -> str:
     vlans = sorted(_children("network", network.id, "vlan"), key=lambda e: _detail(e.id).vid or 0)
     subnets = _children("network", network.id, "subnet")
     return render_template("network/network.html", network=network, vlans=present.views(vlans),
-                           subnets=[(v, addresses.usage(v.entity)) for v in present.views(subnets)])
+                           subnets=[(v, addresses.usage(v.entity, grid=False)) for v in present.views(subnets)])
 
 
 def network_count(network: Entity):
@@ -111,9 +113,9 @@ def ports_tab(device: Entity) -> str:
                                             f"tagged {p.tagged}" if p.tagged else "", p.mac, p.description) if x]})
     # Where this device's free ports can be cabled to: every other device's
     # free ports, grouped by device.
-    taken = {i for c in Cable.query for i in (c.a_id, c.b_id)}
+    taken = {i for c in db.session.query(Cable.a_id, Cable.b_id) for i in c}
     groups = {}
-    for p in (Port.query.join(Entity, Entity.id == Port.device_id)
+    for p in (Port.query.join(Entity, Entity.id == Port.device_id).options(contains_eager(Port.device))
               .filter(Entity.deleted_at.is_(None), Port.device_id != device.id)
               .order_by(Entity.name, Port.position)):
         if p.id not in taken:
@@ -161,7 +163,7 @@ def renewal_soon(query):
 def subnets_widget() -> str:
     rows = []
     for subnet in Entity.live().filter(Entity.type == "subnet", Entity.archived.is_(False)).order_by(Entity.name):
-        u = addresses.usage(subnet)
+        u = addresses.usage(subnet, grid=False)
         if u:
             rows.append({"subnet": subnet, "u": u})
     rows.sort(key=lambda r: addresses.ip_key(str(r["u"]["net"].network_address)))
