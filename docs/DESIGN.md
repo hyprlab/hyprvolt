@@ -29,11 +29,11 @@ Set on `:root` and per theme on `html[data-theme="light"|"dark"]`.
 | --- | --- |
 | `--accent`, `--accent-ink`, `--accent-glow` | The brand color, text on it, and its glow. The only brand values in the file. |
 | `--bg`, `--panel`, `--surface`, `--field` | The four surface levels |
-| `--ink`, `--muted`, `--faint` | Text: primary, secondary, tertiary |
+| `--ink`, `--muted`, `--faint` | Text: primary, secondary, tertiary. Each reads at 4.5:1 or better (WCAG AA) on every surface in both themes; a new shade must too |
 | `--line`, `--line-strong` | Rules and borders |
 | `--wash` | The accent at low opacity: hover and active backgrounds |
 | `--scrim` | Behind dialogs and the mobile sidebar |
-| `--danger` | Destructive actions and errors |
+| `--danger` | Destructive actions and errors; lighter in the dark theme, so it reads at 4.5:1 there as well, alert counts included |
 | `--radius`, `--radius-sm` | 14px for cards and panels, 10px for controls |
 | `--shadow-1`, `--shadow-2` | Resting and raised |
 | `--sidebar-w`, `--topbar-h` | Shell dimensions |
@@ -103,6 +103,11 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 
 ## Interface rules
 
+- **Everyone can use it.** Every control has a name a screen reader can read
+  (visible text, or `aria-label` on an icon button), every field a label.
+  On a touch screen, links and small buttons in rows get at least 24 px to
+  tap (the `pointer: coarse` rules in `app.css`); inside a sentence a link
+  stays inline.
 - **Errors are shown; success mostly isn't.** A failed action always says what
   went wrong, in a sentence, as an inline form error or an error toast. A
   success toast is for actions whose result is not already visible (a saved

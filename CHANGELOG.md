@@ -55,6 +55,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Accounts have a role: viewers read everything, editors also change the documentation, admins also manage users and the instance. Admins pick the role per user and the role new accounts start with
 
 ### Changed
+- Secondary text and the red of errors and alerts have more contrast, meeting WCAG AA in both themes, and links and small buttons are easier to tap on a touch screen
 - The app icon is Hyprvolt's own, in the sidebar, on the sign-in page and as the browser tab's icon
 - Documentation belongs to the instance rather than to the account that wrote it; deleting an account keeps it
 - Sign-up is off on a fresh install

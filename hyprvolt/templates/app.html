@@ -380,9 +380,9 @@
 
       <p class="setting-label">Users</p>
       <form class="adduser" id="admin-adduser">
-        <input type="text" id="au-name" placeholder="Name" autocomplete="off" maxlength="120">
-        <input type="email" id="au-email" placeholder="user@example.com" autocomplete="off" spellcheck="false" maxlength="80" required>
-        <input type="password" id="au-password" placeholder="Temporary password" autocomplete="new-password" minlength="8" required>
+        <input type="text" id="au-name" placeholder="Name" aria-label="Name" autocomplete="off" maxlength="120">
+        <input type="email" id="au-email" placeholder="user@example.com" aria-label="Email address" autocomplete="off" spellcheck="false" maxlength="80" required>
+        <input type="password" id="au-password" placeholder="Temporary password" aria-label="Temporary password" autocomplete="new-password" minlength="8" required>
         <span class="adduser-actions">
           <label class="field adduser-role"><select id="au-role" aria-label="Role">
             {% for r in ('viewer', 'editor', 'admin') %}<option value="{{ r }}" {{ 'selected' if inst_default_role == r }}>{{ r|capitalize }}</option>{% endfor %}
@@ -678,7 +678,7 @@
 <dialog class="palette" id="search-modal">
   <div class="palette-inputrow">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-    <input id="search-input" placeholder="Search everything…" autocomplete="off" spellcheck="false">
+    <input id="search-input" placeholder="Search everything…" aria-label="Search" autocomplete="off" spellcheck="false">
     <kbd>esc</kbd>
   </div>
   <div class="palette-results" id="search-results" hidden></div>

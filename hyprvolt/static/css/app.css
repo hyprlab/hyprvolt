@@ -29,7 +29,7 @@
   --accent: #FFD60A;
   --accent-ink: #171300;        /* text on the accent */
   --accent-glow: rgb(255 214 10 / .35);
-  --danger: #D0453C;
+  --danger: #BC3E36;
   --font: "Inter", system-ui, -apple-system, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
   --radius: 14px;
@@ -47,8 +47,8 @@ html[data-theme="light"] {
   --surface: #FFFFFF;
   --field: #F3F3EF;
   --ink: #191917;
-  --muted: #6F6F68;
-  --faint: #A3A39B;
+  --muted: #55554F;
+  --faint: #6B6B64;
   --line: #E4E4DD;
   --line-strong: #D4D4CC;
   --wash: rgb(255 214 10 / .17);
@@ -63,8 +63,9 @@ html[data-theme="dark"] {
   --surface: #17171B;
   --field: #101014;
   --ink: #ECECE7;
-  --muted: #8F8F8A;
-  --faint: #63635E;
+  --muted: #A8A8A3;
+  --faint: #878782;
+  --danger: #E26B60;
   --line: #26262B;
   --line-strong: #34343A;
   --wash: rgb(247 223 30 / .10);
@@ -1230,6 +1231,15 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 }
 
 /* ————— Motion & scrollbars ————— */
+/* On a touch screen, links and small buttons inside rows get room enough
+   for a finger (24 px at least), without changing how they look. */
+@media (pointer: coarse) {
+  .elink { display: inline-block; padding-block: 5px; }
+  .prose .elink, .hint .elink { display: inline; padding-block: 0; }   /* in a sentence, a link stays inline */
+  .tagchip { min-height: 26px; }
+  .rack-item-remove { width: 26px; height: 26px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
