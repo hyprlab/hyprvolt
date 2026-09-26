@@ -7,7 +7,7 @@
 <p align="center"><strong>IT documentation for on-premise infrastructure.</strong></p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="AGPL-3.0 license"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
 </p>
 
 Hyprvolt documents what an on-premise business, organization or homelab
@@ -68,7 +68,6 @@ makes no requests to AI services.
 
 ## License
 
-Hyprvolt is free software, licensed under the **GNU Affero General Public License
-v3.0 or later** ([AGPL-3.0-or-later](LICENSE)).
+Hyprvolt is free software, released under the [MIT License](LICENSE).
 
 © 2026 Hyprlab
