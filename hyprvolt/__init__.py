@@ -254,6 +254,10 @@ def _migrate(app: Flask) -> None:
     core = Migrator("core")
     # The shape every step takes.
     core.add_column("users", "infinite_scroll", "BOOLEAN NOT NULL DEFAULT 1")
+    core.add_column("users", "can_see_secrets", "BOOLEAN NOT NULL DEFAULT 0")
+    # Admins of an install from before the vault keep what they could do:
+    # they are the ones who would have been told the passwords anyway.
+    core.once("secrets-for-admins", lambda: User.query.filter_by(role="admin").update({"can_see_secrets": True}))
 
     for module, step in current().migration_steps():
         step.run(Migrator(module.id))

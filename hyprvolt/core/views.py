@@ -120,8 +120,17 @@ ACTIONS = {"created": "created it", "edited": "edited", "archived": "archived it
            "unlinked": "unlinked", "attached": "attached", "detached": "removed"}
 
 
+def hide_secret_lines(rows):
+    """The vault's history lines (a secret added, changed, revealed) name a
+    secret; only people with access to secrets see them."""
+    if getattr(current_user, "can_see_secrets", False):
+        return rows
+    return [r for r in rows if not r.action.endswith(" a secret")]
+
+
 def history_tab(entity: Entity) -> str:
-    rows = AuditLog.query.filter_by(entity_id=entity.id).order_by(AuditLog.at.desc(), AuditLog.id.desc()).limit(300).all()
+    rows = hide_secret_lines(AuditLog.query.filter_by(entity_id=entity.id)
+                             .order_by(AuditLog.at.desc(), AuditLog.id.desc()).limit(300).all())
     return render_template("sheet/history.html", entity=entity, rows=rows, actions=ACTIONS)
 
 

@@ -33,6 +33,7 @@ def register(app: Flask) -> None:
     app.cli.add_command(backup)
     app.cli.add_command(turnstile)
     app.cli.add_command(seed_demo)
+    app.cli.add_command(secrets_group)
 
 
 def _find(username: str) -> User | None:
@@ -53,7 +54,8 @@ def _ask_password() -> str:
 @click.option("--role", "role_", type=click.Choice(["viewer", "editor", "admin"]),
               default="viewer", show_default=True, help="What the account may do.")
 @click.option("--admin", is_flag=True, help="Shorthand for --role admin.")
-def create_user(username, name, role_, admin):
+@click.option("--secrets", "secrets_", is_flag=True, help="May see and change the secrets vault.")
+def create_user(username, name, role_, admin, secrets_):
     """Create an account."""
     username = username.strip().lower()
     if not EMAIL_RE.match(username):
@@ -61,11 +63,11 @@ def create_user(username, name, role_, admin):
     if _find(username):
         raise click.ClickException(f"{username} already exists.")
     role_ = "admin" if admin else role_
-    user = User(username=username, name=name, role=role_)
+    user = User(username=username, name=name, role=role_, can_see_secrets=secrets_)
     user.set_password(_ask_password())
     db.session.add(user)
     db.session.commit()
-    click.echo(f"Created {username} ({role_}).")
+    click.echo(f"Created {username} ({role_}{', with secrets' if secrets_ else ''}).")
 
 
 @click.command("reset-password")
@@ -131,6 +133,10 @@ def backup(destination: Path):
                 if files.is_dir():
                     tar.add(files, arcname="attachments")
     click.echo(f"Backed up to {destination} ({destination.stat().st_size // 1024} KB).")
+    from .modules.vault.models import Secret
+    if Secret.query.first() is not None:
+        click.echo("The secrets key is not in the backup, on purpose. Keep a copy of it separately "
+                   "(`flask secrets status` says where it is).")
 
 
 @click.group("turnstile")
@@ -170,3 +176,43 @@ def seed_demo(force):
     except DemoError as err:
         raise click.ClickException(str(err) + " Use --force to add it anyway.") from None
     click.echo(f"Added the demo homelab: {made} records.")
+
+
+@click.group("secrets")
+def secrets_group():
+    """The secrets vault's key."""
+
+
+@secrets_group.command("status")
+@with_appcontext
+def secrets_status():
+    """Say where the key is and whether it opens the secrets."""
+    from .modules.vault import crypto
+    from .modules.vault.models import Secret
+    try:
+        source = crypto.source()
+        where = {"environment": "the SECRETS_KEY environment variable",
+                 "file": str(crypto.key_path()),
+                 "none": f"not made yet; it will be {crypto.key_path()}"}[source]
+    except crypto.BadKey as err:
+        raise click.ClickException(str(err)) from None
+    secrets_ = Secret.query.filter_by(deleted_at=None).all()
+    click.echo(f"Key: {where}")
+    click.echo(f"Secrets: {len(secrets_)}")
+    unreadable = 0
+    for s in secrets_:
+        try:
+            crypto.decrypt(s.ciphertext)
+        except (crypto.Unreadable, crypto.BadKey):
+            unreadable += 1
+    if unreadable:
+        raise click.ClickException(f"{unreadable} of them can't be opened with this key.")
+    if secrets_:
+        click.echo("The key opens all of them. Keep a copy of it away from this server: without it they are lost.")
+
+
+@secrets_group.command("new-key")
+def secrets_new_key():
+    """Print a new key, for SECRETS_KEY on a fresh instance."""
+    from .modules.vault import crypto
+    click.echo(crypto.new_key())

@@ -58,23 +58,23 @@ def test_installations_are_recorded_with_their_version(client, h, admin):
 def test_license_seats_are_counted(client, h, admin):
     title, srv, nuc = lab(client, h)
     other = make(client, h, "software", name="Other")
-    lic = make(client, h, "license", name="Key", **{"f.software": title["id"], "f.seats": 1, "f.extra_seats": 0})
+    lic = make(client, h, "license", name="Office key", **{"f.software": title["id"], "f.seats": 1, "f.extra_seats": 0})
     wrong = make(client, h, "license", name="Other key", **{"f.software": other["id"]})
     post(client, h, "/software/installations", software_id=title["id"], host_id=srv["id"], license_id=lic["id"])
     mismatch = post(client, h, "/software/installations", 400, software_id=title["id"], host_id=nuc["id"],
                     license_id=wrong["id"])
     assert "license for other software" in mismatch["error"]
-    assert ">Key<" not in client.get("/software?f=over&view=list").data.decode()
+    assert ">Office key<" not in client.get("/software?f=over&view=list").data.decode()
     post(client, h, "/software/installations", software_id=title["id"], host_id=nuc["id"], license_id=lic["id"])
     tab = client.get(f"/e/{lic['id']}/sheet?tab=seats").data.decode()
     assert "2/1 used" in tab and ">over<" in tab
-    assert ">Key<" in client.get("/software?f=over&view=list").data.decode()
+    assert ">Office key<" in client.get("/software?f=over&view=list").data.decode()
     client.post(f"/api/entities/{lic['id']}", json={"f.seats": 5, "f.extra_seats": 2}, headers=h)
     tab = client.get(f"/e/{lic['id']}/sheet?tab=seats").data.decode()
     assert "4/5 used" in tab and "and 2 used elsewhere" in tab
     soon = (date.today() + timedelta(days=30)).isoformat()
     client.post(f"/api/entities/{lic['id']}", json={"f.renews": soon}, headers=h)
-    assert ">Key<" in client.get("/software?f=renewal&view=list").data.decode()
+    assert ">Office key<" in client.get("/software?f=renewal&view=list").data.decode()
     assert "license for other software" not in client.get(f"/e/{title['id']}/sheet?tab=installations").data.decode()
 
 

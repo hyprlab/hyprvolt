@@ -34,6 +34,9 @@ class User(UserMixin, db.Model):
     theme = db.Column(db.String(10), default="system", nullable=False)     # system|light|dark
     view_mode = db.Column(db.String(10), default="cards", nullable=False)  # cards|list
     infinite_scroll = db.Column(db.Boolean, default=True, nullable=False)
+    # Secrets are their own permission, granted per account by an admin
+    # (admins included): the role alone never shows a password.
+    can_see_secrets = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=utcnow, nullable=False)
 
     @property

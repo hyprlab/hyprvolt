@@ -771,6 +771,10 @@
   //   [data-pick]                chooses a record in the palette; its id goes
   //                              into the form's data-pick-into field (other_id)
   //   [data-fill='{"a": 1}']     sets fields of its form (or data-fill-form)
+  //   [data-reveal="/url"]       posts to url and shows its value in the
+  //                              element named by data-reveal-into; again hides it
+  //   [data-copy="text"]         copies the text; [data-copy-url] posts first
+  //                              and copies the answer's value
   //   input[data-autosubmit]     submits its form when it changes
   function afterAction(el, data) {
     var then = el.getAttribute("data-then");
@@ -874,6 +878,30 @@
       });
       return;
     }
+    var reveal = e.target.closest("[data-reveal]");
+    if (reveal) {
+      e.preventDefault();
+      var into = document.getElementById(reveal.getAttribute("data-reveal-into"));
+      if (!into) return;
+      if (reveal.getAttribute("aria-pressed") === "true") { hideSecret(reveal, into); return; }
+      api(reveal.getAttribute("data-reveal"), {}).then(function (data) {
+        into.textContent = data.value;
+        into.classList.add("is-shown");
+        reveal.setAttribute("aria-pressed", "true");
+        reveal.textContent = "Hide";
+        clearTimeout(reveal._hide);
+        reveal._hide = setTimeout(function () { hideSecret(reveal, into); }, 30000);
+      }).catch(toastError);
+      return;
+    }
+    var copy = e.target.closest("[data-copy], [data-copy-url]");
+    if (copy) {
+      e.preventDefault();
+      var text = copy.hasAttribute("data-copy") ? Promise.resolve(copy.getAttribute("data-copy"))
+        : api(copy.getAttribute("data-copy-url"), {}).then(function (data) { return data.value; });
+      text.then(copyText).then(function () { toast(copy.getAttribute("data-done") || "Copied"); }).catch(toastError);
+      return;
+    }
     var fill = e.target.closest("[data-fill]");
     if (fill) {
       e.preventDefault();
@@ -888,6 +916,35 @@
     }
     if (e.target.closest("[data-sheet-action='archive']")) { e.preventDefault(); toggleArchive(); }
   });
+
+  // A revealed secret goes back to its mask on a second click, or by itself
+  // after 30 seconds.
+  function hideSecret(btn, into) {
+    clearTimeout(btn._hide);
+    into.textContent = into.getAttribute("data-mask") || "••••••••";
+    into.classList.remove("is-shown");
+    btn.setAttribute("aria-pressed", "false");
+    btn.textContent = "Show";
+  }
+
+  // The clipboard API needs HTTPS or localhost; on a plain-HTTP LAN address
+  // the old way still works.
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise(function (resolve, reject) {
+      var area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (_) { ok = false; }
+      area.remove();
+      if (ok) resolve(); else reject(new Error("The browser didn't allow copying. Select the text instead."));
+    });
+  }
 
   /* ————— Detail sheet ————— */
   // The article is the server's (sheet/sheet.html): the header, the tabs and

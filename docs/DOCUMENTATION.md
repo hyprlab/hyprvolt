@@ -33,6 +33,7 @@ Everything is optional. Put values in a `.env` file next to
 | `APP_NAME` | `Hyprvolt` | What the app calls itself |
 | `APP_TAGLINE` | `IT documentation for on-premise infrastructure.` | The line under the name on the sign-in page and in About |
 | `SECRET_KEY` | generated | Signs sessions. If unset, one is generated and kept in the volume |
+| `SECRETS_KEY` | made in the volume | Encrypts the secrets vault; see [Secrets](#secrets) |
 | `SESSION_COOKIE_SECURE` | `0` | Set to `1` when the app is served over HTTPS |
 | `TRUST_PROXY` | `0` | How many reverse proxies are in front; see below |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | empty | Cloudflare Turnstile keys; see [Turnstile](#turnstile). Usually set in the app instead |
@@ -139,6 +140,32 @@ Attachments are limited in size per file in Settings > Admin (25 MB by
 default). Images, PDFs and plain text open in the browser; everything else
 downloads.
 
+## Secrets
+
+Passwords, API keys, SSH keys and license keys are kept in the Secrets tab
+of the record they belong to. Only accounts an admin has given access to
+secrets see the tab, admins included: the key button beside each user in
+Settings > Admin gives and takes it away. The account made in the setup
+wizard has it. Seeing needs only that access; adding, changing and removing
+also need the editor role.
+
+A secret's value is hidden until Show, which hides it again after 30
+seconds, and Copy puts it on the clipboard without showing it. Each Show and
+each Copy is a line in the record's History ("revealed a secret"), and
+Settings > Secrets lists the latest. Those lines, like the tab, are hidden
+from people without access. Values are never searched, exported or given to
+an API token.
+
+**The key.** Values are encrypted in the database with a key that is not in
+it. It comes from `SECRETS_KEY`, or else from `secrets.key` in the volume,
+made the first time a secret is saved. **Keep a copy of the key somewhere
+other than this server and its backups. Without it nobody can read the
+secrets, and there is no way to recover them: losing the key loses the
+secrets.** `flask backup` leaves the key out on purpose, so a backup that goes
+astray is no use without it. To move to `SECRETS_KEY`, put the contents of
+`secrets.key` in it; `flask secrets status` says where the key in use is and
+whether it opens every secret.
+
 ## Turnstile
 
 [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) puts a
@@ -202,8 +229,10 @@ existing install needs something done by hand; the changelog says what.
 
 ## Backups
 
-Everything is in the volume: the SQLite database, the attachments and the
-generated secret key. For a consistent copy while the app runs:
+Everything is in the volume: the SQLite database, the attachments, the
+generated session key and the secrets key. `flask backup` copies the
+database and attachments, and leaves the secrets key out: keep that apart
+(see [Secrets](#secrets)). For a consistent copy while the app runs:
 
 ```sh
 docker exec hyprvolt flask backup /data/backup-$(date +%F).tar.gz
@@ -226,11 +255,13 @@ Run inside the container:
 
 | Command | What it does |
 | --- | --- |
-| `flask create-user EMAIL [--role viewer\|editor\|admin] [--admin] [--name NAME]` | Create an account; asks for the password. `--admin` is `--role admin` |
+| `flask create-user EMAIL [--role viewer\|editor\|admin] [--admin] [--secrets] [--name NAME]` | Create an account; asks for the password. `--admin` is `--role admin`; `--secrets` gives it access to secrets |
 | `flask reset-password EMAIL` | Set a new password; the way back in for a locked-out admin |
 | `flask backup PATH` | Write a consistent copy: `.tar.gz` for the database and attachments, `.db` for the database alone |
 | `flask seed-demo [--force]` | Fill an empty instance with a small demo homelab |
 | `flask turnstile status`, `flask turnstile off` | Show whether Turnstile is on; turn it off when nobody can sign in |
+| `flask secrets status` | Say where the secrets key is and whether it opens every secret |
+| `flask secrets new-key` | Print a new key for `SECRETS_KEY` |
 
 ```sh
 docker exec -it hyprvolt flask reset-password you@example.com

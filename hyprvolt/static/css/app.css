@@ -115,6 +115,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .iconbtn--sm { width: 28px; height: 28px; }
 .iconbtn--sm svg { width: 17px; height: 17px; }
 .iconbtn--danger:hover { background: rgb(220 70 60 / .12); color: var(--danger); }
+.iconbtn[aria-pressed="true"] { background: var(--wash); color: var(--ink); }
 .iconbtn.is-busy svg { animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -1004,6 +1005,15 @@ button.rack-slot:hover, button.rack-slot:focus-visible { background: var(--wash)
   .mountform { grid-template-columns: 1fr 1fr; }
   .mountform-what, .mountform-label { grid-column: 1 / -1; }
 }
+
+/* A secret's value: masked until shown, then kept as typed (keys span lines). */
+.secret-value {
+  display: block; margin: 4px 0 2px; padding: 6px 10px; max-width: 100%; border-radius: var(--radius-sm);
+  background: var(--field); color: var(--muted); font-size: 12.5px; letter-spacing: .08em;
+  white-space: pre-wrap; word-break: break-all; max-height: 16em; overflow: auto;
+}
+.secret-value.is-shown { color: var(--ink); letter-spacing: 0; user-select: all; }
+.mountform .secret-field { grid-column: 1 / -1; }
 
 /* A subnet's addresses, one cell each, sixteen to a row. Used is solid ink,
    reserved hatched, DHCP a filled field, free an outline. */

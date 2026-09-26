@@ -125,6 +125,12 @@ field that names another record in a way that matters when it fails (a VM's
 host) is kept as a relationship, not a column, so the form and the
 dependency view can never disagree.
 
+**Secrets are a built-in module with a permission of their own.** The vault
+(`modules/vault`) keeps its values encrypted with a key outside the
+database, shows its tab only to accounts with `can_see_secrets`, and writes
+every reveal to the record's history. The core hides those history lines
+from everyone else; nothing else in the core knows about secrets.
+
 **Delete marks, the worker purges.** Deleting stamps `deleted_at`. Undo
 clears it, so the record comes back with the same id, its links, files,
 history and every `/e/<id>` link intact, which re-creating a record could not
@@ -227,7 +233,7 @@ the database unreadable to the previous version is a MAJOR release.
 
 | | |
 | --- | --- |
-| `DATA_DIR` (`/data` in Docker, `./var` locally) | The SQLite database, the generated `.secret_key` and `attachments/` |
+| `DATA_DIR` (`/data` in Docker, `./var` locally) | The SQLite database, the generated `.secret_key`, the secrets vault's `secrets.key` (unless `SECRETS_KEY` is set) and `attachments/` |
 | `users` | Accounts, their roles and preferences |
 | `settings` | Instance settings, which modules are off, migration markers, when each job last ran |
 | `entities` and the core tables | Every record, its tags, custom values, links, files and history |

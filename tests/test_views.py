@@ -25,7 +25,7 @@ def test_the_sheet_has_the_core_tabs(client, h, admin):
     g = make(client, h, name="Blue box", **{"f.color": "blue"}, notes="Under **the** desk.")
     body = client.get(f"/e/{g['id']}/sheet").data.decode()
     tabs = [part.split('"')[0] for part in body.split('role="tab" data-tab="')[1:]]
-    assert tabs == ["overview", "relationships", "documents", "attachments", "history"]
+    assert tabs == ["overview", "relationships", "documents", "secrets", "attachments", "history"]
     assert "<strong>the</strong>" in body and ">blue<" in body
     for tab in ("relationships", "documents", "attachments", "history"):
         resp = client.get(f"/e/{g['id']}/sheet?tab={tab}")

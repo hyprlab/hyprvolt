@@ -57,7 +57,7 @@ def submit():
     if not 0 <= worker <= 1440:
         return jsonify(error="The background interval must be between 0 and 1440 minutes."), 400
 
-    admin = User(username=username, role="admin",
+    admin = User(username=username, role="admin", can_see_secrets=True,
                  name=(data.get("name") or "").strip()[:120] or None)
     admin.set_password(password)
     db.session.add(admin)

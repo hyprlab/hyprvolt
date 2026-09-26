@@ -30,6 +30,8 @@ def context(active_module=None, active_type=None, active_filter=None, active_tag
     counts = type_counts()
     groups, by_group = [], {}
     for m in reg.enabled_modules():
+        if not m.types:
+            continue    # a module of tabs and panes only (the vault) has no list
         entry = {
             "module": m,
             "count": sum(counts.get(t.key, 0) for t in m.types),

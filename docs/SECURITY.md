@@ -31,6 +31,8 @@ Only the latest stable release receives security fixes.
 | A default password | There is none: the first account is created in the setup wizard |
 | Stale pages | HTML is served `no-store` |
 | Running as root | The container runs as an unprivileged user |
+| A stolen database or backup | Secrets are encrypted (Fernet: AES-128-CBC with an HMAC) with a key that is not in the database and not in `flask backup`'s archive |
+| Seeing a password without cause | Secrets are their own permission, given per account; each reveal and copy is written to the record's history with who and when; API tokens can't read them |
 
 ## Out of scope
 

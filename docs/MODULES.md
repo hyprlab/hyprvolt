@@ -224,6 +224,8 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `[data-new-type="rack"]`, `data-new-location`, `data-new-attach`, `data-new-fields='{"host": 12}'` | Opens the form for a new record, placed somewhere, attached as a document, or with fields filled in |
 | `a[data-entity="id"]` | Opens that record's sheet in place (`entity_link` makes these) |
 | `input[data-autosubmit]` | Submits its form when it changes |
+| `[data-reveal="/url"]`, `data-reveal-into="id"` | Posts to the URL and shows the answer's `value` in that element, until a second click or 30 seconds (the vault's Show) |
+| `[data-copy="text"]`, `[data-copy-url="/url"]` | Copies the text, or posts to the URL and copies the answer's `value` |
 
 Routes live on the module's blueprint, which must be named like the module
 and is mounted at `/<id>`. Every view declares who may call it with

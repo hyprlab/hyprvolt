@@ -68,7 +68,7 @@ def index():
     counts = shell.type_counts()
     tiles = [{"module": m, "count": sum(counts.get(t.key, 0) for t in m.types),
               "types": [(t, counts.get(t.key, 0)) for t in m.types]}
-             for m in reg.enabled_modules()]
+             for m in reg.enabled_modules() if m.types]
     recent = (Entity.live().filter(Entity.type.in_(reg.enabled_type_keys()))
               .order_by(Entity.updated_at.desc(), Entity.id.desc()).limit(10).all())
     widgets = []
@@ -167,7 +167,7 @@ def all_records():
 @role("viewer")
 def module_list(module_id):
     reg = registry()
-    if not reg.is_enabled(module_id):
+    if not reg.is_enabled(module_id) or not reg.module(module_id).types:
         abort(404)
     return _render_list(reg.module(module_id))
 
@@ -452,6 +452,16 @@ def admin_set_role(user_id):
     user.role = new_role
     db.session.commit()
     return jsonify(ok=True, role=user.role)
+
+
+@bp.route("/admin/users/<int:user_id>/secrets", methods=["POST"])
+@role("admin")
+def admin_set_secrets(user_id):
+    """Grant or take away access to the secrets vault, admins included."""
+    user = db.get_or_404(User, user_id)
+    user.can_see_secrets = bool((request.get_json(silent=True) or {}).get("allowed"))
+    db.session.commit()
+    return jsonify(ok=True, allowed=user.can_see_secrets)
 
 
 @bp.route("/admin/users/<int:user_id>/delete", methods=["POST"])

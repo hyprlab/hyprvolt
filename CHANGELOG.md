@@ -31,6 +31,9 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Contacts and vendors: vendors with support and account numbers, the people there, and contracts with their term, notice period and cost
 - Hardware, software, services, networks and domains name their supplier and the contract that covers them in their form
 - Phone numbers and email addresses are links
+- A secrets vault: passwords, API keys, SSH keys and license keys in a Secrets tab on any record, encrypted with a key kept outside the database, shown or copied on request, each time written to the history
+- Access to secrets is its own permission, given per account in Settings > Admin; Settings > Secrets says where the key is and who revealed what lately
+- `flask secrets status` and `flask secrets new-key`; `flask create-user --secrets`
 - A knowledge base of Markdown documents that attach to any record and link to records with [[slug]]
 - Typed links between records in both directions, and a view of what breaks if a record goes down
 - Files attached to any record, included in `flask backup` when the backup is named `.tar.gz`

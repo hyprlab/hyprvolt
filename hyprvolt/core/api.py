@@ -191,7 +191,9 @@ def entity_restore(entity_id):
 @role("viewer")
 def entity_history(entity_id):
     entity_or_404(entity_id, deleted_ok=True)
-    rows = AuditLog.query.filter_by(entity_id=entity_id).order_by(AuditLog.at.desc(), AuditLog.id.desc()).limit(200)
+    from .views import hide_secret_lines
+    rows = hide_secret_lines(AuditLog.query.filter_by(entity_id=entity_id)
+                             .order_by(AuditLog.at.desc(), AuditLog.id.desc()).limit(200).all())
     return jsonify(history=[{
         "at": r.at.isoformat() + "Z", "user": r.user_name, "action": r.action, "changes": r.changes,
     } for r in rows])

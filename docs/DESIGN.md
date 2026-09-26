@@ -56,7 +56,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | Class | What it is |
 | --- | --- |
 | `.btn` + `--primary`, `--ghost`, `--danger`, `--block`, `--xs` | Buttons. One primary per view. |
-| `.iconbtn` + `--sm`, `--danger`, `.is-busy` | Square icon buttons; `.is-busy` spins the icon |
+| `.iconbtn` + `--sm`, `--danger`, `.is-busy`, `[aria-pressed="true"]` | Square icon buttons; `.is-busy` spins the icon; pressed is a switch that is on (a user's access to secrets) |
 | `.field`, `.field-label`, `.check`, `.hint`, `.form-error` | Form parts |
 | `.seg`, `.seg--xs` | Segmented control over radio inputs; `--xs` inside a list row (a user's role) |
 | `.switch`, `.switch-track` | An on/off switch over a checkbox, for something that takes effect at once (a module) |
@@ -71,6 +71,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.tiles`, `.tile`, `.widget` | The dashboard: one tile per module with its count, and module widgets as cards |
 | `.meters`, `.meter` | How much of something is used (rack units), as a bar with the number beside it |
 | `.ipgrid`, `.ipcell`, `.iplegend` | A subnet's addresses, sixteen to a row: used in solid ink, reserved hatched, DHCP filled, free an outline. A used cell opens its record; a free one, for an editor, records it |
+| `.secret-value` | A secret's value in its row: a mask until Show, then the value as typed, lines kept, selectable in one click |
 | `.trace`, `.trace-path`, `.trace-hop`, `.trace-link` | A cable path inside a port's row, opened from a `<details>`: each port a pill, the cables and patch panels between them in small text |
 | `.empty`, `.pager`, `.pager-end` | Empty states and paging |
 | `.modal`, `.modal--wide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>` |
