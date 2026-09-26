@@ -41,6 +41,7 @@ module = Module(
     blueprint=views.bp,
     types=(
         EntityType("network", "Network", "Networks", detail=NetworkDetail, located_in=None, icon=NETWORK,
+                   traits=("supplied",),
                    fields=(Field("kind", "Kind", "select", options=NETWORK_KINDS, card=True, list=True),
                            Field("provider", "Provider", list=True, help="For an internet connection: the ISP."),
                            Field("public_ips", "Public addresses", help="203.0.113.24, or a range."),
@@ -67,6 +68,7 @@ module = Module(
                            Field("mac", "MAC address", help="aa:bb:cc:dd:ee:ff")),
                    tabs=(Tab("network", "Subnet", views.ip_tab),)),
         EntityType("domain", "Domain", "Domains", detail=NetworkDetail, located_in=(), icon=DOMAIN,
+                   traits=("domain", "supplied"),
                    statuses=DOMAIN_STATUSES, check=dns.check_domain,
                    fields=(Field("registrar", "Registrar", list=True),
                            Field("dns_provider", "DNS hosted at"),

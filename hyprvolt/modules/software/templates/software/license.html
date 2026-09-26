@@ -1,0 +1,22 @@
+{% from "partials/macros.html" import entity_link %}
+<ul class="meters">
+  <li>
+    <span class="meters-name">Seats{% if s.over %} <span class="count count--alert" title="More seats used than owned">over</span>{% endif %}</span>
+    <span class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ s.percent }}"
+          aria-label="{{ s.used }} of {{ s.owned or 'unlimited' }} seats used"><span style="width: {{ s.percent }}%"></span></span>
+    <span class="meters-value">{{ s.used }}{% if s.owned %}/{{ s.owned }}{% endif %} used</span>
+  </li>
+</ul>
+<p class="hint">{{ s.here }} {{ 'installation' if s.here == 1 else 'installations' }} here{% if s.extra %}, and {{ s.extra }} used elsewhere{% endif %}.
+  {%- if not s.owned %} The number of seats owned isn't recorded.{% endif %}
+  {%- if title %} Installations are recorded in {{ entity_link(title.id, title.name) }}'s Installations tab.{% endif %}</p>
+{% if rows %}
+<ul class="manage-list">
+  {% for i in rows %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(i.host.id, i.host.name) }}{% if i.version %} {{ i.version }}{% endif %}</span>
+    <span class="manage-sub">{{ kinds[i.host_id] }}{% if i.installed %} · installed {{ i.installed.isoformat() }}{% endif %}</span>
+  </div></li>
+  {% endfor %}
+</ul>
+{% endif %}

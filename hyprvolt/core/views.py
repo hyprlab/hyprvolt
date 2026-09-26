@@ -77,7 +77,7 @@ def overview_tab(entity: Entity) -> str:
             prose.append((f, markdown(value or "")))
             continue
         item = {"field": f, "value": value, "shown": F.display(f, value, records.live),
-                "link": value if F.is_link(f, value) else None,
+                "link": F.href(f, value),
                 "ref": records.live(value) if f.kind == "ref" and value else None}
         if is_custom:
             custom.append(item)

@@ -23,6 +23,7 @@ in a single SQLite volume.
 - Servers, network gear, UPSes, storage and desks, with serials, asset tags, warranties, specs and a lifecycle
 - Hypervisors, VMs, LXC and Docker containers and compose stacks, and what each runs on
 - VLANs, subnets with a map of used and free addresses, ports and cables traced end to end, and DNS records
+- Services and what they run on, software installations and license seats, vendors, people and contracts
 - Rack elevations, front and rear, that flag overlaps and anything that no longer fits
 - A Markdown knowledge base whose documents attach to records and link to them with `[[slug]]`
 - Typed links between any two records, and a view of what breaks if one goes down

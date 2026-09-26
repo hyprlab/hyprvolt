@@ -29,7 +29,7 @@
   {% elif f.kind == 'date' %}
   <input type="date" name="{{ item.name }}" value="{{ v.isoformat() if v else '' }}" {{ 'required' if f.required }}>
   {% else %}
-  <input type="{{ 'email' if f.kind == 'email' else 'text' }}" name="{{ item.name }}" value="{{ v or '' }}"
+  <input type="{{ 'email' if f.kind == 'email' else ('tel' if f.kind == 'phone' else 'text') }}" name="{{ item.name }}" value="{{ v or '' }}"
          maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https://" spellcheck="false"{% endif %}
          {%- if f.kind in ('ip', 'cidr') %} spellcheck="false" autocomplete="off" placeholder="{{ '10.0.20.11' if f.kind == 'ip' else '10.0.20.0/24' }}"{% endif %}
          {%- if etype.name_from == f.key %} autofocus{% endif %}>

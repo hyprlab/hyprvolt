@@ -64,7 +64,7 @@ change their own role or delete themselves, so there is always one left.
 ## Modules and custom fields
 
 What Hyprvolt documents comes in modules: Locations, Hardware, Virtual,
-Network and the knowledge base. Settings > Modules turns a module off; it then
+Network, Services, Software, Contacts and vendors, and the knowledge base. Settings > Modules turns a module off; it then
 disappears from the sidebar, search and the dashboard, and its records stay
 in the database until it is turned back on. A module that needs another is
 off while that one is: Hardware needs Locations, and Virtual and Network
@@ -101,6 +101,26 @@ are written down by hand in its DNS records tab, and an A record or a CNAME
 that leads to a recorded address links to the device holding it. The
 palette finds DNS names and MAC addresses. The sidebar lists addresses with
 no device and domains due for renewal within 90 days.
+
+A service is what people use: its address, ports, who uses it, how much it
+matters, what it runs on and the domain it is under. The last two are also
+links, so the dependency view of a server or a domain lists the services
+that go with it, and the dashboard shows the services marked high or
+critical and any that are degraded or down.
+
+Software titles are installed on hosts: record an installation in the
+title's Installations tab or the host's Software tab, with its version and
+the license seat it takes. An installation at another version than the
+title's current one is marked as behind. A license's seats in use are its
+installations plus the seats it says are used elsewhere; the sidebar lists
+licenses over their seats and those due for renewal.
+
+Vendors hold support numbers and account numbers, people work at them, and
+contracts are with them. Hardware, software, services, networks and domains
+have a Supplier section in their form: the vendor and the contract that
+covers them. A vendor's Supplies tab and a contract's Covers tab list what
+is linked; the sidebar lists contracts ending within 90 days. Phone numbers
+and email addresses are links.
 
 Settings > Custom fields adds fields of your own to any kind of record: text,
 a number, a date, a choice list, a web address, or yes or no. They appear in

@@ -1,0 +1,19 @@
+{# One installation in a list; "other" is the record at the far end. #}
+{% from "partials/macros.html" import entity_link %}
+<li class="manage-item">
+  <div class="manage-meta">
+    <span class="manage-title">{{ entity_link(other.id, other.name) }}{% if i.version %} {{ i.version }}{% endif %}
+      {%- if behind(i, current) %} <span class="count count--alert" title="The current version is {{ current }}">behind</span>{% endif %}</span>
+    <span class="manage-sub">{{ [sub, i.license.name if i.license else '', ('installed ' ~ i.installed.isoformat()) if i.installed else '', i.note]|select|join(' · ') }}</span>
+  </div>
+  {% if current_user.can_edit %}
+  <button class="iconbtn iconbtn--sm" aria-label="Change {{ other.name }}" title="Change this installation" data-fill-form="{{ form_id }}"
+          data-fill='{{ {"installation_id": i.id, "version": i.version, "license_id": i.license_id or "", "installed": i.installed.isoformat() if i.installed else "", "note": i.note}|tojson }}'>
+    <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>
+  </button>
+  <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/software/installations/{{ i.id }}/delete" data-then="sheet"
+          data-done="Installation removed" aria-label="Remove it from {{ other.name }}" title="Remove this installation">
+    <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  {% endif %}
+</li>

@@ -1,0 +1,17 @@
+{% from "partials/macros.html" import entity_link %}
+{% if rows %}
+<ul class="manage-list">
+  {% for v in rows %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+      <span class="manage-sub">{% for label, shown in v.list_facts %}{{ ' · ' if not loop.first }}{{ shown }}{% endfor %}</span>
+    </div>
+    <span class="chip {{ 'chip--muted' if v.entity.status == 'running' }}">{{ v.status }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% if more %}<p class="hint"><a class="link" href="{{ url_for('main.module_list', module_id='services', f='important') }}">{{ more }} more</a></p>{% endif %}
+{% else %}
+<p class="hint">No service is marked high or critical.</p>
+{% endif %}

@@ -60,7 +60,7 @@ required.
 | `id` | Lower-case letters, digits and underscores; the URL (`/<id>`) and the name of its settings. Can't be a word the core uses (`all`, `api`, `admin`, `search`, …) |
 | `name`, `description`, `icon` | What the sidebar, dashboard and Settings > Modules show. `icon` is the inside of a 24×24 stroked `<svg>`, like every icon in the app |
 | `group`, `order` | Where it sits in the sidebar: under the `group` heading, sorted by `order` |
-| `requires` | Ids of modules it builds on. They migrate and seed first; a module whose requirement is missing is left out, and one whose requirement is turned off is off too |
+| `requires` | Ids of modules it builds on. They migrate and seed first; a module whose requirement is missing is left out, and one whose requirement is turned off is off too. A module that only takes part through traits (Services pointing at hosts) needs no requirement |
 | `core` | Built in; it can't be turned off. Only the knowledge base is |
 | `models` | Its SQLAlchemy models, for the record; importing the package is what registers them |
 | `migrations` | Its `Step`s, in order. See [Migrations](#migrations) |
@@ -74,7 +74,7 @@ required.
 | `relation_kinds` | `RelationKind`s it adds to the core's |
 | `sheet_tabs` | `Tab`s on records of any module, shown where `when(entity)` says |
 | `form_sections` | `FormSection`s in the record form of any module's types. See [Adding to other modules' forms](#adding-to-other-modules-forms) |
-| `seed` | `seed(demo)`, its part of `flask seed-demo` |
+| `seed` | `seed(demo)`, its part of `flask seed-demo`. Seeds run in sidebar order, each after the modules it requires, the knowledge base last, so a module later in the sidebar finds the records it links to |
 
 A manifest that fails validation is left out, logged, and listed in
 Settings > Modules with the reason. With `MODULES_STRICT=1` (the tests set it)
@@ -112,7 +112,9 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   what another module adds without either naming the other: Hardware marks a
   server `("rackmount",)`, and Locations adds a rack position to the form of
   every type with that trait. The ones in use: `rackmount` (Locations),
-  `addressable` and `cabled` (Network).
+  `addressable` and `cabled` (Network), `host` (Software and Services: where
+  software is installed and services run), `supplied` (Contacts: has a
+  supplier and a contract), `domain` (Services: a service's domain).
 - `name_from="address"` makes the record's name the shown value of one of
   its fields, and leaves the Name box out of the form: an IP address is
   named by its address.
@@ -126,7 +128,8 @@ and a `kind`:
 
 | Kind | Stored as | Shown as |
 | --- | --- | --- |
-| `text`, `email`, `url` | a string, 500 characters at most | text; a `url` starting with http links out |
+| `text`, `email`, `url` | a string, 500 characters at most | text; a `url` starting with http links out, an `email` is a mailto: link |
+| `phone` | a phone number as written, with an extension if any | a tel: link |
 | `longtext` | text | text, line breaks kept |
 | `markdown` | text | rendered Markdown with `[[slug]]` links, under the fields |
 | `integer`, `number` | int, float, with `min` and `max` | the value and its `unit` |

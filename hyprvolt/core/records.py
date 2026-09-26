@@ -80,7 +80,7 @@ def linked_values(entity_ids, etype) -> dict[int, dict[str, int]]:
     out: dict[int, dict[str, int]] = {}
     for source_id, kind, target_id, target_type in rows:
         for f in rel_fields:
-            if f.relation == kind and target_type in f.types:
+            if f.relation == kind and F.ref_allows(f, target_type):
                 out.setdefault(source_id, {}).setdefault(f.key, target_id)
     return out
 

@@ -1,0 +1,18 @@
+{# The Supplier section in the form of anything supplied: kept as links. #}
+<div class="form-grid">
+  <label class="field">
+    <span class="field-label">Supplier</span>
+    <select name="s.supplier.vendor_id">
+      <option value="">Not set</option>
+      {% for v in vendors %}<option value="{{ v.id }}" {{ 'selected' if v.id == vendor_id }}>{{ v.name }}</option>{% endfor %}
+    </select>
+    {% if not vendors %}<span class="hint">No vendors recorded yet.</span>{% endif %}
+  </label>
+  <label class="field">
+    <span class="field-label">Contract</span>
+    <select name="s.supplier.contract_id">
+      <option value="">None</option>
+      {% for id, label in contracts %}<option value="{{ id }}" {{ 'selected' if id == contract_id }}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+</div>

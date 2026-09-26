@@ -2,8 +2,10 @@
 dashboard of an empty instance.
 
 Each module adds its part through its manifest's ``seed(demo)``, called in
-migration order (built-in modules last), so a module that requires another
-finds that one's records already there (``demo.get("rack-1")``). Everything
+sidebar order but always after the modules it requires, built-in modules
+last (``seed_order``). So Services finds the VMs it runs on, and a module that
+requires another finds that one's records already there
+(``demo.get("rack-1")``). Everything
 goes through the normal write path, so the demo has history, search text and
 links like real data.
 """
@@ -82,6 +84,20 @@ class Demo:
             relations.link(kind, source, target, note, self.user)
 
 
+def seed_order() -> list:
+    """The modules in sidebar order, each moved after the ones it requires,
+    built-in modules last: the knowledge base documents everything else."""
+    reg = registry()
+    waiting = sorted(reg.sidebar_order(), key=lambda m: m.core)
+    done, order = set(), []
+    while waiting:
+        m = next((m for m in waiting if all(r in done for r in m.requires)), waiting[0])
+        waiting.remove(m)
+        done.add(m.id)
+        order.append(m)
+    return order
+
+
 def is_empty() -> bool:
     return Entity.query.first() is None
 
@@ -95,9 +111,7 @@ def seed(user=None, force: bool = False) -> int:
         user = User.query.filter_by(role="admin").order_by(User.id).first()
     demo = Demo(user, force=force)
     try:
-        # Migration order, built-in modules last: the knowledge base
-        # documents everything else, so everything else must exist first.
-        for module in sorted(registry().modules.values(), key=lambda m: m.core):
+        for module in seed_order():
             if module.seed is not None and registry().is_enabled(module.id):
                 module.seed(demo)
                 db.session.flush()

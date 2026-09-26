@@ -1,0 +1,12 @@
+{# The one form that changes an installation, filled from a row's button. #}
+<form class="mountform" id="{{ form_id }}" data-api="/software/installations/edit" data-then="sheet" data-done="Saved" hidden>
+  <p class="setting-label">Change an installation</p>
+  <input type="hidden" name="installation_id" value="">
+  <label class="field"><span class="field-label">Version</span><input name="version" maxlength="60" data-fill-focus></label>
+  <label class="field"><span class="field-label">License</span>
+    <select name="license_id"><option value="">None</option>{% for id, label in license_choices %}<option value="{{ id }}">{{ label }}</option>{% endfor %}</select></label>
+  <label class="field"><span class="field-label">Installed</span><input type="date" name="installed"></label>
+  <label class="field"><span class="field-label">Note</span><input name="note" maxlength="200"></label>
+  <button class="btn btn--primary" type="submit">Save</button>
+  <p class="form-error" hidden></p>
+</form>

@@ -1,0 +1,27 @@
+{# The software on a host. #}
+{% set form_id = 'install-edit-' ~ host.id %}
+{% if rows %}
+<ul class="manage-list">
+  {% for i in rows %}{% with other = i.software, current = currents.get(i.software_id), sub = "" %}{% include "software/_row.html" %}{% endwith %}{% endfor %}
+</ul>
+{% else %}
+<p class="hint">No software recorded here yet.</p>
+{% endif %}
+{% if current_user.can_edit %}
+{% if titles %}
+<form class="mountform" data-api="/software/installations" data-then="sheet" data-done="Installation recorded">
+  <p class="setting-label">Record software here</p>
+  <input type="hidden" name="host_id" value="{{ host.id }}">
+  <label class="field"><span class="field-label">Software</span>
+    <select name="software_id" required><option value="">Choose…</option>{% for t in titles %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></label>
+  <label class="field"><span class="field-label">Version</span><input name="version" maxlength="60"></label>
+  <label class="field"><span class="field-label">License</span>
+    <select name="license_id"><option value="">None</option>{% for id, label in licenses %}<option value="{{ id }}">{{ label }}</option>{% endfor %}</select></label>
+  <button class="btn btn--primary" type="submit">Record</button>
+  <p class="form-error" hidden></p>
+</form>
+{% else %}
+<div class="doc-actions"><button type="button" class="btn btn--ghost" data-new-type="software">New software</button></div>
+{% endif %}
+{% include "software/_edit.html" %}
+{% endif %}

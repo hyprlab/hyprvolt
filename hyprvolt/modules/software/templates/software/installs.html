@@ -1,0 +1,39 @@
+{# A title's licenses and where it is installed. #}
+{% from "partials/macros.html" import entity_link %}
+{% set form_id = 'install-edit-' ~ title.id %}
+{% if seats %}
+<p class="setting-label">Licenses</p>
+<ul class="meters">
+  {% for lic, s in seats %}
+  <li>
+    <span class="meters-name">{{ entity_link(lic.id, lic.name) }}{% if s.over %} <span class="count count--alert" title="More seats used than owned">over</span>{% endif %}</span>
+    <span class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ s.percent }}"
+          aria-label="{{ s.used }} of {{ s.owned or 'unlimited' }} seats"><span style="width: {{ s.percent }}%"></span></span>
+    <span class="meters-value">{{ s.used }}{% if s.owned %}/{{ s.owned }}{% endif %} seats</span>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+<p class="setting-label {{ 'setting-label--spaced' if seats }}">Installed on <span class="count">{{ rows|length }}</span></p>
+{% if current %}<p class="hint">The current version is {{ current }}.</p>{% endif %}
+{% if rows %}
+<ul class="manage-list">
+  {% for i in rows %}{% with other = i.host, sub = kinds[i.host_id] %}{% include "software/_row.html" %}{% endwith %}{% endfor %}
+</ul>
+{% else %}
+<p class="hint">Not recorded as installed anywhere yet.</p>
+{% endif %}
+{% if current_user.can_edit %}
+<form class="mountform" data-api="/software/installations" data-then="sheet" data-done="Installation recorded">
+  <p class="setting-label">Record an installation</p>
+  <input type="hidden" name="software_id" value="{{ title.id }}">
+  <label class="field"><span class="field-label">On</span>
+    <select name="host_id" required><option value="">Choose…</option>{% for id, label in hosts %}<option value="{{ id }}">{{ label }}</option>{% endfor %}</select></label>
+  <label class="field"><span class="field-label">Version</span><input name="version" maxlength="60" value="{{ current or '' }}"></label>
+  <label class="field"><span class="field-label">License</span>
+    <select name="license_id"><option value="">None</option>{% for lic in licenses %}<option value="{{ lic.id }}">{{ lic.name }}</option>{% endfor %}</select></label>
+  <button class="btn btn--primary" type="submit">Record</button>
+  <p class="form-error" hidden></p>
+</form>
+{% include "software/_edit.html" %}
+{% endif %}

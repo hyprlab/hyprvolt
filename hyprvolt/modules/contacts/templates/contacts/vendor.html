@@ -1,0 +1,25 @@
+{% from "partials/macros.html" import entity_link %}
+{% macro group(title, items, empty, spaced=false) %}
+<p class="setting-label {{ 'setting-label--spaced' if spaced }}">{{ title }} <span class="count">{{ items|length }}</span></p>
+{% if items %}
+<ul class="manage-list">
+  {% for v in items %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+    <span class="manage-sub">{{ v.type_label }} · {{ v.status }}{% for label, shown in v.list_facts %} · {{ shown }}{% endfor %}</span>
+  </div></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">{{ empty }}</p>
+{% endif %}
+{% endmacro %}
+{{ group("Supplies", supplies, "Nothing yet. Choose this vendor as the supplier in a record's form.") }}
+{{ group("Contracts", contracts, "No contracts with this vendor.", true) }}
+{{ group("People", people, "No people recorded here.", true) }}
+{% if current_user.can_edit %}
+<div class="doc-actions">
+  <button type="button" class="btn btn--ghost" data-new-type="contract" data-new-fields='{"vendor": {{ vendor.id }}}'>New contract</button>
+  <button type="button" class="btn btn--ghost" data-new-type="person" data-new-fields='{"organization": {{ vendor.id }}}'>New person</button>
+</div>
+{% endif %}

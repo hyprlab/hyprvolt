@@ -16,7 +16,7 @@ from typing import Any, Callable
 #: Field kinds a module may use. The core parses, validates, renders and
 #: indexes each one (core/fields.py).
 FIELD_KINDS = ("text", "longtext", "markdown", "integer", "number", "date", "select",
-               "url", "email", "boolean", "ref", "ip", "cidr")
+               "url", "email", "phone", "boolean", "ref", "ip", "cidr")
 #: The subset an admin can add as a custom field, without code.
 CUSTOM_KINDS = ("text", "number", "date", "select", "url", "boolean")
 
@@ -85,7 +85,7 @@ class EntityType:
         or the type is ``proper``."""
         label = self.plural if plural else self.label
         first = label.split(" ", 1)[0]
-        return label if self.proper or (len(first) > 1 and first.isupper()) else label.lower()
+        return label if self.proper or (len(first) > 1 and first[:2].isupper()) else label.lower()
 
 
 @dataclass(frozen=True)

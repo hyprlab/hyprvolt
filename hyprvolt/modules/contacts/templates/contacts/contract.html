@@ -1,0 +1,22 @@
+{% from "partials/macros.html" import entity_link %}
+{% if d and d.ends %}
+<p class="hint">
+  {%- if left < 0 %}Ended {{ -left }} {{ 'day' if left == -1 else 'days' }} ago, on {{ d.ends.isoformat() }}.
+  {%- elif left == 0 %}Ends today.
+  {%- else %}{{ 'Renews' if d.auto_renew else 'Ends' }} in {{ left }} {{ 'day' if left == 1 else 'days' }}, on {{ d.ends.isoformat() }}.{% endif %}
+  {%- if notice and left >= 0 %} Notice is due by {{ notice.isoformat() }}.{% endif %}
+</p>
+{% endif %}
+<p class="setting-label">Covers <span class="count">{{ covers|length }}</span></p>
+{% if covers %}
+<ul class="manage-list">
+  {% for v in covers %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+    <span class="manage-sub">{{ v.type_label }}{% if v.path %} · {{ v.path }}{% endif %}</span>
+  </div></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">Nothing yet. Choose this contract in the form of what it covers.</p>
+{% endif %}

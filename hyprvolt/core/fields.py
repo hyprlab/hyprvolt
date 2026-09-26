@@ -13,6 +13,7 @@ from ..manifest import Field
 
 URL_SCHEMES = ("http", "https", "ftp", "sftp", "ssh", "smb", "rdp", "vnc", "nfs", "git")
 URL_RE = re.compile(r"^([a-z][a-z0-9+.-]*)://\S+$", re.I)
+PHONE_RE = re.compile(r"^\+?[0-9 ().\-/]{3,30}((ext\.?|x) ?[0-9]{1,6})?$", re.I)
 TRUE = ("1", "true", "on", "yes")
 FALSE = ("", "0", "false", "off", "no")
 MAX_TEXT = 500
@@ -49,6 +50,12 @@ def parse(f: Field, raw, lookup=None):
         return None
 
     kind = f.kind
+    if kind == "phone":
+        raw = " ".join(str(raw).split())
+        if not PHONE_RE.match(raw) or sum(c.isdigit() for c in raw) < 3:
+            raise Invalid(f"{f.label} must be a phone number, such as +1 555 010 0199.")
+        return raw
+
     if kind in ("text", "longtext", "markdown", "email", "url"):
         if not isinstance(raw, str):
             raw = str(raw)
@@ -196,6 +203,21 @@ def to_json(f: Field, value):
     if isinstance(value, date):
         return value.isoformat()
     return value
+
+
+def href(f: Field, value) -> str | None:
+    """Where a value links to in the Overview: a web address, mailto: for an
+    email, tel: for a phone number. None for anything else."""
+    if not value:
+        return None
+    if is_link(f, value):
+        return value
+    if f.kind == "email":
+        return "mailto:" + value
+    if f.kind == "phone":
+        number = re.split(r"(?i)\s*(?:ext\.?|x)\s*", value)[0]
+        return "tel:" + "".join(c for c in number if c.isdigit() or c == "+")
+    return None
 
 
 def is_link(f: Field, value) -> bool:

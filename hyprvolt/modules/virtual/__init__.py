@@ -19,8 +19,10 @@ GUEST_STATUSES = (("running", "Running"), ("stopped", "Stopped"), ("template", "
                   ("planned", "Planned"), ("retired", "Retired"))
 RUN_STATUSES = (("running", "Running"), ("stopped", "Stopped"), ("planned", "Planned"), ("retired", "Retired"))
 MACHINES = ("server", "workstation", "nas")
-#: The Network module gives these an IP addresses section and tab.
-ADDRESSABLE = ("addressable",)
+#: Traits other modules look for: an IP address (Network), software
+#: installed and services run (Software, Services).
+ADDRESSABLE = ("addressable", "host")
+HOST = ("host",)
 
 # ———— Fields ————
 
@@ -84,13 +86,13 @@ module = Module(
                            Field("vcpus", "Cores", "integer", min=1, max=4096, card=True, group="Resources"),
                            MEMORY, DISK)),
         EntityType("docker_host", "Docker host", "Docker hosts", detail=VirtualDetail, located_in=(), icon=DOCKER,
-                   proper=True,
+                   proper=True, traits=HOST,
                    fields=(host("Runs on", ("vm", "lxc") + MACHINES, card=True, list=True),
                            Field("version", "Docker version"),
                            Field("management_url", "Management", "url", help="Portainer or another web interface.")),
                    tabs=(Tab("containers", "Containers", views.containers_tab, count=views.container_count),)),
         EntityType("stack", "Stack", "Stacks", detail=VirtualDetail, located_in=(), icon=STACK,
-                   statuses=RUN_STATUSES,
+                   statuses=RUN_STATUSES, traits=HOST,
                    fields=(host("Docker host", ("docker_host",), card=True, list=True),
                            Field("path", "Compose file at", help="/opt/stacks/media/compose.yaml"),
                            Field("repo_url", "Repository", "url"),

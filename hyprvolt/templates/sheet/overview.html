@@ -13,7 +13,7 @@
   {% for item in group['items'] %}
   <div><dt>{{ item.field.label }}</dt><dd>
     {%- if item.ref %}{{ entity_link(item.ref.id, item.ref.name) }}
-    {%- elif item.link %}<a class="link" href="{{ item.link }}" target="_blank" rel="noopener noreferrer">{{ item.shown }}</a>
+    {%- elif item.link %}<a class="link" href="{{ item.link }}" {% if item.link.startswith('http') %}target="_blank" rel="noopener noreferrer"{% endif %}>{{ item.shown }}</a>
     {%- elif item.field.kind == 'longtext' and item.shown %}<span class="kv-long">{{ item.shown }}</span>
     {%- elif item.shown %}{{ item.shown }}
     {%- else %}<span class="kv-empty">Not set</span>{% endif -%}
@@ -27,7 +27,7 @@
 <dl class="kv">
   {% for item in custom %}
   <div><dt>{{ item.field.label }}</dt><dd>
-    {%- if item.link %}<a class="link" href="{{ item.link }}" target="_blank" rel="noopener noreferrer">{{ item.shown }}</a>
+    {%- if item.link %}<a class="link" href="{{ item.link }}" {% if item.link.startswith('http') %}target="_blank" rel="noopener noreferrer"{% endif %}>{{ item.shown }}</a>
     {%- elif item.shown %}{{ item.shown }}{% else %}<span class="kv-empty">Not set</span>{% endif -%}
   </dd></div>
   {% endfor %}

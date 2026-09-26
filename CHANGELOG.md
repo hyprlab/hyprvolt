@@ -24,6 +24,13 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Devices have ports, set with their speed, PoE and VLANs, cabled to other devices' ports; a cable path is traced through patch panels to the far end
 - Domains hold DNS records written down by hand, linked to the devices their addresses belong to; the palette finds DNS names and MAC addresses
 - Sidebar filters list IP addresses with no device and domains due for renewal, and a dashboard card shows how full each subnet is
+- Services: what people use, with its address, ports, users, importance, what it runs on and its domain; the dependency view of a server or a domain lists the services that go with it
+- A dashboard card lists the services marked high or critical and any that are degraded or down
+- Software: titles and where each is installed, at which version; installations behind the current version are marked
+- Licenses count the seats in use against the seats owned, and sidebar filters list licenses over their seats or due for renewal
+- Contacts and vendors: vendors with support and account numbers, the people there, and contracts with their term, notice period and cost
+- Hardware, software, services, networks and domains name their supplier and the contract that covers them in their form
+- Phone numbers and email addresses are links
 - A knowledge base of Markdown documents that attach to any record and link to records with [[slug]]
 - Typed links between records in both directions, and a view of what breaks if a record goes down
 - Files attached to any record, included in `flask backup` when the backup is named `.tar.gz`

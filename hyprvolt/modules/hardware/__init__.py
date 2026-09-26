@@ -60,14 +60,17 @@ WORKSTATION = '<rect x="3.5" y="4.5" width="17" height="11" rx="1"/><path d="M9 
 PRINTER = '<path d="M7 9V4.5h10V9"/><rect x="3.5" y="9" width="17" height="7" rx="1"/><path d="M7 14h10v5.5H7z"/>'
 PERIPHERAL = '<rect x="3" y="8" width="18" height="9" rx="1.2"/><path d="M6.5 11h.1M9.5 11h.1M12.5 11h.1M15.5 11h.1M8 14h8"/>'
 
-#: Every hardware type has network ports and can hold an IP address (the
-#: Network module looks for these); those that go in a rack say so too.
-NET = ("addressable", "cabled")
+#: Traits other modules look for. Every hardware type has network ports,
+#: can hold an IP address (Network) and has a supplier (Contacts); those
+#: that go in a rack say so (Locations), and those that run software or
+#: services are hosts (Software, Services).
+NET = ("addressable", "cabled", "supplied")
 RACK = ("rackmount",) + NET
+HOST = ("host",)
 
 
 def hardware(key, label, plural, icon, specs=(), traits=()):
-    return EntityType(key, label, plural, detail=HardwareDetail, statuses=STATUSES, icon=icon, traits=traits or NET,
+    return EntityType(key, label, plural, detail=HardwareDetail, statuses=STATUSES, icon=icon, traits=traits,
                       fields=IDENTITY + tuple(specs) + PURCHASE)
 
 
@@ -81,15 +84,15 @@ module = Module(
     requires=("locations",),
     models=(HardwareDetail,),
     types=(
-        hardware("server", "Server", "Servers", SERVER, traits=RACK, specs=(
+        hardware("server", "Server", "Servers", SERVER, traits=RACK + HOST, specs=(
             Field("kind", "Form factor", "select", options=FORM_FACTORS, group="Specs"),
             CPU, CORES, RAM, STORAGE, NICS, POWER, OS)),
-        hardware("network_device", "Network device", "Network gear", NETWORK, traits=RACK, specs=(
+        hardware("network_device", "Network device", "Network gear", NETWORK, traits=RACK + HOST, specs=(
             Field("kind", "Kind", "select", options=NETWORK_KINDS, list=True, group="Specs"),
             PORTS, Field("managed", "Managed", "boolean", group="Specs"), FIRMWARE, POWER)),
-        hardware("firewall", "Firewall", "Firewalls", FIREWALL, traits=RACK, specs=(
+        hardware("firewall", "Firewall", "Firewalls", FIREWALL, traits=RACK + HOST, specs=(
             PORTS, FIRMWARE, CPU, RAM, POWER)),
-        hardware("access_point", "Access point", "Access points", ACCESS_POINT, specs=(
+        hardware("access_point", "Access point", "Access points", ACCESS_POINT, traits=NET, specs=(
             Field("wifi", "Wi-Fi", group="Specs", help="The standard and bands: Wi-Fi 6, 2.4 and 5 GHz."),
             FIRMWARE, POWER)),
         hardware("ups", "UPS", "UPSes", UPS, traits=RACK, specs=(
@@ -98,14 +101,14 @@ module = Module(
             Field("battery_due", "Battery due", "date", group="Specs",
                   help="When the batteries should be replaced."),
             Field("power_w", "Rated output", "integer", min=0, max=1_000_000, unit="W", group="Specs"))),
-        hardware("nas", "NAS", "NAS", NAS, traits=RACK, specs=(
+        hardware("nas", "NAS", "NAS", NAS, traits=RACK + HOST, specs=(
             Field("drive_bays", "Drive bays", "integer", min=0, max=500, group="Specs"),
             Field("capacity_tb", "Usable capacity", "number", min=0, unit="TB", card=True, group="Specs"),
             STORAGE, CPU, RAM, NICS, POWER, OS)),
-        hardware("workstation", "Workstation", "Workstations", WORKSTATION, specs=(
+        hardware("workstation", "Workstation", "Workstations", WORKSTATION, traits=NET + HOST, specs=(
             Field("assigned_to", "Used by", list=True, group="Specs"),
             CPU, CORES, RAM, STORAGE, OS)),
-        hardware("printer", "Printer", "Printers", PRINTER, specs=(FIRMWARE, POWER)),
+        hardware("printer", "Printer", "Printers", PRINTER, traits=NET, specs=(FIRMWARE, POWER)),
         hardware("peripheral", "Peripheral", "Peripherals", PERIPHERAL, traits=RACK, specs=(
             Field("category", "What it is", list=True, group="Specs",
                   help="A monitor, a KVM switch, a PDU, a dock."), POWER)),

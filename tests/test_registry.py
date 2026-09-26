@@ -252,3 +252,4 @@ def test_a_type_label_inside_a_sentence():
     assert EntityType("lxc", "LXC container", "LXC containers").text() == "LXC container"
     assert EntityType("docker_host", "Docker host", "Docker hosts", proper=True).text(True) == "Docker hosts"
     assert EntityType("a", "A", "As").text() == "a"
+    assert EntityType("vlan", "VLAN", "VLANs").text(plural=True) == "VLANs"
