@@ -61,10 +61,8 @@ Configuration is covered in [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md).
 
 Hyprvolt is built by a human maintainer who uses generative AI as a development
 tool. The maintainer decides what gets built, reviews the results, tests every
-release and signs off on everything that ships. Commits are made under the
-maintainer's name; the tool is declared here once, for the whole repository,
-instead of in a trailer on every commit. The app itself contains no AI and
-makes no requests to AI services.
+release and signs off on everything that ships. The app itself contains no AI
+and makes no requests to AI services.
 
 ## License
 
