@@ -1,7 +1,7 @@
 """The vault's tab, routes, settings pane and purge.
 
-Only accounts granted the secrets permission see any of it; changing a
-secret also takes the editor role. Every reveal and copy is written to the
+Only admins and the accounts an admin has given access see any of it;
+changing a secret also takes the editor role. Every reveal and copy is written to the
 record's history, and a value is never sent anywhere but in answer to one.
 API tokens can't reveal secrets: scripts get the list, never a value.
 """
@@ -27,7 +27,7 @@ ACTIONS = ("added a secret", "changed a secret", "removed a secret", "restored a
 
 def allowed(user=None) -> bool:
     user = user or current_user
-    return bool(getattr(user, "is_authenticated", False) and getattr(user, "can_see_secrets", False))
+    return bool(getattr(user, "is_authenticated", False) and getattr(user, "sees_secrets", False))
 
 
 def _require(edit=False):
@@ -218,7 +218,8 @@ def pane() -> str:
         src = "environment"
     return render_template("vault/pane.html", source=src, path=crypto.key_path(), total=total,
                            readable=readable, problem=problem, reveals=reveals,
-                           people=User.query.filter_by(can_see_secrets=True).order_by(User.username).all())
+                           people=User.query.filter((User.role == "admin") | User.can_see_secrets.is_(True))
+                           .order_by(User.username).all())
 
 
 def purge() -> int:

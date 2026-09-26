@@ -123,7 +123,7 @@ ACTIONS = {"created": "created it", "edited": "edited", "archived": "archived it
 def hide_secret_lines(rows):
     """The vault's history lines (a secret added, changed, revealed) name a
     secret; only people with access to secrets see them."""
-    if getattr(current_user, "can_see_secrets", False):
+    if getattr(current_user, "sees_secrets", False):
         return rows
     return [r for r in rows if not r.action.endswith(" a secret")]
 

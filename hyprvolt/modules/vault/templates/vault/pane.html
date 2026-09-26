@@ -13,7 +13,7 @@
   <div><dt>Secrets</dt><dd>{{ total }}</dd></div>
   <div><dt>Who can see them</dt><dd>{% for u in people %}{{ u.display_name }}{{ ', ' if not loop.last }}{% else %}<span class="kv-empty">Nobody yet</span>{% endfor %}</dd></div>
 </dl>
-<p class="hint">Give or take access in Admin, with the key button beside each user.</p>
+<p class="hint">Admins always see secrets. Give or take access for anyone else in Admin, with the key button beside each user.</p>
 
 <p class="setting-label setting-label--spaced">Latest reveals</p>
 {% if reveals %}

@@ -2,9 +2,9 @@
 record, encrypted with a key kept outside the database (crypto.py).
 
 Built in, because a record's Secrets tab is part of every record, as its
-Documents tab is. Only accounts an admin has granted access to secrets see
-the tab, the pane or any route; the role decides only whether they may also
-change them.
+Documents tab is. Admins, and the accounts an admin has given access, see
+the tab, the pane and the routes; the role decides only whether they may
+also change them.
 """
 from hyprvolt.manifest import Job, Module, Pane, Tab
 

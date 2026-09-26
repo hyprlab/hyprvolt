@@ -224,11 +224,11 @@ downloads.
 ## Secrets
 
 Passwords, API keys, SSH keys and license keys are kept in the Secrets tab
-of the record they belong to. Only accounts an admin has given access to
-secrets see the tab, admins included: the key button beside each user in
-Settings > Admin gives and takes it away. The account made in the setup
-wizard has it. Seeing needs only that access; adding, changing and removing
-also need the editor role.
+of the record they belong to. Admins see and change them always, as they can
+do everything. Viewers and editors see them only when an admin gives them
+access, with the key button beside each user in Settings > Admin. Seeing
+needs only that access; adding, changing and removing also need the editor
+role.
 
 A secret's value is hidden until Show, which hides it again after 30
 seconds, and Copy puts it on the clipboard without showing it. Each Show and

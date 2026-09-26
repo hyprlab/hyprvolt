@@ -3,9 +3,10 @@
 The data belongs to the instance, not to whoever created it, so access is a
 question of role rather than ownership:
 
-* ``viewer`` reads everything (secrets aside, once they exist)
+* ``viewer`` reads everything but secrets, unless given access to them
 * ``editor`` also creates, edits, archives and deletes documentation
-* ``admin`` also manages users, modules, custom fields and instance settings
+* ``admin`` also manages users, modules, custom fields, backups and instance
+  settings, and sees every secret: an admin can do everything
 
 Every view declares what it needs with ``@role(...)`` or ``@public``. The app
 factory refuses to start if a route has neither (``check_routes``), so a new

@@ -398,7 +398,7 @@
             <span class="manage-title">{{ u.display_name }}
               {% if u.id == current_user.id %}<span class="chip chip--muted">you</span>{% endif %}
             </span>
-            <span class="manage-sub">{{ u.username }} · joined {{ u.created_at.strftime('%b %-d, %Y') }}{% if u.can_see_secrets %} · sees secrets{% endif %}</span>
+            <span class="manage-sub">{{ u.username }} · joined {{ u.created_at.strftime('%b %-d, %Y') }}{% if u.sees_secrets %} · sees secrets{% endif %}</span>
           </div>
           {% if u.id != current_user.id %}
           <div class="seg seg--xs" role="radiogroup" aria-label="Role of {{ u.display_name }}">
@@ -409,6 +409,11 @@
           {% else %}
           <span class="chip">{{ u.role }}</span>
           {% endif %}
+          {% if u.is_admin %}
+          <span class="iconbtn iconbtn--sm" aria-pressed="true" title="Admins always see secrets" role="img" aria-label="Sees secrets, as every admin does">
+            <svg viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="4"/><path d="M10.8 12.7 20.5 3M16 7.5l3 3M18.5 5l2 2"/></svg>
+          </span>
+          {% else %}
           <button class="iconbtn iconbtn--sm" aria-pressed="{{ 'true' if u.can_see_secrets else 'false' }}"
                   data-api-post="/admin/users/{{ u.id }}/secrets" data-body='{"allowed": {{ 'false' if u.can_see_secrets else 'true' }}}'
                   data-then="reload" data-done="{{ 'Access to secrets taken away' if u.can_see_secrets else 'Access to secrets given' }}"
@@ -416,6 +421,7 @@
                   title="{{ 'Can see secrets. Take it away' if u.can_see_secrets else 'Give access to secrets' }}">
             <svg viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="4"/><path d="M10.8 12.7 20.5 3M16 7.5l3 3M18.5 5l2 2"/></svg>
           </button>
+          {% endif %}
           <button class="iconbtn iconbtn--sm" data-admin-password aria-label="Reset password" title="Reset password">
             <svg viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="4"/><path d="M10.3 12.7 21 2M15 5l3 3M18 2l3 3"/></svg>
           </button>

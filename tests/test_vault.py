@@ -69,11 +69,17 @@ def test_only_people_given_access_see_secrets(app, client, h, admin, editor):
     assert other.post(f"/vault/secrets/{sid}/reveal", headers=oh).status_code == 200
     assert other.post(f"/vault/entities/{server['id']}/secrets", json={"name": "x", "value": "y"},
                       headers=oh).status_code == 403
-    # Admins need it given too: taking it away from yourself works.
-    post(client, h, "/admin/users/1/secrets", allowed=False)
-    assert client.post(f"/vault/secrets/{sid}/reveal", headers=h).status_code == 403
+    # Admins see secrets always; it can't be taken away from one.
+    refused = client.post("/admin/users/1/secrets", json={"allowed": False}, headers=h)
+    assert refused.status_code == 400 and "Admins always see secrets" in refused.get_json()["error"]
     with app.app_context():
-        assert db.session.get(User, 1).can_see_secrets is False
+        admin_user = db.session.get(User, 1)
+        admin_user.can_see_secrets = False
+        db.session.commit()
+    assert client.post(f"/vault/secrets/{sid}/reveal", headers=h).status_code == 200
+    # Made an admin, the editor sees them too, whatever the flag says.
+    client.post("/admin/users/2/role", json={"role": "admin"}, headers=h)
+    post(client, h, "/admin/users/2/secrets", 400, allowed=False)
 
 
 def test_changing_and_removing_a_secret(client, h, admin):

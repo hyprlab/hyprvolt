@@ -36,7 +36,7 @@
 {% else %}
 <p class="hint">No secrets kept for {{ entity.name }}.</p>
 {% endif %}
-<p class="hint sheet-foot">Shown only to people an admin has given access to secrets. Every show and copy is in the History tab.</p>
+<p class="hint sheet-foot">Shown only to admins and the people they have given access to secrets. Every show and copy is in the History tab.</p>
 
 {% if current_user.can_edit %}
 {% macro fields(editing) %}

@@ -471,8 +471,10 @@ def admin_set_role(user_id):
 @bp.route("/admin/users/<int:user_id>/secrets", methods=["POST"])
 @role("admin")
 def admin_set_secrets(user_id):
-    """Grant or take away access to the secrets vault, admins included."""
+    """Grant or take away access to the secrets vault. Admins have it always."""
     user = db.get_or_404(User, user_id)
+    if user.is_admin:
+        return jsonify(error="Admins always see secrets. Change the role to take it away."), 400
     user.can_see_secrets = bool((request.get_json(silent=True) or {}).get("allowed"))
     db.session.commit()
     return jsonify(ok=True, allowed=user.can_see_secrets)

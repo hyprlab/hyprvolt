@@ -32,7 +32,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Hardware, software, services, networks and domains name their supplier and the contract that covers them in their form
 - Phone numbers and email addresses are links
 - A secrets vault: passwords, API keys, SSH keys and license keys in a Secrets tab on any record, encrypted with a key kept outside the database, shown or copied on request, each time written to the history
-- Access to secrets is its own permission, given per account in Settings > Admin; Settings > Secrets says where the key is and who revealed what lately
+- Admins always see secrets; viewers and editors see them when an admin gives them access in Settings > Admin. Settings > Secrets says where the key is and who revealed what lately
 - `flask secrets status` and `flask secrets new-key`; `flask create-user --secrets`
 - The dashboard's Coming up card lists warranties, license renewals, contract ends, domain renewals and UPS battery dates near their date, and the sidebar counts them
 - Settings > Admin sets how many days ahead and behind reminders reach, 90 by default; the sidebar filters for things ending soon follow it
