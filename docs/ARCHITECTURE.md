@@ -40,6 +40,7 @@ hyprvolt/
     shell.py       the sidebar and what surrounds every page
     present.py     how a record shows in a card or a row
     reminders.py   dates coming up, for the dashboard and the badge
+    clock.py       the instance's time zone, and times in it
     transfer.py    CSV export and import, the JSON export
     backups.py     backups and restores, made and scheduled in Settings
   modules/
@@ -52,6 +53,7 @@ hyprvolt/
     services/      what people use, and what it runs on
     certificates/  TLS certificates, read from the servers that serve them
     backup_jobs/   backup jobs and their runs
+    maintenance/   maintenance windows and the change log
     software/      titles, installations and licenses
     contacts/      vendors, people and contracts
   about_docs.py    parses CHANGELOG.md for the About section

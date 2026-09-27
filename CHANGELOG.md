@@ -37,6 +37,10 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Backup jobs: what each backs up, where it saves to, its schedule, retention and restore tests, and a status that follows its runs, from Succeeding to Failing or Overdue
 - Backup scripts report each run with an API token, and the Runs tab shows the command to use; runs can be recorded by hand too
 - What a job backs up has a Backups tab, and a dashboard card lists the backup jobs failing or overdue
+- Maintenance windows: start and end, expected impact, who does it, whether users were told, and a plan; the Impact tab lists what a window affects and everything that goes down with it
+- A change log: changes with when, what kind, who, what and why, and the window they were part of. Every record has a Changes tab with its changes and maintenance, and buttons to record a change or plan maintenance for it
+- A dashboard card lists the maintenance of the next 30 days, marking what is under way, and the changes of the past week; sidebar filters list maintenance coming up and under way, recent changes, and changes that failed or were rolled back
+- Settings > Admin sets the instance's time zone, in which times are typed and shown; it starts as the `TZ` environment variable, or UTC
 - A secrets vault: passwords, API keys, SSH keys and license keys in a Secrets tab on any record, encrypted with a key kept outside the database, shown or copied on request, each time written to the history
 - Admins always see secrets; viewers and editors see them when an admin gives them access in Settings > Admin. Settings > Secrets says where the key is and who revealed what lately
 - `flask secrets status` and `flask secrets new-key`; `flask create-user --secrets`

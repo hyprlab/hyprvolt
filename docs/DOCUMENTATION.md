@@ -41,6 +41,7 @@ Everything is optional. Put values in a `.env` file next to
 | `ALLOW_REGISTRATION` | `0` | Whether anyone can create an account. The setup wizard asks and saves the answer, which wins from then on |
 | `WORKER_MINUTES` | `15` | How often background work runs. The setup wizard saves 15, which Settings > Admin changes; `0` here keeps the worker from starting at all |
 | `ITEMS_PER_PAGE` | `40` | Records per page |
+| `TZ` | `UTC` | The time zone the app starts with, such as `America/Chicago`. Settings > Admin changes it |
 | `DATA_DIR` | `/data` | Where the database and attachments live inside the container |
 | `MODULES_STRICT` | `0` | Stop at startup when a module's manifest is broken, instead of leaving the module out |
 | `DATABASE_URL` | the SQLite file in `DATA_DIR` | Where the database is. Only SQLite is supported; backups copy it with SQLite's own API |
@@ -73,7 +74,8 @@ changed it stays signed in.
 ## Modules and custom fields
 
 What Hyprvolt documents comes in modules: Locations, Hardware, Virtual,
-Network, Services, Certificates, Backup jobs, Software, Contacts and vendors, and the knowledge base. Settings > Modules turns a module off; it then
+Network, Services, Certificates, Backup jobs, Maintenance, Software, Contacts and vendors, and the
+knowledge base. Settings > Modules turns a module off; it then
 disappears from the sidebar, search and the dashboard, and its records stay
 in the database until it is turned back on. A module that needs another is
 off while that one is: Hardware needs Locations, and Virtual and Network
@@ -143,6 +145,31 @@ runs can be recorded there by hand too. A paused or retired job keeps its
 status. Only the changes of status go in the history, and each job keeps its
 latest 200 runs. The dashboard's Backups card lists the jobs failing or
 overdue, and the next restore test is on the Coming up card.
+
+A maintenance window has a start and an end, the impact people will notice
+(an outage, degraded service, or none), who does it, whether users were
+told, and a plan in Markdown. Its Impact tab lists what it affects, added
+from the palette, and, unless nothing is interrupted, everything that goes
+down with those: what runs on them or depends on them, however far down.
+A window's status is what was decided (planned, done or canceled); whether it
+is coming or under way follows from its times. The dashboard's Maintenance
+card lists the planned windows of the next 30 days, those under way marked,
+and the changes of the past week.
+
+A change is something someone did to a system: when, what kind, who did it,
+what and why, and the window it was part of. Every other record has a
+Changes tab: its change log and its maintenance, with buttons to record a
+change or plan maintenance that start out linked to it. A change left
+without a time is one made now. The sidebar lists maintenance coming up and
+under way, the changes of the last 30 days, and the changes that failed or
+were rolled back. The history of each record still logs every edit to it;
+changes are what people did to the systems themselves.
+
+Times, such as a window's start, are typed and shown in the instance's time
+zone, set in Settings > Admin (it starts as the `TZ` environment variable, or
+UTC). They are stored in UTC, so changing the zone moves nothing; a time sent
+to the API with an offset or a `Z` is taken as it says, and one without, in
+the instance's zone. The API returns times in UTC with a `Z`.
 
 Software titles are installed on hosts: record an installation in the
 title's Installations tab or the host's Software tab, with its version and

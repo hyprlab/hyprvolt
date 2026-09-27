@@ -137,6 +137,7 @@ and a `kind`:
 | `markdown` | text | rendered Markdown with `[[slug]]` links, under the fields |
 | `integer`, `number` | int, float, with `min` and `max` | the value and its `unit` |
 | `date` | a date | `2026-09-25` |
+| `datetime` | a date and time, stored in UTC; typed and shown in the instance's time zone (`core/clock.py`) | `2026-10-03 22:00` |
 | `select` | one of `options`, as (value, label) pairs | its label |
 | `boolean` | true or false | Yes or No |
 | `ref` | the id of a record of one of `types` or of any type with `trait`, or a relationship (below) | a link to it |
@@ -238,7 +239,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `data-done="Message"` | The toast; with Undo when the response has `undo`. An answer's own `message` takes its place |
 | `[data-pick]`, `data-pick-types`, `data-pick-into` | Opens the palette to choose a record; its id goes into the form field named by `data-pick-into` (`other_id` by default) and its name into `[data-pick-label]`. `data-pick-exclude="id"` leaves a record out; `data-pick-submit` submits the form once one is chosen |
 | `[data-fill='{"field": value}']`, `data-fill-form="id"` | Fills fields of a form and shows it; the field marked `data-fill-focus` gets the focus |
-| `[data-new-type="rack"]`, `data-new-location`, `data-new-attach`, `data-new-name`, `data-new-fields='{"host": 12}'` | Opens the form for a new record, placed somewhere, attached as a document, with a name, or with fields filled in |
+| `[data-new-type="rack"]`, `data-new-location`, `data-new-attach`, `data-new-link="affects:12"`, `data-new-name`, `data-new-fields='{"host": 12}'` | Opens the form for a new record, placed somewhere, attached as a document, linked to a record once saved (new record, kind, that record), with a name, or with fields filled in |
 | `[data-open="dialog-id"]`, `[data-close]` | Opens a dialog; closes the one it is in |
 | `form.dropzone` | Files dropped on it go in through its file input and the form is submitted |
 | `a[data-entity="id"]` | Opens that record's sheet in place (`entity_link` makes these) |
@@ -299,14 +300,14 @@ on every write.
 
 ## Planned modules and the hooks they would use
 
-These are not built. Each fits the manifest as it is. Certificates and
-Backup jobs were on this list and are built; their packages show the hooks
-in use (a `job` that reads from the network and commits record by record, a
-table of runs kept apart from the history, `remind`).
+These are not built. Each fits the manifest as it is. Certificates,
+Backup jobs, and Maintenance and changes were on this list and are built;
+their packages show the hooks in use (a `job` that reads from the network
+and commits record by record, a table of runs kept apart from the history,
+`remind`, `datetime` fields, a sheet tab on every record, `data-new-link`).
 
 | Module | Hooks |
 | --- | --- |
 | **Discovery and sync** (Proxmox, Portainer, pfSense) | A `settings_pane` for the API address and token (the token kept in the secrets vault); a `job` that pulls on a schedule and writes through `records.create` and `records.update`, so every change it makes is in the history; a table of its own mapping outside ids to record ids; a blueprint route for "Sync now"; a `widget` with the last run; the core's `runs_on` and `hosted_by` links |
-| **Maintenance windows and change log** | `maintenance` and `change` types with start and end dates and a Markdown description; a `RelationKind` "affects"; a `sheet_tab` on any record listing its windows and changes; `relations.walk()` to list what a window takes down; a `widget` of what is coming up. The core's history already logs every edit; this module is for changes people describe |
 | **Network diagram** | A blueprint page that draws an SVG on the server from `relations` and Network's cables (`network_cables`, port to port), and a `sheet_tab` showing the neighborhood of one record. `requires=("network",)`. No script needed |
 | **Asset labels** | A blueprint page of printable labels, each with a QR code linking to `/e/<id>` (which opens `?open=<id>` in the right module), reached from a `ListFilter` or a `sheet_tab`. It needs a QR encoder: a small dependency or a hand-written one, to be decided then, and print styles added to `app.css` as a shared component |

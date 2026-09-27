@@ -25,6 +25,7 @@ in a single SQLite volume.
 - VLANs, subnets with a map of used and free addresses, ports and cables traced end to end, and DNS records
 - Services and what they run on, software installations and license seats, vendors, people and contracts
 - TLS certificates kept current by reading them from the servers that serve them, and backup jobs whose scripts report each run
+- Maintenance windows that show everything they take down, and a change log on every record
 - Rack elevations, front and rear, that flag overlaps and anything that no longer fits
 - A Markdown knowledge base whose documents attach to records and link to them with `[[slug]]`
 - Typed links between any two records, and a view of what breaks if one goes down
