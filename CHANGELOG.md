@@ -31,6 +31,12 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Contacts and vendors: vendors with support and account numbers, the people there, and contracts with their term, notice period and cost
 - Hardware, software, services, networks and domains name their supplier and the contract that covers them in their form
 - Phone numbers and email addresses are links
+- Certificates: TLS certificates with the names they cover, issuer, dates, key and fingerprint, and the services they secure; the dependency view of a certificate lists what breaks when it expires
+- A certificate's Check tab reads it from PEM text, or from the server that serves it; given an address, the app checks it once a day and takes in a renewed certificate by itself
+- Certificates are reminded of before they expire; one that renews by itself only once its renewal is plainly late. Sidebar filters list certificates expiring soon and those whose check failed
+- Backup jobs: what each backs up, where it saves to, its schedule, retention and restore tests, and a status that follows its runs, from Succeeding to Failing or Overdue
+- Backup scripts report each run with an API token, and the Runs tab shows the command to use; runs can be recorded by hand too
+- What a job backs up has a Backups tab, and a dashboard card lists the backup jobs failing or overdue
 - A secrets vault: passwords, API keys, SSH keys and license keys in a Secrets tab on any record, encrypted with a key kept outside the database, shown or copied on request, each time written to the history
 - Admins always see secrets; viewers and editors see them when an admin gives them access in Settings > Admin. Settings > Secrets says where the key is and who revealed what lately
 - `flask secrets status` and `flask secrets new-key`; `flask create-user --secrets`

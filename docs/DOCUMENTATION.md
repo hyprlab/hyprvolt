@@ -73,7 +73,7 @@ changed it stays signed in.
 ## Modules and custom fields
 
 What Hyprvolt documents comes in modules: Locations, Hardware, Virtual,
-Network, Services, Software, Contacts and vendors, and the knowledge base. Settings > Modules turns a module off; it then
+Network, Services, Certificates, Backup jobs, Software, Contacts and vendors, and the knowledge base. Settings > Modules turns a module off; it then
 disappears from the sidebar, search and the dashboard, and its records stay
 in the database until it is turned back on. A module that needs another is
 off while that one is: Hardware needs Locations, and Virtual and Network
@@ -118,6 +118,32 @@ links, so the dependency view of a server or a domain lists the services
 that go with it, and the dashboard shows the services marked high or
 critical and any that are degraded or down.
 
+A certificate records the names it covers, its issuer, its dates, its key
+and its fingerprint, and what uses it: a service or host chosen in its form, or
+anything linked as "secures" in Relationships, so the dependency view of a
+certificate lists what breaks when it expires. Its expiry is on the Coming
+up card like a warranty; one marked "Renews by itself" only once it is 21
+days from its end, since by then its renewal has failed. The Check tab reads
+a certificate from its PEM text, and given a host and port in "Check at",
+the app connects there once a day, reads the certificate the server
+presents, and updates the record when it has changed, so renewals keep the
+dates current by themselves. The check trusts nothing and sends nothing but
+a TLS handshake; it goes out from the app's server, so the address must be
+reachable from there. The sidebar lists certificates expiring soon and those
+whose last check failed.
+
+A backup job records its tool, what it backs up, where it saves to, its
+schedule, how long it keeps copies, and how often it should succeed. What it
+backs up gets a Backups tab showing the jobs and how each stands. Its status
+follows its runs: Succeeding, Warnings or Failing after the latest run, and
+Overdue once half an interval more than it should take passes without a
+success (a nightly job after 36 hours). The backup script reports each run
+with an API token; the job's Runs tab shows the command to add to it, and
+runs can be recorded there by hand too. A paused or retired job keeps its
+status. Only the changes of status go in the history, and each job keeps its
+latest 200 runs. The dashboard's Backups card lists the jobs failing or
+overdue, and the next restore test is on the Coming up card.
+
 Software titles are installed on hosts: record an installation in the
 title's Installations tab or the host's Software tab, with its version and
 the license seat it takes. An installation at another version than the
@@ -142,8 +168,9 @@ removes its values too, with Undo.
 
 The dashboard counts what each module documents, lists what changed
 lately, and carries the cards modules add (rack space, hypervisors, subnets,
-services). Its Coming up card lists every warranty, license renewal,
-contract end, domain renewal and UPS battery date that falls within the
+services, backups). Its Coming up card lists every warranty, license
+renewal, contract end, domain renewal, certificate expiry, restore test and
+UPS battery date that falls within the
 reminder window, from that many days before the date until that many days
 after; the Dashboard entry in the sidebar shows how many. The window is 90
 days unless an admin changes it in Settings > Admin ("Remind of dates

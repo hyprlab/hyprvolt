@@ -50,6 +50,8 @@ hyprvolt/
     virtual/       clusters, hypervisors, VMs, containers, stacks
     network/       networks, VLANs, subnets, IP addresses, ports, DNS
     services/      what people use, and what it runs on
+    certificates/  TLS certificates, read from the servers that serve them
+    backup_jobs/   backup jobs and their runs
     software/      titles, installations and licenses
     contacts/      vendors, people and contracts
   about_docs.py    parses CHANGELOG.md for the About section

@@ -36,6 +36,7 @@ Only the latest stable release receives security fixes.
 | A stolen database or backup | Secrets are encrypted (Fernet: AES-128-CBC with an HMAC) with a key that is not in the database and not in `flask backup`'s archive |
 | A leaked API token | Only a SHA-256 of each token is stored; a token can be limited to reading, and whatever its role can't reveal a secret, download the secrets key or a backup, restore, or make tokens; it is revoked at once in Settings, a revoked one can be brought back only within ten minutes, and a restore revokes them all |
 | A stolen session or remember-me cookie | Sign-in ids carry a stamp of the password: changing or resetting it ends every other session and cookie of the account |
+| The certificate check as a way into the network | Only editors set a certificate's address or press Check now; the check opens a connection, makes a TLS handshake and reads the certificate presented, sending no request, following no redirect and keeping nothing but the certificate's details; one address at a time, with a five-second timeout, and the worker checks each certificate at most once a day |
 | Seeing a password without cause | Beyond admins, secrets are a permission given per account; each reveal and copy is written to the record's history with who and when; API tokens can't read them |
 
 ## Out of scope
@@ -44,6 +45,9 @@ Only the latest stable release receives security fixes.
   admin resets passwords in Settings, or with `flask reset-password`.
 - There is no two-factor authentication yet.
 - TLS is the reverse proxy's job.
+- The certificate check reaches whatever the app's server can reach, as a
+  port scanner could: an editor can learn from its answer whether a host and
+  port on the internal network accept connections and speak TLS.
 - The in-memory sign-in throttle resets when the container restarts.
 - The Turnstile secret is stored in the database unencrypted, like every other
   setting; whoever can read the volume can read it. It is never sent to a

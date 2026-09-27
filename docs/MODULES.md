@@ -114,7 +114,8 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   every type with that trait. The ones in use: `rackmount` (Locations),
   `addressable` and `cabled` (Network), `host` (Software and Services: where
   software is installed and services run), `supplied` (Contacts: has a
-  supplier and a contract), `domain` (Services: a service's domain).
+  supplier and a contract), `domain` (Services: a service's domain), `tls`
+  (Certificates: services and hosts that serve a certificate).
 - `inactive` are the statuses of records that need no reminders, `("retired",)`
   by default; Hardware's are retired and disposed.
 - `name_from="address"` makes the record's name the shown value of one of
@@ -156,6 +157,11 @@ dashboard's Coming up card and counts toward the sidebar badge, unless it is
 archived or in an `inactive` status. `reminders.ending_within(query, detail,
 column)` is the sidebar filter for the window ahead; with `past=True` it also
 takes in the window behind (a renewal missed).
+
+`remind=` narrows the window ahead for one record: `remind(detail)` returns a
+number of days, or None for the admin's window, and the smaller of the two
+applies. Certificates uses it so one that renews by itself is only reminded
+of when it is 21 days from its end, which means the renewal failed.
 
 A `ref` with `trait="addressable"` instead of `types` points at a record of
 any type with that trait, from whichever modules are installed; the form
@@ -293,13 +299,14 @@ on every write.
 
 ## Planned modules and the hooks they would use
 
-These are not built. Each fits the manifest as it is:
+These are not built. Each fits the manifest as it is. Certificates and
+Backup jobs were on this list and are built; their packages show the hooks
+in use (a `job` that reads from the network and commits record by record, a
+table of runs kept apart from the history, `remind`).
 
 | Module | Hooks |
 | --- | --- |
 | **Discovery and sync** (Proxmox, Portainer, pfSense) | A `settings_pane` for the API address and token (the token kept in the secrets vault); a `job` that pulls on a schedule and writes through `records.create` and `records.update`, so every change it makes is in the history; a table of its own mapping outside ids to record ids; a blueprint route for "Sync now"; a `widget` with the last run; the core's `runs_on` and `hosted_by` links |
-| **Certificates** | A `certificate` type with issuer, names and an expiry `date` marked `expires`, so the Coming up card and the badge remind of it with no job; a `ListFilter` "Expiring soon" built on `reminders.ending_within`; a `job` only to fetch certificates from hosts; a `search` provider for host names; a `RelationKind` "secures" |
-| **Backup jobs** | A `backup_job` type with its schedule, retention and last success; the core's `backs_up` link to what it backs up; a `job` that marks stale ones; a `ListFilter` "Failing or stale"; a `widget` |
 | **Maintenance windows and change log** | `maintenance` and `change` types with start and end dates and a Markdown description; a `RelationKind` "affects"; a `sheet_tab` on any record listing its windows and changes; `relations.walk()` to list what a window takes down; a `widget` of what is coming up. The core's history already logs every edit; this module is for changes people describe |
 | **Network diagram** | A blueprint page that draws an SVG on the server from `relations` and Network's cables (`network_cables`, port to port), and a `sheet_tab` showing the neighborhood of one record. `requires=("network",)`. No script needed |
 | **Asset labels** | A blueprint page of printable labels, each with a QR code linking to `/e/<id>` (which opens `?open=<id>` in the right module), reached from a `ListFilter` or a `sheet_tab`. It needs a QR encoder: a small dependency or a hand-written one, to be decided then, and print styles added to `app.css` as a shared component |
