@@ -118,6 +118,10 @@
           <div class="menupop" role="menu" hidden>
             <a class="menuopt" role="menuitem" href="{{ url_for('transfer.export_csv', name=module.id if module else 'all') }}?{{ request.query_string.decode() }}" download>
               <span>Export these as CSV</span></a>
+            {% for m, p in list_pages %}
+            <a class="menuopt" role="menuitem" href="{{ url_for('main.module_page', module_id=m.id, key=p.key) }}?{{ request.query_string.decode() }}{{ '&' if request.query_string }}list={{ module.id if module else 'all' }}">
+              <span>{{ p.label }}</span></a>
+            {% endfor %}
             {% if current_user.can_edit %}
             <button type="button" class="menuopt" role="menuitem" data-open="import-modal"><span>Import from CSV…</span></button>
             {% endif %}
@@ -144,6 +148,8 @@
 
     {% if page == 'dashboard' %}
     {% include "partials/dashboard.html" %}
+    {% elif page == 'module' %}
+    <div class="module-page">{{ page_html }}</div>
     {% else %}
     <div class="records" id="records-root" data-view="{{ view }}"
          data-infinite="{{ '1' if current_user.infinite_scroll else '0' }}">

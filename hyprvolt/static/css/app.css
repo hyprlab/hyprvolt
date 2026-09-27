@@ -1254,3 +1254,67 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ————— A module's own page (Page in a manifest) ————— */
+.module-page { padding: clamp(18px, 3vw, 34px) clamp(16px, 3.5vw, 36px) 60px; }
+/* A segmented control of links rather than radio buttons: each choice is a page. */
+.seg--links { flex-wrap: wrap; }
+.seg--links a {
+  display: block; padding: 6px 14px; border-radius: 7px;
+  font-size: 13px; font-weight: 600; color: var(--muted); transition: background .15s, color .15s;
+}
+.seg--links a:hover { color: var(--ink); }
+.seg--links a.is-active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+
+/* ————— Diagrams: SVG drawn on the server, colored here so both themes work ————— */
+.diagram-scroll { overflow: auto; max-width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+/* Its own size, not the 20 px icon every other svg is, and no inherited stroke. */
+.diagram { display: block; width: auto; height: auto; max-width: none; stroke: none; font-family: var(--font); }
+/* Scaled down to the width it has: a record's neighborhood in the sheet. */
+.diagram--fit { width: 100%; height: auto; }
+.diagram-node rect { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; transition: stroke .15s, fill .15s; }
+.diagram-node:hover rect, .diagram-node:focus-visible rect { stroke: var(--accent); fill: var(--wash); }
+.diagram-node:focus-visible { outline: none; }
+.diagram-node:focus-visible rect { stroke-width: 2; }
+.diagram-node.is-center rect { fill: var(--wash); stroke: var(--accent); stroke-width: 2; }
+.diagram-icon { fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.diagram-name { font-size: 13px; font-weight: 650; fill: var(--ink); }
+.diagram-type { font-size: 11px; fill: var(--faint); }
+.diagram-link path { fill: none; stroke: var(--line-strong); stroke-width: 1.6; }
+.diagram-link:hover path { stroke: var(--accent); stroke-width: 2.4; }
+.diagram-link--loose path { stroke-dasharray: 5 4; }
+.diagram-link text { font-size: 10.5px; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.diagram-legend { margin: 0 0 12px; max-width: 72ch; }
+
+/* ————— Printable labels, in real units: a sheet prints as it shows ————— */
+.labels-tools { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+.labels-tools .hint { margin: 0; }
+.labels { display: grid; gap: 0; width: max-content; max-width: 100%; overflow: auto; }
+.label {
+  display: flex; align-items: center; gap: 2mm; padding: 2mm 2.5mm; overflow: hidden;
+  background: #fff; color: #000; outline: 1px dashed var(--line-strong); break-inside: avoid;
+}
+.label-qr { flex: none; height: 100%; width: auto; aspect-ratio: 1; stroke-width: 1; stroke-linecap: butt; shape-rendering: crispEdges; }
+.label-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.label-name { font-weight: 750; font-size: 10pt; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.label-meta, .label-code { font-size: 7pt; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.label-code { font-family: var(--mono); font-weight: 600; }
+/* Avery 5160 and L7160: three across; a label printer: one 62 × 29 mm label a page. */
+.labels--5160 { page: labels-5160; grid-template-columns: repeat(3, 2.625in); grid-auto-rows: 1in; column-gap: .125in; }
+.labels--l7160 { page: labels-l7160; grid-template-columns: repeat(3, 63.5mm); grid-auto-rows: 38.1mm; column-gap: 2.5mm; }
+.labels--l7160 .label-name { font-size: 11pt; }
+.labels--l7160 .label-meta, .labels--l7160 .label-code { font-size: 8pt; }
+.labels--62x29 { page: labels-62x29; grid-template-columns: 62mm; grid-auto-rows: 29mm; row-gap: 4mm; }
+@page labels-5160 { size: letter; margin: .5in .1875in; }
+@page labels-l7160 { size: A4; margin: 15.1mm 7.2mm; }
+@page labels-62x29 { size: 62mm 29mm; margin: 0; }
+
+@media print {
+  .sidebar, .topbar, .scrim, .labels-tools, .toast, dialog { display: none !important; }
+  .shell { display: block; }
+  body, .module-page { background: #fff; padding: 0; margin: 0; }
+  .labels { overflow: visible; }
+  .label { outline: none; }
+  .labels--62x29 { row-gap: 0; }
+  .labels--62x29 .label { break-after: page; }
+}

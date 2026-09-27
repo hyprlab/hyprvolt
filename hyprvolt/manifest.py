@@ -127,6 +127,20 @@ class Widget:
 
 
 @dataclass(frozen=True)
+class Page:
+    """A page of its own in the shell, at ``/p/<module>/<key>``. ``render()``
+    returns its HTML, reading what it needs from ``request.args``.
+    ``sidebar`` lists it under the module in the sidebar; ``from_list``
+    offers it in a list's export menu, the list's filters in its query
+    string (``records_listed()`` in main.py turns them into records)."""
+    key: str
+    label: str
+    render: Callable
+    sidebar: bool = True
+    from_list: bool = False
+
+
+@dataclass(frozen=True)
 class Job:
     """Periodic work, run by the worker thread every ``minutes`` at most.
     ``run()`` returns the number of rows it touched, for the log."""
@@ -187,6 +201,7 @@ class Module:
     types: tuple = ()
     search: Callable | None = None   # search(query, limit) -> [SearchResult]
     filters: tuple = ()
+    pages: tuple = ()                # full pages in the shell
     widgets: tuple = ()
     jobs: tuple = ()
     settings_pane: Pane | None = None

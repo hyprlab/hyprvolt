@@ -5,7 +5,7 @@ from flask import Blueprint
 
 from hyprvolt import registry as reg_mod
 from hyprvolt.core.models import EntityDetail
-from hyprvolt.manifest import EntityType, Field, FormSection, Module, RelationKind, Step
+from hyprvolt.manifest import EntityType, Field, FormSection, Module, Page, RelationKind, Step
 from hyprvolt.models import db, set_setting
 from hyprvolt.permissions import role
 
@@ -87,6 +87,8 @@ def test_a_good_manifest_passes():
     (Module(id="tools", name="x", types=(EntityType("tool", "Tool", "Tools", detail=ToolDetail,
                                                     fields=(Field("size", "Size", remind=lambda d: 5),)),)),
      "remind"),
+    (Module(id="tools", name="x", pages=(Page("Bad Key", "x", str),)), "page"),
+    (Module(id="tools", name="x", pages=(Page("one", "x", str), Page("one", "y", str))), "appears twice"),
 ])
 def test_bad_manifests_are_refused(module, expected):
     found = problems(module)

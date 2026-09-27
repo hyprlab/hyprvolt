@@ -117,15 +117,9 @@ def csv_rows(entities, etypes) -> tuple[list[str], list[list[str]]]:
 def export_csv(name):
     """The list at ``/<module>`` (or ``/all``) with the same filters, every
     page of it, as CSV."""
-    from ..main import _list_args, _list_query
+    from ..main import records_listed
     reg = registry()
-    module = None
-    if name != "all":
-        module = reg.module(name)
-        if module is None or not reg.is_enabled(module.id) or not module.types:
-            abort(404)
-    a = _list_args(module)
-    rows = _list_query(module, a).limit(50_000).all()
+    module, a, rows = records_listed(name, 50_000)
     etypes = [a["etype"]] if a["etype"] else ([t for t in module.types] if module else reg.enabled_types())
     etypes = [t for t in etypes if any(e.type == t.key for e in rows)] or etypes[:1]
     header, body = csv_rows(rows, etypes)

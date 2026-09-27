@@ -26,13 +26,13 @@
 <nav class="nav-primary" aria-label="{{ group.label }}">
   {% for entry in group.modules %}
   {% set m = entry.module %}
-  <a class="navitem {{ 'is-active' if entry.active and not entry.filters|selectattr('active')|list and not entry.types|selectattr('active')|list and not request.args.get('archived') }}"
-     href="{{ url_for('main.module_list', module_id=m.id) }}">
+  <a class="navitem {{ 'is-active' if entry.active and not entry.filters|selectattr('active')|list and not entry.types|selectattr('active')|list and not entry.pages|selectattr('active')|list and not request.args.get('archived') and not (entry.on_page and m.types) }}"
+     href="{{ entry.href }}">
     {{ type_icon(m.icon) }}
     <span>{{ m.name }}</span>
     {% if entry.count %}<span class="count">{{ entry.count }}</span>{% endif %}
   </a>
-  {% if entry.active and (entry.types or entry.filters or entry.archived) %}
+  {% if entry.active and (entry.types or entry.filters or entry.archived or entry.pages) %}
   <ul class="sidelist sidelist--nested">
     {% for t in entry.types %}
     <li><a class="sideitem {{ 'is-active' if t.active }}" href="{{ url_for('main.module_list', module_id=m.id, type=t.type.key) }}">
@@ -41,6 +41,10 @@
     {% for f in entry.filters %}
     <li><a class="sideitem {{ 'is-active' if f.active }}" href="{{ url_for('main.module_list', module_id=m.id, f=f.filter.key) }}">
       <span class="sideitem-title">{{ f.filter.label }}</span>{% if f.count %}<span class="count count--alert">{{ f.count }}</span>{% endif %}</a></li>
+    {% endfor %}
+    {% for p in entry.pages %}
+    <li><a class="sideitem {{ 'is-active' if p.active }}" href="{{ url_for('main.module_page', module_id=m.id, key=p.page.key) }}">
+      <span class="sideitem-title">{{ p.page.label }}</span></a></li>
     {% endfor %}
     {% if entry.archived %}
     <li><a class="sideitem {{ 'is-active' if request.args.get('archived') == '1' }}" href="{{ url_for('main.module_list', module_id=m.id, archived=1) }}">

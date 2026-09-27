@@ -2,6 +2,7 @@
 menu, and the settings sections modules add. One call, ``context()``, so the
 dashboard and every list render the same frame.
 """
+from flask import url_for
 from flask_login import current_user
 from sqlalchemy import func
 
@@ -25,19 +26,27 @@ def module_query(module, archived: bool = False):
 
 
 def context(active_module=None, active_type=None, active_filter=None, active_tag=None,
-            special=None) -> dict:
+            special=None, active_page=None) -> dict:
     reg = registry()
     counts = type_counts()
     groups, by_group = [], {}
     for m in reg.enabled_modules():
-        if not m.types:
-            continue    # a module of tabs and panes only (the vault) has no list
+        pages = [p for p in m.pages if p.sidebar]
+        if not m.types and not pages:
+            continue    # a module of tabs and panes only (the vault) has no place here
+        active = active_module is not None and m.id == active_module.id
         entry = {
             "module": m,
             "count": sum(counts.get(t.key, 0) for t in m.types),
-            "active": active_module is not None and m.id == active_module.id,
+            "active": active,
+            "href": url_for("main.module_list", module_id=m.id) if m.types else
+            url_for("main.module_page", module_id=m.id, key=pages[0].key),
             "types": [],
             "filters": [],
+            # A module of pages alone is one link: its first page.
+            "pages": [{"page": p, "active": active and active_page == p.key}
+                      for p in pages] if active and (m.types or len(pages) > 1) else [],
+            "on_page": active and active_page is not None,
         }
         if entry["active"]:
             if len(m.types) > 1:
@@ -46,7 +55,7 @@ def context(active_module=None, active_type=None, active_filter=None, active_tag
             for f in m.filters:
                 entry["filters"].append({"filter": f, "count": f.apply(module_query(m)).count(),
                                          "active": active_filter == f.key})
-            entry["archived"] = module_query(m, archived=True).count()
+            entry["archived"] = module_query(m, archived=True).count() if m.types else 0
         if m.group not in by_group:
             by_group[m.group] = {"label": m.group, "modules": []}
             groups.append(by_group[m.group])
@@ -68,6 +77,7 @@ def context(active_module=None, active_type=None, active_filter=None, active_tag
         "nav_special": special,
         "active_tag": active_tag,
         "new_menu": new_menu(active_module),
+        "list_pages": [(m, p) for m in reg.enabled_modules() for p in m.pages if p.from_list],
         "module_panes": [(m, m.settings_pane) for m in reg.enabled_modules()
                          if m.settings_pane and (current_user.is_admin or not m.settings_pane.admin)],
     }

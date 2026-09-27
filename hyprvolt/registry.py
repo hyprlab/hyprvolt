@@ -30,7 +30,7 @@ from jinja2 import ChoiceLoader, FileSystemLoader
 from werkzeug.routing import BaseConverter
 
 from .core.relations import CORE_KINDS
-from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, FormSection, Job, ListFilter,
+from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, FormSection, Job, ListFilter, Page,
                        Module, Pane, RelationKind, Step, Tab, Widget)
 
 log = logging.getLogger(__name__)
@@ -280,7 +280,7 @@ def validate(m: Module, reg: Registry) -> list[str]:
         steps.add(getattr(s, "id", None))
 
     for items, cls, what in ((m.filters, ListFilter, "filter"), (m.widgets, Widget, "widget"),
-                             (m.jobs, Job, "job"), (m.sheet_tabs, Tab, "sheet tab")):
+                             (m.jobs, Job, "job"), (m.sheet_tabs, Tab, "sheet tab"), (m.pages, Page, "page")):
         keys = set()
         for item in items:
             if not isinstance(item, cls):
@@ -297,6 +297,9 @@ def validate(m: Module, reg: Registry) -> list[str]:
         elif section.key in others:
             p.append(f"the form section {section.key!r} already exists")
         others.add(getattr(section, "key", None))
+    for page in m.pages:
+        if isinstance(page, Page) and (not ID_RE.match(page.key or "") or not callable(page.render)):
+            p.append(f"the page {page.key!r} needs a lower-case key and a render function")
     for job in m.jobs:
         if isinstance(job, Job) and job.minutes < 1:
             p.append(f"the job {job.key!r} must run at most every minute")

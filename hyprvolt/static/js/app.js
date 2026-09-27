@@ -791,6 +791,7 @@
   //   [data-copy="text"]         copies the text; [data-copy-url] posts first
   //                              and copies the answer's value
   //   input[data-autosubmit]     submits its form when it changes
+  //   [data-print]               prints the page (a sheet of labels)
   function afterAction(el, data) {
     var then = el.getAttribute("data-then");
     // An answer that says what happened ("12 made, 2 skipped") wins over
@@ -871,6 +872,8 @@
   });
 
   document.addEventListener("click", function (e) {
+    var print = e.target.closest("[data-print]");
+    if (print) { e.preventDefault(); window.print(); return; }
     var btn = e.target.closest("[data-api-post]");
     if (btn) {
       e.preventDefault();

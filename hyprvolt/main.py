@@ -141,6 +141,35 @@ def _list_query(module, a):
     return query.order_by(order, Entity.id.desc())
 
 
+def records_listed(name: str, limit: int):
+    """What the list at ``/<name>`` (or ``/all``) shows with the request's
+    filters, every page of it up to ``limit``: (module, args, records).
+    404 for a module that is off or has no records. The CSV export and
+    pages offered from a list (``Page(from_list=True)``) use it."""
+    reg = registry()
+    module = None
+    if name != "all":
+        module = reg.module(name)
+        if module is None or not reg.is_enabled(module.id) or not module.types:
+            abort(404)
+    a = _list_args(module)
+    return module, a, _list_query(module, a).limit(limit).all()
+
+
+@bp.route("/p/<module:module_id>/<key>")
+@role("viewer")
+def module_page(module_id, key):
+    """A module's own page (``Page``), in the shell."""
+    reg = registry()
+    m = reg.module(module_id)
+    page = next((p for p in m.pages if p.key == key), None) if reg.is_enabled(module_id) else None
+    if page is None:
+        abort(404)
+    html = Markup(page.render())
+    return render_template("app.html", page="module", page_html=html, title=page.label,
+                           **shell.context(active_module=m, active_page=page.key), **_admin_context())
+
+
 def reg_modules():
     return registry().enabled_modules()
 
