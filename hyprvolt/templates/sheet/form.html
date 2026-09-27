@@ -45,6 +45,7 @@
       data-title="{{ ('Edit ' ~ entity.name) if entity else ('New ' ~ etype.text()) }}" novalidate>
   <input type="hidden" name="type" value="{{ etype.key }}">
   {% if attach_to %}<input type="hidden" name="attach_to" value="{{ attach_to }}">{% endif %}
+  {% if link %}<input type="hidden" name="link" value="{{ link }}">{% endif %}
   <div class="form-grid">
     {% if not etype.name_from %}
     <label class="field form-wide">

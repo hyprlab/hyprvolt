@@ -131,6 +131,8 @@ def entity_create():
         attach_to = data.get("attach_to")
         if attach_to:
             _attach_new(entity, attach_to)
+        if data.get("link"):
+            _link_new(entity, str(data["link"]))
     except Invalid as err:
         return _fail(err)
     db.session.commit()
@@ -143,6 +145,16 @@ def _attach_new(entity: Entity, target_id) -> None:
     if target is None:
         raise Invalid("The record to attach it to no longer exists.")
     relations.link("documented_by", target, entity)
+
+
+def _link_new(entity: Entity, spec: str) -> None:
+    """``kind:id``: the new record <kind> that record, as when a change is
+    recorded from the Maintenance tab of what it affects."""
+    kind, _, target_id = spec.partition(":")
+    target = records.live(target_id)
+    if target is None:
+        raise Invalid("The record to link it to no longer exists.")
+    relations.link(kind, entity, target)
 
 
 @bp.route("/entities/<int:entity_id>", methods=["POST"])

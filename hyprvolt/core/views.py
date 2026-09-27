@@ -222,5 +222,6 @@ def form(entity_id=None):
         "sheet/form.html", entity=entity, etype=etype, fields=fields, custom=custom, sections=sections,
         locations=_location_choices(etype, entity), location_id=location_id,
         attach_to=request.args.get("attach_to", type=int), name=request.args.get("name", ""),
+        link=request.args.get("link", ""),
         tags=", ".join(entity.tag_names) if entity else "", can_admin=current_user.is_admin,
     )

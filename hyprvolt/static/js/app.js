@@ -760,6 +760,8 @@
     var params = new URLSearchParams({ type: btn.getAttribute("data-new-type") });
     if (btn.getAttribute("data-new-location")) params.set("location_id", btn.getAttribute("data-new-location"));
     if (btn.getAttribute("data-new-attach")) params.set("attach_to", btn.getAttribute("data-new-attach"));
+    // data-new-link="affects:12": the new record is linked to record 12.
+    if (btn.getAttribute("data-new-link")) params.set("link", btn.getAttribute("data-new-link"));
     if (btn.getAttribute("data-new-name")) params.set("name", btn.getAttribute("data-new-name"));
     var preset = btn.getAttribute("data-new-fields");
     if (preset) {
