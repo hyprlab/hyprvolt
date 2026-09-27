@@ -1,0 +1,30 @@
+{% from "partials/macros.html" import entity_link %}
+{% if windows %}
+<ul class="manage-list">
+  {% for v in windows %}{% set d = details[v.id] %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+      <span class="manage-sub">{{ d.starts|local }} to {{ d.ends|local }}</span>
+    </div>
+    {% if d.starts <= now %}<span class="count count--alert">under way</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No maintenance planned in the next {{ days }} days.</p>
+{% endif %}
+{% if changes %}
+<p class="setting-label setting-label--spaced">Changed this week</p>
+<ul class="manage-list">
+  {% for v in changes %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+      <span class="manage-sub">{{ details[v.id].at|local }}</span>
+    </div>
+    {% if v.entity.status in ('failed', 'rolled_back') %}<span class="count count--alert">{{ v.status }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}

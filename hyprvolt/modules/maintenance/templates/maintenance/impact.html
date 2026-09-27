@@ -1,0 +1,78 @@
+{# A window's times and what it takes down, or what a change touched. #}
+{% from "partials/macros.html" import entity_link %}
+{% if window and d and d.starts and d.ends %}
+<p class="hint">
+  {%- if entity.status == 'canceled' %}Canceled. It was to run from {{ d.starts|local }} to {{ d.ends|local }}.
+  {%- elif phase == 'coming' %}Starts {{ d.starts|local }} and runs {{ length }}, until {{ d.ends|local }}.
+  {%- elif phase == 'now' %}<span class="count count--alert">under way</span> Since {{ d.starts|local }}, until {{ d.ends|local }}.
+  {%- else %}Ran from {{ d.starts|local }} to {{ d.ends|local }}.{% endif %}
+  {%- if entity.status == 'planned' %} {{ impacts.get(d.impact, '') }}{% if d.impact %}{{ ' for what it affects.' if d.impact != 'none' else ' expected.' }}{% endif %}{% endif %}
+</p>
+{% endif %}
+<p class="setting-label {{ 'setting-label--spaced' if window }}">{{ 'Affects' }} <span class="count">{{ direct|length }}</span></p>
+{% if direct %}
+<ul class="manage-list">
+  {% for v in direct %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+      <span class="manage-sub">{{ v.type_label }}{% if v.path %} · {{ v.path }}{% endif %}</span>
+    </div>
+    {% if current_user.can_edit %}
+    <button type="button" class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/api/relationships/{{ links[v.id] }}/delete"
+            data-then="sheet" data-done="Removed" aria-label="Remove {{ v.name }}" title="Remove from this {{ 'window' if window else 'change' }}">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">Nothing yet. Add the servers, services and anything else it {{ 'takes down or touches' if window else 'changed' }}.</p>
+{% endif %}
+{% if current_user.can_edit %}
+<form class="linkform" data-api="/api/relationships" data-then="sheet">
+  <input type="hidden" name="entity_id" value="{{ entity.id }}">
+  <input type="hidden" name="direction" value="out">
+  <input type="hidden" name="kind" value="affects">
+  <input type="hidden" name="other_id" value="">
+  <div class="field"><span class="field-label">Add a record</span>
+    <button type="button" class="pickbtn" data-pick data-pick-submit data-pick-exclude="{{ entity.id }}">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+      <span data-pick-label>Choose…</span>
+    </button>
+  </div>
+  <p class="form-error" hidden></p>
+</form>
+{% endif %}
+{% if window and d and d.impact != 'none' and direct %}
+<p class="setting-label setting-label--spaced">Also goes down <span class="count">{{ also|length }}</span></p>
+{% if also %}
+<ul class="manage-list">
+  {% for v in also %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+    <span class="manage-sub">{{ v.type_label }}{% if v.path %} · {{ v.path }}{% endif %}</span>
+  </div></li>
+  {% endfor %}
+</ul>
+{% endif %}
+<p class="hint">What depends on those, followed through runs on, depends on and the other links that carry a dependency.</p>
+{% endif %}
+{% if window %}
+<p class="setting-label setting-label--spaced">Changes made in it <span class="count">{{ changes|length }}</span></p>
+{% if changes %}
+<ul class="manage-list">
+  {% for v in changes %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+    <span class="manage-sub">{% for label, shown in v.list_facts %}{{ ' · ' if not loop.first }}{{ shown }}{% endfor %}</span>
+  </div>
+  {% if v.entity.status in ('failed', 'rolled_back') %}<span class="count count--alert">{{ v.status }}</span>{% endif %}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% if current_user.can_edit %}
+<div class="doc-actions"><button type="button" class="btn btn--ghost" data-new-type="change" data-new-fields='{"window": {{ entity.id }}}'>Record a change in it</button></div>
+{% endif %}
+{% endif %}

@@ -1,0 +1,37 @@
+{# A record's maintenance windows and its change log. #}
+{% from "partials/macros.html" import entity_link %}
+{% macro window_row(v) %}{% set d = details[v.id] %}
+<li class="manage-item"><div class="manage-meta">
+  <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+  <span class="manage-sub">{% if d and d.starts %}{{ d.starts|local }} to {{ d.ends|local }}{% endif %}{% if v.entity.status != 'planned' %} · {{ v.status }}{% endif %}</span>
+</div>
+{% if d and d.starts and d.starts <= now <= d.ends and v.entity.status == 'planned' %}<span class="count count--alert">under way</span>{% endif %}</li>
+{% endmacro %}
+{% if ahead %}
+<p class="setting-label">Maintenance coming up</p>
+<ul class="manage-list">{% for v in ahead %}{{ window_row(v) }}{% endfor %}</ul>
+{% endif %}
+<p class="setting-label {{ 'setting-label--spaced' if ahead }}">Changes <span class="count">{{ changes|length }}</span></p>
+{% if changes %}
+<ul class="manage-list">
+  {% for v in changes %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+    <span class="manage-sub">{% if at[v.id] %}{{ at[v.id]|local }}{% endif %}{% for label, shown in v.list_facts if label != 'When' %} · {{ shown }}{% endfor %}</span>
+  </div>
+  {% if v.entity.status in ('failed', 'rolled_back') %}<span class="count count--alert">{{ v.status }}</span>{% elif v.entity.status == 'planned' %}<span class="chip chip--muted">{{ v.status }}</span>{% endif %}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No changes recorded for {{ entity.name }}.</p>
+{% endif %}
+{% if past %}
+<p class="setting-label setting-label--spaced">Past maintenance</p>
+<ul class="manage-list">{% for v in past %}{{ window_row(v) }}{% endfor %}</ul>
+{% endif %}
+{% if current_user.can_edit %}
+<div class="doc-actions">
+  <button type="button" class="btn btn--primary" data-new-type="change" data-new-link="affects:{{ entity.id }}">Record a change</button>
+  <button type="button" class="btn btn--ghost" data-new-type="maintenance" data-new-link="affects:{{ entity.id }}">Plan maintenance</button>
+</div>
+{% endif %}
