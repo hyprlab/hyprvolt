@@ -84,6 +84,9 @@ def test_a_good_manifest_passes():
     (Module(id="tools", name="x", types=(EntityType("tool", "Tool", "Tools", check="yes"),)), "not callable"),
     (Module(id="tools", name="x", types=(EntityType("tool", "Tool", "Tools", detail=ToolDetail,
                                                     fields=(Field("size", "Size", "ref"),)),)), "no types and no trait"),
+    (Module(id="tools", name="x", types=(EntityType("tool", "Tool", "Tools", detail=ToolDetail,
+                                                    fields=(Field("size", "Size", remind=lambda d: 5),)),)),
+     "remind"),
 ])
 def test_bad_manifests_are_refused(module, expected):
     found = problems(module)

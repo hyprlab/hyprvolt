@@ -3,7 +3,10 @@ else a module marks with ``Field(expires=True)``.
 
 A record is due when such a date falls within the reminder window (an admin
 setting, 90 days by default) either side of today, unless the record is
-archived, deleted, or in one of its type's ``inactive`` statuses. The
+archived, deleted, or in one of its type's ``inactive`` statuses. A field's
+``remind(detail)`` can shorten the window ahead for one record: a
+certificate that renews by itself is only worth a reminder once it is late.
+The
 ``reminders`` table holds what is due: the worker's hourly pass brings it up
 to date as the days go by, and every save of a record updates that record's
 rows at once, so an edited date shows on the dashboard straight away.
@@ -32,6 +35,13 @@ def dated_fields(etype) -> list:
     return [f for f in etype.fields if f.expires and f.kind == "date" and etype.detail is not None]
 
 
+def _is_due(f, detail, value, low: date, high: date) -> bool:
+    if value is None or not low <= value <= high:
+        return False
+    days = f.remind(detail) if f.remind is not None else None
+    return days is None or value <= date.today() + timedelta(days=min(days, window()))
+
+
 def _wanted(entity: Entity) -> dict[str, date]:
     etype = registry().type(entity.type)
     if (etype is None or entity.deleted_at is not None or entity.archived
@@ -42,7 +52,7 @@ def _wanted(entity: Entity) -> dict[str, date]:
     out = {}
     for f in dated_fields(etype):
         value = getattr(detail, f.key, None) if detail is not None else None
-        if value is not None and low <= value <= high:
+        if _is_due(f, detail, value, low, high):
             out[f.key] = value
     return out
 
@@ -83,11 +93,13 @@ def refresh_all() -> int:
             continue
         for f in fields:
             column = getattr(etype.detail, f.key)
-            rows = (db.session.query(Entity.id, column).join(etype.detail, etype.detail.entity_id == Entity.id)
+            rows = (db.session.query(etype.detail).join(Entity, etype.detail.entity_id == Entity.id)
                     .filter(Entity.type == etype.key, Entity.deleted_at.is_(None), Entity.archived.is_(False),
                             Entity.status.notin_(etype.inactive), column >= low, column <= high))
-            for entity_id, due in rows:
-                wanted.setdefault(entity_id, {})[f.key] = due
+            for detail in rows:
+                due = getattr(detail, f.key)
+                if _is_due(f, detail, due, low, high):
+                    wanted.setdefault(detail.entity_id, {})[f.key] = due
     have: dict[int, list[Reminder]] = {}
     for r in Reminder.query:
         have.setdefault(r.entity_id, []).append(r)

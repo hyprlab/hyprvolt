@@ -48,6 +48,7 @@ class Field:
     search: bool = True              # part of the search text
     group: str = ""                  # a heading in the form and the Overview
     expires: bool = False            # date: when something ends or is due; reminded of
+    remind: Callable | None = None   # expires: remind(detail) -> days ahead, or None for the window
 
 
 @dataclass(frozen=True)

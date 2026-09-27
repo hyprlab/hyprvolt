@@ -355,6 +355,8 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
             p.append(f"{where} is a select with no options")
         if f.kind == "ref" and not f.types and not f.trait:
             p.append(f"{where} is a ref that names no types and no trait")
+        if f.remind is not None and (not callable(f.remind) or not f.expires):
+            p.append(f"{where} has a remind that isn't a function of an expiring date")
         if f.relation and f.kind != "ref":
             p.append(f"{where} is kept as a link, so it must be a ref")
         if columns and f.key not in columns and not f.relation:
