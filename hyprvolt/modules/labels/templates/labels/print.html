@@ -1,0 +1,26 @@
+{# A sheet of labels for the records of a list, and what to print it on. #}
+<div class="labels-tools">
+  <p class="hint">{{ labels|length }} {{ 'label' if labels|length == 1 else 'labels' }} for {{ what|lower if what != 'All records' else 'all records' }}{% if more %}, the first {{ limit }}: narrow the list to print the rest{% endif %}. <a class="link" href="{{ back }}">Back to the list</a></p>
+  <div class="seg seg--links" role="group" aria-label="Label size">
+    {% for key, label in sizes %}<a class="{{ 'is-active' if key == size }}" href="{{ sizes_url[key] }}" {{ 'aria-current=true' if key == size }}>{{ label }}</a>{% endfor %}
+  </div>
+  <p class="hint">Print at 100% scale with the default margins. Each code opens the record in the app, for anyone signed in.</p>
+  {% if labels %}<button type="button" class="btn btn--primary" data-print>Print</button>{% endif %}
+</div>
+{% if labels %}
+<div class="labels labels--{{ size }}">
+  {% for l in labels %}
+  <div class="label">
+    {{ l.qr }}
+    <div class="label-text">
+      <span class="label-name">{{ l.view.name }}</span>
+      <span class="label-meta">{{ l.view.type_label }}</span>
+      {% if l.code %}<span class="label-code">{{ l.code_label }} {{ l.code }}</span>{% endif %}
+      {% if l.where %}<span class="label-meta">{{ l.where }}</span>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty"><p class="empty-title">Nothing to label</p><p class="hint">The list is empty. Go back and change its filters.</p></div>
+{% endif %}
