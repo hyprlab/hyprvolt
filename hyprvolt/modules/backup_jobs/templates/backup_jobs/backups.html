@@ -1,0 +1,13 @@
+{# The backup jobs that back up a record, and how each stands. #}
+{% from "partials/macros.html" import entity_link %}
+<ul class="manage-list">
+  {% for v in rows %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+      <span class="manage-sub">{% if success.get(v.id) %}Last succeeded {{ success[v.id]|ago }}{% else %}No successful run recorded{% endif %}{% for label, shown in v.list_facts %} · {{ shown }}{% endfor %}</span>
+    </div>
+    <span class="{{ 'count count--alert' if v.entity.status in ('failing', 'stale') else 'chip chip--muted' }}">{{ labels.get(v.entity.status, v.entity.status) }}</span>
+  </li>
+  {% endfor %}
+</ul>

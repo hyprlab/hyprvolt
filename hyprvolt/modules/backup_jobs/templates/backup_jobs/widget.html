@@ -1,0 +1,23 @@
+{% from "partials/macros.html" import entity_link %}
+{% if total %}
+<p class="hint">{{ total }} {{ 'job' if total == 1 else 'jobs' }}:
+  {%- set parts = [] %}
+  {%- for key in ('ok', 'warning', 'failing', 'stale', 'new', 'paused') if counts.get(key) %}{% set _ = parts.append(counts[key] ~ ' ' ~ labels[key]|lower) %}{% endfor %}
+  {{ parts|join(', ') }}.</p>
+{% if rows %}
+<ul class="manage-list">
+  {% for v in rows %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(v.id, v.name) }}</span>
+      <span class="manage-sub">{% if success.get(v.id) %}Last succeeded {{ success[v.id]|ago }}{% else %}Never succeeded{% endif %}</span>
+    </div>
+    <span class="count count--alert">{{ labels[v.entity.status] }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% if more %}<p class="hint"><a class="link" href="{{ url_for('main.module_list', module_id='backup_jobs', f='trouble') }}">{{ more }} more</a></p>{% endif %}
+{% endif %}
+{% else %}
+<p class="hint">No backup jobs recorded.</p>
+{% endif %}

@@ -1,0 +1,45 @@
+{# A backup job's runs: how it stands, the latest runs, recording one by hand
+   and reporting one from the backup script. #}
+<p class="hint">
+  {%- if success %}Last succeeded {{ success|ago }}.{% else %}No successful run recorded.{% endif %}
+  {%- if job.status in ('paused', 'retired') %} {{ 'Paused' if job.status == 'paused' else 'Retired' }}, so runs don't change its status.
+  {%- else %} Overdue once {{ grace_hours }} hours pass without a success.{% endif %}
+</p>
+<p class="setting-label setting-label--spaced">Runs <span class="count">{{ total }}</span></p>
+{% if runs %}
+<ul class="manage-list">
+  {% for r in runs %}
+  <li class="manage-item" data-row>
+    <div class="manage-meta">
+      <span class="manage-title">{{ labels[r.result] }}</span>
+      <span class="manage-sub"><time datetime="{{ r.at.isoformat() }}Z" title="{{ r.at.strftime('%Y-%m-%d %H:%M') }} UTC">{{ r.at|ago }}</time>
+        {%- if r.note %} · {{ r.note }}{% endif %}{% if r.by_name %} · by {{ r.by_name }}{% endif %}</span>
+    </div>
+    {% if r.result == 'failed' %}<span class="count count--alert">failed</span>{% endif %}
+    {% if current_user.can_edit %}
+    <button type="button" class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/backup_jobs/runs/{{ r.id }}/delete" data-then="sheet"
+            data-done="Run removed" aria-label="Remove this run" title="Remove this run">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% if total > runs|length %}<p class="hint">The latest {{ runs|length }} of {{ total }}. All of them: <code>GET /backup_jobs/{{ job.id }}/runs</code>.</p>{% endif %}
+{% else %}
+<p class="hint">No runs yet. Have the backup script report each one, or record one here.</p>
+{% endif %}
+{% if current_user.can_edit %}
+<form class="mountform" data-api="/backup_jobs/{{ job.id }}/runs" data-then="sheet">
+  <p class="setting-label">Record a run</p>
+  <label class="field"><span class="field-label">Result</span>
+    <select name="result">{% for value, label in results %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+  <label class="field mountform-label"><span class="field-label">Note</span><input name="note" maxlength="300" placeholder="12.4 GB, 38 minutes"></label>
+  <button class="btn btn--primary" type="submit">Record</button>
+  <p class="form-error" hidden></p>
+</form>
+<p class="setting-label setting-label--spaced">Report from the backup script</p>
+<p class="hint">Make an API token in Settings, then have the script run this when it finishes. <code>warning</code> and <code>failed</code> work the same way, and a <code>note</code> goes with the run.</p>
+<pre class="snippet">{{ command }}</pre>
+<button type="button" class="btn btn--xs btn--ghost" data-copy="{{ command }}" data-done="Command copied">Copy the command</button>
+{% endif %}
