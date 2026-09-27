@@ -1,0 +1,22 @@
+{# The network, drawn from ports and cables. #}
+{% from "diagram/_node.html" import node %}
+{% if nodes %}
+<p class="hint diagram-legend">{{ nodes|length }} devices and {{ edges|length }} links, from the internet side down. A solid line is a cable, traced through patch panels{% if dashed %}; a dashed one is a "connected to" link with no cable recorded{% endif %}. Hover a line for its ports and VLANs; choose a device to open it.</p>
+<div class="diagram-scroll">
+<svg class="diagram" width="{{ width|round|int }}" height="{{ height|round|int }}" viewBox="0 0 {{ width|round|int }} {{ height|round|int }}" role="img" aria-label="Network diagram">
+  {% for e in edges %}
+  <g class="diagram-link {{ '' if e.cabled else 'diagram-link--loose' }}">
+    <title>{{ e.title(by_id) }}</title>
+    <path d="{{ e.path }}"/>
+    {% if e.vlans or e.via %}<text x="{{ e.mid[0]|round(1) }}" y="{{ e.mid[1]|round(1) }}" text-anchor="middle">{{ e.vlans or ('via ' ~ e.via|join(', ')) }}</text>{% endif %}
+  </g>
+  {% endfor %}
+  {% for n in nodes %}{{ node(n.id, n.label, n.type_label, n.icon, n.x, n.y, w, h) }}{% endfor %}
+</svg>
+</div>
+{% else %}
+<div class="empty">
+  <p class="empty-title">No cables yet</p>
+  <p class="hint">The diagram is drawn from the cables between devices' ports. Open a switch, a firewall or a server, add its ports in the Ports tab, and cable them to other devices.</p>
+</div>
+{% endif %}

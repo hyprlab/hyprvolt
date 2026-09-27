@@ -1,0 +1,10 @@
+{# One record as a box in a diagram: a link that opens its sheet. #}
+{% macro node(id, name, type_label, icon, x, y, w, h, cls='') -%}
+<a class="diagram-node {{ cls }}" href="/e/{{ id }}" data-entity="{{ id }}" transform="translate({{ x|round(1) }} {{ y|round(1) }})">
+  <title>{{ name }}, {{ type_label }}</title>
+  <rect width="{{ w }}" height="{{ h }}" rx="10"/>
+  <svg class="diagram-icon" x="11" y="14" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">{{ icon|safe }}</svg>
+  <text class="diagram-name" x="40" y="21">{{ name }}</text>
+  <text class="diagram-type" x="40" y="37">{{ type_label }}</text>
+</a>
+{%- endmacro %}

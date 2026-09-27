@@ -1,0 +1,17 @@
+{# A record and everything linked to it: what it points at on the left, what
+   points at it on the right. #}
+{% from "diagram/_node.html" import node %}
+<div class="diagram-scroll">
+<svg class="diagram diagram--fit" width="{{ width }}" height="{{ height }}" viewBox="0 0 {{ width }} {{ height }}" role="img" aria-label="{{ entity.name }} and what it is linked to">
+  {% for side in (left, right) %}{% for n in side %}
+  <g class="diagram-link"><path d="{{ n.path }}"/>
+    <text x="{{ n.lx|round(1) }}" y="{{ n.ly|round(1) }}" text-anchor="{{ n.anchor }}">{{ n.label }}</text></g>
+  {% endfor %}{% endfor %}
+  {% for side in (left, right) %}{% for n in side %}
+  {{ node(n.view.id, n.name, n.view.type_label, n.view.icon, n.x, n.y, w, h) }}
+  {% endfor %}{% endfor %}
+  {{ node(entity.id, name, me.type_label, me.icon, center.x, center.y, w, h, 'is-center') }}
+</svg>
+</div>
+{% if more_out or more_in %}<p class="hint">{% if more_out %}{{ more_out }} more on the left{% endif %}{% if more_out and more_in %}, and {% endif %}{% if more_in %}{{ more_in }} more on the right{% endif %}: the Relationships tab lists them all.</p>{% endif %}
+<p class="hint">Left: what {{ entity.name }} is linked to, and cabled to. Right: what is linked to it. Choose a record to open it.</p>
