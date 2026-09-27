@@ -54,6 +54,8 @@ hyprvolt/
     certificates/  TLS certificates, read from the servers that serve them
     backup_jobs/   backup jobs and their runs
     maintenance/   maintenance windows and the change log
+    diagram/       the network diagram and each record's neighborhood
+    labels/        printable asset labels with QR codes
     software/      titles, installations and licenses
     contacts/      vendors, people and contracts
   about_docs.py    parses CHANGELOG.md for the About section

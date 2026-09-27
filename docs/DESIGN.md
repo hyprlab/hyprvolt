@@ -91,6 +91,10 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.elink` | A link to a record inside text; it opens the record's sheet in place |
 | `.deps`, `.deptree` | The dependency view, both directions side by side, each nested; a loop and a repeat are marked, not followed |
 | `.linkform`, `.mountform`, `.mountform-wide`, `.doc-actions` | Small forms inside a tab: make a link, place something in a rack, add ports, cable them, add a DNS record, record a backup run; `.mountform-wide` takes a field or a hint across the whole form (a certificate's PEM text) |
+| `.module-page` | The body of a module's own page (`Page`), padded like a list |
+| `.seg--links` | A segmented control whose choices are links, each a page of its own (a label size) |
+| `.diagram`, `.diagram--fit`, `.diagram-scroll`, `.diagram-node`, `.diagram-link`, `.diagram-link--loose`, `.diagram-icon` | SVG drawn on the server: records as boxes that open their sheet, links as curves labeled near their lower end; a dashed link has no cable behind it. Colors come from the theme's variables, so both themes work. `--fit` scales down to the width it has; otherwise it scrolls |
+| `.labels`, `.labels--5160`, `.labels--l7160`, `.labels--62x29`, `.label`, `.label-qr` | Printable labels in real units, each size with its own named `@page`, so a sheet prints as it shows. Black on white whatever the theme |
 | `.snippet` | A command to copy, in monospace and wrapped, with a Copy button (`data-copy`) under it: a backup job's report command |
 | `.dropzone`, `.file-thumb` | Where files are dropped or chosen, and an attachment's preview |
 | `.history`, `.changes` | Who changed what: a line per change, old value struck through, new value after |

@@ -74,8 +74,8 @@ changed it stays signed in.
 ## Modules and custom fields
 
 What Hyprvolt documents comes in modules: Locations, Hardware, Virtual,
-Network, Services, Certificates, Backup jobs, Maintenance, Software, Contacts and vendors, and the
-knowledge base. Settings > Modules turns a module off; it then
+Network, Diagram, Services, Certificates, Backup jobs, Maintenance, Software, Contacts and vendors,
+Asset labels, and the knowledge base. Settings > Modules turns a module off; it then
 disappears from the sidebar, search and the dashboard, and its records stay
 in the database until it is turned back on. A module that needs another is
 off while that one is: Hardware needs Locations, and Virtual and Network
@@ -164,6 +164,25 @@ without a time is one made now. The sidebar lists maintenance coming up and
 under way, the changes of the last 30 days, and the changes that failed or
 were rolled back. The history of each record still logs every edit to it;
 changes are what people did to the systems themselves.
+
+Diagram draws the network from its cables: every device with a cable to
+another, the cables traced through patch panels (which are named on the
+link rather than drawn), in tiers from the internet side: modems, then
+routers and firewalls, then outward. A "connected to" link between two
+devices with no cable recorded is drawn dashed. Hovering a link shows its
+ports and VLANs; choosing a device opens it. Every record with links or
+cables also has a Neighborhood tab, drawing what it is linked to on the
+left (and cabled to) and what is linked to it on the right. Diagram needs
+Network.
+
+Asset labels prints a label for each record of a list: open any list,
+filter or search it, and choose Print labels in its export menu. Each
+label has a QR code that opens the record in the app, its name and kind,
+its asset tag or serial number, and the two innermost places it is in (a
+rack in a room). Sheets of 30 on Letter (Avery 5160) and 21 on A4 (Avery
+L7160), and single 62 × 29 mm labels for a label printer, print at their
+real size at 100% scale with the default margins. Up to 300 labels at a
+time.
 
 Times, such as a window's start, are typed and shown in the instance's time
 zone, set in Settings > Admin (it starts as the `TZ` environment variable, or

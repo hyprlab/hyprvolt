@@ -69,6 +69,7 @@ required.
 | `search` | `search(query, limit)` returning `SearchResult`s for the palette, for things that aren't records (an IP address, a DNS name). Records are searched without it |
 | `filters` | `ListFilter(key, label, apply)`s: sidebar entries with live counts under the module. `apply(query)` narrows a query of the module's live records |
 | `widgets` | `Widget(key, label, render, wide=False)`s on the dashboard; `wide` spans the row |
+| `pages` | `Page(key, label, render, sidebar=True, from_list=False)`s: pages of their own in the shell, at `/p/<module>/<key>`. `render()` returns the HTML and reads `request.args`. `sidebar` lists the page under the module (a module of pages alone is one sidebar link, to its first); `from_list` offers it in every list's export menu with the list's filters, and `records_listed(name, limit)` in main.py turns those into records. Diagram and Asset labels are the examples |
 | `jobs` | `Job`s the worker runs, each at most every `minutes`. Dates that come due need no job: mark the field `expires` |
 | `settings_pane` | A `Pane(key, label, render, icon="", admin=True)` in the settings window; `admin=False` shows it to everyone |
 | `relation_kinds` | `RelationKind(key, label, reverse, impact)`s it adds to the core's: `label` reads from source to target ("runs on"), `reverse` the other way ("runs"), and `impact` is `source` (the source stops when the target goes down), `target`, or `none` (only a link); the dependency view follows only those with an impact |
@@ -244,6 +245,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `form.dropzone` | Files dropped on it go in through its file input and the form is submitted |
 | `a[data-entity="id"]` | Opens that record's sheet in place (`entity_link` makes these) |
 | `input[data-autosubmit]` | Submits its form when it changes |
+| `[data-print]` | Prints the page; print styles hide the shell |
 | `[data-reveal="/url"]`, `data-reveal-into="id"` | Posts to the URL and shows the answer's `value` in that element, until a second click or 30 seconds (the vault's Show); the element's `data-mask` is what it shows otherwise |
 | `[data-copy="text"]`, `[data-copy-url="/url"]` | Copies the text, or posts to the URL and copies the answer's `value` |
 
@@ -300,14 +302,13 @@ on every write.
 
 ## Planned modules and the hooks they would use
 
-These are not built. Each fits the manifest as it is. Certificates,
-Backup jobs, and Maintenance and changes were on this list and are built;
-their packages show the hooks in use (a `job` that reads from the network
-and commits record by record, a table of runs kept apart from the history,
-`remind`, `datetime` fields, a sheet tab on every record, `data-new-link`).
+This is not built yet, and fits the manifest as it is. Certificates, Backup
+jobs, Maintenance and changes, Diagram and Asset labels were on this list
+and are built; their packages show the hooks in use (a `job` that reads from
+the network and commits record by record, a table of runs kept apart from
+the history, `remind`, `datetime` fields, a sheet tab on every record,
+`data-new-link`, `pages`, SVG drawn on the server).
 
 | Module | Hooks |
 | --- | --- |
 | **Discovery and sync** (Proxmox, Portainer, pfSense) | A `settings_pane` for the API address and token (the token kept in the secrets vault); a `job` that pulls on a schedule and writes through `records.create` and `records.update`, so every change it makes is in the history; a table of its own mapping outside ids to record ids; a blueprint route for "Sync now"; a `widget` with the last run; the core's `runs_on` and `hosted_by` links |
-| **Network diagram** | A blueprint page that draws an SVG on the server from `relations` and Network's cables (`network_cables`, port to port), and a `sheet_tab` showing the neighborhood of one record. `requires=("network",)`. No script needed |
-| **Asset labels** | A blueprint page of printable labels, each with a QR code linking to `/e/<id>` (which opens `?open=<id>` in the right module), reached from a `ListFilter` or a `sheet_tab`. It needs a QR encoder: a small dependency or a hand-written one, to be decided then, and print styles added to `app.css` as a shared component |

@@ -27,6 +27,7 @@ in a single SQLite volume.
 - TLS certificates kept current by reading them from the servers that serve them, and backup jobs whose scripts report each run
 - Maintenance windows that show everything they take down, and a change log on every record
 - Rack elevations, front and rear, that flag overlaps and anything that no longer fits
+- A network diagram drawn from the cables, a map of each record's links, and printable asset labels with QR codes
 - A Markdown knowledge base whose documents attach to records and link to them with `[[slug]]`
 - Typed links between any two records, and a view of what breaks if one goes down
 - Attachments, tags, custom fields and a full history on every record
