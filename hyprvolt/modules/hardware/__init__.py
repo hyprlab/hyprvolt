@@ -63,10 +63,10 @@ PERIPHERAL = '<rect x="3" y="8" width="18" height="9" rx="1.2"/><path d="M6.5 11
 #: Traits other modules look for. Every hardware type has network ports,
 #: can hold an IP address (Network) and has a supplier (Contacts); those
 #: that go in a rack say so (Locations), and those that run software or
-#: services are hosts (Software, Services).
+#: services are hosts (Software, Services) and may serve a certificate.
 NET = ("addressable", "cabled", "supplied")
 RACK = ("rackmount",) + NET
-HOST = ("host",)
+HOST = ("host", "tls")
 
 
 def hardware(key, label, plural, icon, specs=(), traits=()):

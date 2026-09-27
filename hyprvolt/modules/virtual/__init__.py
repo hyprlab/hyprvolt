@@ -21,8 +21,8 @@ RUN_STATUSES = (("running", "Running"), ("stopped", "Stopped"), ("planned", "Pla
 MACHINES = ("server", "workstation", "nas")
 #: Traits other modules look for: an IP address (Network), software
 #: installed and services run (Software, Services).
-ADDRESSABLE = ("addressable", "host")
-HOST = ("host",)
+ADDRESSABLE = ("addressable", "host", "tls")
+HOST = ("host", "tls")
 
 # ———— Fields ————
 

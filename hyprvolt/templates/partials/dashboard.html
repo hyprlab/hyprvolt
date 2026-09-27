@@ -51,7 +51,7 @@
       </ul>
       {% endif %}
       {% if due|length > 12 %}<p class="hint"><a class="link" href="{{ url_for('main.all_records', due=1) }}">All {{ due|length }} coming up</a></p>{% endif %}
-      <p class="hint">{% if not due %}Nothing ends or falls due in the next {{ reminder_days }} days. {% endif %}Warranties, licenses, contracts, domains and batteries due within {{ reminder_days }} days, or past due by no more than that.{% if current_user.is_admin %} The window is in Settings > Admin.{% endif %}</p>
+      <p class="hint">{% if not due %}Nothing ends or falls due in the next {{ reminder_days }} days. {% endif %}Warranties, renewals, expiries and other dates due within {{ reminder_days }} days, or past due by no more than that.{% if current_user.is_admin %} The window is in Settings > Admin.{% endif %}</p>
     </div>
     {% for w in widgets %}
     <div class="card widget {{ 'widget--wide' if w.widget.wide }}">

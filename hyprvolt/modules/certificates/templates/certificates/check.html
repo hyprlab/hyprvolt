@@ -1,0 +1,33 @@
+{# A certificate's days left, its live check, and reading one from PEM text. #}
+{% if d and d.expires %}
+<p class="hint">
+  {%- if left < 0 %}Expired {{ -left }} {{ 'day' if left == -1 else 'days' }} ago, on {{ d.expires.isoformat() }}.
+  {%- elif left == 0 %}Expires today.
+  {%- else %}Expires in {{ left }} {{ 'day' if left == 1 else 'days' }}, on {{ d.expires.isoformat() }}.{% endif %}
+  {%- if d.auto_renew and left >= 0 %} It renews by itself, so it is only reminded of once it is {{ late }} days from its end.{% endif %}
+</p>
+{% endif %}
+<p class="setting-label {{ 'setting-label--spaced' if d and d.expires }}">Live check</p>
+{% if d and d.endpoint %}
+<p class="hint">
+  {%- if d.check_error %}<span class="count count--alert">failed</span> Checked {{ d.checked_at|ago }} at <code>{{ d.endpoint }}</code>: {{ d.check_error }}
+  {%- elif d.checked_at %}Checked {{ d.checked_at|ago }} at <code>{{ d.endpoint }}</code>. This record matches the certificate it serves.
+  {%- else %}Not checked yet. The app checks <code>{{ d.endpoint }}</code> within the hour, then once a day.{% endif %}
+</p>
+{% if current_user.can_edit %}
+<button type="button" class="btn btn--ghost" data-api-post="/certificates/{{ cert.id }}/check" data-then="sheet">Check now</button>
+{% endif %}
+{% else %}
+<p class="hint">Give it an address in Check at, and the app reads the certificate served there once a day and keeps these details current, renewals included.</p>
+{% endif %}
+{% if current_user.can_edit %}
+<form class="mountform" data-api="/certificates/{{ cert.id }}/read" data-then="sheet">
+  <p class="setting-label">Read a certificate</p>
+  <label class="field mountform-wide"><span class="field-label">Certificate as PEM text</span>
+    <textarea name="pem" rows="5" class="mono" autocomplete="off" spellcheck="false" required
+              placeholder="-----BEGIN CERTIFICATE-----"></textarea></label>
+  <p class="hint mountform-wide">Fills in its names, issuer, dates, key and fingerprint. Only those are kept: not the text, and not a private key pasted with it.</p>
+  <button class="btn btn--primary" type="submit">Read</button>
+  <p class="form-error" hidden></p>
+</form>
+{% endif %}

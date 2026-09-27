@@ -1003,6 +1003,13 @@ button.rack-slot:hover, button.rack-slot:focus-visible { background: var(--wash)
 .mountform > .setting-label, .mountform .form-error { grid-column: 1 / -1; margin: 0; }
 .mountform-what { grid-column: 1 / 3; }
 .mountform-label { grid-column: 3 / -1; }
+.mountform-wide { grid-column: 1 / -1; }
+.mountform > .hint { margin: 0; }
+/* A command to copy: monospace, wrapped rather than scrolled. */
+.snippet {
+  margin: 8px 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--field); color: var(--ink);
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-all;
+}
 @media (max-width: 700px) {
   .elevation { grid-template-columns: 1fr; }
   .mountform { grid-template-columns: 1fr 1fr; }

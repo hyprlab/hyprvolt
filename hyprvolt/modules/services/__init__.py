@@ -6,7 +6,8 @@ it runs on.
 anything with the ``domain`` trait (Network's domains), and both are kept as
 links: runs on and depends on. So the dependency view of a server lists the
 services that go down with it, and a domain's lists what breaks if it
-lapses, without Services needing either module.
+lapses, without Services needing either module. The ``tls`` trait lets
+Certificates say which certificate a service serves.
 """
 from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Widget
 
@@ -33,7 +34,7 @@ module = Module(
     models=(ServiceDetail,),
     types=(
         EntityType("service", "Service", "Services", detail=ServiceDetail, located_in=(), icon=ICON,
-                   statuses=STATUSES, traits=("supplied",),
+                   statuses=STATUSES, traits=("supplied", "tls"),
                    fields=(Field("kind", "Kind", "select", options=KINDS, list=True),
                            Field("url", "Address", "url", card=True, help="Where people reach it."),
                            Field("host", "Runs on", "ref", trait="host", relation="runs_on", card=True, list=True,

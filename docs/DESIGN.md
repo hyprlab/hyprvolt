@@ -90,7 +90,8 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.banner`, `.banner--danger`, `.banner--stack` | A notice at the top of the sheet (archived, deleted, rack conflicts), with its action; `--stack` puts several paragraphs and buttons under each other (a backup's check, a new token) |
 | `.elink` | A link to a record inside text; it opens the record's sheet in place |
 | `.deps`, `.deptree` | The dependency view, both directions side by side, each nested; a loop and a repeat are marked, not followed |
-| `.linkform`, `.mountform`, `.doc-actions` | Small forms inside a tab: make a link, place something in a rack, add ports, cable them, add a DNS record |
+| `.linkform`, `.mountform`, `.mountform-wide`, `.doc-actions` | Small forms inside a tab: make a link, place something in a rack, add ports, cable them, add a DNS record, record a backup run; `.mountform-wide` takes a field or a hint across the whole form (a certificate's PEM text) |
+| `.snippet` | A command to copy, in monospace and wrapped, with a Copy button (`data-copy`) under it: a backup job's report command |
 | `.dropzone`, `.file-thumb` | Where files are dropped or chosen, and an attachment's preview |
 | `.history`, `.changes` | Who changed what: a line per change, old value struck through, new value after |
 | `.elevation`, `.rack-grid`, `.rack-u`, `.rack-slot`, `.rack-item`, `.rack-summary`, `.rack-problems` | A rack, front and rear, one grid row per unit. An empty unit is a button; overlapping items share the width, and a conflict is drawn in the danger color |
