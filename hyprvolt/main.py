@@ -215,11 +215,17 @@ def _admin_context() -> dict:
         "inst_purge_days": int_setting("purge_days", 30),
         "inst_upload_mb": int_setting("max_upload_mb", 25),
         "inst_reminder_days": int_setting("reminder_days", 90),
+        **_clock_context(),
         **_backups_context(),
         "inst_default_role": default_role(),
         "turnstile": _turnstile_status(),
         **_modules_context(),
     }
+
+
+def _clock_context() -> dict:
+    from .core import clock
+    return {"inst_time_zone": clock.zone_name(), "time_zones": clock.names()}
 
 
 def _backups_context() -> dict:
@@ -380,6 +386,11 @@ def admin_instance():
             from .core.reminders import refresh_all
             refresh_all()
             db.session.commit()
+    if "time_zone" in data:
+        from .core import clock
+        if not clock.valid(data["time_zone"]):
+            return jsonify(error="Choose a time zone from the list, such as Europe/London or America/Chicago."), 400
+        set_setting(clock.SETTING, data["time_zone"])
     if "default_role" in data:
         if data["default_role"] not in ("viewer", "editor"):
             return jsonify(error="New accounts can start as viewers or editors."), 400

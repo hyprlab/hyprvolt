@@ -33,6 +33,8 @@ services:
       - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-0}
       - WORKER_MINUTES=${WORKER_MINUTES:-15}
       - ITEMS_PER_PAGE=${ITEMS_PER_PAGE:-40}
+      # The time zone times are typed and shown in, such as America/Chicago.
+      - TZ=${TZ:-UTC}
     volumes:
       - hyprvolt-data:/data
     restart: unless-stopped

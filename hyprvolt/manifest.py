@@ -15,7 +15,7 @@ from typing import Any, Callable
 
 #: Field kinds a module may use. The core parses, validates, renders and
 #: indexes each one (core/fields.py).
-FIELD_KINDS = ("text", "longtext", "markdown", "integer", "number", "date", "select",
+FIELD_KINDS = ("text", "longtext", "markdown", "integer", "number", "date", "datetime", "select",
                "url", "email", "phone", "boolean", "ref", "ip", "cidr")
 #: The subset an admin can add as a custom field, without code.
 CUSTOM_KINDS = ("text", "number", "date", "select", "url", "boolean")

@@ -223,6 +223,10 @@ def create_app(config_class=Config) -> Flask:
     from . import about_docs
     app.jinja_env.globals["app_changelog"] = about_docs.changelog
 
+    from .core import clock
+    app.jinja_env.filters["local"] = clock.shown
+    app.jinja_env.filters["local_input"] = clock.input_value
+
     @app.template_filter("ago")
     def ago(dt: datetime) -> str:
         seconds = int((utcnow() - dt).total_seconds())

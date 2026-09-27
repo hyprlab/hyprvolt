@@ -6,7 +6,7 @@ an admin adds, so both behave the same everywhere.
 """
 import ipaddress
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 
 from ..auth import EMAIL_RE
 from ..manifest import Field
@@ -90,7 +90,12 @@ def parse(f: Field, raw, lookup=None):
                           else f"{f.label} must be at most {_num(high)}.")
         return value
 
+    if kind == "datetime":
+        return _parse_datetime(f, raw)
+
     if kind == "date":
+        if isinstance(raw, datetime):
+            return raw.date()
         if isinstance(raw, date):
             return raw
         try:
@@ -130,6 +135,23 @@ def parse(f: Field, raw, lookup=None):
     raise Invalid(f"{f.label} has a kind the app doesn't know.")
 
 
+def _parse_datetime(f: Field, raw) -> datetime:
+    """Stored as naive UTC. Text with an offset or a Z is taken as it says;
+    without one, as a time in the instance's zone, which is what a form
+    sends. A datetime object is already UTC."""
+    from . import clock
+    if isinstance(raw, datetime):
+        return raw.astimezone(timezone.utc).replace(tzinfo=None) if raw.tzinfo else raw
+    text = str(raw).strip()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00") if text.endswith("Z") else text)
+    except ValueError:
+        raise Invalid(f"{f.label} must be a date and time, such as 2026-10-03 22:00.") from None
+    if parsed.tzinfo is not None:
+        return parsed.astimezone(timezone.utc).replace(tzinfo=None, second=0, microsecond=0)
+    return clock.to_utc(parsed.replace(second=0, microsecond=0))
+
+
 def ref_allows(f: Field, type_key: str) -> bool:
     """Whether a ref field may point at a record of ``type_key``: one of its
     types, or a type with its trait."""
@@ -157,6 +179,9 @@ def display(f: Field, value, lookup=None) -> str:
     if f.kind == "ref":
         target = lookup(value) if lookup else None
         return target.name if target else f"#{value}"
+    if f.kind == "datetime" and isinstance(value, datetime):
+        from . import clock
+        return clock.shown(value)
     if f.kind == "date":
         return value.isoformat() if isinstance(value, date) else str(value)
     if f.kind == "number":
@@ -174,6 +199,8 @@ def to_text(f: Field, value) -> str:
         return ""
     if f.kind == "boolean":
         return "1" if value else "0"
+    if f.kind == "datetime" and isinstance(value, datetime):
+        return value.isoformat(timespec="minutes")
     if f.kind == "date" and isinstance(value, date):
         return value.isoformat()
     if f.kind == "number" and isinstance(value, float) and value.is_integer():
@@ -194,12 +221,16 @@ def from_text(f: Field, text: str):
             return int(text)
         if f.kind == "date":
             return date.fromisoformat(text)
+        if f.kind == "datetime":
+            return datetime.fromisoformat(text)
     except ValueError:
         return None
     return text
 
 
 def to_json(f: Field, value):
+    if isinstance(value, datetime):
+        return value.isoformat(timespec="minutes") + "Z"
     if isinstance(value, date):
         return value.isoformat()
     return value

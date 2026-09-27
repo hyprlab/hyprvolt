@@ -369,6 +369,15 @@
     });
   });
 
+  var tzSelect = document.getElementById("inst-tz");
+  if (tzSelect) {
+    tzSelect.addEventListener("change", function () {
+      api("/admin/instance", { time_zone: tzSelect.value })
+        .then(function () { toast("Times are in " + tzSelect.value); })
+        .catch(toastError);
+    });
+  }
+
   document.querySelectorAll('input[name="default_role"]').forEach(function (radio) {
     radio.addEventListener("change", function () {
       api("/admin/instance", { default_role: radio.value })

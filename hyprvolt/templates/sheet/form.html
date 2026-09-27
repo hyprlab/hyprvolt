@@ -26,6 +26,8 @@
   {% elif f.kind in ('integer', 'number') %}
   <input type="number" name="{{ item.name }}" value="{{ v if v is not none else '' }}" step="{{ '1' if f.kind == 'integer' else 'any' }}"
          {% if f.min is not none %}min="{{ f.min }}"{% endif %} {% if f.max is not none %}max="{{ f.max }}"{% endif %} {{ 'required' if f.required }}>
+  {% elif f.kind == 'datetime' %}
+  <input type="datetime-local" name="{{ item.name }}" value="{{ v|local_input if v else '' }}" {{ 'required' if f.required }}>
   {% elif f.kind == 'date' %}
   <input type="date" name="{{ item.name }}" value="{{ v.isoformat() if v else '' }}" {{ 'required' if f.required }}>
   {% else %}

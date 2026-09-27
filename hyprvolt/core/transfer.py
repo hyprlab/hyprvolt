@@ -57,7 +57,7 @@ def _plain(f, value) -> str:
         return ""
     if f.kind == "boolean":
         return "yes" if value else "no"
-    if f.kind in ("select", "ref"):
+    if f.kind in ("select", "ref", "datetime"):
         return F.display(f, value, records.live)
     if isinstance(value, date):
         return value.isoformat()

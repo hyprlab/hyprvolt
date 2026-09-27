@@ -364,8 +364,12 @@
           <span class="field-label">Remind of dates within (days)</span>
           <input type="number" id="inst-reminders" min="1" max="3650" step="1" value="{{ inst_reminder_days }}">
         </label>
+        <label class="field">
+          <span class="field-label">Time zone</span>
+          <select id="inst-tz">{% for z in time_zones %}<option value="{{ z }}" {{ 'selected' if z == inst_time_zone }}>{{ z }}</option>{% endfor %}</select>
+        </label>
       </div>
-      <p class="hint">0 minutes pauses the background worker. A change takes effect after the current wait. Deleted records can be restored until they are purged. Warranties, renewals, expiries and other dates show on the dashboard from that many days before their date until that many days after.</p>
+      <p class="hint">0 minutes pauses the background worker. A change takes effect after the current wait. Deleted records can be restored until they are purged. Warranties, renewals, expiries and other dates show on the dashboard from that many days before their date until that many days after. Times, such as a maintenance window's, are typed and shown in the time zone.</p>
       <p class="setting-label setting-label--spaced">New accounts start as</p>
       <div class="seg" id="inst-default-role">
         {% for r in ('viewer', 'editor') %}
