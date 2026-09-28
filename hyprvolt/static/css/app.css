@@ -53,6 +53,9 @@ html[data-theme="light"] {
   --line-strong: #D4D4CC;
   --wash: rgb(255 214 10 / .17);
   --scrim: rgb(25 25 20 / .40);
+  /* Code colors: each at least 4.5:1 on --field. */
+  --code-kw: #7A3E9D; --code-str: #2F6B2B; --code-com: #6B6B64; --code-num: #9A4A12;
+  --code-fn: #1F5FA8; --code-bi: #7D5A00; --code-var: #A1334F;
 }
 
 html[data-theme="dark"] {
@@ -70,6 +73,8 @@ html[data-theme="dark"] {
   --line-strong: #34343A;
   --wash: rgb(247 223 30 / .10);
   --scrim: rgb(0 0 0 / .55);
+  --code-kw: #C9A2F0; --code-str: #9BD48A; --code-com: #878782; --code-num: #F0A96B;
+  --code-fn: #8DBAF5; --code-bi: #E6C36A; --code-var: #F09AB0;
   --shadow-1: 0 1px 2px rgb(0 0 0 / .35), 0 6px 20px rgb(0 0 0 / .30);
   --shadow-2: 0 2px 8px rgb(0 0 0 / .45), 0 18px 44px rgb(0 0 0 / .45);
 }
@@ -1105,9 +1110,27 @@ button.ipcell { cursor: pointer; }
 .prose a { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .prose a:hover { background: var(--wash); }
 .prose img { border-radius: var(--radius-sm); margin: 8px 0; height: auto; }
-.prose h3, .prose h4 { font-weight: 750; letter-spacing: -0.02em; margin: 1.6em 0 .5em; line-height: 1.25; }
-.prose h3 { font-size: 21px; }
+/* h1 in a body is shown as h2, under the page's own title; each level below
+   is a step smaller, so sections and subsections read as different. */
+.prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  font-weight: 750; letter-spacing: -0.02em; margin: 1.6em 0 .5em; line-height: 1.25; scroll-margin-top: 16px;
+}
+.prose h2 { font-size: 24px; letter-spacing: -0.03em; }
+.prose h3 { font-size: 20px; }
 .prose h4 { font-size: 17.5px; }
+.prose h5 { font-size: 15.5px; }
+.prose h6 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+/* The contents list of a longer page, linking to its headings. */
+.doc-contents { margin: 0 0 1.6em; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel); font-size: 14.5px; line-height: 1.5; }
+.doc-contents .setting-label { margin: 0 0 6px; }
+.doc-contents ol { margin: 0; padding-left: 1.2em; }
+.doc-contents ol ol { margin-top: 2px; }
+.doc-contents li { margin: 2px 0; }
+.doc-contents a { text-decoration: none; }
+.doc-contents a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+/* Task lists: - [ ] and - [x] items, with the checkbox in place of the bullet. */
+.prose li.task { list-style: none; margin-left: -1.3em; }
+.prose li.task input { accent-color: var(--accent); margin: 0 6px 0 0; vertical-align: -1px; }
 .prose blockquote {
   margin: 1.2em 0; padding: 2px 0 2px 18px;
   border-left: 3px solid var(--accent);
@@ -1121,9 +1144,26 @@ button.ipcell { cursor: pointer; }
 }
 .prose code { font-family: var(--mono); font-size: .92em; background: var(--field); padding: 1px 5px; border-radius: 5px; }
 .prose pre code { background: none; padding: 0; }
+/* A fenced block names its language, and Pygments' tokens take the theme's code colors. */
+.prose pre[data-lang] { position: relative; padding-top: 28px; }
+.prose pre[data-lang]::before {
+  content: attr(data-lang); position: absolute; top: 7px; left: 16px;
+  font-family: var(--font); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint);
+}
+.prose [class^="hl-k"] { color: var(--code-kw); }
+.prose [class^="hl-s"] { color: var(--code-str); }
+.prose [class^="hl-c"], .prose .hl-cm { color: var(--code-com); font-style: italic; }
+.prose [class^="hl-m"] { color: var(--code-num); }
+.prose .hl-nf, .prose .hl-fm, .prose .hl-nc, .prose .hl-nd { color: var(--code-fn); }
+.prose .hl-nb, .prose .hl-bp, .prose .hl-nt, .prose .hl-na { color: var(--code-bi); }
+.prose [class^="hl-nv"], .prose [class^="hl-v"], .prose .hl-ni { color: var(--code-var); }
+.prose .hl-o, .prose .hl-ow { color: var(--code-kw); }
+.prose .hl-err { color: inherit; background: none; }
+.prose .hl-gd { color: var(--danger); }
+.prose .hl-gi { color: var(--code-str); }
 .prose hr { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
 .prose table { border-collapse: collapse; width: 100%; margin: 0 0 1.2em; font-size: 14px; display: block; overflow-x: auto; }
-.prose th, .prose td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; }
+.prose th, .prose td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
 .prose figure { margin: 1.2em 0; }
 .prose figcaption { font-size: 13px; color: var(--faint); margin-top: 6px; }
 

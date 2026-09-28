@@ -29,7 +29,9 @@ module = Module(
             "document", "Document", "Documents", detail=DocumentBody, located_in=(),
             statuses=(("current", "Current"), ("draft", "Draft"), ("outdated", "Outdated")),
             fields=(Field("body", "Body", "markdown",
-                          help="Markdown. Link to a record with [[its-slug]]."),),
+                          help="Markdown. # and ## make headings, and a page with three or more gets a "
+                               "contents list. ```bash starts a code block colored for that language; "
+                               "- [ ] and - [x] make a task list. Link to a record with [[its-slug]]."),),
         ),
     ),
     sheet_tabs=(

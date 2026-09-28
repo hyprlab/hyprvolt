@@ -896,6 +896,18 @@
     document.querySelectorAll(".infotip-pop:popover-open").forEach(function (pop) { pop.hidePopover(); });
   }, true);
 
+  // A link to a heading on the same page (a document's contents list)
+  // scrolls to it inside whatever scrolls, the sheet included, and leaves the
+  // address alone: the address says which record is open.
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest('a[href^="#h-"]');
+    if (!a) return;
+    var target = document.getElementById(a.getAttribute("href").slice(1));
+    if (!target) return;
+    e.preventDefault();
+    target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  });
+
   document.addEventListener("click", function (e) {
     var print = e.target.closest("[data-print]");
     if (print) { e.preventDefault(); window.print(); return; }

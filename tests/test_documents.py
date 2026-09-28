@@ -11,8 +11,37 @@ def render(app, text):
 
 def test_markdown_is_rendered_and_sanitized(app, client, h, admin):
     html = render(app, "# Restore\n\nRun `zfs rollback`.\n\n<script>alert(1)</script><img src=x onerror=alert(1)>")
-    assert "<h3>Restore</h3>" in html and "<code>zfs rollback</code>" in html
+    assert '<h2 id="h-restore">Restore</h2>' in html and "<code>zfs rollback</code>" in html
     assert "<script" not in html and "onerror" not in html
+
+
+def test_headings_keep_their_levels_and_get_anchors(app, client, h, admin):
+    html = render(app, "# Setup\n\n## Install\n\n### Options\n\nSee [install](#h-install).")
+    assert '<h2 id="h-setup">' in html and '<h2 id="h-install">' in html and '<h3 id="h-options">' in html
+    # Three headings or more: a contents list at the top, linking to each.
+    assert html.startswith('<nav class="doc-contents"') and '<a href="#h-options">Options</a>' in html
+    assert '<a href="#h-install">install</a>' in html            # same page: no new tab
+    assert "doc-contents" not in render(app, "## Only one")
+
+
+def test_typed_ids_and_classes_are_refused(app, client, h, admin):
+    html = render(app, '<h2 id="csrf">x</h2><h3 id="h-ok">y</h3><code class="banner">z</code>'
+                       '<code class="language-sql">w</code><table><tr><td colspan="2" rowspan="x">c</td></tr></table>')
+    assert 'id="csrf"' not in html and 'id="h-ok"' in html and "banner" not in html
+    assert 'class="language-sql"' in html and 'colspan="2"' in html and "rowspan" not in html
+
+
+def test_code_is_highlighted_for_its_language(app, client, h, admin):
+    html = render(app, '```powershell\nGet-Service -Name "sshd" # check\n```\n\n```madeup\n<b>x</b>\n```')
+    assert '<pre data-lang="powershell"><code class="language-powershell">' in html and 'class="hl-' in html
+    assert '<pre data-lang="madeup"><code class="language-madeup">&lt;b&gt;x&lt;/b&gt;' in html
+    assert "<b>" not in html
+
+
+def test_task_lists_show_checkboxes(app, client, h, admin):
+    html = render(app, "- [ ] back up\n- [x] tested\n- plain")
+    assert '<li class="task"><input type="checkbox" disabled aria-label="Not done"> back up' in html
+    assert 'checked aria-label="Done"> tested' in html and "<li>plain</li>" in html
 
 
 def test_slug_links_resolve_to_records(app, client, h, admin):

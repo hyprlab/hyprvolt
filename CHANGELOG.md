@@ -6,7 +6,14 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Added
+- Headings in documents get anchors, and a page with three or more headings opens with a contents list linking to them
+- Code blocks are colored for their language (```bash, ```powershell, ```python and the rest), with the language named above the block
+- Task lists: `- [ ]` and `- [x]` items show as checkboxes
+
 ### Changed
+- A document's headings keep their levels: # and ## are no longer shown the same size as ###
+- Table cells keep their colspan and rowspan
 - There is no beta channel: every release goes to `latest`, and `IMAGE_TAG` takes `latest` or a version to pin
 
 ## [1.1.0] — 2026-09-28

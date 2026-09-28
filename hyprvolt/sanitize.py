@@ -15,16 +15,27 @@ ALLOWED = {
     "strong": (), "b": (), "em": (), "i": (), "u": (), "s": (), "mark": (), "small": (),
     "blockquote": (), "q": (),
     "ul": (), "ol": (), "li": (),
-    "h1": (), "h2": (), "h3": (), "h4": (), "h5": (), "h6": (),
-    "pre": (), "code": (),
+    "h1": ("id",), "h2": ("id",), "h3": ("id",), "h4": ("id",), "h5": ("id",), "h6": ("id",),
+    "pre": (), "code": ("class",),
     "img": ("src", "alt", "title"),
     "figure": (), "figcaption": (),
-    "table": (), "thead": (), "tbody": (), "tr": (), "th": (), "td": (),
+    "table": (), "thead": (), "tbody": (), "tr": (), "th": ("colspan", "rowspan"), "td": ("colspan", "rowspan"),
     "sup": (), "sub": (),
 }
 VOID = {"br", "hr", "img"}
-# Headings in article bodies get demoted so they sit under the reader's own title.
-DEMOTE = {"h1": "h3", "h2": "h3", "h5": "h4", "h6": "h4"}
+# Some attributes are allowed only with values of one shape, so nothing typed
+# into a document can reuse the app's own ids or classes: a heading's anchor
+# carries the h- prefix the Markdown renderer gives it, code only names its
+# language, and a table cell spans a few rows or columns.
+VALUES = {
+    "id": re.compile(r"^h-[a-z0-9_-]{1,80}$"),
+    "class": re.compile(r"^language-[A-Za-z0-9_+#.-]{1,30}$"),
+    "colspan": re.compile(r"^[1-9][0-9]?$"),
+    "rowspan": re.compile(r"^[1-9][0-9]?$"),
+}
+# An h1 in a body becomes an h2, under the page's own title; the rest keep
+# their level, so sections and subsections still look different.
+DEMOTE = {"h1": "h2"}
 DROP_WITH_CONTENT = {"script", "style", "iframe", "object", "embed", "form", "svg", "video", "audio", "noscript"}
 
 _SAFE_URL = re.compile(r"^(https?:)?//|^https?:|^/|^#|^mailto:", re.I)
@@ -52,8 +63,11 @@ class _Sanitizer(HTMLParser):
             if name in allowed_attrs and value:
                 if name in ("href", "src") and not _SAFE_URL.match(value.strip()):
                     continue
-                parts.append(f' {name}="{escape(value, quote=True)}"')
-        if tag == "a":
+                if name in VALUES and not VALUES[name].match(value.strip()):
+                    continue
+                parts.append(f' {name}="{escape(value.strip() if name in VALUES else value, quote=True)}"')
+        if tag == "a" and not (dict(attrs).get("href") or "").startswith("#"):
+            # A link to a place on the same page stays in it.
             parts.append(' target="_blank" rel="noopener noreferrer"')
         if tag == "img":
             parts.append(' loading="lazy"')
