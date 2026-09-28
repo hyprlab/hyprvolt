@@ -132,7 +132,7 @@ def test_a_record_that_needs_something_after_a_sibling_sits_below_it(client, h, 
         from hyprvolt.models import User
         login_user(User.query.first())
         entity = sa.session.get(Entity, hv["id"])
-        rows, _more, _ = depmap._side(relations.walk(entity, "dependents"), entity.id)
+        rows, _ = depmap._side(relations.walk(entity, "dependents"), entity.id)
     assert {d: [e.name for e in r] for d, r in rows.items()} == {1: ["db"], 2: ["web"]}
 
 
@@ -147,11 +147,11 @@ def test_a_loop_is_drawn_dashed_and_a_lone_record_has_no_switch(client, h, admin
     assert "data-views" not in client.get(f"/e/{lonely['id']}/sheet?tab=relationships").data.decode()
 
 
-def test_a_crowded_row_is_counted_and_keeps_what_leads_further(client, h, admin):
+def test_a_crowded_row_draws_every_record(client, h, admin):
     hv = make(client, h, "hypervisor", name="pve1")
-    guests = [make(client, h, "vm", name=f"vm{n}", **{"f.host": hv["id"]}) for n in range(7)]
+    guests = [make(client, h, "vm", name=f"vm{n}", **{"f.host": hv["id"]}) for n in range(9)]
     make(client, h, "service", name="app", **{"f.host": guests[6]["id"]})
     tab = client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode()
     drawing = tab[tab.index('data-view="diagram"'):]
-    assert "3 more in the list" in drawing and ">vm6</text>" in drawing and ">app</text>" in drawing
-    assert sum(drawing.count(f">vm{n}</text>") for n in range(7)) == 4
+    assert all(f">vm{n}</text>" in drawing for n in range(9)) and ">app</text>" in drawing
+    assert "more in the list" not in drawing and "data-zoom" in drawing

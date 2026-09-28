@@ -1093,8 +1093,6 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 .pickbtn.is-picked { color: var(--ink); font-weight: 600; }
 /* The dependency view's List and Diagram switch. */
 .deps-switch { display: flex; margin: 26px 0 12px; }
-.diagram-more rect { fill: none; stroke: var(--line-strong); stroke-dasharray: 4 3; }
-.diagram-more text { font-size: 12px; font-weight: 600; fill: var(--muted); }
 .diagram-head { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; fill: var(--muted); }
 .deps { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin: 8px 0 10px; }
 @media (max-width: 700px) { .deps { grid-template-columns: 1fr; } }
@@ -1479,9 +1477,14 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 .diagram { display: block; width: auto; height: auto; max-width: none; stroke: none; font-family: var(--font); }
 /* Scaled down to the width it has: a record's neighborhood in the sheet. */
 .diagram--fit { width: 100%; height: auto; }
-/* Scaled to fit on a wide screen only: on a phone it keeps its size and
-   scrolls, opening on the record it is about (app.js). */
-@media (max-width: 700px) { .diagram--fit-wide { width: auto; } }
+/* A diagram's frame: zoom buttons above it on the right, clear of the
+   drawing; zoomed in, the drawing scrolls in a window of its own and a
+   mouse drags it. */
+.diagram-tools { display: flex; justify-content: flex-end; align-items: center; gap: 2px; margin: 0 0 6px auto; width: max-content; }
+.diagram-tools .btn--xs { border: 0; }
+.diagram-tools .iconbtn[disabled] { opacity: .35; cursor: default; background: none; }
+.diagram-frame.is-zoomed .diagram-scroll { max-height: min(72vh, 720px); cursor: grab; }
+.diagram-scroll.is-dragging { cursor: grabbing; user-select: none; }
 .diagram-node rect { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; transition: stroke .15s, fill .15s; }
 .diagram-node:hover rect, .diagram-node:focus-visible rect { stroke: var(--accent); fill: var(--wash); }
 .diagram-node:focus-visible { outline: none; }

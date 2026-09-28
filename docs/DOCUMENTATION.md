@@ -368,6 +368,11 @@ each step further away. A record reached two ways is one box with two lines
 into it, and a loop is a dashed line. Any box opens its record. The choice
 is remembered in the browser.
 
+Every diagram (this one, the Neighborhood tab and the network diagram)
+opens with all of it showing. −, Fit and + above it zoom it, as does
+Ctrl or ⌘ with the scroll wheel, or a trackpad's pinch; zoomed in, drag it
+with the mouse to move around.
+
 An editor edits a record where it is shown. In its Overview each field reads
 as its value until it is pointed at or clicked, when it becomes a field to
 type in or a list to choose from; the name is edited in the title. A change

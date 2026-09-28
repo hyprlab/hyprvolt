@@ -1,21 +1,18 @@
 {# The dependency view drawn: what the record needs above it, what breaks if
    it goes down below it, a row for each step away (core/depmap.py). #}
 {% from "partials/diagram_node.html" import node %}
-<div class="diagram-scroll">
-<svg class="diagram{{ ' diagram--fit diagram--fit-wide' if fits }}" width="{{ width }}" height="{{ height }}" viewBox="0 0 {{ width }} {{ height }}" role="img"
+{% from "partials/macros.html" import zoom_frame %}
+{% call zoom_frame() %}
+<svg class="diagram diagram--fit" width="{{ width }}" height="{{ height }}" viewBox="0 0 {{ width }} {{ height }}" role="img"
      aria-label="What {{ entity.name }} needs, and what breaks if it goes down">
   {% for text, y in heads %}<text class="diagram-head" x="{{ margin }}" y="{{ y }}">{{ text }}</text>{% endfor %}
   {% for l in links %}
   <g class="diagram-link{{ ' diagram-link--loose' if l.loop }}"><path d="{{ l.path }}"/>
     <text x="{{ l.lx|round(1) }}" y="{{ l.ly|round(1) }}" text-anchor="{{ l.anchor }}">{{ l.label }}</text></g>
   {% endfor %}
-  {% for x, y, n in mores %}
-  <g class="diagram-more" transform="translate({{ x|round(1) }} {{ y|round(1) }})"><rect width="{{ w }}" height="{{ h }}" rx="10"/>
-    <text x="{{ w / 2 }}" y="{{ h / 2 + 4 }}" text-anchor="middle">{{ n }} more in the list</text></g>
-  {% endfor %}
   {% for n in nodes %}
   {{ node(n.view.id, n.name, n.view.type_label, n.view.icon, n.x, n.y, w, h, 'is-center' if n.center else '') }}
   {% endfor %}
 </svg>
-</div>
+{% endcall %}
 <p class="hint">Each line is a link that carries a dependency; a record reached two ways is drawn once.{% if links|selectattr('loop')|list %} A dashed line leads back into a loop.{% endif %}{% if truncated %} It stops six steps out.{% endif %} Choose a record to open it.</p>

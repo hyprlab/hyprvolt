@@ -1,8 +1,9 @@
 {# The network, drawn from ports and cables. #}
 {% from "partials/diagram_node.html" import node %}
+{% from "partials/macros.html" import zoom_frame %}
 {% if nodes %}
 <p class="hint diagram-legend">{{ nodes|length }} devices and {{ edges|length }} links, from the internet side down. A solid line is a cable, traced through patch panels{% if dashed %}; a dashed one is a "connected to" link with no cable recorded{% endif %}. Hover a line for its ports and VLANs; choose a device to open it.</p>
-<div class="diagram-scroll">
+{% call zoom_frame() %}
 <svg class="diagram" width="{{ width|round|int }}" height="{{ height|round|int }}" viewBox="0 0 {{ width|round|int }} {{ height|round|int }}" role="img" aria-label="Network diagram">
   {% for e in edges %}
   <g class="diagram-link {{ '' if e.cabled else 'diagram-link--loose' }}">
@@ -13,7 +14,7 @@
   {% endfor %}
   {% for n in nodes %}{{ node(n.id, n.label, n.type_label, n.icon, n.x, n.y, w, h) }}{% endfor %}
 </svg>
-</div>
+{% endcall %}
 {% else %}
 <div class="empty">
   <p class="empty-title">No cables yet</p>

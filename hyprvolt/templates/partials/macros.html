@@ -39,3 +39,20 @@
   {% endfor %}
 </ul>
 {%- endmacro %}
+
+{# A server-drawn diagram in its zoomable frame (app.js, "Diagram zoom"): it
+   opens fitted so all of it shows, and −, Fit and + (or Ctrl/⌘ and the
+   wheel) zoom it. Call it with the <svg> inside:
+   {% call zoom_frame() %}<svg class="diagram">…</svg>{% endcall %} #}
+{% macro zoom_frame() -%}
+<div class="diagram-frame" data-zoom>
+  <div class="diagram-tools" role="group" aria-label="Zoom">
+    <button type="button" class="iconbtn iconbtn--sm" data-zoom-by="-1" aria-label="Zoom out" title="Zoom out">
+      <svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
+    <button type="button" class="btn btn--xs btn--ghost" data-zoom-fit title="Show all of it">Fit</button>
+    <button type="button" class="iconbtn iconbtn--sm" data-zoom-by="1" aria-label="Zoom in" title="Zoom in">
+      <svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></button>
+  </div>
+  <div class="diagram-scroll">{{ caller() }}</div>
+</div>
+{%- endmacro %}

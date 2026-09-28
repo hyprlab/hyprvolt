@@ -8,6 +8,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ### Added
 - The dependency view in a record's Relationships tab can be shown as a diagram: what it needs above the record, what breaks if it goes down below it, a row for each step away. List and Diagram switch between the two, and the choice is remembered in the browser
+- Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ## [1.3.0] — 2026-09-28
 

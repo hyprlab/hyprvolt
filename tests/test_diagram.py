@@ -13,6 +13,7 @@ def test_the_diagram_draws_cables_through_patch_panels(client, h, admin):
                                             "target_id": switch["id"], "note": "WAN"}, headers=h)
     page = client.get("/p/diagram/network").data.decode()
     assert page.count('class="diagram-node') == 3          # the panel is on the way, not a box
+    assert "data-zoom" in page and "data-zoom-fit" in page
     assert "pc eth0 to sw1 Port 3 through pp1" in page or "sw1 Port 3 to pc eth0 through pp1" in page
     assert "diagram-link--loose" in page and "linked but no cable recorded" in page
     # The modem is upstream: drawn first, above the switch.

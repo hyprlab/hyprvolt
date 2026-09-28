@@ -836,6 +836,8 @@
   //   .infotip[popovertarget]    opens its help (a native popover) beside it
   //   [data-gallery]             its [data-gallery-item] links open in the
   //                              picture viewer (see "Picture viewer")
+  //   [data-zoom]                a diagram's frame: fitted, zoomed with its
+  //                              buttons or Ctrl/Cmd and the wheel, dragged
   //   [data-views="key"]         radios that show one [data-view] panel of
   //                              the tab (a list or a diagram), remembered
   //                              in this browser under the key
@@ -918,6 +920,88 @@
     }
   });
 
+  // [data-zoom]: a diagram drawn on the server, in a frame that opens with all
+  // of it showing (never larger than drawn). −, Fit and + zoom it, as do
+  // Ctrl/Cmd and the wheel (a trackpad's pinch), about the pointer; zoomed
+  // in, it scrolls, and a mouse drags it around.
+  var ZOOM_STEP = 1.25, ZOOM_MAX = 3;
+  function zoomParts(frame) {
+    var box = frame.querySelector(".diagram-scroll"), svg = box && box.querySelector("svg.diagram");
+    return svg ? { box: box, svg: svg, natural: svg.viewBox.baseVal.width } : null;
+  }
+  function fitScale(p) { return Math.min(1, (p.box.clientWidth - 2) / p.natural); }
+  function setZoom(frame, scale, focus) {
+    var p = zoomParts(frame);
+    if (!p || !p.box.clientWidth) return;
+    var fit = fitScale(p);
+    scale = Math.max(fit, Math.min(ZOOM_MAX, scale));
+    var rect = p.box.getBoundingClientRect();
+    var fx = focus ? focus.x - rect.left : p.box.clientWidth / 2;
+    var fy = focus ? focus.y - rect.top : p.box.clientHeight / 2;
+    var was = p.svg.getBoundingClientRect().width / p.natural || fit;
+    var px = (p.box.scrollLeft + fx) / was, py = (p.box.scrollTop + fy) / was;
+    p.svg.classList.remove("diagram--fit");
+    p.svg.style.width = (p.natural * scale) + "px";
+    p.svg.style.height = "auto";
+    frame.classList.toggle("is-zoomed", scale > fit + 0.001);
+    frame.setAttribute("data-scale", scale);
+    var out = frame.querySelector("[data-zoom-by='-1']"), inn = frame.querySelector("[data-zoom-by='1']");
+    if (out) out.disabled = scale <= fit + 0.001;
+    if (inn) inn.disabled = scale >= ZOOM_MAX - 0.001;
+    // Keep the point under the pointer (or the middle) where it was.
+    p.box.scrollLeft = px * scale - fx;
+    p.box.scrollTop = py * scale - fy;
+  }
+  function fitDiagrams(root) {
+    root.querySelectorAll("[data-zoom]").forEach(function (frame) {
+      if (frame.offsetParent !== null && !frame.classList.contains("is-zoomed")) setZoom(frame, 0);
+    });
+  }
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-zoom] [data-zoom-by], [data-zoom] [data-zoom-fit]");
+    if (!btn) return;
+    var frame = btn.closest("[data-zoom]");
+    if (btn.hasAttribute("data-zoom-fit")) { frame.classList.remove("is-zoomed"); setZoom(frame, 0); return; }
+    var now = parseFloat(frame.getAttribute("data-scale")) || 1;
+    setZoom(frame, now * Math.pow(ZOOM_STEP, parseInt(btn.getAttribute("data-zoom-by"), 10)));
+  });
+  document.addEventListener("wheel", function (e) {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    var box = e.target.closest && e.target.closest("[data-zoom] .diagram-scroll");
+    if (!box) return;
+    e.preventDefault();
+    var frame = box.closest("[data-zoom]");
+    var now = parseFloat(frame.getAttribute("data-scale")) || 1;
+    setZoom(frame, now * Math.exp(-e.deltaY * 0.01), { x: e.clientX, y: e.clientY });
+  }, { passive: false });
+  var zoomDrag = null, zoomDragged = false;
+  document.addEventListener("pointerdown", function (e) {
+    var box = e.target.closest && e.target.closest("[data-zoom].is-zoomed .diagram-scroll");
+    if (!box || e.pointerType !== "mouse" || e.button !== 0) return;
+    zoomDrag = { box: box, x: e.clientX, y: e.clientY, left: box.scrollLeft, top: box.scrollTop, moved: false };
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (!zoomDrag) return;
+    var dx = e.clientX - zoomDrag.x, dy = e.clientY - zoomDrag.y;
+    if (!zoomDrag.moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+    zoomDrag.moved = true;
+    zoomDrag.box.classList.add("is-dragging");
+    zoomDrag.box.scrollLeft = zoomDrag.left - dx;
+    zoomDrag.box.scrollTop = zoomDrag.top - dy;
+  });
+  document.addEventListener("pointerup", function () {
+    if (zoomDrag && zoomDrag.moved) {
+      zoomDrag.box.classList.remove("is-dragging");
+      zoomDragged = true;     // the click that ends a drag opens nothing
+      setTimeout(function () { zoomDragged = false; }, 0);
+    }
+    zoomDrag = null;
+  });
+  document.addEventListener("click", function (e) {
+    if (zoomDragged && e.target.closest && e.target.closest(".diagram-scroll")) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  window.addEventListener("resize", function () { fitDiagrams(document); });
+
   // [data-views]: a choice of how to show something, remembered per browser.
   var VIEWS_KEY = "app-views";
   function storedViews() {
@@ -927,15 +1011,8 @@
     var scope = group.closest(".tab-panel") || group.parentNode.parentNode;
     scope.querySelectorAll("[data-view]").forEach(function (panel) {
       panel.hidden = panel.getAttribute("data-view") !== value;
-      if (!panel.hidden) panel.querySelectorAll(".diagram-scroll").forEach(centerDiagram);
+      if (!panel.hidden) fitDiagrams(panel);
     });
-  }
-  // A diagram wider than its place scrolls; it opens on the record itself.
-  function centerDiagram(box) {
-    var me = box.querySelector(".is-center");
-    if (!me || box.scrollWidth <= box.clientWidth) return;
-    var b = box.getBoundingClientRect(), m = me.getBoundingClientRect();
-    box.scrollLeft += (m.left + m.width / 2) - (b.left + b.width / 2);
   }
   function applyViews(root) {
     var stored = storedViews();
@@ -946,6 +1023,7 @@
       var on = group.querySelector("input:checked");
       if (on) showView(group, on.value);
     });
+    fitDiagrams(root || document);
   }
   document.addEventListener("change", function (e) {
     var group = e.target.closest && e.target.closest("[data-views]");
@@ -1183,6 +1261,7 @@
       if (!sheet.open) {
         if (opts.restoring) markRestoring(sheet);
         sheet.showModal();
+        fitDiagrams(sheetArticle);    // drawn before it showed, with no width to fit to
       }
       if (opts.keepScroll) {
         sheet.scrollTop = before;

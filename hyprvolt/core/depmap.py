@@ -14,11 +14,6 @@ MARGIN = 20
 HEAD = 28          # a band for a side's heading
 GAP_X = 24
 GAP_Y = 64         # between rows: room for the lines and their labels
-#: Records drawn in one row; the rest are counted in a "more" box (the
-#: list has them all). Those with records below them are kept first.
-PER_ROW = 4
-#: Wider than this, the diagram scrolls instead of shrinking to fit.
-FIT_UP_TO = 1100
 
 
 def fit(text: str, n: int) -> str:
@@ -62,25 +57,17 @@ def _side(tree: list[dict], root_id: int):
     for parent, child, _label, loop in edges:
         if not loop:
             parents.setdefault(child, []).append(parent)
-    has_children = {p for p, _c, _l, loop in edges if not loop}
 
-    # Row by row: only what hangs from a record already drawn, at most
-    # PER_ROW of it, ordered under the records it hangs from.
-    rows, more, place = {}, {}, {root_id: 0.0}
+    # Row by row, each ordered under the records it hangs from.
+    rows, place = {}, {root_id: 0.0}
     for d in sorted(by_depth):
-        reachable = [e for e in by_depth[d] if any(p in place for p in parents.get(e.id, []))]
-        kept = sorted(reachable, key=lambda e: (e.id not in has_children, e.name.lower()))[:PER_ROW]
-
         def weight(e):
             seen_at = [place[p] for p in parents.get(e.id, []) if p in place]
             return (sum(seen_at) / len(seen_at) if seen_at else 0, e.name.lower())
-        kept.sort(key=weight)
-        if not kept:
-            break
-        rows[d], more[d] = kept, len(by_depth[d]) - len(kept)
-        for n, e in enumerate(kept):
-            place[e.id] = n - (len(kept) - 1) / 2
-    return rows, more, [(None if p == root_id else p, c, label, loop) for p, c, label, loop in edges]
+        rows[d] = sorted(by_depth[d], key=weight)
+        for n, e in enumerate(rows[d]):
+            place[e.id] = n - (len(rows[d]) - 1) / 2
+    return rows, [(None if p == root_id else p, c, label, loop) for p, c, label, loop in edges]
 
 
 def draw(entity, needs: list[dict], dependents: list[dict]) -> str:
@@ -89,12 +76,10 @@ def draw(entity, needs: list[dict], dependents: list[dict]) -> str:
     what breaks if it goes down (the nearest first)."""
     if not needs and not dependents:
         return ""
-    up, up_more, up_edges = _side(needs, entity.id)
-    down, down_more, down_edges = _side(dependents, entity.id)
+    up, up_edges = _side(needs, entity.id)
+    down, down_edges = _side(dependents, entity.id)
     n_up, n_down = max(up, default=0), max(down, default=0)
-    slots = [len(r) + (1 if more.get(d) else 0) for rows_, more in ((up, up_more), (down, down_more))
-             for d, r in rows_.items()]
-    widest = max(slots + [1])
+    widest = max([len(r) for r in list(up.values()) + list(down.values())] + [1])
     width = max(widest * NODE_W + (widest - 1) * GAP_X, 3 * NODE_W + 2 * GAP_X) + 2 * MARGIN
 
     # Each row's top edge, with a heading band above each side.
@@ -118,21 +103,17 @@ def draw(entity, needs: list[dict], dependents: list[dict]) -> str:
     height = y + MARGIN
 
     boxes = {}                      # (side, id) -> (x, y)
-    mores = {}                      # (side, depth) -> (x, y, how many)
 
-    def place(side, depth, items, hidden=0):
-        count = len(items) + (1 if hidden else 0)
-        x0 = (width - count * NODE_W - (count - 1) * GAP_X) / 2
+    def place(side, depth, items):
+        x0 = (width - len(items) * NODE_W - (len(items) - 1) * GAP_X) / 2
         for n, e in enumerate(items):
             boxes[(side, e.id)] = (x0 + n * (NODE_W + GAP_X), tops[(side, depth)])
-        if hidden:
-            mores[(side, depth)] = (x0 + len(items) * (NODE_W + GAP_X), tops[(side, depth)], hidden)
 
     place("", 0, [entity])
     for depth, items in up.items():
-        place("U", depth, items, up_more.get(depth, 0))
+        place("U", depth, items)
     for depth, items in down.items():
-        place("D", depth, items, down_more.get(depth, 0))
+        place("D", depth, items)
 
     def at(side, eid):
         """A box: the record itself (a loop can lead back to it), or one on this side."""
@@ -168,8 +149,7 @@ def draw(entity, needs: list[dict], dependents: list[dict]) -> str:
             my = (y1 + y2) / 2
             # A line that skips rows goes round the boxes in them, down their
             # right (the headings are on the left), its label beside it.
-            between = [x for (x, y) in boxes.values() if y1 < y < y2] + \
-                [x for (x, y, _n) in mores.values() if y1 < y < y2]
+            between = [x for (x, y) in boxes.values() if y1 < y < y2]
             if between:
                 xs = max(between) + NODE_W + 16
                 reach[1] = max(reach[1], xs + 70)     # room for the label too
@@ -190,17 +170,14 @@ def draw(entity, needs: list[dict], dependents: list[dict]) -> str:
         width = reach[1] + shift
         for key, (x, y) in list(boxes.items()):
             boxes[key] = (x + shift, y)
-        for key, (x, y, n) in list(mores.items()):
-            mores[key] = (x + shift, y, n)
         links, _ = lines()
     everyone = [entity] + [e for r in list(up.values()) + list(down.values()) for e in r]
     views = {v.id: v for v in present.views(list({e.id: e for e in everyone}.values()))}
     nodes = [{"view": views[eid], "name": fit(views[eid].name, 15), "x": x, "y": y, "center": side == ""}
              for (side, eid), (x, y) in boxes.items()]
     return render_template("sheet/depmap.html", entity=entity, nodes=nodes, links=links, heads=heads,
-                           mores=list(mores.values()),
                            width=width, height=height, w=NODE_W, h=NODE_H, margin=MARGIN,
-                           fits=width <= FIT_UP_TO, truncated=_truncated(needs) or _truncated(dependents))
+                           truncated=_truncated(needs) or _truncated(dependents))
 
 
 def _truncated(tree: list[dict]) -> bool:
