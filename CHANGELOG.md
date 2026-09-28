@@ -8,7 +8,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ### Added
 - Headings in documents get anchors, and a page with three or more headings opens with a contents list linking to them
-- Code blocks are colored for their language (```bash, ```powershell, ```python and the rest), with the language named above the block
+- A fenced code block that names its language (bash, PowerShell, Python and the rest) is colored for it, with the language named above the block
 - Task lists: `- [ ]` and `- [x]` items show as checkboxes
 - An admin can set when a record was created, through the API, to keep the date a document was first written elsewhere; a record's header shows it
 - A document can be a page of another, in an order: the parent lists its pages, and each page shows its path and links to the pages before and after it. A sidebar filter shows the top-level pages only
