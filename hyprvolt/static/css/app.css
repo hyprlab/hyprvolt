@@ -61,19 +61,21 @@ html[data-theme="light"] {
 html[data-theme="dark"] {
   color-scheme: dark;
   --accent: #F7DF1E;
-  --bg: #101013;
-  --panel: #0B0B0E;
-  --surface: #17171B;
-  --field: #101014;
+  /* Charcoal rather than black: lifted enough to read comfortably, with
+     every text color still at 5:1 or better on each surface. */
+  --bg: #202026;
+  --panel: #1A1A1F;
+  --surface: #29292F;
+  --field: #222228;
   --ink: #ECECE7;
-  --muted: #A8A8A3;
-  --faint: #878782;
-  --danger: #E26B60;
-  --line: #26262B;
-  --line-strong: #34343A;
+  --muted: #B0B0AB;
+  --faint: #9A9A95;
+  --danger: #EC7A70;
+  --line: #36363D;
+  --line-strong: #46464E;
   --wash: rgb(247 223 30 / .10);
   --scrim: rgb(0 0 0 / .55);
-  --code-kw: #C9A2F0; --code-str: #9BD48A; --code-com: #878782; --code-num: #F0A96B;
+  --code-kw: #C9A2F0; --code-str: #9BD48A; --code-com: #9A9A95; --code-num: #F0A96B;
   --code-fn: #8DBAF5; --code-bi: #E6C36A; --code-var: #F09AB0;
   --shadow-1: 0 1px 2px rgb(0 0 0 / .35), 0 6px 20px rgb(0 0 0 / .30);
   --shadow-2: 0 2px 8px rgb(0 0 0 / .45), 0 18px 44px rgb(0 0 0 / .45);
@@ -618,9 +620,9 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .theme-opt input:checked + .theme-chip { border-color: var(--accent); color: var(--ink); background: var(--wash); }
 .theme-opt input:focus-visible + .theme-chip { outline: 2px solid var(--accent); outline-offset: 2px; }
 .theme-chip-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line-strong); }
-.theme-chip--system .theme-chip-dot { background: linear-gradient(90deg, #FFF 50%, #17171B 50%); }
+.theme-chip--system .theme-chip-dot { background: linear-gradient(90deg, #FFF 50%, #29292F 50%); }
 .theme-chip--light .theme-chip-dot { background: #FFF; }
-.theme-chip--dark .theme-chip-dot { background: #17171B; }
+.theme-chip--dark .theme-chip-dot { background: #29292F; }
 
 .seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--field); border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .seg label { position: relative; }
