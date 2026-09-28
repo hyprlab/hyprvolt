@@ -237,6 +237,15 @@ at most, and a document can't be a page of itself or of one of its pages.
 A document's Linked from tab lists the documents that link to it; another
 record's Documents tab lists those that mention it.
 
+A document's "Visible to" narrows who can read it: everyone signed in (the
+default), editors and admins, or admins and the people given access to
+secrets in Settings > Admin. Anyone below the level never sees the document:
+not in lists, search, counts, tags, links, exports, labels or the API, where
+it answers 404 like a record that isn't there. A `[[link]]` to it is struck
+through for them, and a history line naming it is left out, or says "a
+restricted record". Nobody can set a level that would hide the document from
+themselves. An API token reads what its account may.
+
 ## The dashboard and reminders
 
 The dashboard counts what each module documents, lists what changed

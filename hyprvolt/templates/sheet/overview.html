@@ -5,6 +5,9 @@
   {% if etype and etype.located_in != () %}
   <div><dt>Location</dt><dd>{% if crumbs %}{{ crumb_nav(crumbs) }}{% else %}<span class="kv-empty">Not set</span>{% endif %}</dd></div>
   {% endif %}
+  {% if etype and etype.restrictable %}
+  <div><dt>Visible to</dt><dd>{{ access_label }}</dd></div>
+  {% endif %}
   <div><dt>Tags</dt><dd>{% if entity.tag_names %}{{ tag_chips(entity.tag_names) }}{% else %}<span class="kv-empty">None</span>{% endif %}</dd></div>
 </dl>
 

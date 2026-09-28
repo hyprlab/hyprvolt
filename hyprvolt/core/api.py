@@ -18,6 +18,7 @@ from ..manifest import CUSTOM_KINDS
 from ..models import db, utcnow
 from ..permissions import role
 from ..registry import current as registry
+from . import access
 from . import attachments as files
 from . import fields as F
 from . import records, relations
@@ -35,7 +36,7 @@ def like(query: str) -> str:
 def entity_or_404(entity_id: int, deleted_ok: bool = False) -> Entity:
     entity = db.session.get(Entity, entity_id)
     etype = registry().type(entity.type) if entity else None
-    if entity is None or etype is None or not registry().is_enabled(etype.module):
+    if entity is None or etype is None or not registry().is_enabled(etype.module) or not access.can_see(entity):
         abort(404, description="There is no such record.")
     if entity.deleted_at is not None and not deleted_ok:
         abort(404, description="That record was deleted.")
@@ -184,6 +185,8 @@ def entity_upsert(slug):
     if not records.SLUG_RE.match(slug):
         return jsonify(error="A slug is lower-case letters, digits and dashes, starting with a letter or digit."), 400
     entity = _by_slug(slug)
+    if entity is not None and not access.can_see(entity):
+        return jsonify(error=f"The slug “{slug}” is taken."), 409
     if entity is not None and entity.deleted_at is not None:
         return jsonify(error=f"A deleted record has the slug “{slug}”. Restore it (POST /api/entities/"
                              f"{entity.id}/restore), or choose another slug."), 409
@@ -250,9 +253,9 @@ def entity_restore(entity_id):
 @role("viewer")
 def entity_history(entity_id):
     entity_or_404(entity_id, deleted_ok=True)
-    from .views import hide_secret_lines
-    rows = hide_secret_lines(AuditLog.query.filter_by(entity_id=entity_id)
-                             .order_by(AuditLog.at.desc(), AuditLog.id.desc()).limit(200).all())
+    from .views import hide_secret_lines, redact
+    rows = redact(hide_secret_lines(AuditLog.query.filter_by(entity_id=entity_id)
+                                    .order_by(AuditLog.at.desc(), AuditLog.id.desc()).limit(200).all()))
     return jsonify(history=[{
         "at": r.at.isoformat() + "Z", "user": r.user_name, "action": r.action, "changes": r.changes,
     } for r in rows])
@@ -434,7 +437,8 @@ def tag_counts(type_keys=None) -> list[tuple[str, int]]:
     rows = (db.session.query(Tag.name, func.count(Entity.id))
             .join(entity_tags, entity_tags.c.tag_id == Tag.id)
             .join(Entity, Entity.id == entity_tags.c.entity_id)
-            .filter(Entity.deleted_at.is_(None), Entity.archived.is_(False), Entity.type.in_(keys))
+            .filter(Entity.deleted_at.is_(None), Entity.archived.is_(False), Entity.type.in_(keys),
+                    Entity.access.notin_(access.hidden()))
             .group_by(Tag.id).order_by(func.lower(Tag.name)).all())
     return [(name, count) for name, count in rows]
 

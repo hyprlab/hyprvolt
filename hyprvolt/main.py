@@ -23,7 +23,7 @@ from sqlalchemy import func
 
 from . import __version__
 from .auth import EMAIL_RE, MIN_PASSWORD, siteverify, turnstile_config
-from .core import present, shell
+from .core import access, present, shell
 from .core.api import like
 from .core.models import Entity, Tag
 from .models import User, db, get_setting, int_setting, set_setting
@@ -115,7 +115,7 @@ def _list_query(module, a):
     keys = [t.key for t in module.types] if module else reg.enabled_type_keys()
     if a["etype"]:
         keys = [a["etype"].key]
-    query = Entity.query.filter(Entity.type.in_(keys))
+    query = access.visible(Entity.query.filter(Entity.type.in_(keys)))
     if a["deleted"]:
         query = query.filter(Entity.deleted_at.isnot(None))
     else:
@@ -225,7 +225,8 @@ def entity_link(entity_id):
     """A stable link to a record: its module's list with the sheet open.
     This is what [[slug]] links, copied links and labels point at."""
     entity = db.session.get(Entity, entity_id)
-    if entity is None or not registry().type(entity.type) or not registry().is_enabled(entity.module):
+    if (entity is None or not registry().type(entity.type) or not registry().is_enabled(entity.module)
+            or not access.can_see(entity)):
         abort(404)
     return redirect(url_for("main.module_list", module_id=entity.module, open=entity.id))
 

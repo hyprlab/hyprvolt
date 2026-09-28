@@ -8,14 +8,15 @@ from sqlalchemy import func
 
 from ..models import db
 from ..registry import current as registry
+from . import access
 from .api import tag_counts
 from .models import Entity
 
 
 def type_counts() -> dict[str, int]:
     """Live, unarchived entities per type."""
-    rows = db.session.query(Entity.type, func.count(Entity.id)).filter(
-        Entity.deleted_at.is_(None), Entity.archived.is_(False)).group_by(Entity.type).all()
+    rows = access.visible(db.session.query(Entity.type, func.count(Entity.id)).filter(
+        Entity.deleted_at.is_(None), Entity.archived.is_(False))).group_by(Entity.type).all()
     return dict(rows)
 
 
@@ -64,7 +65,7 @@ def context(active_module=None, active_type=None, active_filter=None, active_tag
     keys = reg.enabled_type_keys()
     deleted = 0
     if current_user.can_edit:
-        deleted = Entity.query.filter(Entity.deleted_at.isnot(None), Entity.type.in_(keys)).count()
+        deleted = access.visible(Entity.query.filter(Entity.deleted_at.isnot(None), Entity.type.in_(keys))).count()
     from . import reminders
     from .. import tokens
     return {

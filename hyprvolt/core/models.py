@@ -48,6 +48,8 @@ class Entity(db.Model):
     location_id = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)
     notes = db.Column(db.Text, nullable=False, default="")
     archived = db.Column(db.Boolean, nullable=False, default=False)
+    # Who may read it: "" everyone, "editors", "private" (core/access.py).
+    access = db.Column(db.String(10), nullable=False, default="", server_default="", index=True)
     # Deleting only stamps this, so Undo brings back the same id with its
     # links, files and history; the worker purges it later.
     deleted_at = db.Column(db.DateTime)
@@ -66,7 +68,9 @@ class Entity(db.Model):
 
     @classmethod
     def live(cls):
-        return cls.query.filter(cls.deleted_at.is_(None))
+        """Not deleted, and readable by whoever is asking (core/access.py)."""
+        from .access import visible
+        return visible(cls.query.filter(cls.deleted_at.is_(None)))
 
     @property
     def tag_names(self) -> list[str]:

@@ -23,7 +23,9 @@ def test_a_field_kept_as_a_link_is_a_relationship(client, h, admin):
     assert [r["other"]["name"] for r in rels] == ["Cell B"]
     edit = history(client, gadget["id"])[0]
     assert edit["action"] == "edited" and edit["changes"] == [
-        {"field": "f.battery", "label": "Battery", "old": "Cell A", "new": "Cell B"}]
+        {"field": "f.battery", "label": "Battery", "old": "Cell A", "new": "Cell B",
+         "old_ref": edit["changes"][0]["old_ref"], "new_ref": edit["changes"][0]["new_ref"]}]
+    assert edit["changes"][0]["old_ref"] != edit["changes"][0]["new_ref"]      # the records' ids, kept
     assert history(client, cell["id"])[0]["action"] == "unlinked"
     # Unlinking in the Relationships tab empties the field.
     rel_id = rels[0]["id"]

@@ -306,6 +306,10 @@ def _migrate(app: Flask) -> None:
     from .core.reminders import refresh_all
     core.once("reminders-first-fill", refresh_all)
 
+    # Who may read a record: everyone, until a document is restricted.
+    core.add_column("entities", "access", "VARCHAR(10) NOT NULL DEFAULT ''")
+    core.add_index("ix_entities_access", "entities", ["access"])
+
 
 def _start_worker(app: Flask) -> None:
     """Background thread for periodic work (worker.py).

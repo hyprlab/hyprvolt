@@ -126,6 +126,11 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   rules that span fields or records: a gateway inside its subnet, a VLAN ID
   used once per network. It raises `Invalid` to refuse the save, and may
   tidy values (Network lower-cases a domain's name).
+- `restrictable=True` gives the form a "Visible to" choice (everyone, editors,
+  private) and hides the record from readers below it everywhere
+  (`core/access.py`). Documents use it. Read records with `Entity.live()` or
+  `records.live(id)`, which apply the rule; a query of your own over
+  `Entity` goes through `access.visible(query)`.
 - `overview(entity)` returns two pieces of HTML (render a template), shown
   above the Overview's fields and below its Markdown: a document's page
   path, and its pages with the ones either side.

@@ -43,9 +43,9 @@ def link(kind_key: str, source, target, note: str = "", user=None, audit_source:
     db.session.add(rel)
     if audit_source:
         records.audit(source, "linked", [{"field": "relationship", "label": kind.label.capitalize(),
-                                          "old": "", "new": target.name}], user)
+                                          "old": "", "new": target.name, "ref": target.id}], user)
     records.audit(target, "linked", [{"field": "relationship", "label": kind.reverse.capitalize(),
-                                      "old": "", "new": source.name}], user)
+                                      "old": "", "new": source.name, "ref": source.id}], user)
     return rel
 
 
@@ -59,9 +59,9 @@ def unlink(rel, user=None, audit_source: bool = True) -> dict:
     snapshot = {"kind": rel.kind, "source_id": rel.source_id, "target_id": rel.target_id, "note": rel.note}
     if audit_source:
         records.audit(rel.source, "unlinked", [{"field": "relationship", "label": label.capitalize(),
-                                                "old": rel.target.name, "new": ""}], user)
+                                                "old": rel.target.name, "new": "", "ref": rel.target_id}], user)
     records.audit(rel.target, "unlinked", [{"field": "relationship", "label": reverse.capitalize(),
-                                            "old": rel.source.name, "new": ""}], user)
+                                            "old": rel.source.name, "new": "", "ref": rel.source_id}], user)
     db.session.delete(rel)
     return snapshot
 
@@ -72,7 +72,9 @@ def visible_ids() -> set[int]:
     from ..registry import current as registry
     from .models import Entity
     keys = registry().enabled_type_keys()
-    return {i for (i,) in db.session.query(Entity.id).filter(Entity.deleted_at.is_(None), Entity.type.in_(keys))}
+    from .access import visible
+    return {i for (i,) in visible(db.session.query(Entity.id).filter(Entity.deleted_at.is_(None),
+                                                                      Entity.type.in_(keys)))}
 
 
 def for_entity(entity) -> list[dict]:

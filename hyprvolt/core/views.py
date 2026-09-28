@@ -12,12 +12,12 @@ from flask import Blueprint, abort, render_template, request
 from flask_login import current_user
 from markupsafe import Markup
 
-from ..models import int_setting
+from ..models import db, int_setting
 from ..permissions import role
 from ..registry import current as registry
 from . import attachments as files
 from . import fields as F
-from . import present, records, relations
+from . import access, present, records, relations
 from .api import entity_or_404
 from .markdown import render as markdown
 from .models import Attachment, AuditLog, Entity
@@ -58,7 +58,7 @@ def sheet(entity_id):
     tab = next((t for t in tabs if t.key == key), tabs[0])
     etype = registry().type(entity.type)
     return render_template(
-        "sheet/sheet.html", entity=entity, etype=etype, tabs=tabs, tab=tab,
+        "sheet/sheet.html", entity=entity, etype=etype, tabs=tabs, tab=tab, access_short=access.SHORT,
         panel=Markup(tab.render(entity)), crumbs=present.crumbs(entity.location_id),
         status=records.status_label(entity), icon=present.icon(etype),
         purge_days=int_setting("purge_days", 30),
@@ -88,6 +88,7 @@ def overview_tab(entity: Entity) -> str:
     above, below = etype.overview(entity) if etype and etype.overview else ("", "")
     return render_template("sheet/overview.html", entity=entity, etype=etype, groups=groups, prose=prose,
                            above=Markup(above), below=Markup(below),
+                           access_label=access.LABELS.get(entity.access or "", "Everyone"),
                            custom=custom, notes=markdown(entity.notes or ""),
                            crumbs=present.crumbs(entity.location_id),
                            status=records.status_label(entity))
@@ -130,9 +131,43 @@ def hide_secret_lines(rows):
     return [r for r in rows if not r.action.endswith(" a secret")]
 
 
+class HistoryLine:
+    """A history row as a reader may see it."""
+    def __init__(self, row, changes):
+        self.at, self.user_name, self.action, self.changes = row.at, row.user_name, row.action, changes
+
+
+def redact(rows) -> list:
+    """History lines that name a record the reader may not see (a link to a
+    private document, a field pointing at one) lose that change; a line left
+    with nothing to say goes."""
+    hidden = access.hidden()
+    if not hidden:
+        return rows
+    ids = {c.get(k) for r in rows for c in r.changes for k in ("ref", "old_ref", "new_ref") if c.get(k)}
+    secret = {i for (i,) in db.session.query(Entity.id).filter(Entity.id.in_(ids), Entity.access.in_(hidden))} \
+        if ids else set()
+    if not secret:
+        return rows
+    out = []
+    for r in rows:
+        changes = []
+        for c in r.changes:
+            if c.get("ref") in secret:
+                continue
+            c = dict(c)
+            for side in ("old", "new"):
+                if c.get(side + "_ref") in secret:
+                    c[side] = "a restricted record"
+            changes.append(c)
+        if changes or not r.changes:
+            out.append(HistoryLine(r, changes))
+    return out
+
+
 def history_tab(entity: Entity) -> str:
-    rows = hide_secret_lines(AuditLog.query.filter_by(entity_id=entity.id)
-                             .order_by(AuditLog.at.desc(), AuditLog.id.desc()).limit(300).all())
+    rows = redact(hide_secret_lines(AuditLog.query.filter_by(entity_id=entity.id)
+                                    .order_by(AuditLog.at.desc(), AuditLog.id.desc()).limit(300).all()))
     return render_template("sheet/history.html", entity=entity, rows=rows, actions=ACTIONS)
 
 
@@ -224,6 +259,6 @@ def form(entity_id=None):
         "sheet/form.html", entity=entity, etype=etype, fields=fields, custom=custom, sections=sections,
         locations=_location_choices(etype, entity), location_id=location_id,
         attach_to=request.args.get("attach_to", type=int), name=request.args.get("name", ""),
-        link=request.args.get("link", ""),
+        link=request.args.get("link", ""), access_levels=access.choices(current_user),
         tags=", ".join(entity.tag_names) if entity else "", can_admin=current_user.is_admin,
     )

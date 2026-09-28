@@ -3,7 +3,7 @@ the ones that mention it with [[its-slug]]. And a document's pages: its
 path, the pages under it, the pages either side, and what links to it."""
 from flask import render_template
 
-from hyprvolt.core import present, records
+from hyprvolt.core import access, present, records
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.markdown import excerpt
 from hyprvolt.core.models import Entity, Relationship
@@ -17,7 +17,8 @@ def attached(entity):
     rows = (db.session.query(Relationship, Entity)
             .join(Entity, Entity.id == Relationship.target_id)
             .filter(Relationship.source_id == entity.id, Relationship.kind == "documented_by",
-                    Entity.type == "document", Entity.deleted_at.is_(None))
+                    Entity.type == "document", Entity.deleted_at.is_(None),
+                    Entity.access.notin_(access.hidden()))
             .order_by(Entity.name).all())
     return rows
 

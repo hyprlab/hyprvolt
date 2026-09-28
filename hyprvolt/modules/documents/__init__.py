@@ -42,6 +42,7 @@ module = Module(
         EntityType(
             "document", "Document", "Documents", detail=DocumentBody, located_in=(),
             statuses=(("current", "Current"), ("draft", "Draft"), ("outdated", "Outdated")),
+            restrictable=True,
             check=lambda e, d: views.check_parent(e, d),
             overview=lambda e: views.page_overview(e),
             tabs=(Tab("linked", "Linked from", lambda e: views.linked_tab(e), count=lambda e: views.linked_count(e)),),

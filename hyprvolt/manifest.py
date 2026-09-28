@@ -81,6 +81,7 @@ class EntityType:
     inactive: tuple = ("retired",)   # statuses that need no reminders
     check: Callable | None = None    # check(entity, detail): rules across fields
     overview: Callable | None = None # overview(entity) -> (html above, html below) the Overview
+    restrictable: bool = False       # can be hidden from viewers (core/access.py)
     module: str = ""                 # filled in by the registry
 
     def text(self, plural: bool = False) -> str:

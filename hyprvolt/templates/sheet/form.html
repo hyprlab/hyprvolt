@@ -100,6 +100,14 @@
       <input id="ef-slug" name="slug" value="{{ entity.slug if entity else '' }}" maxlength="119" spellcheck="false" autocomplete="off" aria-describedby="ef-slug-help"
              placeholder="Made from the {{ (etype.fields|selectattr('key', 'equalto', etype.name_from)|first).label|lower if etype.name_from else 'name' }}" pattern="[a-z0-9][a-z0-9-]*">
     </div>
+    {% if etype.restrictable %}
+    <div class="field">
+      {{ head('ef-access', 'Visible to', 'Who can read it. Everyone signed in, or only editors and admins, or only admins and the people given access to secrets, for a manual with details not everyone should see. Anyone else never sees it: not in lists, search, links or the API.') }}
+      <select id="ef-access" name="access" aria-describedby="ef-access-help">
+        {% for value, label in access_levels %}<option value="{{ value }}" {{ 'selected' if entity and (entity.access or '') == value }}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
   </div>
 
   {% set ns = namespace(group=None, open=false) %}

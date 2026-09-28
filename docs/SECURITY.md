@@ -37,6 +37,7 @@ Only the latest stable release receives security fixes.
 | A leaked API token | Only a SHA-256 of each token is stored; a token can be limited to reading, and whatever its role can't reveal a secret, download the secrets key or a backup, restore, or make tokens; it is revoked at once in Settings, a revoked one can be brought back only within ten minutes, and a restore revokes them all |
 | A stolen session or remember-me cookie | Sign-in ids carry a stamp of the password: changing or resetting it ends every other session and cookie of the account |
 | The certificate check as a way into the network | Only editors set a certificate's address or press Check now; the check opens a connection, makes a TLS handshake and reads the certificate presented, sending no request, following no redirect and keeping nothing but the certificate's details; one address at a time, with a five-second timeout, and the worker checks each certificate at most once a day |
+| Reading a restricted document | Every read goes through one rule (`core/access.py`): lists, search, counts, tags, links, exports and the API leave out a document above the reader's level, and a lookup by id or slug answers 404; history lines that name one are redacted |
 | Seeing a password without cause | Beyond admins, secrets are a permission given per account; each reveal and copy is written to the record's history with who and when; API tokens can't read them |
 
 ## Out of scope

@@ -18,6 +18,7 @@ from sqlalchemy.orm import aliased
 
 from ..models import db, int_setting, utcnow
 from ..registry import current as registry
+from . import access
 from . import fields as F
 from .models import AuditLog, CustomField, CustomValue, Entity, Relationship, Tag
 from .fields import Invalid
@@ -25,7 +26,7 @@ from .fields import Invalid
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,118}$")
 MAX_TAGS = 30
 LABELS = {"name": "Name", "slug": "Slug", "status": "Status", "location": "Location",
-          "tags": "Tags", "notes": "Notes", "created_at": "Created"}
+          "tags": "Tags", "notes": "Notes", "created_at": "Created", "access": "Visible to"}
 CREATED = F.Field("created_at", "Created", "datetime")
 
 
@@ -37,7 +38,7 @@ def live(entity_id) -> Entity | None:
         entity = db.session.get(Entity, int(entity_id))
     except (TypeError, ValueError):
         return None
-    if entity is None or entity.deleted_at is not None:
+    if entity is None or entity.deleted_at is not None or not access.can_see(entity):
         return None
     etype = registry().type(entity.type)
     if etype is None or not registry().is_enabled(etype.module):
@@ -257,9 +258,9 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
     data = normalize(data)
     changes = []
 
-    def note(key, label, old, new):
+    def note(key, label, old, new, **refs):
         if old != new and not (creating and new == ""):
-            changes.append({"field": key, "label": label, "old": old, "new": new})
+            changes.append({"field": key, "label": label, "old": old, "new": new, **refs})
 
     if etype.name_from:
         if creating:
@@ -279,7 +280,8 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
             raise Invalid("A slug is lower-case letters, digits and dashes, starting with a letter or digit.")
         clash = Entity.query.filter(Entity.slug == slug, Entity.id != (entity.id or 0)).first()
         if clash:
-            raise Invalid(f"The slug “{slug}” is taken by {clash.name}.")
+            raise Invalid(f"The slug “{slug}” is taken by {clash.name}." if access.can_see(clash)
+                          else f"The slug “{slug}” is taken.")
         if not creating:
             note("slug", LABELS["slug"], entity.slug, slug)
         entity.slug = slug
@@ -306,6 +308,9 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
         entity.tags = [_tag(n) for n in names]
         note("tags", LABELS["tags"], old, ", ".join(sorted(names, key=str.lower)))
 
+    if "access" in data and (data["access"] or "") != (entity.access or ""):
+        _set_access(entity, etype, data["access"] or "", user, note)
+
     if data.get("created_at") not in (None, ""):
         _set_created(entity, data["created_at"], user, note)
 
@@ -330,8 +335,10 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
                 continue
             value = F.parse(f, raw, lookup=live)
             old = linked.get(f.key) if f.relation else getattr(detail, f.key, None)
-            if old != value:
-                note("f." + f.key, f.label, F.display(f, old, live), F.display(f, value, live))
+            # "" and None are both empty: a column's default ("") is no change.
+            if old != value and not (old in (None, "") and value in (None, "")):
+                refs = {"old_ref": old, "new_ref": value} if f.kind == "ref" else {}
+                note("f." + f.key, f.label, F.display(f, old, live), F.display(f, value, live), **refs)
                 if f.relation:
                     _relink(entity, f, old, value, user)
                 else:
@@ -387,6 +394,18 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
     return changes
 
 
+def _set_access(entity: Entity, etype, level: str, user, note) -> None:
+    if level not in access.LABELS:
+        raise Invalid("Visible to must be everyone, editors or private.")
+    if level and not etype.restrictable:
+        raise Invalid(f"A {etype.text()} is visible to everyone; only documents can be restricted.")
+    who = _user(user)
+    if level and who is not None and not access.allows(who, level):
+        raise Invalid("That would hide it from you: choose a level you can see.")
+    note("access", LABELS["access"], access.LABELS[entity.access or ""], access.LABELS[level])
+    entity.access = level
+
+
 def _set_created(entity: Entity, raw, user, note) -> None:
     """When the record came into being, for records brought in from
     elsewhere (a manual first written in 2019). An admin's call only: it
@@ -422,6 +441,8 @@ def _merge(changes: list[dict]) -> list[dict]:
     for c in changes:
         if c["field"] in at:
             out[at[c["field"]]]["new"] = c["new"]
+            if "new_ref" in c:
+                out[at[c["field"]]]["new_ref"] = c["new_ref"]
         else:
             at[c["field"]] = len(out)
             out.append(dict(c))
