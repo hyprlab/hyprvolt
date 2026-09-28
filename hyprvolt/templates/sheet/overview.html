@@ -1,4 +1,10 @@
 {% from "partials/macros.html" import crumbs as crumb_nav, entity_link, tag_chips %}
+{% if notes %}
+<section class="sheet-notes" aria-label="Notes">
+  <p class="setting-label">Notes</p>
+  <div class="prose">{{ notes }}</div>
+</section>
+{% endif %}
 {{ above }}
 <dl class="kv">
   <div><dt>Status</dt><dd>{{ status }}</dd></div>
@@ -44,9 +50,5 @@
 
 {{ below }}
 
-{% if notes %}
-<p class="setting-label setting-label--spaced">Notes</p>
-<div class="prose sheet-prose">{{ notes }}</div>
-{% endif %}
 
 <p class="hint sheet-foot">Created {{ entity.created_at.strftime('%b %-d, %Y') }}{% if entity.created_by %} by {{ entity.created_by.display_name }}{% endif %}.</p>

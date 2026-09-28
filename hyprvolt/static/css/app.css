@@ -893,6 +893,11 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 
 .sheet-meta .slug, .slug { font-family: var(--mono); font-size: 12px; background: var(--field); padding: 1px 6px; border-radius: 5px; color: var(--muted); }
 .sheet-prose { margin-top: 18px; }
+/* A record's notes come first in its Overview: what someone wrote down about
+   it matters more than the fields below. */
+.sheet-notes { margin: 0 0 22px; padding: 14px 16px 2px; border-left: 3px solid var(--accent); background: var(--panel); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.sheet-notes .setting-label { margin: 0 0 6px; }
+.sheet-notes .prose { font-size: 15.5px; }
 .sheet-foot { margin-top: 28px; }
 
 /* Breadcrumbs: where a record is, outermost first. */
