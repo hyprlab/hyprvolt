@@ -10,15 +10,8 @@
     {% endif %}
     <div class="manage-meta">
       <a class="manage-title link" href="/attachments/{{ a.id }}/{{ a.filename|urlencode }}" target="_blank" rel="noopener">{{ a.filename }}</a>
-      <span class="manage-sub">{% if main and main.id == a.id %}Main image · {% endif %}{{ human_size(a.size) }} · {{ a.created_at|ago }}{% if a.created_by %} · {{ a.created_by.display_name }}{% endif %}</span>
+      <span class="manage-sub">{{ human_size(a.size) }} · {{ a.created_at|ago }}{% if a.created_by %} · {{ a.created_by.display_name }}{% endif %}</span>
     </div>
-    {% if a.is_image and current_user.can_edit %}
-    {% set is_main = main and main.id == a.id %}
-    <button class="iconbtn iconbtn--sm starbtn" data-api-post="/api/entities/{{ entity.id }}/image" data-body='{"attachment_id": {{ a.id }}}'
-            data-then="sheet" aria-pressed="{{ 'true' if is_main else 'false' }}" aria-label="Main image"
-            title="{{ 'The main image' if is_main else 'Make it the main image' }}">
-      <svg viewBox="0 0 24 24"><path d="m12 4 2.4 5 5.4.6-4 3.7 1.1 5.4L12 16l-4.9 2.7 1.1-5.4-4-3.7 5.4-.6L12 4Z"/></svg></button>
-    {% endif %}
     <a class="iconbtn iconbtn--sm" href="/attachments/{{ a.id }}/{{ a.filename|urlencode }}?download=1" aria-label="Download" title="Download">
       <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg></a>
     {% if current_user.can_edit %}
@@ -39,7 +32,7 @@
   <label for="file-input-{{ entity.id }}">
     <svg viewBox="0 0 24 24"><path d="M12 16V5M7.5 9.5 12 5l4.5 4.5M5 19.5h14"/></svg>
     <span>Drop files here, or <strong>choose files</strong></span>
-    <span class="hint">Up to {{ limit_mb }} MB each. Pictures show in the Overview.</span>
+    <span class="hint">Up to {{ limit_mb }} MB each. Images also show in the Overview.</span>
   </label>
   <p class="form-error" hidden></p>
 </form>

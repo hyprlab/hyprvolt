@@ -1329,7 +1329,7 @@
       link.closest("[data-gallery]").querySelectorAll("[data-gallery-item]").forEach(function (a) {
         var large = a.getAttribute("data-large") || a.href;
         if (a === link) start = seen[large] !== undefined ? seen[large] : lbItems.length;
-        if (seen[large] !== undefined) return;   // the main image is in the strip as well
+        if (seen[large] !== undefined) return;   // a picture listed twice shows once
         seen[large] = lbItems.length;
         lbItems.push({ href: a.href, large: large, caption: a.getAttribute("data-caption") || "" });
       });

@@ -60,9 +60,9 @@ class Entity(db.Model):
     updated_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=utcnow)
-    # The attached image shown as its picture (core/images.py). Not a foreign
-    # key: attachments already point here, and a removed file just leaves the
-    # first image attached in its place.
+    # Its featured image, stored as an attachment but not listed with them
+    # (core/images.py). Not a foreign key: attachments already point here,
+    # and one that is removed or purged simply isn't shown.
     image_id = db.Column(db.Integer)
 
     location = db.relationship("Entity", remote_side=[id], foreign_keys=[location_id])
@@ -166,7 +166,7 @@ class Relationship(db.Model):
     target = db.relationship(Entity, foreign_keys=[target_id])
 
 
-#: Attachments shown as pictures: a record's main image and its gallery.
+#: Attachments shown as pictures: a record's featured image and its gallery.
 IMAGE_TYPES = ("image/png", "image/jpeg", "image/gif", "image/webp")
 
 

@@ -35,7 +35,7 @@ hyprvolt/
     relations.py   relationship kinds and the dependency walk
     markdown.py    Markdown with [[slug]] links, through the sanitizer
     attachments.py files on disk
-    images.py      a record's main image and gallery, and their thumbnails
+    images.py      a record's featured image and gallery, and their thumbnails
     api.py         the JSON API
     views.py       the detail sheet and the form, as HTML fragments
     shell.py       the sidebar and what surrounds every page

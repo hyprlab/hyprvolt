@@ -23,7 +23,7 @@ from . import attachments as files
 from . import fields as F
 from . import images, records, relations
 from .fields import Invalid
-from .models import Attachment, AuditLog, CustomField, CustomValue, Entity, Relationship, Tag, entity_tags
+from .models import IMAGE_TYPES, Attachment, AuditLog, CustomField, CustomValue, Entity, Relationship, Tag, entity_tags
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -65,7 +65,7 @@ def to_json(entity: Entity, full: bool = True) -> dict:
     if full:
         out["notes"] = entity.notes
         out["created_at"] = entity.created_at.isoformat() + "Z"
-        main = images.main_image(entity)
+        main = images.featured(entity)
         out["image"] = {"attachment_id": main.id, **images.urls(main)} if main else None
         out["path"] = [{"id": c.id, "name": c.name} for c in records.crumbs(entity)]
         values = records.own_values(entity)
@@ -343,7 +343,9 @@ def attachment_json(att) -> dict:
 @role("viewer")
 def attachment_list(entity_id):
     entity_or_404(entity_id)
-    rows = Attachment.query.filter_by(entity_id=entity_id, deleted_at=None).order_by(Attachment.created_at.desc())
+    entity = entity_or_404(entity_id)
+    rows = (Attachment.query.filter_by(entity_id=entity_id, deleted_at=None)
+            .filter(Attachment.id != (entity.image_id or 0)).order_by(Attachment.created_at.desc()))
     return jsonify(attachments=[attachment_json(a) for a in rows])
 
 
@@ -418,17 +420,39 @@ def att_entity(att) -> Entity:
 @bp.route("/entities/<int:entity_id>/image", methods=["POST"])
 @role("editor")
 def image_set(entity_id):
-    """``{"attachment_id": 12}``: make one of the record's images its main one."""
+    """The featured image: upload one as multipart ``file``, or send
+    ``{"attachment_id": 12}`` to use an image stored for this record (the
+    one an Undo brings back), or ``{"attachment_id": null}`` for none. The
+    image replaced comes back with the Undo in the answer."""
     entity = entity_or_404(entity_id)
-    att_id = _body().get("attachment_id")
-    att = db.session.get(Attachment, att_id) if isinstance(att_id, int) else None
-    if att is None or att.entity_id != entity.id or att.deleted_at is not None:
-        return jsonify(error="That file is not attached to this record."), 400
-    if not att.is_image:
-        return jsonify(error="Only a PNG, JPEG, GIF or WebP image can be the main image."), 400
-    records.set_image(entity, att)
+    if request.files:
+        upload = request.files.get("file")
+        if upload is None or not upload.filename:
+            return jsonify(error="Choose an image."), 400
+        if (upload.mimetype or "") not in IMAGE_TYPES:
+            return jsonify(error="The featured image must be a PNG, JPEG, GIF or WebP image."), 400
+        try:
+            att = files.save(entity, upload, current_user)
+        except Invalid as err:
+            return _fail(err)
+    else:
+        att_id = _body().get("attachment_id")
+        att = db.session.get(Attachment, att_id) if type(att_id) is int else None
+        if att_id is not None and (att is None or att.entity_id != entity.id):
+            return jsonify(error="That image is not stored for this record."), 400
+        if att is not None and not att.is_image:
+            return jsonify(error="The featured image must be a PNG, JPEG, GIF or WebP image."), 400
+    db.session.flush()
+    before = entity.image_id
+    old = records.set_image(entity, att)
+    db.session.flush()
+    records.reindex(entity)
     db.session.commit()
-    return jsonify(ok=True, entity=to_json(entity))
+    out = {"ok": True, "entity": to_json(entity)}
+    if before and (att is None or old is not None):
+        out["undo"] = {"url": f"/api/entities/{entity.id}/image", "body": {"attachment_id": before}}
+        out["message"] = "Featured image removed" if att is None else "Featured image replaced"
+    return jsonify(out)
 
 
 files_bp = Blueprint("files", __name__)

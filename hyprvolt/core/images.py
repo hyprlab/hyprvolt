@@ -1,9 +1,10 @@
-"""A record's pictures: its main image and its gallery.
+"""A record's pictures: its featured image and its gallery.
 
-The pictures are the record's attached images (PNG, JPEG, GIF, WebP); there
-is no separate upload. ``entities.image_id`` names the main one; when it is
-unset, or names a file since removed, the first image attached is the main
-one, so a record's first photo shows without anyone choosing it.
+The featured image has a place of its own at the top of the Overview and on
+the record's card. It is stored like an attachment (the same folder, the
+same backups and purge) and named by ``entities.image_id``, but it is not
+listed with the attachments. The gallery is the record's other attached
+images (PNG, JPEG, GIF, WebP).
 
 Cards and galleries show thumbnails, not the originals a phone takes (often
 several MB each). Pillow makes them the first time they are asked for, turned
@@ -89,45 +90,27 @@ def forget(att: Attachment) -> None:
                 pass
 
 
-def images_of(entity_ids) -> dict[int, list[Attachment]]:
-    """entity id -> its live images, oldest first, in one query."""
-    out: dict[int, list[Attachment]] = {}
-    ids = list(entity_ids)
-    if not ids:
-        return out
-    rows = (Attachment.query.filter(Attachment.entity_id.in_(ids), Attachment.deleted_at.is_(None),
-                                    Attachment.content_type.in_(IMAGE_TYPES))
-            .order_by(Attachment.created_at, Attachment.id))
-    for att in rows:
-        out.setdefault(att.entity_id, []).append(att)
-    return out
+def featured_of(entities) -> dict[int, Attachment]:
+    """entity id -> its featured image, for a page of cards, in one query."""
+    wanted = {e.image_id: e.id for e in entities if e.image_id}
+    if not wanted:
+        return {}
+    rows = Attachment.query.filter(Attachment.id.in_(wanted), Attachment.deleted_at.is_(None),
+                                   Attachment.content_type.in_(IMAGE_TYPES))
+    return {wanted[a.id]: a for a in rows if a.entity_id == wanted[a.id]}
 
 
-def _main(entity: Entity, images: list[Attachment]) -> Attachment | None:
-    return next((a for a in images if a.id == entity.image_id), images[0] if images else None)
-
-
-def main_images(entities) -> dict[int, Attachment]:
-    """entity id -> its main image, for a page of cards."""
-    by_id = images_of(e.id for e in entities)
-    out = {}
-    for e in entities:
-        main = _main(e, by_id.get(e.id, []))
-        if main is not None:
-            out[e.id] = main
-    return out
+def featured(entity: Entity) -> Attachment | None:
+    return featured_of([entity]).get(entity.id)
 
 
 def gallery(entity: Entity) -> list[Attachment]:
-    """The record's images, the main one first."""
-    images = images_of([entity.id]).get(entity.id, [])
-    main = _main(entity, images)
-    return [main] + [a for a in images if a is not main] if main else []
-
-
-def main_image(entity: Entity) -> Attachment | None:
-    images = gallery(entity)
-    return images[0] if images else None
+    """The record's other pictures: its attached images, oldest first, the
+    featured image left out."""
+    return (Attachment.query.filter(Attachment.entity_id == entity.id, Attachment.deleted_at.is_(None),
+                                    Attachment.content_type.in_(IMAGE_TYPES),
+                                    Attachment.id != (entity.image_id or 0))
+            .order_by(Attachment.created_at, Attachment.id).all())
 
 
 def urls(att: Attachment) -> dict:

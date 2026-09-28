@@ -1,12 +1,35 @@
 {% from "partials/macros.html" import crumbs as crumb_nav, entity_link, tag_chips %}
-{% if pictures %}
-{# The main image, then every picture as a strip; either opens the viewer. #}
+{% set can_edit = current_user.can_edit and not entity.deleted_at %}
+{% if featured or pictures or can_edit %}
+{# The featured image in its own place (editors add, replace or remove it
+   here), then the other pictures attached, as a strip. Any of them opens
+   the viewer. #}
 <section class="gallery" data-gallery aria-label="Pictures">
-  {% set main = pictures[0] %}
-  <a class="gallery-main" href="/attachments/{{ main.id }}/{{ main.filename|urlencode }}" data-gallery-item
-     data-large="/attachments/{{ main.id }}/thumb/lg" data-caption="{{ main.filename }}">
-    <img src="/attachments/{{ main.id }}/thumb/lg" alt="{{ main.filename }}"></a>
-  {% if pictures|length > 1 %}
+  {% if featured %}
+  <div class="featured">
+    <a class="gallery-main" href="/attachments/{{ featured.id }}/{{ featured.filename|urlencode }}" data-gallery-item
+       data-large="/attachments/{{ featured.id }}/thumb/lg" data-caption="{{ featured.filename }}">
+      <img src="/attachments/{{ featured.id }}/thumb/lg" alt="{{ featured.filename }}"></a>
+    {% if can_edit %}
+    <form class="featured-actions" data-api="/api/entities/{{ entity.id }}/image" data-then="sheet" enctype="multipart/form-data">
+      <input type="file" name="file" id="featured-{{ entity.id }}" accept="{{ image_types }}" data-autosubmit>
+      <label class="btn btn--xs btn--ghost" for="featured-{{ entity.id }}">Replace</label>
+      <button type="button" class="btn btn--xs btn--ghost" data-api-post="/api/entities/{{ entity.id }}/image"
+              data-body='{"attachment_id": null}' data-then="sheet">Remove</button>
+    </form>
+    {% endif %}
+  </div>
+  {% elif can_edit %}
+  <form class="dropzone dropzone--slim" data-api="/api/entities/{{ entity.id }}/image" data-then="sheet" enctype="multipart/form-data">
+    <input type="file" name="file" id="featured-{{ entity.id }}" accept="{{ image_types }}" data-autosubmit>
+    <label for="featured-{{ entity.id }}">
+      <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4 17 5-4.5 4 3.5 2.5-2 4.5 3.5"/></svg>
+      <span>Add a featured image: drop it here, or <strong>choose one</strong></span>
+    </label>
+    <p class="form-error" hidden></p>
+  </form>
+  {% endif %}
+  {% if pictures %}
   <ul class="gallery-strip">
     {% for a in pictures %}
     <li><a href="/attachments/{{ a.id }}/{{ a.filename|urlencode }}" data-gallery-item

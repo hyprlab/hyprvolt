@@ -381,7 +381,7 @@ button.menuopt { width: 100%; text-align: left; }
   transition: transform .18s ease, border-color .18s, box-shadow .18s;
 }
 .card:hover { transform: translateY(-2px); border-color: var(--line-strong); box-shadow: var(--shadow-2); }
-/* A record's main image heads its card, edge to edge, always the same
+/* A record's featured image heads its card, edge to edge, always the same
    shape so the grid doesn't move as pictures load. */
 .card-image {
   display: block; width: calc(100% + 32px); max-width: none; margin: -14px -16px 2px;
@@ -954,7 +954,7 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .banner--stack p { margin: 0; }
 .banner--danger { background: rgb(220 70 60 / .08); border-color: rgb(220 70 60 / .25); color: var(--ink); }
 
-/* A record's pictures at the top of its Overview: the main image in a box of
+/* A record's pictures at the top of its Overview: the featured image in a box of
    fixed height (so nothing below moves as it loads), then all of them as a
    strip of tiles. */
 .gallery { margin: 0 0 22px; }
@@ -963,6 +963,13 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   background: var(--panel); border: 1px solid var(--line);
 }
 .gallery-main img { width: 100%; height: 100%; object-fit: contain; }
+/* Replace and Remove sit on the featured image, bottom right. */
+.featured { position: relative; }
+.featured-actions { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 6px; }
+.featured-actions .btn { background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(8px); cursor: pointer; }
+.featured-actions input[type=file] { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.featured-actions input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.featured-actions.is-busy { opacity: .6; }
 .gallery-strip { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .gallery-strip a {
   display: block; width: 72px; height: 72px; border-radius: var(--radius-sm); overflow: hidden;
@@ -1037,8 +1044,6 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   border-radius: 8px; background: var(--field); border: 1px solid var(--line); color: var(--faint);
 }
 .file-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.starbtn[aria-pressed="true"] { color: var(--accent); }
-.starbtn[aria-pressed="true"] svg { fill: currentColor; }
 .dropzone { margin-top: 16px; }
 .dropzone input[type=file] { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .dropzone label {
@@ -1049,6 +1054,10 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .dropzone label strong { color: var(--ink); }
 .dropzone input:focus-visible + label, .dropzone label:hover, .dropzone.is-over label { border-color: var(--accent); background: var(--wash); }
 .dropzone.is-busy label { opacity: .6; }
+/* One line rather than a panel: the featured image's place when it is empty. */
+.dropzone--slim { margin-top: 0; }
+.dropzone--slim label { flex-direction: row; justify-content: center; gap: 10px; padding: 12px 16px; font-size: 13.5px; }
+.dropzone--slim svg { width: 18px; height: 18px; flex: none; }
 .doc-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 
 /* Rack elevation: front and rear side by side, one grid row per unit.

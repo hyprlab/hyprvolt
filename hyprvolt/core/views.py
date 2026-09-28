@@ -20,7 +20,7 @@ from . import fields as F
 from . import access, images, present, records, relations
 from .api import entity_or_404
 from .markdown import render as markdown
-from .models import Attachment, AuditLog, Entity
+from .models import IMAGE_TYPES, Attachment, AuditLog, Entity
 
 bp = Blueprint("sheet", __name__)
 
@@ -41,7 +41,7 @@ def tabs_for(entity: Entity) -> list[SheetTab]:
     out.append(SheetTab("relationships", "Relationships", relationships_tab, len(rels)))
     extensions = [(m, t) for m in reg.enabled_modules() for t in m.sheet_tabs if t.when is None or t.when(entity)]
     out += [SheetTab(t.key, t.label, t.render, t.count(entity) if t.count else None) for m, t in extensions if m.core]
-    n_files = Attachment.query.filter_by(entity_id=entity.id, deleted_at=None).count()
+    n_files = _files(entity).count()
     out.append(SheetTab("attachments", "Attachments", attachments_tab, n_files))
     out.append(SheetTab("history", "History", history_tab))
     out += [SheetTab(t.key, t.label, t.render, t.count(entity) if t.count else None)
@@ -87,7 +87,8 @@ def overview_tab(entity: Entity) -> str:
         groups[-1]["items"].append(item)
     above, below = etype.overview(entity) if etype and etype.overview else ("", "")
     return render_template("sheet/overview.html", entity=entity, etype=etype, groups=groups, prose=prose,
-                           pictures=images.gallery(entity),
+                           featured=images.featured(entity), pictures=images.gallery(entity),
+                           image_types=", ".join(IMAGE_TYPES), limit_mb=int_setting("max_upload_mb", 25),
                            above=Markup(above), below=Markup(below),
                            access_label=access.LABELS.get(entity.access or "", "Everyone"),
                            custom=custom, notes=markdown(entity.notes or ""),
@@ -114,9 +115,15 @@ def relationships_tab(entity: Entity) -> str:
 
 
 def attachments_tab(entity: Entity) -> str:
-    rows = Attachment.query.filter_by(entity_id=entity.id, deleted_at=None).order_by(Attachment.created_at.desc()).all()
+    rows = _files(entity).order_by(Attachment.created_at.desc()).all()
     return render_template("sheet/attachments.html", entity=entity, rows=rows, human_size=files.human_size,
-                           limit_mb=int_setting("max_upload_mb", 25), main=images.main_image(entity))
+                           limit_mb=int_setting("max_upload_mb", 25))
+
+
+def _files(entity: Entity):
+    """The record's attachments; the featured image has its own place."""
+    return Attachment.query.filter_by(entity_id=entity.id, deleted_at=None) \
+        .filter(Attachment.id != (entity.image_id or 0))
 
 
 ACTIONS = {"created": "created it", "edited": "edited", "archived": "archived it", "unarchived": "unarchived it",

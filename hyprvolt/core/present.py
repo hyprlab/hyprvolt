@@ -124,6 +124,6 @@ def linked_for(entities) -> dict[int, dict[str, int]]:
 
 
 def views(entities) -> list[View]:
-    from .images import main_images
-    details, linked, pictures = details_for(entities), linked_for(entities), main_images(entities)
+    from .images import featured_of
+    details, linked, pictures = details_for(entities), linked_for(entities), featured_of(entities)
     return [View(e, details.get(e.id), linked.get(e.id), pictures.get(e.id)) for e in entities]

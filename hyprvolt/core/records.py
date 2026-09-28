@@ -245,16 +245,24 @@ def set_archived(entity: Entity, archived: bool, user=None) -> None:
     _remind(entity)
 
 
-def set_image(entity: Entity, att, user=None) -> None:
-    """Make ``att``, a live image attached to this record, its main image."""
-    from .images import main_image
-    old = main_image(entity)
-    if old is not None and old.id == att.id:
-        return
-    entity.image_id = att.id
+def set_image(entity: Entity, att, user=None):
+    """Make ``att``, an image stored for this record, its featured image, or
+    leave it with none (``att`` None). The image it replaces is removed the
+    way a file is, so Undo (setting it back) restores it; that one is
+    returned."""
+    from .images import featured
+    old = featured(entity)
+    if (old.id if old else None) == (att.id if att else None):
+        return None
+    if old is not None:
+        old.deleted_at = utcnow()
+    if att is not None:
+        att.deleted_at = None
+    entity.image_id = att.id if att else None
     _touch(entity, user)
-    audit(entity, "edited", [{"field": "image", "label": "Main image",
-                              "old": old.filename if old else "", "new": att.filename}], user)
+    audit(entity, "edited", [{"field": "image", "label": "Featured image",
+                              "old": old.filename if old else "", "new": att.filename if att else ""}], user)
+    return old
 
 
 def delete(entity: Entity, user=None) -> None:

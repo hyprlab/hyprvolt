@@ -8,7 +8,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ### Added
 - A location, a piece of hardware, or a VM or LXC container can be changed into another kind after it is saved, under Type in its form: a room into a building, a server into a NAS, a VM into an LXC container. It keeps its links, files and history
-- Pictures on records: a record's attached images show at the top of its Overview, the main one large and all of them in a strip below, and open in a viewer that moves through them with the arrow keys or a swipe. The first image attached is the main one until another is starred in the Attachments tab. In card view, each card shows its record's main image
+- Pictures on records: a featured image in a place of its own at the top of a record's Overview, added, replaced or removed there, and shown on the record's card in card view. The record's attached images show below it as a strip, and any picture opens a viewer that moves through them with the arrow keys or a swipe
 
 ### Changed
 - Editing a record opens the form over it, and saving shows the record again where it was, on the same tab

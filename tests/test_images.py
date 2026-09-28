@@ -1,4 +1,4 @@
-"""A record's pictures: the main image, the gallery, thumbnails and the
+"""A record's pictures: the featured image, the gallery, thumbnails and the
 cards that show them."""
 import io
 from pathlib import Path
@@ -28,38 +28,59 @@ def attach_picture(client, h, entity_id, name="front.jpg", **kw):
     return resp.get_json()["attachments"][0]
 
 
-def test_the_first_picture_is_the_main_image_until_another_is_chosen(client, h, admin):
+def feature(client, h, entity_id, name="front.jpg", status=200, data=None, ctype="image/jpeg"):
+    resp = client.post(f"/api/entities/{entity_id}/image", headers=h, content_type="multipart/form-data",
+                       data={"file": (io.BytesIO(data if data is not None else picture()), name, ctype)})
+    assert resp.status_code == status, resp.get_json()
+    return resp.get_json()
+
+
+def test_the_featured_image_has_its_own_place(client, h, admin):
     box = make(client, h, name="Box")
+    photo = attach_picture(client, h, box["id"], "rack.jpg")
+    # An attached image is a picture in the gallery, never featured by itself.
     assert client.get(f"/api/entities/{box['id']}").get_json()["entity"]["image"] is None
-    upload(client, h, box["id"])                      # a text file is never a picture
-    front = attach_picture(client, h, box["id"], "front.jpg")
-    back = attach_picture(client, h, box["id"], "back.jpg")
-    assert front["thumb"] == f"/attachments/{front['id']}/thumb/sm"
-    image = client.get(f"/api/entities/{box['id']}").get_json()["entity"]["image"]
-    assert image["attachment_id"] == front["id"]
-
-    resp = client.post(f"/api/entities/{box['id']}/image", json={"attachment_id": back["id"]}, headers=h)
-    assert resp.get_json()["entity"]["image"]["attachment_id"] == back["id"]
+    got = feature(client, h, box["id"], "front.jpg")
+    assert "undo" not in got                           # nothing was replaced
+    image = got["entity"]["image"]
+    assert image["thumb"] == f"/attachments/{image['attachment_id']}/thumb/sm"
+    # It is not one of the attachments.
+    listed = client.get(f"/api/entities/{box['id']}/attachments").get_json()["attachments"]
+    assert [a["id"] for a in listed] == [photo["id"]]
+    tab = client.get(f"/e/{box['id']}/sheet?tab=attachments").get_data(as_text=True)
+    assert "front.jpg" not in tab and "rack.jpg" in tab
     history = client.get(f"/e/{box['id']}/sheet?tab=history").get_data(as_text=True)
-    assert "Main image" in history and "back.jpg" in history
-
-    # Removing the main image leaves the first one in its place; Undo brings it back.
-    undo = client.post(f"/api/attachments/{back['id']}/delete", headers=h).get_json()["undo"]
-    assert client.get(f"/api/entities/{box['id']}").get_json()["entity"]["image"]["attachment_id"] == front["id"]
-    client.post(undo["url"], json=undo["body"], headers=h)
-    assert client.get(f"/api/entities/{box['id']}").get_json()["entity"]["image"]["attachment_id"] == back["id"]
+    assert "Featured image" in history and "front.jpg" in history
 
 
-def test_only_a_picture_of_the_record_can_be_its_main_image(client, h, admin, viewer):
+def test_replacing_or_removing_it_can_be_undone(client, h, admin):
+    box = make(client, h, name="Box")
+    first = feature(client, h, box["id"], "front.jpg")["entity"]["image"]["attachment_id"]
+    got = feature(client, h, box["id"], "new.jpg")
+    assert got["message"] == "Featured image replaced" and got["undo"]["body"] == {"attachment_id": first}
+    second = got["entity"]["image"]["attachment_id"]
+    undo = got["undo"]
+    back = client.post(undo["url"], json=undo["body"], headers=h).get_json()
+    assert back["entity"]["image"]["attachment_id"] == first
+    assert client.get(f"/attachments/{second}/thumb/sm").status_code == 404     # the newer one went
+    gone = client.post(f"/api/entities/{box['id']}/image", json={"attachment_id": None}, headers=h).get_json()
+    assert gone["entity"]["image"] is None and gone["message"] == "Featured image removed"
+    again = client.post(gone["undo"]["url"], json=gone["undo"]["body"], headers=h).get_json()
+    assert again["entity"]["image"]["attachment_id"] == first
+
+
+def test_only_an_image_of_the_record_can_be_featured(client, h, admin, viewer):
     box, other = make(client, h, name="Box"), make(client, h, name="Other")
+    assert "PNG, JPEG, GIF or WebP" in feature(client, h, box["id"], "notes.txt", 400, b"hi", "text/plain")["error"]
     text = upload(client, h, box["id"]).get_json()["attachments"][0]
     theirs = attach_picture(client, h, other["id"])
-    for att_id in (text["id"], theirs["id"], 99999, "1"):
+    for att_id, words in ((text["id"], "PNG, JPEG"), (theirs["id"], "not stored"), (99999, "not stored"),
+                          ("1", "not stored")):
         resp = client.post(f"/api/entities/{box['id']}/image", json={"attachment_id": att_id}, headers=h)
-        assert resp.status_code == 400 and resp.get_json()["error"]
-    mine = attach_picture(client, h, box["id"])
+        assert resp.status_code == 400 and words in resp.get_json()["error"]
     them, th = viewer
-    resp = them.post(f"/api/entities/{box['id']}/image", json={"attachment_id": mine["id"]}, headers=th)
+    resp = them.post(f"/api/entities/{box['id']}/image", headers=th, content_type="multipart/form-data",
+                     data={"file": (io.BytesIO(picture()), "a.jpg", "image/jpeg")})
     assert resp.status_code == 403
 
 
@@ -106,26 +127,25 @@ def test_the_purge_takes_the_thumbnails_with_the_file(app, client, h, admin):
     assert not list(thumbs.rglob("*.webp"))
 
 
-def test_the_overview_shows_the_main_image_and_the_gallery(client, h, admin):
+def test_the_overview_shows_the_featured_image_and_the_gallery(client, h, admin, viewer):
     box = make(client, h, name="Box")
     html = client.get(f"/e/{box['id']}/sheet").get_data(as_text=True)
-    assert "data-gallery" not in html
-    front = attach_picture(client, h, box["id"], "front.jpg")
+    assert "Add a featured image" in html and "gallery-strip" not in html
+    them, _ = viewer
+    assert "data-gallery" not in them.get(f"/e/{box['id']}/sheet").get_data(as_text=True)
+    front = feature(client, h, box["id"], "front.jpg")["entity"]["image"]["attachment_id"]
     html = client.get(f"/e/{box['id']}/sheet").get_data(as_text=True)
-    assert f'src="/attachments/{front["id"]}/thumb/lg"' in html and "gallery-strip" not in html
+    assert f'src="/attachments/{front}/thumb/lg"' in html and "Add a featured image" not in html
+    assert ">Replace</label>" in html and "gallery-strip" not in html
+    assert ">Replace</label>" not in them.get(f"/e/{box['id']}/sheet").get_data(as_text=True)
     back = attach_picture(client, h, box["id"], "back.jpg")
-    client.post(f"/api/entities/{box['id']}/image", json={"attachment_id": back["id"]}, headers=h)
     html = client.get(f"/e/{box['id']}/sheet").get_data(as_text=True)
-    main = html.index('class="gallery-main"')
-    assert html.index(f"/attachments/{back['id']}/thumb/lg", main) < html.index("gallery-strip")
-    assert html.count("data-gallery-item") == 3        # the main image, then both in the strip
-    tab = client.get(f"/e/{box['id']}/sheet?tab=attachments").get_data(as_text=True)
-    assert tab.count('aria-pressed="true"') == 1 and tab.count("starbtn") == 2
+    assert html.count("data-gallery-item") == 2 and f"/attachments/{back['id']}/thumb/sm" in html
 
 
-def test_cards_show_their_main_image(client, h, admin):
+def test_cards_show_their_featured_image(client, h, admin):
     box, bare = make(client, h, name="Box"), make(client, h, name="Bare")
-    att = attach_picture(client, h, box["id"])
+    attach_picture(client, h, bare["id"])            # an attachment doesn't make a card picture
+    image = feature(client, h, box["id"])["entity"]["image"]
     html = client.get("/all?view=cards").get_data(as_text=True)
-    assert html.count('class="card-image"') == 1
-    assert f'src="/attachments/{att["id"]}/thumb/sm"' in html
+    assert html.count('class="card-image"') == 1 and f'src="{image["thumb"]}"' in html
