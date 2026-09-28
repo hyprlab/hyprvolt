@@ -149,13 +149,56 @@ def create(type_key: str, data: dict, user=None) -> Entity:
 
 
 def update(entity: Entity, data: dict, user=None) -> list[dict]:
+    """Change what ``data`` names. A ``type`` other than the record's own
+    changes its type, to one its type ``becomes`` (a room into a building)."""
     etype = registry().type(entity.type)
     if etype is None:
         raise Invalid("This record's module is not installed.")
+    retyped = []
+    if data.get("type") and data["type"] != entity.type:
+        data = normalize(data)
+        retyped = [_retype(entity, etype, data["type"], data)]
+        etype = registry().type(entity.type)
     changes = _apply(entity, etype, data, creating=False, user=user)
+    changes = retyped + changes
     if changes:
         audit(entity, "edited", changes, user)
     return changes
+
+
+def _retype(entity: Entity, etype, key: str, data: dict) -> dict:
+    """Make ``entity`` a ``key``, if its type may become one and it, and
+    what is in it, are still where they may be. ``data`` gains the defaults
+    of the new type's fields the record has no value for."""
+    reg = registry()
+    new = reg.type(key)
+    if new is None or new.key not in etype.becomes or not reg.is_enabled(new.module):
+        what = f"a {new.text()}" if new else "that"
+        raise Invalid(f"A {etype.text()} can't be changed into {what}.")
+    if etype.before_retype is not None:
+        etype.before_retype(entity, new)
+    inside = [e for e in Entity.query.filter(Entity.location_id == entity.id, Entity.deleted_at.is_(None))
+              if reg.type(e.type) and reg.type(e.type).located_in is not None
+              and new.key not in reg.type(e.type).located_in]
+    if inside:
+        names = [e.name for e in inside[:3]] + ([f"{len(inside) - 3} more"] if len(inside) > 3 else [])
+        listed = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+        one = len(inside) == 1
+        raise Invalid(f"{listed} {'is' if one else 'are'} in it and can't be in a {new.text()}. "
+                      f"Move {'it' if one else 'them'} first.")
+    if "location_id" not in data and entity.location_id is not None:
+        if new.located_in == ():
+            data["location_id"] = None          # a site is nowhere: nothing to choose
+        else:
+            _check_location(entity, new, entity.location_id)
+    if "status" not in data and entity.status not in dict(new.statuses):
+        data["status"] = new.statuses[0][0]
+    entity.type = new.key
+    own = own_values(entity)             # read as the new type: a former rack's height comes back
+    for f in new.fields:
+        if f.key not in data["fields"] and own.get(f.key) in (None, "") and (f.required or f.default is not None):
+            data["fields"][f.key] = f.default
+    return {"field": "type", "label": "Type", "old": etype.label, "new": new.label}
 
 
 def set_archived(entity: Entity, archived: bool, user=None) -> None:

@@ -81,6 +81,13 @@ in the database until it is turned back on. A module that needs another is
 off while that one is: Hardware needs Locations, and Virtual and Network
 need Hardware. The knowledge base and Secrets are built in, and stay on.
 
+A location can be made another kind in its form, under Type: a room that
+is really a building, a shelf that is really a rack. It keeps its name,
+links, files and history, and the form shows the fields of the kind chosen.
+The change waits until everything fits: a building goes in a site, and a
+rack only in a room, so a room with racks in it becomes a building once
+they have moved; a rack is emptied first, and a shelf taken out of its rack.
+
 Hardware's status is where a device is in its life: deployed, ordered, in
 stock, in repair, retired or disposed. Anything that goes in a rack has its
 rack, units and face in its own form, and choosing a rack there makes the
@@ -325,7 +332,7 @@ them all. Errors are
 | `GET /api/entities` | Records, newest change first; filter with `type`, `module`, `tag`, `location`, `slug` (one, or several separated by commas), `q`, and `archived=1` (or `all`) for archived ones; page with `limit` (100 unless given, up to 500) and `offset` |
 | `GET /api/entities/<id>` | One record with its fields, custom fields, location path and main `image` (`null` when it has none) |
 | `POST /api/entities` | Make one: `type`, `name`, `status`, `location_id`, `tags`, `notes`, `fields`, `custom`, and `sections` for what other modules add (`{"rack": {...}}`, `{"addresses": {"list": "10.0.20.5"}}`). An admin can also send `created_at` (`2019-05-02T09:30Z`; without an offset, in the instance's time zone) to keep the date a record was first written elsewhere, here or on a change |
-| `POST /api/entities/<id>` | Change one; only what the body names changes |
+| `POST /api/entities/<id>` | Change one; only what the body names changes. A `type` other than its own changes its kind, where the type allows it (a room into a building) |
 | `GET /api/entities/by-slug/<slug>` | One record by its slug |
 | `POST /api/entities/by-slug/<slug>` | Create the record with that slug, or change it if it exists, so an import can run again without making copies. Creating needs `type` and `name`. The answer says `created` true or false; a slug held by a deleted record is refused until it is restored |
 | `POST /api/entities/<id>/archive`, `/delete`, `/restore` | Archive (`{"archived": false}` to undo), delete, restore |

@@ -240,11 +240,25 @@ def form(entity_id=None):
     etype = reg.type(entity.type if entity else request.args.get("type", ""))
     if etype is None or not reg.is_enabled(etype.module):
         abort(404, description="There is no such kind of record.")
+    # What it can be made instead: a record's form redrawn for another type
+    # (?type=building for a room) shows that type's fields, saved as the change.
+    kinds = [t for t in reg.module(etype.module).types if t.key == etype.key or t.key in etype.becomes] \
+        if entity and etype.becomes else []
+    as_type = next((t for t in kinds if t.key == request.args.get("type")), etype)
+    retyping = as_type is not etype
+    etype = as_type
     own = records.own_values(entity) if entity else {}
+    if retyping:
+        detail = records.detail_of(entity)
+        linked = records.linked_values([entity.id], etype).get(entity.id, {})
+        own = {f.key: linked.get(f.key) if f.relation else getattr(detail, f.key, None) if detail else None
+               for f in etype.fields}
     values = records.custom_values(entity) if entity else {}
     fields = []
     for f in etype.fields:
         value = own.get(f.key) if entity else _preset(f)
+        if retyping and value in (None, ""):
+            value = f.default
         if f.kind == "number" and isinstance(value, float) and value.is_integer():
             value = int(value)   # 850, not 850.0
         fields.append({"field": f, "name": "f." + f.key, "value": value,
@@ -262,4 +276,5 @@ def form(entity_id=None):
         attach_to=request.args.get("attach_to", type=int), name=request.args.get("name", ""),
         link=request.args.get("link", ""), access_levels=access.choices(current_user),
         tags=", ".join(entity.tag_names) if entity else "", can_admin=current_user.is_admin,
+        kinds=kinds,
     )

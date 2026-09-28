@@ -732,6 +732,9 @@
       var el = form.elements[name];
       if (!el || el.type === "file") return;
       if (el.type === "checkbox") el.checked = !!values[name];
+      // A choice the form no longer offers (a location the new type can't
+      // be in) leaves the form's own.
+      else if (el.tagName === "SELECT" && !Array.prototype.some.call(el.options, function (o) { return o.value === String(values[name]); })) return;
       else el.value = values[name];
     });
   }
@@ -745,6 +748,19 @@
   }
 
   if (formSlot) {
+    // Another type chosen for a record: the form for that type, with what
+    // was typed carried over.
+    formSlot.addEventListener("change", function (e) {
+      var select = e.target.closest("select[data-retype]");
+      if (!select) return;
+      var form = select.form, values = formData(form);
+      delete values.type;
+      loadForm("/e/" + form.getAttribute("data-id") + "/form?type=" + encodeURIComponent(select.value)).then(function (fresh) {
+        fillForm(fresh, values);
+        var again = fresh.querySelector("select[data-retype]");
+        if (again) again.focus();
+      }).catch(toastError);
+    });
     formSlot.addEventListener("submit", function (e) {
       var form = e.target.closest("#entity-form");
       if (!form) return;

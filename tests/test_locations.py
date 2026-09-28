@@ -195,3 +195,70 @@ def test_the_form_explains_each_field(client, h, admin):
         assert f'aria-describedby="ef-{name}-help"' in form, name
     assert "A short name for when the full one" in form and "[[its-slug]]" in form
     assert '<label class="field-label" for="ef-f-city">City</label>' in form
+
+
+def retype(client, h, entity, type_, status=200, **body):
+    resp = client.post(f"/api/entities/{entity['id']}", json={"type": type_, **body}, headers=h)
+    assert resp.status_code == status, resp.get_json()
+    return resp.get_json()
+
+
+def test_a_location_can_become_another_kind(client, h, admin):
+    site = make(client, h, "site", name="Home")
+    room = make(client, h, "room", name="Garage", location_id=site["id"], tags="lab", **{"f.code": "GAR"})
+    server = make(client, h, "server", name="pve1", location_id=room["id"])
+    got = retype(client, h, room, "building")["entity"]
+    assert got["type"] == "building" and got["id"] == room["id"] and got["fields"]["code"] == "GAR"
+    assert got["tags"] == ["lab"] and got["location"]["id"] == site["id"]
+    path = client.get(f"/api/entities/{server['id']}").get_json()["entity"]["path"]
+    assert [p["name"] for p in path] == ["Home", "Garage"]
+    history = client.get(f"/api/entities/{room['id']}/history").get_json()["history"]
+    assert {"field": "type", "label": "Type", "old": "Room", "new": "Building"} in history[0]["changes"]
+    # A site is nowhere, so it leaves its location behind.
+    got = retype(client, h, room, "site")["entity"]
+    assert got["type"] == "site" and got["location"] is None
+
+
+def test_a_new_kind_must_suit_where_it_is_and_what_is_in_it(client, h, admin):
+    site, building, room, rack = place(client, h)
+    assert "Rack A is in it and can't be in a building" in retype(client, h, room, "building", 400)["error"]
+    closet = make(client, h, "room", name="Closet", location_id=building["id"])
+    assert "can only be in a site" in retype(client, h, closet, "building", 400)["error"]
+    # Moved at the same time, it fits.
+    assert retype(client, h, closet, "building", location_id=site["id"])["entity"]["type"] == "building"
+    assert "can't be changed into a server" in retype(client, h, room, "server", 400)["error"]
+    server = make(client, h, "server", name="pve1")
+    assert "can't be changed into a room" in retype(client, h, server, "room", 400)["error"]
+    mount(client, h, rack, label="Switch", position_u=4)
+    assert "1 thing is mounted in it" in retype(client, h, rack, "shelf", 400)["error"]
+    # A record is left as it was when the change is refused.
+    assert client.get(f"/api/entities/{rack['id']}").get_json()["entity"]["type"] == "rack"
+
+
+def test_a_mounted_shelf_leaves_the_rack_before_it_becomes_a_room(client, h, admin):
+    site, building, room, rack = place(client, h)
+    shelf = make(client, h, "shelf", name="Shelf", location_id=rack["id"])
+    mount(client, h, rack, entity_id=shelf["id"], position_u=2)
+    assert "mounted in a rack" in retype(client, h, shelf, "room", 400, location_id=building["id"])["error"]
+
+
+def test_a_shelf_made_a_rack_keeps_its_height_or_gets_the_default(client, h, admin):
+    site, building, room, rack = place(client, h)
+    cabinet = make(client, h, "shelf", name="Cabinet", location_id=room["id"], **{"f.height_u": 8})
+    got = retype(client, h, cabinet, "rack")["entity"]
+    assert got["fields"]["height_u"] == 8 and got["fields"]["numbering"] == "bottom"
+    other = make(client, h, "shelf", name="Tray", location_id=room["id"])
+    assert retype(client, h, other, "rack")["entity"]["fields"]["height_u"] == 42
+
+
+def test_the_form_offers_the_other_kinds_and_redraws_for_one(client, h, admin):
+    site, building, room, rack = place(client, h)
+    form = client.get(f"/e/{room['id']}/form").data.decode()
+    assert 'name="type" data-retype' in form and '<option value="building"' in form
+    assert 'name="f.floor"' in form
+    as_rack = client.get(f"/e/{room['id']}/form?type=rack").data.decode()
+    assert 'name="f.height_u"' in as_rack and 'value="42"' in as_rack and 'name="f.floor"' not in as_rack
+    assert '<option value="rack" selected>' in as_rack
+    server = make(client, h, "server", name="pve1")
+    assert "data-retype" not in client.get(f"/e/{server['id']}/form").data.decode()
+    assert "data-retype" not in client.get("/e/form?type=room").data.decode()

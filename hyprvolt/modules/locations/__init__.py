@@ -42,6 +42,14 @@ ROOM = '<path d="M4.5 20V4.5a.5.5 0 0 1 .5-.5h14a.5.5 0 0 1 .5.5V20M3 20h18M14.5
 RACK = '<rect x="6" y="3.5" width="12" height="17" rx="1"/><path d="M6 8h12M6 12.5h12M6 17h12M9 5.8h.1M9 10.3h.1M9 14.8h.1"/>'
 SHELF = '<path d="M4 8.5h16M4 15.5h16M5.5 4v16M18.5 4v16"/>'
 
+KINDS = ("site", "building", "room", "rack", "shelf")
+
+
+def _becomes(key: str) -> tuple:
+    """Any location can be made another kind: a room that is really a building."""
+    return tuple(k for k in KINDS if k != key)
+
+
 in_a_rack = Tab("position", "Rack position", views.position_tab, when=views.has_mount)
 
 module = Module(
@@ -56,17 +64,21 @@ module = Module(
     blueprint=views.bp,
     types=(
         EntityType("site", "Site", "Sites", detail=LocationDetail, location=True, located_in=(),
+                   becomes=_becomes("site"), before_retype=views.before_retype,
                    statuses=STATUSES, icon=SITE,
                    fields=(CODE,) + ADDRESS,
                    tabs=(Tab("contents", "Contents", views.contents_tab, count=views.contents_count),)),
         EntityType("building", "Building", "Buildings", detail=LocationDetail, location=True,
+                   becomes=_becomes("building"), before_retype=views.before_retype,
                    located_in=("site",), statuses=STATUSES, icon=BUILDING, fields=(CODE,),
                    tabs=(Tab("contents", "Contents", views.contents_tab, count=views.contents_count),)),
         EntityType("room", "Room", "Rooms", detail=LocationDetail, location=True,
+                   becomes=_becomes("room"), before_retype=views.before_retype,
                    located_in=("building", "site"), statuses=STATUSES, icon=ROOM,
                    fields=(CODE, Field("floor", "Floor", list=True)),
                    tabs=(Tab("contents", "Contents", views.contents_tab, count=views.contents_count),)),
         EntityType("rack", "Rack", "Racks", detail=LocationDetail, location=True, located_in=("room",),
+                   becomes=_becomes("rack"), before_retype=views.before_retype,
                    statuses=STATUSES, icon=RACK,
                    fields=(
                        Field("height_u", "Height", "integer", required=True, default=42, min=1, max=60,
@@ -77,6 +89,7 @@ module = Module(
                    ),
                    tabs=(Tab("elevation", "Elevation", views.elevation_tab, count=views.elevation_count),)),
         EntityType("shelf", "Shelf", "Shelves", detail=LocationDetail, location=True,
+                   becomes=_becomes("shelf"), before_retype=views.before_retype,
                    located_in=("room", "rack"), statuses=STATUSES, icon=SHELF, traits=("rackmount",),
                    fields=(Field("height_u", "Height in a rack", "integer", min=1, max=60, unit="U",
                                  help="How many units it takes when it is mounted in a rack."),),

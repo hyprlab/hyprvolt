@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- A location can be changed into another kind after it is saved, under Type in its form: a room into a building, a shelf into a rack. It keeps its links, files and history
 - Pictures on records: a record's attached images show at the top of its Overview, the main one large and all of them in a strip below, and open in a viewer that moves through them with the arrow keys or a swipe. The first image attached is the main one until another is starred in the Attachments tab. In card view, each card shows its record's main image
 
 ### Changed

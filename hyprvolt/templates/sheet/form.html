@@ -62,7 +62,7 @@
 
 <form class="entity-form" id="entity-form" data-id="{{ entity.id if entity else '' }}" data-type="{{ etype.key }}"
       data-title="{{ ('Edit ' ~ entity.name) if entity else ('New ' ~ etype.text()) }}" novalidate>
-  <input type="hidden" name="type" value="{{ etype.key }}">
+  {% if not kinds %}<input type="hidden" name="type" value="{{ etype.key }}">{% endif %}
   {% if attach_to %}<input type="hidden" name="attach_to" value="{{ attach_to }}">{% endif %}
   {% if link %}<input type="hidden" name="link" value="{{ link }}">{% endif %}
   <div class="form-grid">
@@ -70,6 +70,14 @@
     <div class="field form-wide">
       {{ head('ef-name', 'Name', 'What people call it. It is shown wherever the record appears, and search matches it first.', true) }}
       <input id="ef-name" name="name" maxlength="200" required autocomplete="off" value="{{ entity.name if entity else name }}" autofocus aria-describedby="ef-name-help">
+    </div>
+    {% endif %}
+    {% if kinds %}
+    <div class="field">
+      {{ head('ef-type', 'Type', 'What kind of record it is. Changing it keeps the record with its links, files and history, and the form shows the fields of the new type. What is inside it must be allowed in the new type: racks go in rooms, so a room with racks in it becomes a building only once they have moved.') }}
+      <select id="ef-type" name="type" data-retype aria-describedby="ef-type-help">
+        {% for t in kinds %}<option value="{{ t.key }}" {{ 'selected' if t.key == etype.key }}>{{ t.label }}</option>{% endfor %}
+      </select>
     </div>
     {% endif %}
     <div class="field">

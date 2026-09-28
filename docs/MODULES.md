@@ -126,6 +126,14 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   rules that span fields or records: a gateway inside its subnet, a VLAN ID
   used once per network. It raises `Invalid` to refuse the save, and may
   tidy values (Network lower-cases a domain's name).
+- `becomes` lists the types a record of this one can be changed into, from
+  the Type choice in its form or `type` in the API: Locations lets a room
+  become a building. Each must be in the same module with the same detail
+  table (and the same `name_from`), so the record's values carry over. The
+  change is refused while the record's location, or anything located in it,
+  doesn't suit the new type. `before_retype(entity, new_type)` may refuse it
+  too, by raising `Invalid`, for what only the module knows: a rack with
+  things mounted in it.
 - `restrictable=True` gives the form a "Visible to" choice (everyone, editors,
   private) and hides the record from readers below it everywhere
   (`core/access.py`). Documents use it. Read records with `Entity.live()` or

@@ -82,6 +82,8 @@ class EntityType:
     check: Callable | None = None    # check(entity, detail): rules across fields
     overview: Callable | None = None # overview(entity) -> (html above, html below) the Overview
     restrictable: bool = False       # can be hidden from viewers (core/access.py)
+    becomes: tuple = ()              # types a record can be changed into: same module, same detail
+    before_retype: Callable | None = None  # before_retype(entity, new_type): raise Invalid to refuse
     module: str = ""                 # filled in by the registry
 
     def text(self, plural: bool = False) -> str:
