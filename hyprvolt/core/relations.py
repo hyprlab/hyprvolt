@@ -127,15 +127,23 @@ def walk(entity, direction: str = "dependents", max_depth: int = 6) -> list[dict
     """The dependency tree from ``entity``. "dependents" answers "what breaks
     if this goes down"; "dependencies" answers "what does this need".
 
-    Each node is {"entity", "label", "children", "cycle", "repeat",
-    "truncated"}. A loop back into the current path is marked ``cycle`` and
-    not followed; a node already expanded elsewhere is marked ``repeat``, so
-    a diamond is shown once in full and the walk stays linear.
+    Each node is {"entity", "label", "type_label", "children", "cycle",
+    "repeat", "truncated"}; ``type_label`` is the kind of record it is. A
+    loop back into the current path is marked ``cycle`` and not followed; a
+    node already expanded elsewhere is marked ``repeat``, so a diamond is
+    shown once in full and the walk stays linear.
     """
+    from ..registry import current as registry
     from .models import Entity
     edges = _edges(direction)
     names = {}
     expanded = {entity.id}
+
+    reg = registry()
+
+    def kind_of(eid):
+        etype = reg.type(name_of(eid).type)
+        return etype.label if etype else name_of(eid).type
 
     def name_of(eid):
         if eid not in names:
@@ -145,7 +153,7 @@ def walk(entity, direction: str = "dependents", max_depth: int = 6) -> list[dict
     def children(eid, depth, path):
         out = []
         for other, label in sorted(edges.get(eid, []), key=lambda e: (e[1], name_of(e[0]).name.lower())):
-            node = {"entity": name_of(other), "label": label, "children": [],
+            node = {"entity": name_of(other), "label": label, "type_label": kind_of(other), "children": [],
                     "cycle": False, "repeat": False, "truncated": False}
             if other in path:
                 node["cycle"] = True
@@ -175,6 +183,7 @@ def count(tree: list[dict]) -> int:
 
 
 def tree_json(tree: list[dict]) -> list[dict]:
-    return [{"id": n["entity"].id, "name": n["entity"].name, "type": n["entity"].type, "label": n["label"],
+    return [{"id": n["entity"].id, "name": n["entity"].name, "type": n["entity"].type,
+             "type_label": n["type_label"], "label": n["label"],
              "cycle": n["cycle"], "repeat": n["repeat"], "truncated": n["truncated"],
              "children": tree_json(n["children"])} for n in tree]

@@ -88,3 +88,13 @@ def test_a_viewer_cannot_link(client, h, admin, viewer):
     assert other.post("/api/relationships", json={"kind": "runs_on", "source_id": a["id"],
                                                   "target_id": b["id"]}, headers=oh).status_code == 403
     assert other.get(f"/api/entities/{a['id']}/dependencies").status_code == 200
+
+
+def test_the_dependency_view_says_what_each_record_is(client, h, admin):
+    host = make(client, h, "hypervisor", name="pve1")
+    vm = make(client, h, "vm", name="docker1", **{"f.host": host["id"]})
+    make(client, h, "service", name="Jellyfin", **{"f.host": vm["id"]})
+    tab = client.get(f"/e/{host['id']}/sheet?tab=relationships").data.decode()
+    assert 'deptree-kind">Virtual machine</span>' in tab and 'deptree-kind">Service</span>' in tab
+    tree = client.get(f"/api/entities/{host['id']}/dependencies").get_json()["tree"]
+    assert tree[0]["type_label"] == "Virtual machine" and tree[0]["children"][0]["type_label"] == "Service"

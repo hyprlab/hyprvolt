@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Changed
+- The dependency view in the Relationships tab marks each record with what it is: a virtual machine, a server, a service and so on. The API's dependency tree gives it as `type_label`
 - Deleting a record opened from another record goes back to that record, with Undo in the toast
 
 ### Fixed

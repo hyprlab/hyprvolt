@@ -975,6 +975,7 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .deptree .deptree { margin-left: 9px; padding-left: 14px; border-left: 1px solid var(--line); }
 .deptree-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 4px 0; }
 .deptree-label { font-size: 12px; color: var(--faint); font-weight: 600; }
+.deptree-kind { align-self: center; }
 .deptree .is-cycle > .deptree-row .elink, .deptree .is-repeat > .deptree-row .elink { color: var(--muted); font-weight: 500; }
 
 /* Files attached to a record, and the place to drop more. */

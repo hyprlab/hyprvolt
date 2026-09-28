@@ -29,6 +29,7 @@
     <span class="deptree-row">
       <span class="deptree-label">{{ n.label }}</span>
       {{ entity_link(n.entity.id, n.entity.name) }}
+      <span class="chip chip--muted deptree-kind">{{ n.type_label }}</span>
       {% if n.cycle %}<span class="chip chip--muted" title="This leads back to a record above it">loop</span>{% endif %}
       {% if n.repeat %}<span class="hint">shown above</span>{% endif %}
       {% if n.truncated %}<span class="hint">and more</span>{% endif %}
