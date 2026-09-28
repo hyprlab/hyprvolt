@@ -20,6 +20,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ### Changed
 - Back and Forward work in a record: following a link to another record, a page's Next, or j and k adds a step that the browser's Back and Forward, and the ‹ › buttons in the record's bar, walk through. Back from the first record closes it, and closing it leaves the browser's history as it was
 - A record's notes come first in its Overview, above its fields
+- A record's close button is on the right of its bar, with Back, Forward and its actions on the left
 - A document's headings keep their levels: # and ## are no longer shown the same size as ###
 - Table cells keep their colspan and rowspan
 - There is no beta channel: every release goes to `latest`, and `IMAGE_TAG` takes `latest` or a version to pin

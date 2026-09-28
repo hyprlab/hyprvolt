@@ -697,9 +697,6 @@
 <!-- ————— Detail sheet ————— -->
 <dialog class="sheet" id="sheet">
   <div class="sheet-bar">
-    <button class="iconbtn" data-close aria-label="Close" title="Close (Esc)">
-      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
     <div class="sheet-bar-actions">
       <div class="sheet-bar-nav" role="group" aria-label="Records visited">
         <button class="iconbtn" id="sheet-back" aria-label="Back" title="Back to the record before" disabled>
@@ -726,6 +723,9 @@
       </button>
       {% endif %}
     </div>
+    <button class="iconbtn" data-close aria-label="Close" title="Close (Esc)" autofocus>
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
   </div>
   <article class="sheet-article" id="sheet-article"></article>
 </dialog>

@@ -84,7 +84,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.field-head`, `.infotip`, `.infotip-pop` | A field's label with an info button beside it; the button opens the field's help in a native popover (`popovertarget`), placed under it by app.js and closed by Escape, a click elsewhere or a scroll. The input names the help in `aria-describedby` too |
 | `.pickbtn` | A button standing in for a field: it opens the palette to choose a record |
 | `.settings`, `.settings-nav`, `.settings-navitem`, `.settings-head`, `.settings-pane` | The settings window: a rail of sections beside the chosen one; on phones a list that slides into each section |
-| `.sheet`, `.sheet-bar`, `.sheet-bar-nav`, `.sheet-article`, `.sheet-notes`, `.prose` | The full-height detail view: close on the left of its bar; Back and Forward through the records visited, then the record's actions, on the right. A record's notes come first in its Overview |
+| `.sheet`, `.sheet-bar`, `.sheet-bar-nav`, `.sheet-article`, `.sheet-notes`, `.prose` | The full-height detail view: on the left of its bar, Back and Forward through the records visited, then the record's actions; close on the right. A record's notes come first in its Overview |
 | `.tabs`, `.tab`, `.tab-panel` | The sheet's sections. The active tab is underlined in the accent; the row scrolls sideways on a phone |
 | `.crumbs`, `.crumbs-sep` | Where a record is: its locations, outermost first, each a link |
 | `.kv`, `.kv-empty`, `.kv-long` | A record's fields: label and value in two columns, stacked on a phone |
