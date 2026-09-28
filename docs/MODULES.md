@@ -169,8 +169,10 @@ A `ref` with `trait="addressable"` instead of `types` points at a record of
 any type with that trait, from whichever modules are installed; the form
 names each choice's type.
 
-`required`, `default`, `help`, `unit` and `group` (a heading in the form and
-the Overview) do what they say. `list=True` puts the value in the list row,
+`required`, `default`, `unit` and `group` (a heading in the form and the
+Overview) do what they say. `help` says what the field is for, in a sentence
+or two: the form shows it in a popover from an info button beside the label.
+Give every field one; a person new to the app should not have to guess. `list=True` puts the value in the list row,
 `card=True` on the card. `search=False` keeps it out of the search text.
 Admins can add fields without code (Settings > Custom fields), of the kinds
 `text`, `number`, `date`, `select`, `url` and `boolean`.

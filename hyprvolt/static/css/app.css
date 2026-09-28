@@ -143,6 +143,26 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   display: block; margin-bottom: 6px;
   font-size: 11px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--muted);
 }
+/* A label with an info button beside it (.infotip), whose help opens in a
+   popover: the form says what each field is for without a wall of hints. */
+.field-head { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
+.field-head .field-label { margin-bottom: 0; }
+.infotip {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%;
+  background: none; color: var(--faint); cursor: pointer; transition: color .15s, background .15s;
+}
+.infotip svg { width: 15px; height: 15px; stroke-width: 1.8; }
+.infotip:hover, .infotip:focus-visible { color: var(--ink); background: var(--wash); }
+.infotip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.infotip-pop {
+  position: fixed; inset: auto; margin: 0; max-width: min(300px, calc(100vw - 16px)); padding: 10px 12px;
+  border: 0; border-radius: 8px; background: var(--ink); color: var(--bg);
+  font-size: 13px; font-weight: 500; line-height: 1.5; text-transform: none; letter-spacing: 0;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .18);
+}
+.infotip-pop:popover-open { animation: pop-in .12s ease both; }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-3px); } }
+.form-check { display: flex; align-items: center; gap: 5px; }
 .field input, .field textarea, .field select {
   width: 100%; padding: 10px 12px;
   font: inherit; color: var(--ink);
@@ -1244,6 +1264,7 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
   .prose .elink, .hint .elink { display: inline; padding-block: 0; }   /* in a sentence, a link stays inline */
   .tagchip { min-height: 26px; }
   .rack-item-remove { width: 26px; height: 26px; }
+  .infotip { width: 26px; height: 26px; margin: -4px 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2,42 +2,61 @@
    schema; fetched by app.js into <dialog id="entity-modal">. Field names are
    what the API takes: name, status, location_id, tags, notes, f.<field>,
    c.<custom field>, and s.<section>.<name> for what other modules add. #}
+{# A field's help sits behind an info button beside its label, in a popover
+   (the shared .infotip component); the input is described by it as well, so
+   a screen reader hears it without opening it. #}
+{% macro tip(id, text, help) -%}
+<button type="button" class="infotip" popovertarget="{{ id }}-help" aria-label="About {{ text|lower }}">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg>
+</button>
+<span class="infotip-pop" id="{{ id }}-help" popover>{{ help }}</span>
+{%- endmacro %}
+{% macro head(id, text, help='', required=false) -%}
+<span class="field-head">
+  <label class="field-label" for="{{ id }}">{{ text }}{% if required %} <span class="req" aria-label="required">*</span>{% endif %}</label>
+  {%- if help %}{{ tip(id, text, help) }}{% endif %}
+</span>
+{%- endmacro %}
+{% macro described(id, help) %}id="{{ id }}"{% if help %} aria-describedby="{{ id }}-help"{% endif %}{% endmacro %}
+
 {% macro input(item) %}
-{% set f = item.field %}{% set v = item.value %}
+{% set f = item.field %}{% set v = item.value %}{% set id = 'ef-' ~ item.name|replace('.', '-') %}
 {% if f.kind == 'boolean' %}
-  <label class="check form-check"><input type="checkbox" name="{{ item.name }}" value="1" {{ 'checked' if v }}><span>{{ f.label }}</span></label>
+  <div class="form-check">
+    <label class="check"><input type="checkbox" name="{{ item.name }}" value="1" {{ 'checked' if v }} {{ described(id, f.help) }}><span>{{ f.label }}</span></label>
+    {%- if f.help %}{{ tip(id, f.label, f.help) }}{% endif %}
+  </div>
 {% else %}
-<label class="field {{ 'form-wide' if f.kind in ('longtext', 'markdown') }}">
-  <span class="field-label">{{ f.label }}{% if f.unit %} ({{ f.unit }}){% endif %}{% if f.required %} <span class="req" aria-label="required">*</span>{% endif %}</span>
+<div class="field {{ 'form-wide' if f.kind in ('longtext', 'markdown') }}">
+  {{ head(id, f.label ~ (' (' ~ f.unit ~ ')' if f.unit else ''), f.help, f.required) }}
   {% if f.kind == 'longtext' %}
-  <textarea name="{{ item.name }}" rows="4" {{ 'required' if f.required }}>{{ v or '' }}</textarea>
+  <textarea name="{{ item.name }}" rows="4" {{ described(id, f.help) }} {{ 'required' if f.required }}>{{ v or '' }}</textarea>
   {% elif f.kind == 'markdown' %}
-  <textarea name="{{ item.name }}" rows="16" class="mono" spellcheck="true" {{ 'required' if f.required }}>{{ v or '' }}</textarea>
+  <textarea name="{{ item.name }}" rows="16" class="mono" spellcheck="true" {{ described(id, f.help) }} {{ 'required' if f.required }}>{{ v or '' }}</textarea>
   {% elif f.kind == 'select' %}
-  <select name="{{ item.name }}" {{ 'required' if f.required }}>
+  <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}>
     {% if not f.required %}<option value="">Not set</option>{% endif %}
     {% for value, label in f.options %}<option value="{{ value }}" {{ 'selected' if v == value }}>{{ label }}</option>{% endfor %}
   </select>
   {% elif f.kind == 'ref' %}
-  <select name="{{ item.name }}" {{ 'required' if f.required }}>
+  <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}>
     <option value="">Not set</option>
-    {% for id, label in item.choices %}<option value="{{ id }}" {{ 'selected' if v == id }}>{{ label }}</option>{% endfor %}
+    {% for rid, label in item.choices %}<option value="{{ rid }}" {{ 'selected' if v == rid }}>{{ label }}</option>{% endfor %}
   </select>
   {% elif f.kind in ('integer', 'number') %}
-  <input type="number" name="{{ item.name }}" value="{{ v if v is not none else '' }}" step="{{ '1' if f.kind == 'integer' else 'any' }}"
+  <input type="number" name="{{ item.name }}" value="{{ v if v is not none else '' }}" step="{{ '1' if f.kind == 'integer' else 'any' }}" {{ described(id, f.help) }}
          {% if f.min is not none %}min="{{ f.min }}"{% endif %} {% if f.max is not none %}max="{{ f.max }}"{% endif %} {{ 'required' if f.required }}>
   {% elif f.kind == 'datetime' %}
-  <input type="datetime-local" name="{{ item.name }}" value="{{ v|local_input if v else '' }}" {{ 'required' if f.required }}>
+  <input type="datetime-local" name="{{ item.name }}" value="{{ v|local_input if v else '' }}" {{ described(id, f.help) }} {{ 'required' if f.required }}>
   {% elif f.kind == 'date' %}
-  <input type="date" name="{{ item.name }}" value="{{ v.isoformat() if v else '' }}" {{ 'required' if f.required }}>
+  <input type="date" name="{{ item.name }}" value="{{ v.isoformat() if v else '' }}" {{ described(id, f.help) }} {{ 'required' if f.required }}>
   {% else %}
-  <input type="{{ 'email' if f.kind == 'email' else ('tel' if f.kind == 'phone' else 'text') }}" name="{{ item.name }}" value="{{ v or '' }}"
+  <input type="{{ 'email' if f.kind == 'email' else ('tel' if f.kind == 'phone' else 'text') }}" name="{{ item.name }}" value="{{ v or '' }}" {{ described(id, f.help) }}
          maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https://" spellcheck="false"{% endif %}
          {%- if f.kind in ('ip', 'cidr') %} spellcheck="false" autocomplete="off" placeholder="{{ '10.0.20.11' if f.kind == 'ip' else '10.0.20.0/24' }}"{% endif %}
          {%- if etype.name_from == f.key %} autofocus{% endif %}>
   {% endif %}
-  {% if f.help %}<span class="hint">{{ f.help }}</span>{% endif %}
-</label>
+</div>
 {% endif %}
 {% endmacro %}
 
@@ -48,39 +67,39 @@
   {% if link %}<input type="hidden" name="link" value="{{ link }}">{% endif %}
   <div class="form-grid">
     {% if not etype.name_from %}
-    <label class="field form-wide">
-      <span class="field-label">Name <span class="req" aria-label="required">*</span></span>
-      <input name="name" maxlength="200" required autocomplete="off" value="{{ entity.name if entity else name }}" autofocus>
-    </label>
+    <div class="field form-wide">
+      {{ head('ef-name', 'Name', 'What people call it. It is shown wherever the record appears, and search matches it first.', true) }}
+      <input id="ef-name" name="name" maxlength="200" required autocomplete="off" value="{{ entity.name if entity else name }}" autofocus aria-describedby="ef-name-help">
+    </div>
     {% endif %}
-    <label class="field">
-      <span class="field-label">Status</span>
-      <select name="status">
+    <div class="field">
+      {{ head('ef-status', 'Status', 'Where it is in its life: in use, planned, retired and so on. Each kind of record has its own. Records that are retired, ended or disposed of drop out of reminders.') }}
+      <select id="ef-status" name="status" aria-describedby="ef-status-help">
         {% for value, label in etype.statuses %}<option value="{{ value }}" {{ 'selected' if entity and entity.status == value }}>{{ label }}</option>{% endfor %}
       </select>
-    </label>
+    </div>
     {% if etype.located_in != () %}
-    <label class="field">
-      <span class="field-label">Location</span>
-      <select name="location_id">
+    <div class="field">
+      {{ head('ef-location', 'Location', 'Where it is: a site, building, room, rack or shelf. The record then shows the whole path, such as Home lab › Basement › Rack 1, and the location lists it in its Contents tab.') }}
+      <select id="ef-location" name="location_id" aria-describedby="ef-location-help">
         <option value="">Not set</option>
         {% for g in locations %}
         <optgroup label="{{ g.label }}">
-          {% for id, label in g.options %}<option value="{{ id }}" {{ 'selected' if location_id == id }}>{{ label }}</option>{% endfor %}
+          {% for lid, label in g.options %}<option value="{{ lid }}" {{ 'selected' if location_id == lid }}>{{ label }}</option>{% endfor %}
         </optgroup>
         {% endfor %}
       </select>
-    </label>
+    </div>
     {% endif %}
-    <label class="field">
-      <span class="field-label">Tags</span>
-      <input name="tags" value="{{ tags }}" autocomplete="off" placeholder="Separated by commas">
-    </label>
-    <label class="field">
-      <span class="field-label">Slug</span>
-      <input name="slug" value="{{ entity.slug if entity else '' }}" maxlength="119" spellcheck="false" autocomplete="off"
+    <div class="field">
+      {{ head('ef-tags', 'Tags', 'Words that group records of any kind, such as lab, production or critical, separated by commas. The sidebar lists every tag; choose one to see everything that has it.') }}
+      <input id="ef-tags" name="tags" value="{{ tags }}" autocomplete="off" placeholder="Separated by commas" aria-describedby="ef-tags-help">
+    </div>
+    <div class="field">
+      {{ head('ef-slug', 'Slug', 'A short, fixed name for the record in links and documents: lower-case letters, digits and dashes. It is made from the name unless you set one. A document links to the record by writing [[its-slug]], and the link keeps working if the record is renamed.') }}
+      <input id="ef-slug" name="slug" value="{{ entity.slug if entity else '' }}" maxlength="119" spellcheck="false" autocomplete="off" aria-describedby="ef-slug-help"
              placeholder="Made from the {{ (etype.fields|selectattr('key', 'equalto', etype.name_from)|first).label|lower if etype.name_from else 'name' }}" pattern="[a-z0-9][a-z0-9-]*">
-    </label>
+    </div>
   </div>
 
   {% set ns = namespace(group=None, open=false) %}
@@ -104,10 +123,10 @@
   {{ item.html }}
   {% endfor %}
 
-  <label class="field form-notes">
-    <span class="field-label">Notes</span>
-    <textarea name="notes" rows="4" placeholder="Markdown. Link to a record with [[its-slug]].">{{ entity.notes if entity else '' }}</textarea>
-  </label>
+  <div class="field form-notes">
+    {{ head('ef-notes', 'Notes', 'Anything else worth knowing, written in Markdown. Link to another record by writing its slug in double brackets: [[its-slug]].') }}
+    <textarea id="ef-notes" name="notes" rows="4" placeholder="Markdown. Link to a record with [[its-slug]]." aria-describedby="ef-notes-help">{{ entity.notes if entity else '' }}</textarea>
+  </div>
   <p class="form-error" id="entity-error" hidden></p>
   <button class="btn btn--primary btn--block" type="submit">
     <span class="btn-label">{{ 'Save' if entity else 'Create' }}</span>

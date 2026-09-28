@@ -796,6 +796,7 @@
   //                              and copies the answer's value
   //   input[data-autosubmit]     submits its form when it changes
   //   [data-print]               prints the page (a sheet of labels)
+  //   .infotip[popovertarget]    opens its help (a native popover) beside it
   function afterAction(el, data) {
     var then = el.getAttribute("data-then");
     // An answer that says what happened ("12 made, 2 skipped") wins over
@@ -874,6 +875,26 @@
       submitApiForm(zone);
     }
   });
+
+  // A popover opens in the top layer, above a dialog, with nothing tying it
+  // to its button; place it under the button (above, if there's no room),
+  // kept inside the window. "toggle" doesn't bubble, so listen as it passes.
+  document.addEventListener("toggle", function (e) {
+    var pop = e.target;
+    if (!pop.classList || !pop.classList.contains("infotip-pop") || e.newState !== "open") return;
+    var btn = document.querySelector('[popovertarget="' + pop.id + '"]');
+    if (!btn) return;
+    var r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    var left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+    var top = r.bottom + 8;
+    if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8);
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+  }, true);
+  // Placed once, so it would be left behind by a scroll: close it instead.
+  document.addEventListener("scroll", function () {
+    document.querySelectorAll(".infotip-pop:popover-open").forEach(function (pop) { pop.hidePopover(); });
+  }, true);
 
   document.addEventListener("click", function (e) {
     var print = e.target.closest("[data-print]");

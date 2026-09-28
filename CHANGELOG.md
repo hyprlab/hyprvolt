@@ -9,6 +9,8 @@ All notable changes to Hyprvolt are documented here. The format follows
 ### Changed
 - Windows such as the record form and Settings, and a record's sheet, no longer close on a click beside them; they close with their close button or Escape, so a form half filled in isn't lost
 - A record's sheet slides back down when it closes, the way it came in
+- Every field in the record form has an info button beside its label that says what the field is for, tags, slug and codes included, instead of hints under some of them
+- A site's address is a field each: street, city, state or region, postal code and country. An address written before is kept in Street address
 
 ## [1.0.0] — 2026-09-28
 
