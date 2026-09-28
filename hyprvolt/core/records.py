@@ -25,7 +25,8 @@ from .fields import Invalid
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,118}$")
 MAX_TAGS = 30
 LABELS = {"name": "Name", "slug": "Slug", "status": "Status", "location": "Location",
-          "tags": "Tags", "notes": "Notes"}
+          "tags": "Tags", "notes": "Notes", "created_at": "Created"}
+CREATED = F.Field("created_at", "Created", "datetime")
 
 
 # ———— Reading ————
@@ -305,6 +306,9 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
         entity.tags = [_tag(n) for n in names]
         note("tags", LABELS["tags"], old, ", ".join(sorted(names, key=str.lower)))
 
+    if data.get("created_at") not in (None, ""):
+        _set_created(entity, data["created_at"], user, note)
+
     if "notes" in data:
         notes = (data.get("notes") or "").strip()
         if len(notes) > F.MAX_LONG:
@@ -381,6 +385,22 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
     reindex(entity)
     _remind(entity)
     return changes
+
+
+def _set_created(entity: Entity, raw, user, note) -> None:
+    """When the record came into being, for records brought in from
+    elsewhere (a manual first written in 2019). An admin's call only: it
+    rewrites what the history would otherwise say."""
+    from . import clock
+    who = _user(user)
+    if who is None or not getattr(who, "is_admin", False):
+        raise Invalid("Only an admin can set when a record was created.")
+    when = F.parse(CREATED, raw)
+    if when > utcnow():
+        raise Invalid("A record can't have been created in the future.")
+    if entity.created_at is not None:
+        note("created_at", LABELS["created_at"], clock.shown(entity.created_at), clock.shown(when))
+    entity.created_at = when
 
 
 def _relink(entity: Entity, f, old_id, new_id, user) -> None:

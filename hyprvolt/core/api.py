@@ -93,7 +93,7 @@ def _fail(err: Invalid):
 @role("viewer")
 def entity_list():
     """Live entities of turned-on modules, filtered by ``type``, ``module``,
-    ``tag``, ``location`` and ``q``, newest change first. ``limit`` up to 500,
+    ``tag``, ``location``, ``slug`` (one or several) and ``q``, newest change first. ``limit`` up to 500,
     ``offset`` to page."""
     reg = registry()
     query = Entity.live().filter(Entity.type.in_(reg.enabled_type_keys()))
@@ -107,6 +107,8 @@ def entity_list():
         query = query.filter(Entity.tags.any(func.lower(Tag.name) == request.args["tag"].lower()))
     if request.args.get("location", type=int):
         query = query.filter(Entity.location_id == request.args.get("location", type=int))
+    if request.args.get("slug"):
+        query = query.filter(Entity.slug.in_(request.args["slug"].split(",")))
     q = (request.args.get("q") or "").strip()
     if q:
         query = query.filter(Entity.search_text.like(like(q), escape="\\"))
@@ -155,6 +157,51 @@ def _link_new(entity: Entity, spec: str) -> None:
     if target is None:
         raise Invalid("The record to link it to no longer exists.")
     relations.link(kind, entity, target)
+
+
+def _by_slug(slug: str) -> Entity | None:
+    return Entity.query.filter_by(slug=slug.lower()).first()
+
+
+@bp.route("/entities/by-slug/<slug>")
+@role("viewer")
+def entity_by_slug(slug):
+    """A record by its slug, as ``GET /entities/<id>`` returns it."""
+    entity = _by_slug(slug)
+    if entity is None or entity.deleted_at is not None:
+        abort(404, description=f"No record has the slug “{slug}”.")
+    return jsonify(entity=to_json(entity_or_404(entity.id)))
+
+
+@bp.route("/entities/by-slug/<slug>", methods=["POST"])
+@role("editor")
+def entity_upsert(slug):
+    """Create or update the record with this slug, so an import can run
+    again without making copies. Creating needs ``type`` and ``name``;
+    updating takes what ``POST /entities/<id>`` takes. Answers ``created``."""
+    data = _body()
+    slug = slug.lower()
+    if not records.SLUG_RE.match(slug):
+        return jsonify(error="A slug is lower-case letters, digits and dashes, starting with a letter or digit."), 400
+    entity = _by_slug(slug)
+    if entity is not None and entity.deleted_at is not None:
+        return jsonify(error=f"A deleted record has the slug “{slug}”. Restore it (POST /api/entities/"
+                             f"{entity.id}/restore), or choose another slug."), 409
+    try:
+        if entity is None:
+            entity = records.create(data.get("type") or "", {**data, "slug": slug})
+            created = True
+        else:
+            entity_or_404(entity.id)
+            if data.get("type") and data["type"] != entity.type:
+                return jsonify(error=f"“{slug}” is a {registry().type(entity.type).text()}, "
+                                     f"not a {data['type']}."), 400
+            records.update(entity, {k: v for k, v in data.items() if k not in ("type", "slug")})
+            created = False
+    except Invalid as err:
+        return _fail(err)
+    db.session.commit()
+    return jsonify(ok=True, created=created, entity=to_json(entity))
 
 
 @bp.route("/entities/<int:entity_id>", methods=["POST"])

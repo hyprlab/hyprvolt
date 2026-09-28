@@ -149,3 +149,38 @@ def test_search_matches_literally(client, h, admin):
     make(client, h, name="Findable 100%")
     assert len(client.get("/api/entities?q=0%25").get_json()["entities"]) == 1
     assert client.get("/api/entities?q=__").get_json()["entities"] == []
+
+
+def test_an_admin_sets_when_a_record_was_created(client, h, admin, editor):
+    doc = client.post("/api/entities", json={"type": "document", "name": "Manual", "created_at": "2019-05-02T09:30Z"},
+                      headers=h).get_json()["entity"]
+    assert doc["created_at"] == "2019-05-02T09:30:00Z"
+    assert "Created <time" in client.get(f"/e/{doc['id']}/sheet").data.decode()
+    client.post(f"/api/entities/{doc['id']}", json={"created_at": "2018-01-01T00:00Z"}, headers=h)
+    history = client.get(f"/api/entities/{doc['id']}/history").get_json()["history"]
+    assert history[0]["changes"][0]["label"] == "Created"
+    other, oh = editor
+    refused = other.post(f"/api/entities/{doc['id']}", json={"created_at": "2017-01-01T00:00Z"}, headers=oh)
+    assert refused.status_code == 400 and "Only an admin" in refused.get_json()["error"]
+    future = client.post(f"/api/entities/{doc['id']}", json={"created_at": "2999-01-01T00:00Z"}, headers=h)
+    assert future.status_code == 400 and "future" in future.get_json()["error"]
+
+
+def test_records_are_found_and_upserted_by_slug(client, h, admin):
+    made = client.post("/api/entities/by-slug/ims-exporter", json={"type": "document", "name": "IMS Exporter",
+                                                                  "f.body": "v1"}, headers=h).get_json()
+    assert made["created"] is True and made["entity"]["slug"] == "ims-exporter"
+    again = client.post("/api/entities/by-slug/ims-exporter", json={"type": "document", "name": "IMS Exporter",
+                                                                   "f.body": "v2"}, headers=h).get_json()
+    assert again["created"] is False and again["entity"]["id"] == made["entity"]["id"]
+    assert again["entity"]["fields"]["body"] == "v2"
+    got = client.get("/api/entities/by-slug/ims-exporter").get_json()["entity"]
+    assert got["id"] == made["entity"]["id"]
+    assert [e["id"] for e in client.get("/api/entities?slug=ims-exporter,nope").get_json()["entities"]] == [got["id"]]
+    assert client.get("/api/entities/by-slug/nope").status_code == 404
+    wrong = client.post("/api/entities/by-slug/ims-exporter", json={"type": "server"}, headers=h)
+    assert wrong.status_code == 400 and "is a document" in wrong.get_json()["error"]
+    assert client.post("/api/entities/by-slug/Bad Slug!", json={}, headers=h).status_code == 400
+    client.post(f"/api/entities/{got['id']}/delete", headers=h)
+    gone = client.post("/api/entities/by-slug/ims-exporter", json={"type": "document", "name": "x"}, headers=h)
+    assert gone.status_code == 409 and "Restore it" in gone.get_json()["error"]

@@ -279,10 +279,12 @@ them all. Errors are
 
 | Route | What it does |
 | --- | --- |
-| `GET /api/entities` | Records, newest change first; filter with `type`, `module`, `tag`, `location`, `q`, and `archived=1` (or `all`) for archived ones; page with `limit` (100 unless given, up to 500) and `offset` |
+| `GET /api/entities` | Records, newest change first; filter with `type`, `module`, `tag`, `location`, `slug` (one, or several separated by commas), `q`, and `archived=1` (or `all`) for archived ones; page with `limit` (100 unless given, up to 500) and `offset` |
 | `GET /api/entities/<id>` | One record with its fields, custom fields and location path |
-| `POST /api/entities` | Make one: `type`, `name`, `status`, `location_id`, `tags`, `notes`, `fields`, `custom`, and `sections` for what other modules add (`{"rack": {...}}`, `{"addresses": {"list": "10.0.20.5"}}`) |
+| `POST /api/entities` | Make one: `type`, `name`, `status`, `location_id`, `tags`, `notes`, `fields`, `custom`, and `sections` for what other modules add (`{"rack": {...}}`, `{"addresses": {"list": "10.0.20.5"}}`). An admin can also send `created_at` (`2019-05-02T09:30Z`; without an offset, in the instance's time zone) to keep the date a record was first written elsewhere, here or on a change |
 | `POST /api/entities/<id>` | Change one; only what the body names changes |
+| `GET /api/entities/by-slug/<slug>` | One record by its slug |
+| `POST /api/entities/by-slug/<slug>` | Create the record with that slug, or change it if it exists, so an import can run again without making copies. Creating needs `type` and `name`. The answer says `created` true or false; a slug held by a deleted record is refused until it is restored |
 | `POST /api/entities/<id>/archive`, `/delete`, `/restore` | Archive (`{"archived": false}` to undo), delete, restore |
 | `GET /api/entities/<id>/history`, `/relationships`, `/dependencies` | Its history, its links, what depends on it (`direction=dependencies` for the other way) |
 | `POST /api/relationships`, `POST /api/relationships/<id>/delete` | Link two records (`kind`, `source_id`, `target_id`), unlink |
