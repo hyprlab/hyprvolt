@@ -1,0 +1,71 @@
+{# The controls of a record's fields, shared by the record form and the
+   Overview an editor edits in place. control(item) is the bare input, select
+   or text box; input(item) is that inside the form's labeled field. With
+   save=true the control saves itself when it changes (app.js, "Editing in
+   place"). #}
+{# A field's help sits behind an info button beside its label, in a popover
+   (the shared .infotip component); the input is described by it as well, so
+   a screen reader hears it without opening it. #}
+{% macro tip(id, text, help) -%}
+<button type="button" class="infotip" popovertarget="{{ id }}-help" aria-label="About {{ text|lower }}">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg>
+</button>
+<span class="infotip-pop" id="{{ id }}-help" popover>{{ help }}</span>
+{%- endmacro %}
+{% macro head(id, text, help='', required=false) -%}
+<span class="field-head">
+  <label class="field-label" for="{{ id }}">{{ text }}{% if required %} <span class="req" aria-label="required">*</span>{% endif %}</label>
+  {%- if help %}{{ tip(id, text, help) }}{% endif %}
+</span>
+{%- endmacro %}
+{% macro described(id, help) %}id="{{ id }}"{% if help %} aria-describedby="{{ id }}-help"{% endif %}{% endmacro %}
+
+{% macro control(item, save=false, cls='', prefix='ef-') %}
+{% set f = item.field %}{% set v = item.value %}{% set id = prefix ~ item.name|replace('.', '-') %}
+{% set extra %}{% if save %} data-save{% endif %}{% if cls %} class="{{ cls }}"{% endif %}{% endset %}
+{% set empty %}{% if save %} placeholder="Not set"{% endif %}{% endset %}
+{% if f.kind == 'boolean' %}
+  <input type="checkbox" name="{{ item.name }}" value="1" {{ 'checked' if v }} {{ described(id, f.help) }}{{ extra }}>
+{% elif f.kind == 'longtext' %}
+  <textarea name="{{ item.name }}" rows="{{ 2 if save else 4 }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}{{ empty }}>{{ v or '' }}</textarea>
+{% elif f.kind == 'markdown' %}
+  <textarea name="{{ item.name }}" rows="16" class="mono{{ ' ' ~ cls if cls }}" spellcheck="true" {{ described(id, f.help) }} {{ 'required' if f.required }}{% if save %} data-save{% endif %}>{{ v or '' }}</textarea>
+{% elif f.kind == 'select' %}
+  <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>
+    {% if not f.required %}<option value="" data-none>Not set</option>{% endif %}
+    {% for value, label in f.options %}<option value="{{ value }}" {{ 'selected' if v == value }}>{{ label }}</option>{% endfor %}
+  </select>
+{% elif f.kind == 'ref' %}
+  <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>
+    <option value="" data-none>Not set</option>
+    {% for rid, label in item.choices %}<option value="{{ rid }}" {{ 'selected' if v == rid }}>{{ label }}</option>{% endfor %}
+  </select>
+{% elif f.kind in ('integer', 'number') %}
+  <input type="number" name="{{ item.name }}" value="{{ v if v is not none else '' }}" step="{{ '1' if f.kind == 'integer' else 'any' }}" {{ described(id, f.help) }}
+         {% if f.min is not none %}min="{{ f.min }}"{% endif %} {% if f.max is not none %}max="{{ f.max }}"{% endif %} {{ 'required' if f.required }}{{ extra }}{{ empty }}>
+{% elif f.kind == 'datetime' %}
+  <input type="datetime-local" name="{{ item.name }}" value="{{ v|local_input if v else '' }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>
+{% elif f.kind == 'date' %}
+  <input type="date" name="{{ item.name }}" value="{{ v.isoformat() if v else '' }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>
+{% else %}
+  <input type="{{ 'email' if f.kind == 'email' else ('tel' if f.kind == 'phone' else 'text') }}" name="{{ item.name }}" value="{{ v or '' }}" {{ described(id, f.help) }}
+         maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https://" spellcheck="false"{% elif f.kind not in ('ip', 'cidr') %}{{ empty }}{% endif %}
+         {%- if f.kind in ('ip', 'cidr') %} spellcheck="false" autocomplete="off" placeholder="{{ '10.0.20.11' if f.kind == 'ip' else '10.0.20.0/24' }}"{% endif %}
+         {%- if not save and etype.name_from == f.key %} autofocus{% endif %}{{ extra }}>
+{% endif %}
+{% endmacro %}
+
+{% macro input(item) %}
+{% set f = item.field %}{% set id = 'ef-' ~ item.name|replace('.', '-') %}
+{% if f.kind == 'boolean' %}
+  <div class="form-check">
+    <label class="check">{{ control(item) }}<span>{{ f.label }}</span></label>
+    {%- if f.help %}{{ tip(id, f.label, f.help) }}{% endif %}
+  </div>
+{% else %}
+<div class="field {{ 'form-wide' if f.kind in ('longtext', 'markdown') }}">
+  {{ head(id, f.label ~ (' (' ~ f.unit ~ ')' if f.unit else ''), f.help, f.required) }}
+  {{ control(item) }}
+</div>
+{% endif %}
+{% endmacro %}

@@ -1,4 +1,29 @@
 {% from "partials/macros.html" import crumbs as crumb_nav, entity_link, tag_chips %}
+{% from "sheet/controls.html" import control, tip with context %}
+{# Read as a page, or, for an editor, edited in place: each field is its
+   control, saved when it changes (app.js, "Editing in place"). The parts
+   marked data-live are redrawn after a save. #}
+{% macro prose_edit(name, label, html, raw, empty, cls='') -%}
+<section class="prose-edit {{ cls }}{{ ' is-empty' if not raw }}" data-prose data-field data-live="prose-{{ name }}">
+  <div class="prose-edit-head">
+    {% if label %}<p class="setting-label">{{ label }}</p>{% endif %}
+    <button type="button" class="btn btn--xs btn--ghost" data-prose-edit>{{ 'Edit' if raw else 'Add ' ~ (label or 'text')|lower }}</button>
+  </div>
+  {% if html %}<div class="prose">{{ html }}</div>{% elif not raw %}{% else %}<p class="kv-empty">{{ empty }}</p>{% endif %}
+  <textarea name="{{ name }}" class="prose-input mono" rows="10" spellcheck="true" aria-label="{{ label or 'Text' }}" data-save hidden>{{ raw }}</textarea>
+</section>
+{%- endmacro %}
+{% macro edit_row(item) -%}
+{% set f = item.control.field %}{% set id = 'ov-' ~ item.control.name|replace('.', '-') %}
+<div data-field>
+  <dt><span class="field-head"><label for="{{ id }}">{{ f.label }}{% if f.unit %} ({{ f.unit }}){% endif %}</label>{% if f.help %}{{ tip(id, f.label, f.help) }}{% endif %}</span></dt>
+  <dd class="kv-edit">{{ control(item.control, save=true, cls='kv-input', prefix='ov-') }}
+    <span class="kv-open" data-live="open-{{ item.control.name }}">
+      {%- if item.ref %}<a class="iconbtn iconbtn--sm" href="/e/{{ item.ref.id }}" data-entity="{{ item.ref.id }}" aria-label="Open {{ item.ref.name }}" title="Open {{ item.ref.name }}"><svg viewBox="0 0 24 24"><path d="M13.5 4.5h6v6M19.5 4.5 11 13M17.5 14v4.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1H10"/></svg></a>
+      {%- elif item.link %}<a class="iconbtn iconbtn--sm" href="{{ item.link }}" {% if item.link.startswith('http') %}target="_blank" rel="noopener noreferrer"{% endif %} aria-label="Open {{ item.shown }}" title="Open"><svg viewBox="0 0 24 24"><path d="M13.5 4.5h6v6M19.5 4.5 11 13M17.5 14v4.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1H10"/></svg></a>{% endif -%}
+    </span></dd>
+</div>
+{%- endmacro %}
 {% set can_edit = current_user.can_edit and not entity.deleted_at %}
 {% if featured or pictures or can_edit %}
 {# The featured image in its own place (editors add, replace or remove it
@@ -40,6 +65,64 @@
   {% endif %}
 </section>
 {% endif %}
+{% if editable %}
+{{ prose_edit('notes', 'Notes', notes, entity.notes or '', 'Nothing written yet.', 'sheet-notes') }}
+<div data-live="above">{{ above }}</div>
+<dl class="kv kv--edit">
+  {% if kinds %}
+  <div data-field><dt><label for="ov-type">Type</label></dt><dd class="kv-edit">
+    <select id="ov-type" name="type" class="kv-input" data-save data-retype>
+      {% for t in kinds %}<option value="{{ t.key }}" {{ 'selected' if t.key == entity.type }}>{{ t.label }}</option>{% endfor %}
+    </select></dd></div>
+  {% endif %}
+  <div data-field><dt><label for="ov-status">Status</label></dt><dd class="kv-edit">
+    <select id="ov-status" name="status" class="kv-input" data-save>
+      {% for value, label in etype.statuses %}<option value="{{ value }}" {{ 'selected' if entity.status == value }}>{{ label }}</option>{% endfor %}
+    </select></dd></div>
+  {% if etype.located_in != () %}
+  <div data-field><dt><label for="ov-location">Location</label></dt><dd class="kv-edit">
+    <select id="ov-location" name="location_id" class="kv-input" data-save>
+      <option value="" data-none>Not set</option>
+      {% for g in locations %}
+      <optgroup label="{{ g.label }}">
+        {% for lid, label in g.options %}<option value="{{ lid }}" {{ 'selected' if entity.location_id == lid }}>{{ label }}</option>{% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select></dd></div>
+  {% endif %}
+  {% if etype.restrictable %}
+  <div data-field><dt><label for="ov-access">Visible to</label></dt><dd class="kv-edit">
+    <select id="ov-access" name="access" class="kv-input" data-save>
+      {% for value, label in access_levels %}<option value="{{ value }}" {{ 'selected' if (entity.access or '') == value }}>{{ label }}</option>{% endfor %}
+    </select></dd></div>
+  {% endif %}
+  <div data-field><dt><label for="ov-tags">Tags</label></dt><dd class="kv-edit">
+    <input id="ov-tags" name="tags" class="kv-input" value="{{ entity.tag_names|join(', ') }}" placeholder="None" title="Separated by commas" autocomplete="off" data-save></dd></div>
+  <div data-field><dt><label for="ov-slug">Slug</label></dt><dd class="kv-edit">
+    <input id="ov-slug" name="slug" class="kv-input mono" value="{{ entity.slug }}" maxlength="119" spellcheck="false" autocomplete="off" data-save></dd></div>
+</dl>
+
+{% for group in groups %}
+{% if group.label %}<p class="setting-label setting-label--spaced">{{ group.label }}</p>{% endif %}
+<dl class="kv kv--edit">{% for item in group['items'] %}{{ edit_row(item) }}{% endfor %}</dl>
+{% endfor %}
+
+{% if custom %}
+<p class="setting-label setting-label--spaced">Custom fields</p>
+<dl class="kv kv--edit">{% for item in custom %}{{ edit_row(item) }}{% endfor %}</dl>
+{% endif %}
+
+{% for item in sections %}
+<p class="setting-label setting-label--spaced">{{ item.section.label }}</p>
+<div class="kv-section" data-save-group data-field>{{ item.html }}</div>
+{% endfor %}
+
+{% for f, html, ctl in prose %}
+{{ prose_edit(ctl.name, f.label, html, ctl.value or '', 'Nothing written yet.', 'sheet-prose') }}
+{% endfor %}
+
+<div data-live="below">{{ below }}</div>
+{% else %}
 {% if notes %}
 <section class="sheet-notes" aria-label="Notes">
   <p class="setting-label">Notes</p>
@@ -85,11 +168,13 @@
 </dl>
 {% endif %}
 
-{% for f, html in prose %}
+{% for f, html, _ in prose %}
 <div class="prose sheet-prose">{% if html %}{{ html }}{% else %}<p class="kv-empty">Nothing written yet.</p>{% endif %}</div>
 {% endfor %}
 
 {{ below }}
 
+
+{% endif %}
 
 <p class="hint sheet-foot">Created {{ entity.created_at.strftime('%b %-d, %Y') }}{% if entity.created_by %} by {{ entity.created_by.display_name }}{% endif %}.</p>

@@ -61,23 +61,44 @@ def sheet(entity_id):
         "sheet/sheet.html", entity=entity, etype=etype, tabs=tabs, tab=tab, access_short=access.SHORT,
         panel=Markup(tab.render(entity)), crumbs=present.crumbs(entity.location_id),
         status=records.status_label(entity), icon=present.icon(etype),
-        purge_days=int_setting("purge_days", 30),
+        purge_days=int_setting("purge_days", 30), editable=etype is not None and can_edit_here(entity),
     )
+
+
+@bp.route("/e/<int:entity_id>/card")
+@role("viewer")
+def card(entity_id):
+    """One record as the list shows it (``view=list`` for its row), so the
+    list behind the sheet follows an edit made in it."""
+    entity = entity_or_404(entity_id, deleted_ok=True)
+    view = "list" if request.args.get("view") == "list" else "cards"
+    return render_template("partials/records.html", items=present.views([entity]), view=view,
+                           has_more=False, page_no=1)
 
 
 # ———— Tabs ————
 
+def can_edit_here(entity: Entity) -> bool:
+    """Whether the reader edits this record in place: an editor, and a
+    record that isn't deleted (restore it first)."""
+    return bool(getattr(current_user, "can_edit", False)) and entity.deleted_at is None
+
+
 def overview_tab(entity: Entity) -> str:
     etype = registry().type(entity.type)
     n_own = len(etype.fields) if etype else 0
+    editable = etype is not None and can_edit_here(entity)
+    edit = edit_items(entity, etype) if editable else {}
+    controls = edit.get("fields", []) + edit.get("custom", [])
     groups, prose, custom = [], [], []
     for n, (f, value) in enumerate(records.field_values(entity)):
         is_custom = n >= n_own
+        control = controls[n] if n < len(controls) else None
         if f.kind == "markdown":
-            prose.append((f, markdown(value or "")))
+            prose.append((f, markdown(value or ""), control))
             continue
         item = {"field": f, "value": value, "shown": F.display(f, value, records.live),
-                "link": F.href(f, value),
+                "link": F.href(f, value), "control": control,
                 "ref": records.live(value) if f.kind == "ref" and value else None}
         if is_custom:
             custom.append(item)
@@ -93,7 +114,10 @@ def overview_tab(entity: Entity) -> str:
                            access_label=access.LABELS.get(entity.access or "", "Everyone"),
                            custom=custom, notes=markdown(entity.notes or ""),
                            crumbs=present.crumbs(entity.location_id),
-                           status=records.status_label(entity))
+                           status=records.status_label(entity), editable=editable,
+                           sections=edit.get("sections", []), locations=edit.get("locations", []),
+                           kinds=kinds_for(entity, etype) if editable else [],
+                           access_levels=access.choices(current_user) if editable else [])
 
 
 def relationships_tab(entity: Entity) -> str:
@@ -249,11 +273,34 @@ def form(entity_id=None):
         abort(404, description="There is no such kind of record.")
     # What it can be made instead: a record's form redrawn for another type
     # (?type=building for a room) shows that type's fields, saved as the change.
-    kinds = [t for t in reg.module(etype.module).types if t.key == etype.key or t.key in etype.becomes] \
-        if entity and etype.becomes else []
+    kinds = kinds_for(entity, etype)
     as_type = next((t for t in kinds if t.key == request.args.get("type")), etype)
     retyping = as_type is not etype
     etype = as_type
+    location_id = entity.location_id if entity else request.args.get("location_id", type=int)
+    items = edit_items(entity, etype, retyping)
+    return render_template(
+        "sheet/form.html", entity=entity, etype=etype, **items, location_id=location_id, kinds=kinds,
+        attach_to=request.args.get("attach_to", type=int), name=request.args.get("name", ""),
+        link=request.args.get("link", ""), access_levels=access.choices(current_user),
+        tags=", ".join(entity.tag_names) if entity else "", can_admin=current_user.is_admin,
+    )
+
+
+def kinds_for(entity: Entity, etype) -> list:
+    """The types a record can be made instead, its own among them, in the
+    module's order; [] when it can't change."""
+    reg = registry()
+    if entity is None or not etype.becomes:
+        return []
+    return [t for t in reg.module(etype.module).types if t.key == etype.key or t.key in etype.becomes]
+
+
+def edit_items(entity, etype, retyping: bool = False) -> dict:
+    """What a record's controls show, for the form and for the Overview an
+    editor edits in place: the type's fields, the custom fields and the
+    sections other modules add, each {"field", "name", "value", "choices"}."""
+    reg = registry()
     own = records.own_values(entity) if entity else {}
     if retyping:
         detail = records.detail_of(entity)
@@ -275,13 +322,6 @@ def form(entity_id=None):
         f = F.custom_field(cf)
         custom.append({"field": f, "name": "c." + cf.key, "value": F.from_text(f, values.get(cf.id, "")),
                        "choices": None})
-    location_id = entity.location_id if entity else request.args.get("location_id", type=int)
     sections = [{"section": s, "html": Markup(s.render(etype, entity))} for s in reg.form_sections(etype)]
-    return render_template(
-        "sheet/form.html", entity=entity, etype=etype, fields=fields, custom=custom, sections=sections,
-        locations=_location_choices(etype, entity), location_id=location_id,
-        attach_to=request.args.get("attach_to", type=int), name=request.args.get("name", ""),
-        link=request.args.get("link", ""), access_levels=access.choices(current_user),
-        tags=", ".join(entity.tag_names) if entity else "", can_admin=current_user.is_admin,
-        kinds=kinds,
-    )
+    return {"fields": fields, "custom": custom, "sections": sections,
+            "locations": _location_choices(etype, entity)}

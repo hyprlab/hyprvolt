@@ -25,13 +25,13 @@ def test_times_are_typed_and_shown_in_the_instance_time_zone(client, h, admin):
     assert fields(client, w["id"])["starts"] == "2026-10-04T03:00Z"
     form = client.get(f"/e/{w['id']}/form").data.decode()
     assert 'type="datetime-local"' in form and 'value="2026-10-03T22:00"' in form
-    assert "2026-10-03 22:00" in client.get(f"/e/{w['id']}/sheet").data.decode()
+    assert 'value="2026-10-03T22:00"' in client.get(f"/e/{w['id']}/sheet").data.decode()
     # A time with an offset is taken as it says.
     client.post(f"/api/entities/{w['id']}", json={"f.ends": "2026-10-04T08:30Z"}, headers=h)
     assert fields(client, w["id"])["ends"] == "2026-10-04T08:30Z"
     # Another zone moves nothing that is stored, only how it reads.
     client.post("/admin/instance", json={"time_zone": "UTC"}, headers=h)
-    assert "2026-10-04 03:00" in client.get(f"/e/{w['id']}/sheet").data.decode()
+    assert 'value="2026-10-04T03:00"' in client.get(f"/e/{w['id']}/sheet").data.decode()
     wrong = client.post("/api/entities", json={"type": "maintenance", "name": "x", "f.starts": "soon",
                                                "f.ends": "2026-10-04T01:00"}, headers=h)
     assert wrong.status_code == 400 and "date and time" in wrong.get_json()["error"]

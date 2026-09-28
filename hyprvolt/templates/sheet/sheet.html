@@ -2,7 +2,8 @@
    Fetched by app.js (/e/<id>/sheet?tab=...) into the <dialog id="sheet">. #}
 {% from "partials/macros.html" import crumbs as crumb_nav, type_icon %}
 <div class="sheet-content" data-id="{{ entity.id }}" data-name="{{ entity.name }}" data-tab="{{ tab.key }}"
-     data-archived="{{ '1' if entity.archived else '0' }}" data-deleted="{{ '1' if entity.deleted_at else '0' }}">
+     data-archived="{{ '1' if entity.archived else '0' }}" data-deleted="{{ '1' if entity.deleted_at else '0' }}"
+     {%- if editable %} data-autosave="/api/entities/{{ entity.id }}"{% endif %}>
   {% if entity.deleted_at %}
   <div class="banner banner--danger">
     <span>Deleted {{ entity.deleted_at|ago }}. It is purged {{ purge_days }} days after it was deleted.</span>
@@ -14,10 +15,18 @@
     {% if current_user.can_edit %}<button class="btn btn--xs btn--ghost" data-sheet-action="archive">Unarchive</button>{% endif %}
   </div>
   {% endif %}
-  <p class="kicker"><span class="kicker-icon">{{ type_icon(icon) }}</span>{{ etype.label if etype else entity.type }} · {{ status }}</p>
-  <h1 class="sheet-title">{{ entity.name }}</h1>
-  {{ crumb_nav(crumbs) }}
-  <p class="sheet-meta">{% if (entity.updated_at - entity.created_at).days >= 1 %}Created <time datetime="{{ entity.created_at.isoformat() }}Z">{{ (entity.created_at|local)[:10] }}</time> · {% endif %}Updated {{ entity.updated_at|ago }}{% if entity.updated_by %} by {{ entity.updated_by.display_name }}{% endif %}
+  <p class="kicker" data-live="kicker"><span class="kicker-icon">{{ type_icon(icon) }}</span>{{ etype.label if etype else entity.type }} · {{ status }}</p>
+  {% if editable and not etype.name_from %}
+  {# The name, edited where it is shown: saved when the cursor leaves it. #}
+  <div class="sheet-title-edit" data-field>
+    <input class="sheet-title sheet-title-input" name="name" value="{{ entity.name }}" maxlength="200" required
+           autocomplete="off" aria-label="Name" data-save>
+  </div>
+  {% else %}
+  <h1 class="sheet-title" data-live="title">{{ entity.name }}</h1>
+  {% endif %}
+  <div data-live="crumbs">{{ crumb_nav(crumbs) }}</div>
+  <p class="sheet-meta" data-live="meta">{% if (entity.updated_at - entity.created_at).days >= 1 %}Created <time datetime="{{ entity.created_at.isoformat() }}Z">{{ (entity.created_at|local)[:10] }}</time> · {% endif %}Updated {{ entity.updated_at|ago }}{% if entity.updated_by %} by {{ entity.updated_by.display_name }}{% endif %}
     {%- if entity.access %} · <span class="chip chip--muted">{{ access_short[entity.access] }}</span>{% endif %}
     · <code class="slug" title="Link to it from a document with [[{{ entity.slug }}]]">{{ entity.slug }}</code></p>
 

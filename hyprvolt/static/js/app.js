@@ -2,9 +2,9 @@
  *
  * Sections, in order: API, toasts, theme, mobile sidebar, dialogs, settings,
  * admin, menus, records, the record form, data-* behaviors, the detail sheet,
- * the picture viewer, keyboard, search palette, paging, pull to refresh, the
- * About hero. Each section guards on the elements it needs, so deleting one
- * leaves the rest working.
+ * editing in place, the picture viewer, keyboard, search palette, paging, pull
+ * to refresh, the About hero. Each section guards on the elements it needs,
+ * so deleting one leaves the rest working.
  */
 (function () {
   "use strict";
@@ -205,7 +205,16 @@
   // every way of dismissing it routes through here (its button, Escape).
   var SHEET_EXIT_MS = 300;   // keep in step with the sheet-out animation
   var sheetExitTimer = null;
-  function closeDialog(dialog, then) {
+  function closeDialog(dialog, then, force) {
+    // A record being edited saves what is still unsaved before it goes; if
+    // that fails it stays open once, with the error at the field.
+    if (dialog.id === "sheet" && !force && editsPending()) {
+      flushEdits().then(function (ok) {
+        if (ok || discardArmed) { discardArmed = false; closeDialog(dialog, then, true); }
+        else warnUnsaved("Close");
+      });
+      return;
+    }
     if (dialog.id !== "sheet" || prefersReducedMotion()) {
       dialog.close();
       if (then) then();
@@ -1100,6 +1109,18 @@
   function openEntity(id, opts) {
     if (!sheet) return;
     opts = opts || {};
+    // Leaving a record (another record, another tab) saves it first.
+    if (!opts.flushed && sheet.open && editsPending()) {
+      var next = Object.assign({}, opts, { flushed: true });
+      return flushEdits().then(function (ok) {
+        if (ok || discardArmed || opts.nav === "pop") {
+          if (!ok && opts.nav === "pop") toast("Some changes weren't saved.", null, null, true);
+          discardArmed = false;
+          return openEntity(id, next);
+        }
+        warnUnsaved("Try again");
+      });
+    }
     // A step on the trail, or the same record again (a tab, a refresh).
     var nav = opts.nav || (opts.restoring || opts.fromURL ? "restore"
                            : !sheet.open || pos < 0 ? "new"
@@ -1152,7 +1173,10 @@
       if (id) openEntity(id, { tab: params.get("tab"), fromURL: true });
     } else if (sheet && sheet.open) {
       leaving = "closing";
-      closeDialog(sheet);
+      flushEdits().then(function (ok) {
+        if (!ok) toast("Some changes weren't saved.", null, null, true);
+        closeDialog(sheet, null, true);
+      });
     }
   });
   function refreshSheet() {
@@ -1195,10 +1219,16 @@
       });
     }).catch(toastError);
   }
-  // The form opens over the record, which stays where it is underneath.
+  // A record is edited where it is shown: e puts the cursor in its first
+  // field, on the Overview.
   function editCurrent() {
     if (!current || current.deleted) return;
-    openEntityForm("/e/" + current.id + "/form");
+    var ready = current.tab === "overview" ? Promise.resolve()
+      : openEntity(current.id, { tab: "overview", tabSwitch: true, nav: "replace" });
+    Promise.resolve(ready).then(function () {
+      var first = sheetArticle.querySelector("[data-autosave] [data-save]:not([hidden])");
+      if (first) first.focus();
+    });
   }
 
   if (sheet) {
@@ -1256,7 +1286,7 @@
           forgetForward = true;
           history.back();
         } else {
-          closeDialog(sheet);
+          closeDialog(sheet, null, true);
         }
         // Undo instead of a confirm dialog: the delete only marks the
         // record, and restoring it brings back the same id and its links.
@@ -1295,6 +1325,185 @@
 
   // ?open=<id> deep-links straight into a record; see "Dialogs survive a
   // reload" below, which opens it (and keeps its scroll across a refresh).
+
+  /* ————— Editing in place ————— */
+  // An editor's Overview is the record's form. Its controls ([data-save],
+  // or every field of a [data-save-group], a module's form section) live
+  // inside [data-autosave="/api/entities/<id>"]. A change (leaving a text
+  // field, choosing an option) posts that field alone; a failure shows its
+  // message under the field and keeps what was typed. After a save, the
+  // parts marked data-live are redrawn from the server, except one the
+  // cursor is in, and the record's card in the list follows. Long text
+  // ([data-prose]) shows formatted until its Edit button opens it.
+  var savesInFlight = [], discardArmed = false;
+  function saveControls() {
+    return Array.prototype.slice.call(sheetArticle ? sheetArticle.querySelectorAll(
+      "[data-autosave] [data-save], [data-autosave] [data-save-group] [name]") : []).filter(function (el) {
+      return el.type !== "file" && !el.disabled;
+    });
+  }
+  function isDirty(el) {
+    if (el.type === "checkbox" || el.type === "radio") return el.checked !== el.defaultChecked;
+    if (el.tagName === "SELECT") {
+      return Array.prototype.some.call(el.options, function (o) { return o.selected !== o.defaultSelected; });
+    }
+    return el.value !== el.defaultValue;
+  }
+  function markSaved(el) {
+    if (el.type === "checkbox" || el.type === "radio") el.defaultChecked = el.checked;
+    else if (el.tagName === "SELECT") Array.prototype.forEach.call(el.options, function (o) { o.defaultSelected = o.selected; });
+    else el.defaultValue = el.value;
+  }
+  function editsPending() {
+    return savesInFlight.length > 0 || saveControls().some(isDirty);
+  }
+  function fieldOf(el) { return el.closest("[data-save-group]") || el.closest("[data-field]") || el.parentNode; }
+  function showFieldError(el, message) {
+    var holder = fieldOf(el), at = el.closest("dd") || holder;
+    var p = at.querySelector(":scope > .field-error");
+    if (!p) { p = document.createElement("p"); p.className = "form-error field-error"; p.setAttribute("role", "alert"); at.appendChild(p); }
+    p.textContent = message;
+    el.setAttribute("aria-invalid", "true");
+  }
+  function clearFieldError(el) {
+    var holder = fieldOf(el), at = el.closest("dd") || holder;
+    var p = at.querySelector(":scope > .field-error");
+    if (p) p.remove();
+    holder.querySelectorAll("[aria-invalid]").forEach(function (c) { c.removeAttribute("aria-invalid"); });
+  }
+  function bodyFor(el) {
+    var group = el.closest("[data-save-group]");
+    var els = group ? Array.prototype.slice.call(group.querySelectorAll("[name]")).filter(function (c) { return c.type !== "file"; }) : [el];
+    var body = {};
+    els.forEach(function (c) {
+      if (c.type === "radio" && !c.checked) return;
+      body[c.name] = c.type === "checkbox" ? c.checked : c.value;
+    });
+    return { url: el.closest("[data-autosave]").getAttribute("data-autosave"), body: body, els: els };
+  }
+  function saveField(el) {
+    var req = bodyFor(el), holder = fieldOf(el), id = current && current.id;
+    clearFieldError(el);
+    holder.classList.add("is-saving");
+    var p = api(req.url, req.body).then(function () {
+      req.els.forEach(markSaved);
+      holder.classList.remove("is-saving");
+      discardArmed = false;
+      // After this save has left savesInFlight: a new type redraws the
+      // whole record; anything else only its live parts.
+      setTimeout(function () {
+        if (el.hasAttribute("data-retype")) refreshSheet(); else refreshLive(id);
+        refreshCard(id);
+      }, 0);
+      return true;
+    }, function (err) {
+      holder.classList.remove("is-saving");
+      showFieldError(el, err.message);
+      return false;
+    });
+    savesInFlight.push(p);
+    p.then(function () { savesInFlight.splice(savesInFlight.indexOf(p), 1); });
+    return p;
+  }
+  // Everything unsaved, saved now (one request per field or group), with
+  // those already on their way. True when all of it went.
+  function flushEdits() {
+    var seen = [], saves = savesInFlight.slice();
+    saveControls().filter(isDirty).forEach(function (el) {
+      var key = el.closest("[data-save-group]") || el;
+      if (seen.indexOf(key) !== -1) return;
+      seen.push(key);
+      saves.push(saveField(el));
+    });
+    return Promise.all(saves).then(function (results) { return results.every(Boolean); });
+  }
+  function warnUnsaved(action) {
+    discardArmed = true;
+    toast("A change isn't saved: its field says why. " + action + " again to discard it.", null, null, true);
+  }
+  function refreshLive(id) {
+    if (!current || current.id !== id) return;
+    fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(current.tab)).then(function (html) {
+      if (!current || current.id !== id) return;
+      var fresh = document.createElement("div");
+      fresh.innerHTML = html;
+      fresh.querySelectorAll("[data-live]").forEach(function (part) {
+        var old = sheetArticle.querySelector('[data-live="' + part.getAttribute("data-live") + '"]');
+        if (old && !old.contains(document.activeElement)) old.replaceWith(part);
+      });
+      var root = fresh.querySelector(".sheet-content"), here = sheetArticle.querySelector(".sheet-content");
+      if (root && here) {
+        current.name = root.getAttribute("data-name");
+        here.setAttribute("data-name", current.name);
+      }
+    }).catch(function () { /* the value is saved; the page catches up on the next load */ });
+  }
+  // The list behind the sheet shows the record as it now is.
+  function refreshCard(id) {
+    var card = id && cardFor(id);
+    if (!card) return;
+    var view = card.classList.contains("row") ? "list" : "cards";
+    fetchHTML("/e/" + id + "/card?view=" + view).then(function (html) {
+      var fresh = document.createElement("div");
+      fresh.innerHTML = html;
+      var item = fresh.querySelector("[data-item]"), now = cardFor(id);
+      if (item && now) now.replaceWith(item);
+    }).catch(function () {});
+  }
+  if (sheetArticle) {
+    document.addEventListener("change", function (e) {
+      var el = e.target;
+      if (!el.closest || !sheetArticle.contains(el) || !el.closest("[data-autosave]") || el.type === "file") return;
+      if (!el.hasAttribute("data-save") && !el.closest("[data-save-group]")) return;
+      if (isDirty(el)) saveField(el);
+    });
+    // Enter in a one-line field saves it, as leaving it would.
+    sheetArticle.addEventListener("keydown", function (e) {
+      var el = e.target;
+      if (e.key !== "Enter" || el.tagName !== "INPUT" || !el.hasAttribute("data-save")) return;
+      e.preventDefault();
+      if (isDirty(el)) saveField(el);
+    });
+    sheetArticle.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-prose-edit]");
+      if (!btn) return;
+      var box = btn.closest("[data-prose]"), text = box.querySelector("textarea");
+      box.classList.add("is-editing");
+      text.hidden = false;
+      autosize(text);
+      text.focus();
+    });
+    sheetArticle.addEventListener("input", function (e) {
+      if (e.target.matches(".prose-input")) autosize(e.target);
+    });
+    // Left unchanged, long text goes back to showing formatted; changed, it
+    // is saved (above) and comes back formatted from the server.
+    sheetArticle.addEventListener("focusout", function (e) {
+      var text = e.target;
+      if (!text.matches || !text.matches(".prose-input") || isDirty(text)) return;
+      var box = text.closest("[data-prose]");
+      box.classList.remove("is-editing");
+      text.hidden = true;
+    });
+  }
+  function autosize(text) {
+    text.style.height = "auto";
+    text.style.height = Math.max(text.scrollHeight + 2, 160) + "px";
+  }
+  // A reload or a closed tab still sends what was typed.
+  window.addEventListener("pagehide", function () {
+    var seen = [];
+    saveControls().filter(isDirty).forEach(function (el) {
+      var key = el.closest("[data-save-group]") || el;
+      if (seen.indexOf(key) !== -1) return;
+      seen.push(key);
+      var req = bodyFor(el);
+      try {
+        fetch(req.url, { method: "POST", keepalive: true, body: JSON.stringify(req.body),
+                         headers: { "Content-Type": "application/json", "X-CSRF": CSRF } });
+      } catch (_) {}
+    });
+  });
 
   /* ————— Picture viewer ————— */
   // A [data-gallery] holds links to pictures ([data-gallery-item], each with

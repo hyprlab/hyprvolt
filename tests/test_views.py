@@ -26,7 +26,8 @@ def test_the_sheet_has_the_core_tabs(client, h, admin):
     body = client.get(f"/e/{g['id']}/sheet").data.decode()
     tabs = [part.split('"')[0] for part in body.split('role="tab" data-tab="')[1:]]
     assert tabs == ["overview", "relationships", "documents", "secrets", "attachments", "history", "changes"]
-    assert "<strong>the</strong>" in body and ">blue<" in body
+    # An editor edits the fields in place; the notes stay formatted.
+    assert "<strong>the</strong>" in body and 'name="f.color"' in body and "data-autosave" in body
     for tab in ("relationships", "documents", "attachments", "history"):
         resp = client.get(f"/e/{g['id']}/sheet?tab={tab}")
         assert resp.status_code == 200 and f'data-panel="{tab}"' in resp.data.decode()

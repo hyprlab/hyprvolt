@@ -236,6 +236,10 @@ FormSection("rack", "Rack position", render=rack_form, save=rack_save,
 - The API takes the same values as `s.rack.position_u` or nested as
   `"sections": {"rack": {"position_u": 12}}`. A save that doesn't name the
   section leaves its values alone.
+- The same HTML appears in an editor's Overview, where the record is edited
+  in place. There a change to any of the section's fields saves all of them
+  together, so `save` always gets the whole section. Nothing in the template
+  needs to know which of the two it is in.
 
 ## Pages, tabs and routes
 
@@ -268,6 +272,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `[data-print]` | Prints the page; print styles hide the shell |
 | `[data-reveal="/url"]`, `data-reveal-into="id"` | Posts to the URL and shows the answer's `value` in that element, until a second click or 30 seconds (the vault's Show); the element's `data-mask` is what it shows otherwise |
 | `[data-copy="text"]`, `[data-copy-url="/url"]` | Copies the text, or posts to the URL and copies the answer's `value` |
+| `[data-autosave="/url"]` with `[data-save]` controls, `[data-save-group]`, `[data-prose]`, `data-live="key"` | Editing in place (the core's Overview uses it): a `[data-save]` control posts `{name: value}` to the container's URL when it changes, a `[data-save-group]` posts all of its fields together, and the parts marked `data-live` are redrawn from the server after a save. `[data-prose]` holds long text shown formatted until its `[data-prose-edit]` button |
 
 Routes live on the module's blueprint, which must be named like the module
 and is mounted at `/<id>`. Every view declares who may call it with

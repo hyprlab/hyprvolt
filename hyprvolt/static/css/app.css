@@ -944,6 +944,58 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   .kv dt { border-bottom: 0; padding-bottom: 0; }
 }
 
+/* A record edited in place (an editor's Overview): each control reads as the
+   value it holds, lined up with the text around it, until it is hovered
+   (a faint outline) or focused (a field). */
+.kv--edit dd { padding: 4px 0; }
+.kv-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; }
+.kv-input, .sheet-title-input {
+  font: inherit; color: var(--ink); background: transparent;
+  border: 1px solid transparent; border-radius: 8px; transition: border-color .15s, background .15s, box-shadow .15s;
+}
+.kv-input { flex: 1; min-width: 0; margin-left: -9px; padding: 5px 8px; font-size: 14.5px; }
+.kv-input::placeholder, .sheet-title-input::placeholder { color: var(--faint); }
+.kv-input:hover, .sheet-title-input:hover { border-color: var(--line-strong); }
+.kv-input:focus, .sheet-title-input:focus {
+  outline: none; border-color: var(--accent); background: var(--field); box-shadow: 0 0 0 3px var(--wash);
+}
+select.kv-input { appearance: none; cursor: pointer; padding-right: 26px; background-repeat: no-repeat; background-position: right 8px center; }
+select.kv-input:hover, select.kv-input:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+textarea.kv-input { resize: vertical; line-height: 1.5; min-height: 34px; }
+textarea.kv-input:not(:focus) { resize: none; }
+/* Nothing chosen reads like an empty field. */
+select.kv-input:has(option[data-none]:checked):not(:focus) { color: var(--faint); }
+input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 15px; accent-color: var(--accent); }
+.kv-input.mono { font-family: var(--mono); font-size: 13px; }
+.kv-open:empty { display: none; }
+.kv-edit .field-error, .sheet-title-edit .field-error { flex-basis: 100%; margin: 2px 0 4px; font-size: 13px; }
+.kv-input[aria-invalid], .sheet-title-input[aria-invalid] { border-color: var(--danger); }
+[data-field].is-saving .kv-input, [data-field].is-saving.sheet-title-edit input { opacity: .6; }
+.sheet-title-input {
+  display: block; width: calc(100% + 18px); margin-left: -9px; padding: 0 8px;
+  font-family: inherit; font-size: clamp(26px, 4.5vw, 38px); font-weight: 800; letter-spacing: -0.035em; line-height: 1.25;
+}
+/* A module's form section (a rack position), edited in place. */
+.kv-section { margin-top: 4px; }
+/* Long text: formatted, until Edit opens it as Markdown. Empty notes are
+   only their button. */
+.prose-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.prose-edit-head .setting-label { margin: 0; }
+.prose-edit .prose-input {
+  display: block; width: 100%; margin-top: 8px; padding: 10px 12px; resize: vertical; line-height: 1.6;
+  font-size: 13.5px; color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: var(--radius-sm);
+}
+.prose-edit .prose-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--wash); }
+.prose-edit.is-editing > .prose, .prose-edit.is-editing > .kv-empty { display: none; }
+.prose-edit.is-editing [data-prose-edit] { visibility: hidden; }
+.prose-edit.sheet-prose { margin-top: 18px; }
+.prose-edit.sheet-prose .prose-edit-head { margin-bottom: 4px; }
+.sheet-notes.prose-edit.is-empty:not(.is-editing) { padding: 0; background: none; border-left-color: transparent; margin-bottom: 14px; }
+.prose-edit.is-empty:not(.is-editing) .setting-label { display: none; }
+.prose-edit.is-empty:not(.is-editing) .prose-edit-head { justify-content: flex-start; }
+
 /* Banners at the top of a sheet: archived, deleted. */
 .banner {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;

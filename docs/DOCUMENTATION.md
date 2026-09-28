@@ -359,6 +359,17 @@ them all. Errors are
 
 ## Records
 
+An editor edits a record where it is shown. In its Overview each field reads
+as its value until it is pointed at or clicked, when it becomes a field to
+type in or a list to choose from; the name is edited in the title. A change
+is saved when the cursor leaves the field, on Enter, or when the record is
+closed or another one opened, and the list behind it follows. A change that
+can't be saved (a required field left empty, a number out of range) says why
+under the field and keeps what was typed; closing the record then keeps it
+open once, and closing it again discards the change. Notes and other long
+text show formatted, with an Edit button that opens them as Markdown. `e`
+puts the cursor in the first field. New records are made in the form.
+
 Deleting a record, a link or a file can be undone from the message that
 follows. A deleted record then waits under Recently deleted, where it can
 still be restored, and is purged for good after the number of days set in
@@ -541,7 +552,7 @@ its database, without signing in. The image's `HEALTHCHECK` uses it, so
 | `j`, `k` | a record | Next, previous in the list |
 | Back, Forward (the browser's, or ‹ › in the record's bar) | a record | The records opened one from another: a link, a page's Next, `j` and `k`. Back from the first one closes it |
 | `1` to `9`, ← → | a record | Its tabs |
-| `e`, `a`, `c` | a record | Edit, archive or unarchive, copy its link |
+| `e`, `a`, `c` | a record | Edit (the cursor in its first field), archive or unarchive, copy its link |
 | Esc | a dialog | Close it |
 
 ## Troubleshooting

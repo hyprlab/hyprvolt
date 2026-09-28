@@ -89,6 +89,8 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.tabs`, `.tab`, `.tab-panel` | The sheet's sections. The active tab is underlined in the accent; the row scrolls sideways on a phone |
 | `.crumbs`, `.crumbs-sep` | Where a record is: its locations, outermost first, each a link |
 | `.kv`, `.kv-empty`, `.kv-long` | A record's fields: label and value in two columns, stacked on a phone |
+| `.kv--edit`, `.kv-edit`, `.kv-input`, `.kv-open`, `.sheet-title-input`, `.field-error` | A record edited in place: each control reads as its value, lined up with the text, until hovered (an outline) or focused (a field); an empty one says Not set in `--faint`. `.kv-open` holds the button that opens a linked record or URL; `.field-error` is a failed save's message under its field |
+| `.prose-edit`, `.prose-input`, `.kv-section` | Long text edited in place: formatted, with an Edit button that opens the Markdown; empty notes are only an Add notes button. `.kv-section` holds another module's form section in the Overview |
 | `.banner`, `.banner--danger`, `.banner--stack` | A notice at the top of the sheet (archived, deleted, rack conflicts), with its action; `--stack` puts several paragraphs and buttons under each other (a backup's check, a new token) |
 | `.elink` | A link to a record inside text; it opens the record's sheet in place |
 | `.deps`, `.deptree` | The dependency view, both directions side by side, each nested; a loop and a repeat are marked, not followed |
@@ -123,6 +125,10 @@ Long-form text uses `.prose` at 16.5px and 1.72.
   preference, a deleted record with Undo), not for every click.
 - **Undo instead of "Are you sure?"** for anything recoverable. A confirmation
   dialog is kept for what can't be undone: deleting an account.
+- **Edited where it is shown.** An editor changes a record in its Overview,
+  one field at a time, saved on leaving the field; there is no Save button.
+  A save that fails keeps the value, says why under the field, and holds
+  the record open once. Forms are for making new things.
 - **Optimistic, then honest.** A toggle updates at once and rolls back with an
   error toast if the server refuses.
 - **Every screen has a URL.** Filters, sort, view and the open record are query
