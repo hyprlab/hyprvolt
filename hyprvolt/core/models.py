@@ -60,6 +60,10 @@ class Entity(db.Model):
     updated_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    # The attached image shown as its picture (core/images.py). Not a foreign
+    # key: attachments already point here, and a removed file just leaves the
+    # first image attached in its place.
+    image_id = db.Column(db.Integer)
 
     location = db.relationship("Entity", remote_side=[id], foreign_keys=[location_id])
     tags = db.relationship(Tag, secondary=entity_tags, order_by=Tag.name, lazy="selectin")
@@ -162,6 +166,10 @@ class Relationship(db.Model):
     target = db.relationship(Entity, foreign_keys=[target_id])
 
 
+#: Attachments shown as pictures: a record's main image and its gallery.
+IMAGE_TYPES = ("image/png", "image/jpeg", "image/gif", "image/webp")
+
+
 class Attachment(db.Model):
     """A file under DATA_DIR/attachments. ``stored_as`` is generated; the
     name the user gave it is only ever a label and a download name."""
@@ -184,7 +192,7 @@ class Attachment(db.Model):
 
     @property
     def is_image(self) -> bool:
-        return self.content_type in ("image/png", "image/jpeg", "image/gif", "image/webp")
+        return self.content_type in IMAGE_TYPES
 
 
 class AuditLog(db.Model):

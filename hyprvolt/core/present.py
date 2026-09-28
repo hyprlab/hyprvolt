@@ -63,8 +63,9 @@ def details_for(entities) -> dict[int, object]:
 class View:
     """One entity as a card or a list row shows it."""
 
-    def __init__(self, entity: Entity, detail=None, linked=None):
+    def __init__(self, entity: Entity, detail=None, linked=None, image=None):
         self.entity = entity
+        self.image = image
         self.id = entity.id
         self.name = entity.name
         self.etype = registry().type(entity.type)
@@ -123,5 +124,6 @@ def linked_for(entities) -> dict[int, dict[str, int]]:
 
 
 def views(entities) -> list[View]:
-    details, linked = details_for(entities), linked_for(entities)
-    return [View(e, details.get(e.id), linked.get(e.id)) for e in entities]
+    from .images import main_images
+    details, linked, pictures = details_for(entities), linked_for(entities), main_images(entities)
+    return [View(e, details.get(e.id), linked.get(e.id), pictures.get(e.id)) for e in entities]

@@ -1,4 +1,22 @@
 {% from "partials/macros.html" import crumbs as crumb_nav, entity_link, tag_chips %}
+{% if pictures %}
+{# The main image, then every picture as a strip; either opens the viewer. #}
+<section class="gallery" data-gallery aria-label="Pictures">
+  {% set main = pictures[0] %}
+  <a class="gallery-main" href="/attachments/{{ main.id }}/{{ main.filename|urlencode }}" data-gallery-item
+     data-large="/attachments/{{ main.id }}/thumb/lg" data-caption="{{ main.filename }}">
+    <img src="/attachments/{{ main.id }}/thumb/lg" alt="{{ main.filename }}"></a>
+  {% if pictures|length > 1 %}
+  <ul class="gallery-strip">
+    {% for a in pictures %}
+    <li><a href="/attachments/{{ a.id }}/{{ a.filename|urlencode }}" data-gallery-item
+           data-large="/attachments/{{ a.id }}/thumb/lg" data-caption="{{ a.filename }}">
+      <img src="/attachments/{{ a.id }}/thumb/sm" alt="{{ a.filename }}" loading="lazy" decoding="async"></a></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endif %}
 {% if notes %}
 <section class="sheet-notes" aria-label="Notes">
   <p class="setting-label">Notes</p>

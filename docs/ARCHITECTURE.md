@@ -35,6 +35,7 @@ hyprvolt/
     relations.py   relationship kinds and the dependency walk
     markdown.py    Markdown with [[slug]] links, through the sanitizer
     attachments.py files on disk
+    images.py      a record's main image and gallery, and their thumbnails
     api.py         the JSON API
     views.py       the detail sheet and the form, as HTML fragments
     shell.py       the sidebar and what surrounds every page
@@ -276,7 +277,7 @@ the database unreadable to the previous version is a MAJOR release.
 
 | | |
 | --- | --- |
-| `DATA_DIR` (`/data` in Docker, `./var` locally) | The SQLite database, the generated `.secret_key`, the secrets vault's `secrets.key` (unless `SECRETS_KEY` is set), `attachments/`, `backups/` (unless `BACKUP_DIR` is set) and `imports/`, uploads between an import's steps, cleared after a day |
+| `DATA_DIR` (`/data` in Docker, `./var` locally) | The SQLite database, the generated `.secret_key`, the secrets vault's `secrets.key` (unless `SECRETS_KEY` is set), `attachments/`, `thumbs/` (smaller copies of attached images, made again when missing, so not backed up), `backups/` (unless `BACKUP_DIR` is set) and `imports/`, uploads between an import's steps, cleared after a day |
 | `users` | Accounts, their roles and preferences |
 | `settings` | Instance settings, which modules are off, migration markers, when each job last ran |
 | `entities` and the core tables | Every record, its tags, custom values, links, files and history |

@@ -167,6 +167,18 @@ def set_archived(entity: Entity, archived: bool, user=None) -> None:
     _remind(entity)
 
 
+def set_image(entity: Entity, att, user=None) -> None:
+    """Make ``att``, a live image attached to this record, its main image."""
+    from .images import main_image
+    old = main_image(entity)
+    if old is not None and old.id == att.id:
+        return
+    entity.image_id = att.id
+    _touch(entity, user)
+    audit(entity, "edited", [{"field": "image", "label": "Main image",
+                              "old": old.filename if old else "", "new": att.filename}], user)
+
+
 def delete(entity: Entity, user=None) -> None:
     """Soft: the row stays, hidden, until the purge. Undo is ``restore``."""
     if entity.deleted_at is not None:

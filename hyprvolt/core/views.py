@@ -17,7 +17,7 @@ from ..permissions import role
 from ..registry import current as registry
 from . import attachments as files
 from . import fields as F
-from . import access, present, records, relations
+from . import access, images, present, records, relations
 from .api import entity_or_404
 from .markdown import render as markdown
 from .models import Attachment, AuditLog, Entity
@@ -87,6 +87,7 @@ def overview_tab(entity: Entity) -> str:
         groups[-1]["items"].append(item)
     above, below = etype.overview(entity) if etype and etype.overview else ("", "")
     return render_template("sheet/overview.html", entity=entity, etype=etype, groups=groups, prose=prose,
+                           pictures=images.gallery(entity),
                            above=Markup(above), below=Markup(below),
                            access_label=access.LABELS.get(entity.access or "", "Everyone"),
                            custom=custom, notes=markdown(entity.notes or ""),
@@ -115,7 +116,7 @@ def relationships_tab(entity: Entity) -> str:
 def attachments_tab(entity: Entity) -> str:
     rows = Attachment.query.filter_by(entity_id=entity.id, deleted_at=None).order_by(Attachment.created_at.desc()).all()
     return render_template("sheet/attachments.html", entity=entity, rows=rows, human_size=files.human_size,
-                           limit_mb=int_setting("max_upload_mb", 25))
+                           limit_mb=int_setting("max_upload_mb", 25), main=images.main_image(entity))
 
 
 ACTIONS = {"created": "created it", "edited": "edited", "archived": "archived it", "unarchived": "unarchived it",

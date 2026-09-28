@@ -18,6 +18,7 @@
   <div class="grid--cards">
     {% for v in items %}
     <article class="card {{ 'is-archived' if v.archived or v.deleted }}" data-item="{{ v.id }}" tabindex="0">
+      {% if v.image %}<img class="card-image" src="/attachments/{{ v.image.id }}/thumb/sm" alt="" loading="lazy" decoding="async">{% endif %}
       <p class="kicker">
         <span class="kicker-icon">{{ type_icon(v.icon) }}</span>
         <span>{{ v.type_label }}</span><span class="kicker-sep">·</span><span>{{ v.status }}</span>

@@ -72,6 +72,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.topbar`, `.context-title`, `.topbar-actions` | The sticky, blurred bar over the content |
 | `.searchpill`, `.viewswitch`, `.menu`/`.menubtn`/`.menupop`/`.menuopt` | Topbar controls |
 | `.card`, `.row`, `.kicker`, `.kicker-icon`, `.facts`, `.is-archived` | Records as cards or list rows. The row's first cell is the type's icon; `.facts` are a card's key fields; archived and deleted records step back with `.is-archived` |
+| `.card-image` | A record's main image across the top of its card, always 16:9 so the grid doesn't move as pictures load |
 | `.dash`, `.dash-section`, `.tiles`, `.tile`, `.widgets`, `.widget`, `.widget--wide` | The dashboard: one tile per module with its count, then the cards (Coming up and the modules' widgets), `--wide` across the row |
 | `.meters`, `.meter` | How much of something is used (rack units), as a bar with the number beside it |
 | `.ipgrid`, `.ipcell`, `.iplegend` | A subnet's addresses, sixteen to a row: used in solid ink, reserved hatched, DHCP filled, free an outline. A used cell opens its record; a free one, for an editor, records it |
@@ -98,6 +99,9 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.labels`, `.labels--5160`, `.labels--l7160`, `.labels--62x29`, `.label`, `.label-qr` | Printable labels in real units, each size with its own named `@page`, so a sheet prints as it shows. Black on white whatever the theme |
 | `.snippet` | A command to copy, in monospace and wrapped, with a Copy button (`data-copy`) under it: a backup job's report command |
 | `.dropzone`, `.file-thumb` | Where files are dropped or chosen, and an attachment's preview |
+| `.starbtn` | An icon button that marks one of several as the chosen one (the main image); pressed, its star fills in the accent |
+| `.gallery`, `.gallery-main`, `.gallery-strip` | A record's pictures at the top of its Overview: the main image in a box of fixed height, then all of them as square tiles |
+| `.lightbox`, `.lightbox-bar`, `.lightbox-img`, `.lightbox-nav` | The picture viewer: the whole window, dark in both themes, the picture fitted in it, its name and place in the bar, previous and next at the sides (at the bottom on a phone) |
 | `.history`, `.changes` | Who changed what: a line per change, old value struck through, new value after |
 | `.elevation`, `.rack-grid`, `.rack-u`, `.rack-slot`, `.rack-item`, `.rack-summary`, `.rack-problems` | A rack, front and rear, one grid row per unit. An empty unit is a button; overlapping items share the width, and a conflict is drawn in the danger color |
 | `.palette` and its parts | The Ctrl/Cmd+K search |

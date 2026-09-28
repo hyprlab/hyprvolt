@@ -730,6 +730,25 @@
   <article class="sheet-article" id="sheet-article"></article>
 </dialog>
 
+<!-- ————— Picture viewer: a record's pictures, large (app.js, [data-gallery]) ————— -->
+<dialog class="lightbox" id="lightbox" aria-label="Pictures" data-restore="off">
+  <div class="lightbox-bar">
+    <p class="lightbox-caption"><span id="lightbox-caption"></span> <span class="lightbox-count" id="lightbox-count"></span></p>
+    <a class="iconbtn" id="lightbox-original" target="_blank" rel="noopener" aria-label="Open the original" title="Open the original">
+      <svg viewBox="0 0 24 24"><path d="M13.5 4.5h6v6M19.5 4.5 11 13M17.5 14v4.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1H10"/></svg></a>
+    <button class="iconbtn" data-close aria-label="Close" title="Close (Esc)" autofocus>
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <img class="lightbox-img" id="lightbox-img" alt="">
+  <button class="iconbtn lightbox-nav lightbox-nav--prev" id="lightbox-prev" aria-label="Previous picture" title="Previous (←)">
+    <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+  </button>
+  <button class="iconbtn lightbox-nav lightbox-nav--next" id="lightbox-next" aria-label="Next picture" title="Next (→)">
+    <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+  </button>
+</dialog>
+
 <div class="ptr" id="ptr" aria-hidden="true">
   <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 3.5V7h-3.5"/></svg>
 </div>

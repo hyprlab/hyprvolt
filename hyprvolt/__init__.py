@@ -311,6 +311,8 @@ def _migrate(app: Flask) -> None:
     core.add_index("ix_entities_access", "entities", ["access"])
     # Search reads attached files; older ones are read by the worker.
     core.add_column("attachments", "text", "TEXT")
+    # A record's main image (core/images.py).
+    core.add_column("entities", "image_id", "INTEGER")
 
 
 def _start_worker(app: Flask) -> None:

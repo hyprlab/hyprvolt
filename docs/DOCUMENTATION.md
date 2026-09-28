@@ -323,7 +323,7 @@ them all. Errors are
 | Route | What it does |
 | --- | --- |
 | `GET /api/entities` | Records, newest change first; filter with `type`, `module`, `tag`, `location`, `slug` (one, or several separated by commas), `q`, and `archived=1` (or `all`) for archived ones; page with `limit` (100 unless given, up to 500) and `offset` |
-| `GET /api/entities/<id>` | One record with its fields, custom fields and location path |
+| `GET /api/entities/<id>` | One record with its fields, custom fields, location path and main `image` (`null` when it has none) |
 | `POST /api/entities` | Make one: `type`, `name`, `status`, `location_id`, `tags`, `notes`, `fields`, `custom`, and `sections` for what other modules add (`{"rack": {...}}`, `{"addresses": {"list": "10.0.20.5"}}`). An admin can also send `created_at` (`2019-05-02T09:30Z`; without an offset, in the instance's time zone) to keep the date a record was first written elsewhere, here or on a change |
 | `POST /api/entities/<id>` | Change one; only what the body names changes |
 | `GET /api/entities/by-slug/<slug>` | One record by its slug |
@@ -332,9 +332,11 @@ them all. Errors are
 | `GET /api/entities/<id>/history`, `/relationships`, `/dependencies` | Its history, its links, what depends on it (`direction=dependencies` for the other way) |
 | `POST /api/relationships`, `POST /api/relationships/<id>/delete` | Link two records (`kind`, `source_id`, `target_id`), unlink |
 | `GET /api/tags`, `GET /api/custom-fields` | Tags in use, custom field definitions |
-| `GET /api/entities/<id>/attachments`, `POST` the same | A record's files; upload with multipart `file` parts |
+| `GET /api/entities/<id>/attachments`, `POST` the same | A record's files; upload with multipart `file` parts. An image also has `thumb` and `large` |
+| `POST /api/entities/<id>/image` | Make one of its images the main one: `{"attachment_id": 12}` |
 | `POST /api/attachments/<id>/delete`, `/restore` | Remove a file (kept until the purge), bring it back |
 | `GET /attachments/<id>` | The file itself |
+| `GET /attachments/<id>/thumb/sm`, `/thumb/lg` | An image at most 480 or 1600 pixels on its longest side, as WebP |
 | `GET /export/<module>.csv` | A module's records as CSV, with the list's filters |
 | `GET /locations/racks/<id>/elevation` | A rack's units and what occupies them |
 | `GET /network/subnets/<id>/addresses` | A subnet's recorded addresses and how many are free |
@@ -354,6 +356,17 @@ lists and search with its history and links, until it is unarchived.
 Attachments are limited in size per file in Settings > Admin (25 MB by
 default). Images, PDFs and plain text open in the browser; everything else
 downloads.
+
+A record's attached images (PNG, JPEG, GIF and WebP) are its pictures. The
+Overview opens with the main one, large, and a strip of all of them below;
+any of them opens the viewer, where the arrow keys, the side buttons or a
+swipe move through them and a button opens the original. The first image
+attached is the main one until an editor stars another in the Attachments
+tab. The main image also heads the record's card in card view. Cards and the
+Overview show smaller copies, made the first time each is shown, turned the
+way the camera was held and without the photo's metadata (its location
+included). They are kept in `DATA_DIR/thumbs` and are not in backups, as
+they can always be made again.
 
 ## Secrets
 

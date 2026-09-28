@@ -2,8 +2,9 @@
  *
  * Sections, in order: API, toasts, theme, mobile sidebar, dialogs, settings,
  * admin, menus, records, the record form, data-* behaviors, the detail sheet,
- * keyboard, search palette, paging, pull to refresh, the About hero. Each section guards on
- * the elements it needs, so deleting one leaves the rest working.
+ * the picture viewer, keyboard, search palette, paging, pull to refresh, the
+ * About hero. Each section guards on the elements it needs, so deleting one
+ * leaves the rest working.
  */
 (function () {
   "use strict";
@@ -805,6 +806,8 @@
   //   input[data-autosubmit]     submits its form when it changes
   //   [data-print]               prints the page (a sheet of labels)
   //   .infotip[popovertarget]    opens its help (a native popover) beside it
+  //   [data-gallery]             its [data-gallery-item] links open in the
+  //                              picture viewer (see "Picture viewer")
   function afterAction(el, data) {
     var then = el.getAttribute("data-then");
     // An answer that says what happened ("12 made, 2 skipped") wins over
@@ -1273,6 +1276,74 @@
 
   // ?open=<id> deep-links straight into a record; see "Dialogs survive a
   // reload" below, which opens it (and keeps its scroll across a refresh).
+
+  /* ————— Picture viewer ————— */
+  // A [data-gallery] holds links to pictures ([data-gallery-item], each with
+  // data-large and data-caption). A click shows them large in #lightbox, where
+  // the arrow keys, the side buttons and a swipe move through them. A link
+  // opened in a new tab still gets the file itself.
+  var lightbox = document.getElementById("lightbox");
+  if (lightbox) {
+    var lbImg = document.getElementById("lightbox-img");
+    var lbItems = [], lbAt = 0, lbSwiped = false;
+    var showPicture = function (i) {
+      var n = lbItems.length;
+      lbAt = (i + n) % n;
+      var item = lbItems[lbAt];
+      lbImg.src = item.large;
+      lbImg.alt = item.caption;
+      document.getElementById("lightbox-caption").textContent = item.caption;
+      document.getElementById("lightbox-count").textContent = n > 1 ? (lbAt + 1) + " of " + n : "";
+      document.getElementById("lightbox-original").href = item.href;
+      lightbox.classList.toggle("is-single", n < 2);
+      if (n > 1) {   // the neighbors load ahead, so moving on is instant
+        new Image().src = lbItems[(lbAt + 1) % n].large;
+        new Image().src = lbItems[(lbAt - 1 + n) % n].large;
+      }
+    };
+    document.addEventListener("click", function (e) {
+      var link = e.target.closest("[data-gallery] [data-gallery-item]");
+      if (!link || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button) return;
+      e.preventDefault();
+      var seen = {}, start = 0;
+      lbItems = [];
+      link.closest("[data-gallery]").querySelectorAll("[data-gallery-item]").forEach(function (a) {
+        var large = a.getAttribute("data-large") || a.href;
+        if (a === link) start = seen[large] !== undefined ? seen[large] : lbItems.length;
+        if (seen[large] !== undefined) return;   // the main image is in the strip as well
+        seen[large] = lbItems.length;
+        lbItems.push({ href: a.href, large: large, caption: a.getAttribute("data-caption") || "" });
+      });
+      showPicture(start);
+      lightbox.showModal();
+    });
+    document.getElementById("lightbox-prev").addEventListener("click", function () { showPicture(lbAt - 1); });
+    document.getElementById("lightbox-next").addEventListener("click", function () { showPicture(lbAt + 1); });
+    lightbox.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowLeft") { e.preventDefault(); showPicture(lbAt - 1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); showPicture(lbAt + 1); }
+    });
+    // A swipe sideways on a touch screen moves along; a tap beside the
+    // picture closes it, as there is nothing in the viewer to lose.
+    var swipeFrom = null;
+    lightbox.addEventListener("pointerdown", function (e) {
+      swipeFrom = e.pointerType === "mouse" ? null : { x: e.clientX, y: e.clientY };
+    });
+    lightbox.addEventListener("pointerup", function (e) {
+      if (!swipeFrom) return;
+      var dx = e.clientX - swipeFrom.x, dy = e.clientY - swipeFrom.y;
+      swipeFrom = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && lbItems.length > 1) {
+        lbSwiped = true;
+        showPicture(lbAt + (dx < 0 ? 1 : -1));
+      }
+    });
+    lightbox.addEventListener("click", function (e) {
+      if (lbSwiped) { lbSwiped = false; return; }
+      if (e.target === lightbox) closeDialog(lightbox);
+    });
+    lightbox.addEventListener("close", function () { lbImg.removeAttribute("src"); });
+  }
 
   /* ————— Keyboard ————— */
   document.addEventListener("keydown", function (e) {

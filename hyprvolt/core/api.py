@@ -21,7 +21,7 @@ from ..registry import current as registry
 from . import access
 from . import attachments as files
 from . import fields as F
-from . import records, relations
+from . import images, records, relations
 from .fields import Invalid
 from .models import Attachment, AuditLog, CustomField, CustomValue, Entity, Relationship, Tag, entity_tags
 
@@ -65,6 +65,8 @@ def to_json(entity: Entity, full: bool = True) -> dict:
     if full:
         out["notes"] = entity.notes
         out["created_at"] = entity.created_at.isoformat() + "Z"
+        main = images.main_image(entity)
+        out["image"] = {"attachment_id": main.id, **images.urls(main)} if main else None
         out["path"] = [{"id": c.id, "name": c.name} for c in records.crumbs(entity)]
         values = records.own_values(entity)
         out["fields"] = {f.key: F.to_json(f, values.get(f.key)) for f in (etype.fields if etype else ())}
@@ -328,10 +330,13 @@ def relationship_delete(rel_id):
 # ———— Attachments ————
 
 def attachment_json(att) -> dict:
-    return {"id": att.id, "entity_id": att.entity_id, "filename": att.filename, "size": att.size,
-            "content_type": att.content_type, "sha256": att.sha256,
-            "created_at": att.created_at.isoformat() + "Z",
-            "url": f"/attachments/{att.id}/{quote(att.filename)}"}
+    out = {"id": att.id, "entity_id": att.entity_id, "filename": att.filename, "size": att.size,
+           "content_type": att.content_type, "sha256": att.sha256,
+           "created_at": att.created_at.isoformat() + "Z",
+           "url": f"/attachments/{att.id}/{quote(att.filename)}"}
+    if att.is_image:
+        out.update(images.urls(att))
+    return out
 
 
 @bp.route("/entities/<int:entity_id>/attachments")
@@ -410,6 +415,22 @@ def att_entity(att) -> Entity:
     return db.session.get(Entity, att.entity_id)
 
 
+@bp.route("/entities/<int:entity_id>/image", methods=["POST"])
+@role("editor")
+def image_set(entity_id):
+    """``{"attachment_id": 12}``: make one of the record's images its main one."""
+    entity = entity_or_404(entity_id)
+    att_id = _body().get("attachment_id")
+    att = db.session.get(Attachment, att_id) if isinstance(att_id, int) else None
+    if att is None or att.entity_id != entity.id or att.deleted_at is not None:
+        return jsonify(error="That file is not attached to this record."), 400
+    if not att.is_image:
+        return jsonify(error="Only a PNG, JPEG, GIF or WebP image can be the main image."), 400
+    records.set_image(entity, att)
+    db.session.commit()
+    return jsonify(ok=True, entity=to_json(entity))
+
+
 files_bp = Blueprint("files", __name__)
 
 
@@ -431,6 +452,26 @@ def attachment_download(att_id, name=None):
                      max_age=0, conditional=True)
     if att.content_type != "application/pdf" or not inline:
         resp.headers["Content-Security-Policy"] = "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'"
+    resp.headers["Cache-Control"] = "private, no-cache"
+    return resp
+
+
+@files_bp.route("/attachments/<int:att_id>/thumb/<size>")
+@role("viewer")
+def attachment_thumb(att_id, size):
+    """A small copy of an image (``sm`` for cards and galleries, ``lg`` for
+    the large view), made the first time it is asked for."""
+    att = attachment_or_404(att_id)
+    if size not in images.SIZES or not att.is_image:
+        abort(404, description="There is no such picture.")
+    if not files.path_for(att).exists():
+        abort(404, description="The file is missing from the data directory.")
+    path = images.thumbnail(att, size)
+    if path is None:
+        abort(404, description="The picture could not be read.")
+    resp = send_file(path, mimetype="image/webp", etag=f"{att.sha256}-{size}" if att.sha256 else True,
+                     max_age=0, conditional=True)
+    resp.headers["Content-Security-Policy"] = "sandbox; default-src 'none'"
     resp.headers["Cache-Control"] = "private, no-cache"
     return resp
 

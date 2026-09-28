@@ -381,6 +381,12 @@ button.menuopt { width: 100%; text-align: left; }
   transition: transform .18s ease, border-color .18s, box-shadow .18s;
 }
 .card:hover { transform: translateY(-2px); border-color: var(--line-strong); box-shadow: var(--shadow-2); }
+/* A record's main image heads its card, edge to edge, always the same
+   shape so the grid doesn't move as pictures load. */
+.card-image {
+  display: block; width: calc(100% + 32px); max-width: none; margin: -14px -16px 2px;
+  aspect-ratio: 16 / 9; object-fit: cover; background: var(--field); border-bottom: 1px solid var(--line);
+}
 .card-title { font-size: 16.5px; font-weight: 680; letter-spacing: -0.016em; line-height: 1.3; overflow-wrap: anywhere; }
 .card-dek {
   font-size: 13.5px; line-height: 1.55; color: var(--muted);
@@ -948,6 +954,53 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .banner--stack p { margin: 0; }
 .banner--danger { background: rgb(220 70 60 / .08); border-color: rgb(220 70 60 / .25); color: var(--ink); }
 
+/* A record's pictures at the top of its Overview: the main image in a box of
+   fixed height (so nothing below moves as it loads), then all of them as a
+   strip of tiles. */
+.gallery { margin: 0 0 22px; }
+.gallery-main {
+  display: block; height: min(360px, 62vw); border-radius: var(--radius); overflow: hidden;
+  background: var(--panel); border: 1px solid var(--line);
+}
+.gallery-main img { width: 100%; height: 100%; object-fit: contain; }
+.gallery-strip { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.gallery-strip a {
+  display: block; width: 72px; height: 72px; border-radius: var(--radius-sm); overflow: hidden;
+  background: var(--field); border: 1px solid var(--line); transition: border-color .15s;
+}
+.gallery-strip a:hover { border-color: var(--line-strong); }
+.gallery-strip img { width: 100%; height: 100%; object-fit: cover; }
+.gallery a:focus-visible { outline-offset: 2px; }
+
+/* The picture viewer: the whole window, dark in either theme so a photo
+   reads as it was taken. */
+.lightbox {
+  width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
+  display: none; place-items: center; background: transparent; color: #f4f4f5; overscroll-behavior: contain;
+}
+.lightbox[open] { display: grid; animation: scrim-in .18s ease both; }
+.lightbox::backdrop { background: rgb(8 8 10 / .94); }
+.lightbox[open]::backdrop { animation: scrim-in .18s ease both; }
+.lightbox-img {
+  max-width: calc(100vw - 136px); max-height: calc(100dvh - 128px); object-fit: contain;
+  border-radius: 4px; user-select: none; touch-action: pan-y;
+}
+.lightbox-bar {
+  position: absolute; inset: 0 0 auto; display: flex; align-items: center; gap: 4px; padding: 10px 12px 10px 20px;
+}
+.lightbox-caption { flex: 1; min-width: 0; margin: 0; font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lightbox-count { color: #a1a1aa; font-weight: 550; margin-left: 6px; }
+.lightbox .iconbtn { color: #d4d4d8; }
+.lightbox .iconbtn:hover { background: rgb(255 255 255 / .12); color: #fff; }
+.lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; }
+.lightbox-nav--prev { left: 14px; }
+.lightbox-nav--next { right: 14px; }
+.lightbox.is-single .lightbox-nav { display: none; }
+@media (max-width: 700px) {
+  .lightbox-img { max-width: 100vw; max-height: calc(100dvh - 140px); border-radius: 0; }
+  .lightbox-nav { top: auto; bottom: 18px; transform: none; }
+}
+
 /* Relationships, and the dependency tree under them. */
 .rel-group + .rel-group { margin-top: 18px; }
 .rel-group .setting-label { margin-bottom: 2px; }
@@ -984,6 +1037,8 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   border-radius: 8px; background: var(--field); border: 1px solid var(--line); color: var(--faint);
 }
 .file-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.starbtn[aria-pressed="true"] { color: var(--accent); }
+.starbtn[aria-pressed="true"] svg { fill: currentColor; }
 .dropzone { margin-top: 16px; }
 .dropzone input[type=file] { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .dropzone label {

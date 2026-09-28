@@ -27,6 +27,7 @@ Only the latest stable release receives security fixes.
 | Session theft | `HttpOnly` and `SameSite=Lax` cookies; `Secure` with `SESSION_COOKIE_SECURE=1` |
 | Doing more than a role allows | Every route declares the role it needs (viewer, editor, admin), checked on the server; the app refuses to start with a route that declares none |
 | Files that run script | Attachments are stored under generated names, served with `Content-Security-Policy: sandbox` (PDFs excepted) and `nosniff`; anything but images, PDFs and plain text downloads |
+| A hostile image | Only PNG, JPEG, GIF and WebP attachments are opened, by Pillow, to make thumbnails; one over 120 megapixels is refused, two are made at a time, a file that fails to open gets no thumbnail, and a thumbnail is WebP without the original's metadata, a photo's location included |
 | HTML in documents | Markdown is rendered, then passed through the allowlist sanitizer; `[[slug]]` labels are escaped |
 | A default password | There is none: the first account is created in the setup wizard |
 | Stale pages | HTML is served `no-store` |

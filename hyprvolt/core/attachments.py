@@ -154,11 +154,13 @@ def index_pending() -> int:
 
 def remove_files(entity_ids=None, attachments=None) -> None:
     """Delete the files behind these entities' attachments (or these
-    attachments), before their rows go."""
+    attachments), before their rows go. Their thumbnails go too."""
+    from .images import forget
     rows = list(attachments or [])
     if entity_ids:
         rows += Attachment.query.filter(Attachment.entity_id.in_(entity_ids)).all()
     for att in rows:
+        forget(att)
         try:
             path_for(att).unlink()
         except FileNotFoundError:
