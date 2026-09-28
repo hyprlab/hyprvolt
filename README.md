@@ -57,7 +57,7 @@ Configuration is covered in [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md).
 | [Architecture](docs/ARCHITECTURE.md) | How the pieces fit, and why |
 | [Modules](docs/MODULES.md) | Writing a module |
 | [Contributing](docs/CONTRIBUTING.md) | Commits, prose style, tests |
-| [Releasing](docs/RELEASING.md) | Versions, the beta and stable channels |
+| [Releasing](docs/RELEASING.md) | Versions, when releases happen, and how |
 | [Changelog](CHANGELOG.md) | What changed in each release |
 
 ## AI notice

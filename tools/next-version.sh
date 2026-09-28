@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Say which version SemVer calls for, from the commits since the last stable.
 #
-#   tools/next-version.sh           # the next stable
-#   tools/next-version.sh beta      # the next beta of it
+#   tools/next-version.sh           # the next release
 #   tools/next-version.sh --why     # also list the commits that decided it
 #
 # The Conventional Commit types decide it: a "!" or a BREAKING CHANGE footer is
@@ -14,9 +13,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-CHANNEL=stable; WHY=0
+WHY=0
 for arg in "$@"; do
-    case "$arg" in beta) CHANNEL=beta ;; stable) ;; --why) WHY=1 ;; *) echo "unknown: $arg" >&2; exit 1 ;; esac
+    case "$arg" in
+        stable) ;;
+        beta) echo "This project has no beta channel." >&2; exit 1 ;;
+        --why) WHY=1 ;;
+        *) echo "unknown: $arg" >&2; exit 1 ;;
+    esac
 done
 
 # The newest stable tag reachable from here: on a stable-X.Y branch that is
@@ -60,9 +64,4 @@ case "$level" in
     patch) next="$MA.$MI.$((PA + 1))" ;;
     none)  echo "Nothing since ${last:-the start} calls for a release." >&2; exit 2 ;;
 esac
-
-if [ "$CHANNEL" = beta ]; then
-    k=$(git tag -l "v$next-beta.*" | sed 's/.*-beta\.//' | sort -n | tail -1)
-    next="$next-beta.$(( ${k:-0} + 1 ))"
-fi
 echo "$next"

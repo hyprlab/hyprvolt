@@ -8,8 +8,7 @@
 # the whole history.
 #
 # With the tag pushed, it appends a "What's changed" list against the previous
-# tag OF THE SAME KIND (a beta against the previous beta, a stable against the
-# previous stable) and a compare link.
+# release's tag and a compare link.
 #
 # GitHub keeps every line break in a release body, so paragraphs and list items
 # are unwrapped to one line each. An @handle keeps its @ only if the person is
@@ -18,7 +17,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${1:?usage: tools/release-notes.sh X.Y.Z[-beta.N]}"
+VERSION="${1:?usage: tools/release-notes.sh X.Y.Z}"
 TAG="v$VERSION"
 
 {

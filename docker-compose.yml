@@ -4,7 +4,7 @@ name: hyprvolt
 
 services:
   hyprvolt:
-    # IMAGE_TAG=beta follows the beta channel; a version (1.4.0) pins one.
+    # latest follows every release; a version (1.1.0) pins one.
     image: hyprlab/hyprvolt:${IMAGE_TAG:-latest}
     container_name: hyprvolt
     ports:

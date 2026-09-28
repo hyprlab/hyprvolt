@@ -6,6 +6,9 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Changed
+- There is no beta channel: every release goes to `latest`, and `IMAGE_TAG` takes `latest` or a version to pin
+
 ## [1.1.0] — 2026-09-28
 
 ### Changed

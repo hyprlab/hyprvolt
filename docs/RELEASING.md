@@ -1,9 +1,8 @@
 # Releasing
 
-How versions are numbered, when releases happen, and the exact steps. The
-policy comes from Hylki, where it was settled after a week of twenty stable
-releases left users tired of update prompts and a beta channel that only ever
-mirrored stable after the fact.
+How versions are numbered, when releases happen, and the exact steps.
+Hyprvolt has one channel: a release goes from `main` straight to stable.
+There is no beta branch, no prerelease and no `:beta` image.
 
 ## Versions: strict SemVer
 
@@ -33,33 +32,24 @@ A version never counts backwards, and a released version is never reused. The
 version lives in one place, `__version__` in the package's `__init__.py`, and
 the newest `CHANGELOG.md` section must match it (`tools/check-docs.py`).
 
-## Channels and cadence
+## Branches and cadence
 
 | | Branch | Version | Docker tags | GitHub release |
 | --- | --- | --- | --- | --- |
-| Development | `main` | the last stable, plus `## Unreleased` in the changelog | none | none |
-| Beta | `beta` | `X.Y.0-beta.K` | `:X.Y.0-beta.K`, `:beta` | prerelease |
-| Stable | `main` | `X.Y.Z` | `:X.Y.Z`, `:X.Y`, `:latest` | release |
-| Urgent patch | `stable-X.Y` | `X.Y.Z+1` | as stable | release |
+| Development | `main` | the last release, plus `## Unreleased` in the changelog | none | none |
+| Release | `main` | `X.Y.Z` | `:X.Y.Z`, `:X.Y`, `:latest` | release |
+| Urgent patch | `stable-X.Y` | `X.Y.Z+1` | as a release | release |
 
 1. **Work lands on `main`.** Commits stay local until the maintainer says to
    push or ship. Every user-visible change adds a line under `## Unreleased`.
-2. **Beta is the gate, not a copy.** "Ship it to beta" merges `main` into
-   `beta` and publishes `X.(N+1).0-beta.K`, where N is the current stable
-   minor and K counts up. Nightly-style: whatever is on main, whenever the
-   maintainer asks. A beta never moves `:latest`.
-3. **Stable is roughly weekly, and only on request.** "Ship it to stable"
-   promotes what the latest beta carried. If `main` has commits since that
-   beta, ask whether to include them untested or cut another beta first.
-4. **Patches are for urgent fixes only:** a crash, data loss, a security
-   hole, an instance that can't start or can't sign anyone in. Everything else
-   waits for the next stable. See [Urgent patches](#urgent-patches).
-5. **No catch-up beta after a stable.** The next beta after `1.N.0` is
-   `1.(N+1).0-beta.1`, cut from main when asked.
-6. **A bare "ship" or "ship it" is ambiguous.** Ask: beta or stable?
-
-If the app gains translations, add a string freeze: no new user-facing strings
-between the beta that becomes the stable and the stable itself.
+2. **Releases happen only on request.** "Ship it" (or "ship X.Y.Z") releases
+   what is on `main`. There is no beta to try it on first, so the test suite,
+   the local instance (`tools/redeploy.sh`) and a look at the running app are
+   the gate.
+3. **Patches are for urgent fixes only:** a crash, data loss, a security
+   hole, an instance that can't start or can't sign anyone in, when `main`
+   has other changes that should not go out with the fix. Otherwise a fix
+   simply ships with the next release. See [Urgent patches](#urgent-patches).
 
 ## Before any release
 
@@ -74,32 +64,7 @@ between the beta that becomes the stable and the stable itself.
   `git log origin/main..main --format=%B | grep -i co-authored-by` shows only
   people. The `pre-push` hook refuses the rest.
 
-## Ship it to beta
-
-```sh
-tools/prepare-release.sh beta          # version from next-version.sh
-```
-
-That checks out `beta` (creating it the first time), merges `main` with
-`-X theirs`, rewrites the changelog so one `## [X.Y.0-beta.K]` section holds
-everything main has unreleased, sets `__version__`, runs the checks, commits
-`chore(release): X.Y.0-beta.K`, tags it, and stops. Then publish:
-
-```sh
-git push origin main beta vX.Y.0-beta.K
-tools/release-notes.sh X.Y.0-beta.K > /tmp/notes.md
-gh release create vX.Y.0-beta.K --prerelease --title "vX.Y.0-beta.K" --notes-file /tmp/notes.md
-tools/publish-image.sh X.Y.0-beta.K
-git checkout main
-```
-
-`--prerelease` always, so `releases/latest` keeps pointing at stable.
-
-Issues fixed in the beta get a reply naming the beta version and saying it
-reaches stable with the next weekly release. They stay open until that stable
-ships. See [Issue replies](CONTRIBUTING.md#issue-replies).
-
-## Ship it to stable
+## Ship it
 
 On `main`, with the changelog's `## Unreleased` section written:
 
@@ -108,7 +73,9 @@ tools/prepare-release.sh stable        # version from next-version.sh
 ```
 
 That turns `## Unreleased` into `## [X.Y.Z] — date`, sets `__version__`, runs
-the checks, commits `chore(release): X.Y.Z`, tags it, and stops. Then publish:
+the checks, commits `chore(release): X.Y.Z`, tags it, and stops.
+
+### Publish
 
 ```sh
 git push origin main vX.Y.Z
@@ -136,17 +103,14 @@ or can't sign anyone in.
    under `## Unreleased`, then `tools/prepare-release.sh stable X.Y.Z+1`.
 4. Publish as for a stable, pushing `stable-X.Y` instead of `main`.
 5. Merge `stable-X.Y` back into `main`, so the changelog entry survives.
-6. Ship a beta from main alongside the patch, so the beta is never missing a
-   fix that stable has.
-7. Never delete a `stable-X.Y` branch: patch commits may exist only there.
+6. Never delete a `stable-X.Y` branch: patch commits may exist only there.
 
 ## The Releases page
 
-Keep it short: the newest release of each `X.Y` line, plus the current beta.
-When a new patch supersedes `X.Y.Z`, or a new beta supersedes the previous one,
-delete the superseded release and its tag, but only after the new one is
+Keep it short: the newest release of each `X.Y` line. When a new patch
+supersedes `X.Y.Z`, delete the superseded release and its tag, but only after the new one is
 published, `releases/latest` points at it, and its notes were generated (the
-notes diff against the previous tag of the same kind). Docker image tags are
+notes diff against the previous tag). Docker image tags are
 never deleted: someone may have pinned one. Confirm with the maintainer the
 first time this comes up in a project.
 
@@ -155,5 +119,5 @@ first time this comes up in a project.
 `tools/publish-image.sh` builds from the tag with `git archive`, not from the
 working tree, so the image is exactly what was released. It pushes
 `linux/amd64` only; set `PLATFORMS=linux/amd64,linux/arm64` once the host's
-buildx has an arm64 builder. Users pick a channel with `IMAGE_TAG` in their
-`.env`: `latest` (default), `beta`, or a version to pin.
+buildx has an arm64 builder. Users follow `latest` (the default) or pin a version
+with `IMAGE_TAG` in their `.env`.

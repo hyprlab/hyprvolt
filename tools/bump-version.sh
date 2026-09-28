@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Set the version and turn the changelog's Unreleased section into its section.
 #
-#   tools/bump-version.sh 1.3.0          # a stable
-#   tools/bump-version.sh 1.4.0-beta.1   # a beta
+#   tools/bump-version.sh 1.3.0
 #
 # It edits __version__ and CHANGELOG.md and runs check-docs. It does not
 # commit, tag or push: docs/RELEASING.md is the procedure around it.
@@ -13,7 +12,7 @@ INIT=$(ls */__init__.py | grep -vE '^(tests|tools)/' | head -1)
 CURRENT=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$INIT")
 VERSION="${1:-}"
 if [ -z "$VERSION" ]; then
-    echo "usage: tools/bump-version.sh X.Y.Z[-beta.N]   (current: $CURRENT)" >&2
+    echo "usage: tools/bump-version.sh X.Y.Z   (current: $CURRENT)" >&2
     exit 1
 fi
 
