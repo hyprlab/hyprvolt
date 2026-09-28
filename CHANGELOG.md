@@ -6,6 +6,8 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+## [1.0.0] — 2026-09-28
+
 ### Added
 - Records of every kind share one interface: cards or a list with filters and live counts in the sidebar, a detail sheet with Overview, Relationships, Documents, Attachments and History tabs, and one form
 - Locations: sites, buildings, rooms, racks and shelves, with breadcrumbs on everything that has a place
