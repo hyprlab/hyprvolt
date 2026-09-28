@@ -82,9 +82,9 @@ off while that one is: Hardware needs Locations, and Virtual and Network
 need Hardware. The knowledge base and Secrets are built in, and stay on.
 
 A location, a piece of hardware, or a VM or LXC container can be made
-another kind in its form, under Type: a room that is really a building, a
+another kind in its Overview, under Type: a room that is really a building, a
 server recorded as a NAS, a VM that is really an LXC container. It keeps its
-name, links, files and history, and the form shows the fields of the kind
+name, links, files and history, and then shows the fields of the kind
 chosen; values the new kind has no field for are kept, and come back if it
 changes back. The change waits until everything fits: a building goes in a
 site and a rack only in a room, so a room with racks in it becomes a
