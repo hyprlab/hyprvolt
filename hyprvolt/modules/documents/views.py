@@ -117,7 +117,7 @@ def page_overview(entity: Entity) -> tuple[str, str]:
     below = render_template("documents/pages.html", entity=entity,
                             children=[{"view": present.View(c), "excerpt": excerpt(_text(c.id), 140)}
                                       for c in children],
-                            before=before, after=after) if children or before or after else ""
+                            before=before, after=after, access_short=access.SHORT) if children or before or after else ""
     return above, below
 
 

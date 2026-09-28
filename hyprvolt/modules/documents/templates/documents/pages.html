@@ -5,7 +5,7 @@
 <ol class="manage-list doc-pages">
   {% for c in children %}
   <li class="manage-item"><div class="manage-meta">
-    <span class="manage-title">{{ entity_link(c.view.id, c.view.name) }}{% if c.view.status != 'Current' %} <span class="chip chip--muted">{{ c.view.status }}</span>{% endif %}</span>
+    <span class="manage-title">{{ entity_link(c.view.id, c.view.name) }}{% if c.view.status != 'Current' %} <span class="chip chip--muted">{{ c.view.status }}</span>{% endif %}{% if c.view.entity.access %} <span class="chip chip--muted">{{ access_short[c.view.entity.access] }}</span>{% endif %}</span>
     {% if c.excerpt %}<span class="manage-sub">{{ c.excerpt }}</span>{% endif %}
   </div></li>
   {% endfor %}
