@@ -11,6 +11,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Pictures on records: a featured image in a place of its own at the top of a record's Overview, added, replaced or removed there, and shown on the record's card in card view. The record's attached images show below it as a strip, and any picture opens a viewer that moves through them with the arrow keys or a swipe
 
 ### Changed
+- In the light theme, the chosen row in the sidebar, settings and search is a darker grey instead of yellow, keeping its yellow edge
 - The dark theme is lighter: charcoal backgrounds instead of near-black, with brighter borders and secondary text, so it is easier to read
 - A record is edited where it is shown, instead of in a form: in its Overview, an editor changes a field in place, and it is saved on leaving the field, on Enter, or on closing the record. A change that can't be saved says why under the field and keeps the record open until it is fixed or closed again. Notes and other long text show formatted until their Edit button. New records are still made in the form
 - The dependency view in the Relationships tab marks each record with what it is: a virtual machine, a server, a service and so on. The API's dependency tree gives it as `type_label`

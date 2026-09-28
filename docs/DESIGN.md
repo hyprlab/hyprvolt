@@ -32,6 +32,7 @@ Set on `:root` and per theme on `html[data-theme="light"|"dark"]`.
 | `--ink`, `--muted`, `--faint` | Text: primary, secondary, tertiary. Each reads at 4.5:1 or better (WCAG AA) on every surface in both themes; a new shade must too |
 | `--line`, `--line-strong` | Rules and borders |
 | `--wash` | The accent at low opacity: hover and active backgrounds |
+| `--selected`, `--hover` | The chosen row in the sidebar, settings and search, and a row under the pointer: a grey a step darker than the panel in the light theme (the accent bar alone marks the choice), the wash in the dark |
 | `--scrim` | Behind dialogs and the mobile sidebar |
 | `--danger` | Destructive actions and errors; lighter in the dark theme, so it reads at 4.5:1 there as well, alert counts included |
 | `--radius`, `--radius-sm` | 14px for cards and panels, 10px for controls |

@@ -29,7 +29,7 @@
   --accent: #FFD60A;
   --accent-ink: #171300;        /* text on the accent */
   --accent-glow: rgb(255 214 10 / .35);
-  --danger: #BC3E36;
+  --danger: #AC362E;
   --font: "Inter", system-ui, -apple-system, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
   --radius: 14px;
@@ -48,13 +48,17 @@ html[data-theme="light"] {
   --field: #F3F3EF;
   --ink: #191917;
   --muted: #55554F;
-  --faint: #6B6B64;
+  --faint: #61615A;
   --line: #E4E4DD;
   --line-strong: #D4D4CC;
   --wash: rgb(255 214 10 / .17);
+  /* The chosen row (sidebar, settings, search) and a row under the pointer:
+     grey a step darker than the panel, the accent bar alone marking it. */
+  --selected: #E2E2DB;
+  --hover: #E8E8E2;
   --scrim: rgb(25 25 20 / .40);
   /* Code colors: each at least 4.5:1 on --field. */
-  --code-kw: #7A3E9D; --code-str: #2F6B2B; --code-com: #6B6B64; --code-num: #9A4A12;
+  --code-kw: #7A3E9D; --code-str: #2F6B2B; --code-com: #61615A; --code-num: #9A4A12;
   --code-fn: #1F5FA8; --code-bi: #7D5A00; --code-var: #A1334F;
 }
 
@@ -74,6 +78,8 @@ html[data-theme="dark"] {
   --line: #36363D;
   --line-strong: #46464E;
   --wash: rgb(247 223 30 / .10);
+  --selected: var(--wash);
+  --hover: var(--wash);
   --scrim: rgb(0 0 0 / .55);
   --code-kw: #C9A2F0; --code-str: #9BD48A; --code-com: #9A9A95; --code-num: #F0A96B;
   --code-fn: #8DBAF5; --code-bi: #E6C36A; --code-var: #F09AB0;
@@ -219,8 +225,8 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   transition: background .15s, color .15s;
 }
 .navitem svg { width: 18px; height: 18px; }
-.navitem:hover { color: var(--ink); background: var(--wash); }
-.navitem.is-active { color: var(--ink); font-weight: 650; background: var(--wash); box-shadow: inset 3px 0 0 var(--accent); }
+.navitem:hover { color: var(--ink); background: var(--hover); }
+.navitem.is-active { color: var(--ink); font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
 .navitem .count { margin-left: auto; }
 
 .sidebar-label {
@@ -235,8 +241,8 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   font-size: 13.5px; color: var(--muted);
   transition: background .15s, color .15s;
 }
-.sideitem:hover { color: var(--ink); background: var(--wash); }
-.sideitem.is-active { color: var(--ink); font-weight: 600; background: var(--wash); box-shadow: inset 3px 0 0 var(--accent); }
+.sideitem:hover { color: var(--ink); background: var(--hover); }
+.sideitem.is-active { color: var(--ink); font-weight: 600; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
 .sideitem-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .sidelist-empty { padding: 10px; font-size: 13px; color: var(--faint); }
 .count {
@@ -561,8 +567,8 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .settings-navitem svg { width: 18px; height: 18px; }
 .settings-navitem span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .settings-navitem-chev { display: none; }
-.settings-navitem:hover { color: var(--ink); background: var(--wash); }
-.settings-navitem.is-active { color: var(--ink); font-weight: 650; background: var(--wash); box-shadow: inset 3px 0 0 var(--accent); }
+.settings-navitem:hover { color: var(--ink); background: var(--hover); }
+.settings-navitem.is-active { color: var(--ink); font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
 .settings-nav-foot { flex: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .settings-nav-version { padding: 8px 10px 0; font-size: 11.5px; font-weight: 550; color: var(--faint); }
 
@@ -849,7 +855,7 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   border-radius: 3px; padding: 0 1px;
 }
 .palette-item-meta { font-size: 11.5px; color: var(--faint); font-weight: 550; flex: none; }
-.palette-item.is-active { background: var(--wash); box-shadow: inset 3px 0 0 var(--accent); }
+.palette-item.is-active { background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
 .palette-item--all { margin-top: 6px; border-top: 1px solid var(--line); border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
 .palette-item--all .palette-item-title { color: var(--muted); font-weight: 500; }
 .palette-empty { padding: 18px 12px 14px; text-align: center; font-size: 13.5px; color: var(--muted); }
