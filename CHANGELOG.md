@@ -10,6 +10,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Pictures on records: a record's attached images show at the top of its Overview, the main one large and all of them in a strip below, and open in a viewer that moves through them with the arrow keys or a swipe. The first image attached is the main one until another is starred in the Attachments tab. In card view, each card shows its record's main image
 
 ### Changed
+- Editing a record opens the form over it, and saving shows the record again where it was, on the same tab
 - The dependency view in the Relationships tab marks each record with what it is: a virtual machine, a server, a service and so on. The API's dependency tree gives it as `type_label`
 - Deleting a record opened from another record goes back to that record, with Undo in the toast
 

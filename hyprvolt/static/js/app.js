@@ -756,7 +756,10 @@
       setBusy(btn, true);
       api(id ? "/api/entities/" + id : "/api/entities", formData(form)).then(function (data) {
         entityModal.close();   // saved: the page that follows shows the record, not the form
-        goToEntity(data.entity.id);
+        // Edited from its open sheet: reload, and the sheet comes back in
+        // place (same tab, same scroll) over the refreshed list.
+        if (id && sheet && sheet.open && new URLSearchParams(location.search).get("open") === id) location.reload();
+        else goToEntity(data.entity.id);
       }).catch(function (err) {
         errEl.textContent = err.message;
         errEl.hidden = false;
@@ -1086,7 +1089,7 @@
                            : !sheet.open || pos < 0 ? "new"
                            : current && current.id === id ? "replace" : "push");
     var before = sheet.scrollTop;
-    fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview")).then(function (html) {
+    return fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview")).then(function (html) {
       sheetArticle.innerHTML = html;
       var root = sheetArticle.querySelector(".sheet-content");
       current = {
@@ -1176,10 +1179,10 @@
       });
     }).catch(toastError);
   }
+  // The form opens over the record, which stays where it is underneath.
   function editCurrent() {
     if (!current || current.deleted) return;
-    var id = current.id;
-    closeDialog(sheet, function () { openEntityForm("/e/" + id + "/form"); });
+    openEntityForm("/e/" + current.id + "/form");
   }
 
   if (sheet) {
@@ -1704,12 +1707,7 @@
   // The latest draft, section and scroll are read as the page goes away.
   window.addEventListener("pagehide", rememberDialog);
 
-  var deepLink = parseInt(new URLSearchParams(location.search).get("open"), 10);
-  if (deepLink) {
-    var sheetState = remembered && remembered.id === "sheet" ? remembered.state || {} : null;
-    openEntity(deepLink, { tab: new URLSearchParams(location.search).get("tab"), restoring: !!sheetState,
-                           fromURL: true, scroll: sheetState ? sheetState.scroll : 0 });
-  } else if (remembered) {
+  function restoreDialog() {
     var toRestore = document.getElementById(remembered.id);
     if (toRestore && toRestore.tagName === "DIALOG" && toRestore.getAttribute("data-restore") !== "off" && remembered.id !== "sheet") {
       markRestoring(toRestore);
@@ -1717,6 +1715,16 @@
       if (memory) memory.restore(toRestore, remembered.state || {});
       else toRestore.showModal();
     }
+  }
+  var deepLink = parseInt(new URLSearchParams(location.search).get("open"), 10);
+  if (deepLink) {
+    // The sheet first, then whatever was open over it (a record's form).
+    var sheetState = remembered && remembered.id === "sheet" ? remembered.state || {} : null;
+    var opening = openEntity(deepLink, { tab: new URLSearchParams(location.search).get("tab"), restoring: !!remembered,
+                                         fromURL: true, scroll: sheetState ? sheetState.scroll : 0 });
+    if (remembered && !sheetState && opening) opening.then(restoreDialog);
+  } else if (remembered) {
+    restoreDialog();
   }
 
   /* ————— About hero: animated sine-wave gradient ————— */
