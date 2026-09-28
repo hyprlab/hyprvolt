@@ -52,12 +52,12 @@
    [data-view] panels and remembers the choice in this browser (app.js). #}
 <div class="deps-switch">
   <div class="seg seg--xs" role="radiogroup" aria-label="Show dependencies as" data-views="dependencies">
-    <label><input type="radio" name="deps-view-{{ entity.id }}" value="list" checked><span>List</span></label>
-    <label><input type="radio" name="deps-view-{{ entity.id }}" value="diagram"><span>Diagram</span></label>
+    <label><input type="radio" name="deps-view-{{ entity.id }}" value="list"><span>List</span></label>
+    <label><input type="radio" name="deps-view-{{ entity.id }}" value="diagram" checked><span>Diagram</span></label>
   </div>
 </div>
 {% endif %}
-<div data-view="list">
+<div data-view="list"{% if diagram %} hidden{% endif %}>
 <div class="deps">
   <section>
     <p class="setting-label">What breaks if this goes down{% if n_dependents %} <span class="count">{{ n_dependents }}</span>{% endif %}</p>
@@ -70,4 +70,4 @@
 </div>
 <p class="hint">Followed through links that carry a dependency: runs on, hosted by, depends on, installed on, powered by.</p>
 </div>
-{% if diagram %}<div data-view="diagram" hidden>{{ diagram }}</div>{% endif %}
+{% if diagram %}<div data-view="diagram">{{ diagram }}</div>{% endif %}

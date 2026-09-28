@@ -113,7 +113,9 @@ def _chain(client, h):
 def test_the_dependency_view_switches_to_a_diagram(client, h, admin):
     srv, hv, web, db = _chain(client, h)
     tab = client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode()
-    assert 'data-views="dependencies"' in tab and 'data-view="diagram" hidden' in tab
+    # The diagram shows first; List is a click away.
+    assert 'data-views="dependencies"' in tab and '<div data-view="diagram">' in tab
+    assert '<div data-view="list" hidden>' in tab and 'value="diagram" checked' in tab
     drawing = tab[tab.index('data-view="diagram"'):]
     assert "What it needs" in drawing and "What breaks if this goes down" in drawing
     # One box each, web reached both from pve1 and through db.
@@ -144,7 +146,8 @@ def test_a_loop_is_drawn_dashed_and_a_lone_record_has_no_switch(client, h, admin
     tab = client.get(f"/e/{a['id']}/sheet?tab=relationships").data.decode()
     assert "diagram-link--loose" in tab and "A dashed line leads back into a loop." in tab
     lonely = make(client, h, "vm", name="spare")
-    assert "data-views" not in client.get(f"/e/{lonely['id']}/sheet?tab=relationships").data.decode()
+    alone = client.get(f"/e/{lonely['id']}/sheet?tab=relationships").data.decode()
+    assert "data-views" not in alone and '<div data-view="list">' in alone and "Nothing depends on it." in alone
 
 
 def test_a_crowded_row_draws_every_record(client, h, admin):
