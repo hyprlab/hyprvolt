@@ -175,3 +175,23 @@ def test_the_rack_position_is_checked(client, h, admin):
     assert "front, rear" in bad(rack_id=rack["id"], position_u=1, face="side")
     # Nothing was made.
     assert client.get("/api/entities?type=shelf").get_json()["entities"] == []
+
+
+def test_a_site_address_is_a_field_each(client, h, admin):
+    site = make(client, h, "site", name="Office", **{"f.address": "1 Main St\nSuite 200", "f.city": "Springfield",
+                                                     "f.region": "IL", "f.postal_code": "62704",
+                                                     "f.country": "United States"})
+    got = client.get(f"/api/entities/{site['id']}").get_json()["entity"]["fields"]
+    assert (got["address"], got["city"], got["postal_code"]) == ("1 Main St\nSuite 200", "Springfield", "62704")
+    assert "Springfield" in client.get("/locations?view=list").data.decode()
+
+
+def test_the_form_explains_each_field(client, h, admin):
+    form = client.get("/e/form?type=site").data.decode()
+    for name in ("name", "status", "tags", "slug", "f-code", "f-address", "f-city", "f-region", "f-postal_code",
+                 "f-country", "notes"):
+        assert f'popovertarget="ef-{name}-help"' in form, name
+        assert f'id="ef-{name}" ' in form or f'id="ef-{name}"' in form, name
+        assert f'aria-describedby="ef-{name}-help"' in form, name
+    assert "A short name for when the full one" in form and "[[its-slug]]" in form
+    assert '<label class="field-label" for="ef-f-city">City</label>' in form

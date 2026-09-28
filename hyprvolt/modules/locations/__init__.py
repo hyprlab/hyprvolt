@@ -7,13 +7,33 @@ The hierarchy is the core's own ``location`` field: a room's location is its
 building. So every record anywhere gets breadcrumbs, and the Contents tab
 lists what is directly inside a place.
 """
-from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, Tab, Widget
+from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, Step, Tab, Widget
 
 from . import demo, views
 from .models import LocationDetail, RackMount
 
 STATUSES = (("active", "In use"), ("planned", "Planned"), ("retired", "Out of use"))
-CODE = Field("code", "Code", help="A short name, as on a label: HQ, B2, SRV1.", card=True, list=True)
+CODE = Field("code", "Code", card=True, list=True,
+             help="A short name for when the full one won't fit, such as HQ, B2 or SRV1: shown on cards and "
+                  "lists, and handy on labels, rack names and cable tags. Optional.")
+
+#: A site's address, a field each. "address" holds the street lines: it was
+#: the whole address before 1.1, so an older one is still all in it.
+ADDRESS = (
+    Field("address", "Street address", "longtext", group="Address",
+          help="The street and number, with a second line for a suite, unit or floor if it needs one."),
+    Field("city", "City", list=True, card=True, group="Address", help="The city or town."),
+    Field("region", "State or region", group="Address",
+          help="The state, province or county, written the way the post office writes it."),
+    Field("postal_code", "Postal code", group="Address", help="The ZIP code or postcode."),
+    Field("country", "Country", list=True, group="Address", help="The country, written out in full."),
+)
+
+
+def _address_parts(m):
+    for column, ddl in (("city", "VARCHAR(120)"), ("region", "VARCHAR(120)"), ("postal_code", "VARCHAR(20)"),
+                        ("country", "VARCHAR(120)")):
+        m.add_column("location_details", column, ddl)
 
 ICON = '<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"/><circle cx="12" cy="10" r="2.3"/>'
 SITE = ICON
@@ -32,11 +52,12 @@ module = Module(
     group="Infrastructure",
     order=10,
     models=(LocationDetail, RackMount),
+    migrations=(Step("site-address-parts", _address_parts),),
     blueprint=views.bp,
     types=(
         EntityType("site", "Site", "Sites", detail=LocationDetail, location=True, located_in=(),
                    statuses=STATUSES, icon=SITE,
-                   fields=(CODE, Field("address", "Address", "longtext", list=True)),
+                   fields=(CODE,) + ADDRESS,
                    tabs=(Tab("contents", "Contents", views.contents_tab, count=views.contents_count),)),
         EntityType("building", "Building", "Buildings", detail=LocationDetail, location=True,
                    located_in=("site",), statuses=STATUSES, icon=BUILDING, fields=(CODE,),

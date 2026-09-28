@@ -7,7 +7,8 @@ from .models import RackMount
 
 
 def seed(demo):
-    home = demo.add("site", "Home lab", key="home", tags=["lab"], code="HOME", address="12 Birch Lane, Springfield")
+    home = demo.add("site", "Home lab", key="home", tags=["lab"], code="HOME", address="12 Birch Lane",
+                    city="Springfield", region="IL", postal_code="62704", country="United States")
     house = demo.add("building", "House", key="house", location=home, code="H")
     basement = demo.add("room", "Basement", key="basement", location=house, floor="-1", code="BSMT",
                         notes="Cool and dry. The rack stands by the north wall, next to the electrical panel.")

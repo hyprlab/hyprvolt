@@ -8,7 +8,11 @@ class LocationDetail(EntityDetail, db.Model):
     __tablename__ = "location_details"
 
     code = db.Column(db.String(40))          # a short name: "HQ", "B2", "SRV"
-    address = db.Column(db.Text)             # sites
+    address = db.Column(db.Text)             # sites: the street lines
+    city = db.Column(db.String(120))
+    region = db.Column(db.String(120))       # a state, province or county
+    postal_code = db.Column(db.String(20))
+    country = db.Column(db.String(120))
     floor = db.Column(db.String(40))         # rooms
     height_u = db.Column(db.Integer)         # racks, and shelves that go in one
     numbering = db.Column(db.String(10))     # racks: "bottom" (U1 at the bottom) or "top"
