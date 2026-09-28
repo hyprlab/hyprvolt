@@ -6,6 +6,8 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+## [1.2.0] — 2026-09-28
+
 ### Added
 - Headings in documents get anchors, and a page with three or more headings opens with a contents list linking to them
 - A fenced code block that names its language (bash, PowerShell, Python and the rest) is colored for it, with the language named above the block
