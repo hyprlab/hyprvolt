@@ -836,6 +836,9 @@
   //   .infotip[popovertarget]    opens its help (a native popover) beside it
   //   [data-gallery]             its [data-gallery-item] links open in the
   //                              picture viewer (see "Picture viewer")
+  //   [data-views="key"]         radios that show one [data-view] panel of
+  //                              the tab (a list or a diagram), remembered
+  //                              in this browser under the key
   function afterAction(el, data) {
     var then = el.getAttribute("data-then");
     // An answer that says what happened ("12 made, 2 skipped") wins over
@@ -914,6 +917,45 @@
       submitApiForm(zone);
     }
   });
+
+  // [data-views]: a choice of how to show something, remembered per browser.
+  var VIEWS_KEY = "app-views";
+  function storedViews() {
+    try { return JSON.parse(localStorage.getItem(VIEWS_KEY) || "{}"); } catch (_) { return {}; }
+  }
+  function showView(group, value) {
+    var scope = group.closest(".tab-panel") || group.parentNode.parentNode;
+    scope.querySelectorAll("[data-view]").forEach(function (panel) {
+      panel.hidden = panel.getAttribute("data-view") !== value;
+      if (!panel.hidden) panel.querySelectorAll(".diagram-scroll").forEach(centerDiagram);
+    });
+  }
+  // A diagram wider than its place scrolls; it opens on the record itself.
+  function centerDiagram(box) {
+    var me = box.querySelector(".is-center");
+    if (!me || box.scrollWidth <= box.clientWidth) return;
+    var b = box.getBoundingClientRect(), m = me.getBoundingClientRect();
+    box.scrollLeft += (m.left + m.width / 2) - (b.left + b.width / 2);
+  }
+  function applyViews(root) {
+    var stored = storedViews();
+    (root || document).querySelectorAll("[data-views]").forEach(function (group) {
+      var want = stored[group.getAttribute("data-views")];
+      var radio = want && group.querySelector('input[value="' + want + '"]');
+      if (radio) radio.checked = true;
+      var on = group.querySelector("input:checked");
+      if (on) showView(group, on.value);
+    });
+  }
+  document.addEventListener("change", function (e) {
+    var group = e.target.closest && e.target.closest("[data-views]");
+    if (!group) return;
+    showView(group, e.target.value);
+    var stored = storedViews();
+    stored[group.getAttribute("data-views")] = e.target.value;
+    try { localStorage.setItem(VIEWS_KEY, JSON.stringify(stored)); } catch (_) {}
+  });
+  applyViews(document);
 
   // A popover opens in the top layer, above a dialog, with nothing tying it
   // to its button; place it under the button (above, if there's no room),
@@ -1128,6 +1170,7 @@
     var before = sheet.scrollTop;
     return fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview")).then(function (html) {
       sheetArticle.innerHTML = html;
+      applyViews(sheetArticle);
       var root = sheetArticle.querySelector(".sheet-content");
       current = {
         id: id,

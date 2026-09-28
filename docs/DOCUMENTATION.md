@@ -359,6 +359,15 @@ them all. Errors are
 
 ## Records
 
+A record's Relationships tab ends with its dependency view: what breaks if
+it goes down, and what it needs, followed through the links that carry a
+dependency (runs on, hosted by, depends on, installed on, powered by). List
+and Diagram switch between the two nested lists and a drawing: the record
+in the middle, what it needs above it and what breaks below it, a row for
+each step further away. A record reached two ways is one box with two lines
+into it, and a loop is a dashed line. Any box opens its record. The choice
+is remembered in the browser.
+
 An editor edits a record where it is shown. In its Overview each field reads
 as its value until it is pointed at or clicked, when it becomes a field to
 type in or a list to choose from; the name is edited in the title. A change

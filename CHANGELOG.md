@@ -6,6 +6,9 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Added
+- The dependency view in a record's Relationships tab can be shown as a diagram: what it needs above the record, what breaks if it goes down below it, a row for each step away. List and Diagram switch between the two, and the choice is remembered in the browser
+
 ## [1.3.0] — 2026-09-28
 
 ### Added

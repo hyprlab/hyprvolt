@@ -17,7 +17,7 @@ from ..permissions import role
 from ..registry import current as registry
 from . import attachments as files
 from . import fields as F
-from . import access, images, present, records, relations
+from . import access, depmap, images, present, records, relations
 from .api import entity_or_404
 from .markdown import render as markdown
 from .models import IMAGE_TYPES, Attachment, AuditLog, Entity
@@ -134,6 +134,7 @@ def relationships_tab(entity: Entity) -> str:
     dependents = relations.walk(entity, "dependents")
     needs = relations.walk(entity, "dependencies")
     return render_template("sheet/relationships.html", entity=entity, grouped=grouped, kinds=kinds,
+                           diagram=Markup(depmap.draw(entity, needs, dependents)),
                            dependents=dependents, needs=needs,
                            n_dependents=relations.count(dependents), n_needs=relations.count(needs))
 

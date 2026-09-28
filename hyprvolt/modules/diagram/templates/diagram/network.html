@@ -1,5 +1,5 @@
 {# The network, drawn from ports and cables. #}
-{% from "diagram/_node.html" import node %}
+{% from "partials/diagram_node.html" import node %}
 {% if nodes %}
 <p class="hint diagram-legend">{{ nodes|length }} devices and {{ edges|length }} links, from the internet side down. A solid line is a cable, traced through patch panels{% if dashed %}; a dashed one is a "connected to" link with no cable recorded{% endif %}. Hover a line for its ports and VLANs; choose a device to open it.</p>
 <div class="diagram-scroll">

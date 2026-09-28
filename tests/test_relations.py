@@ -98,3 +98,60 @@ def test_the_dependency_view_says_what_each_record_is(client, h, admin):
     assert 'deptree-kind">Virtual machine</span>' in tab and 'deptree-kind">Service</span>' in tab
     tree = client.get(f"/api/entities/{host['id']}/dependencies").get_json()["tree"]
     assert tree[0]["type_label"] == "Virtual machine" and tree[0]["children"][0]["type_label"] == "Service"
+
+
+def _chain(client, h):
+    srv = make(client, h, "server", name="srv1")
+    hv = make(client, h, "hypervisor", name="pve1", **{"f.host": srv["id"]})
+    web = make(client, h, "vm", name="web", **{"f.host": hv["id"]})
+    db = make(client, h, "vm", name="db", **{"f.host": hv["id"]})
+    client.post("/api/relationships", json={"kind": "depends_on", "source_id": web["id"],
+                                            "target_id": db["id"]}, headers=h)
+    return srv, hv, web, db
+
+
+def test_the_dependency_view_switches_to_a_diagram(client, h, admin):
+    srv, hv, web, db = _chain(client, h)
+    tab = client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode()
+    assert 'data-views="dependencies"' in tab and 'data-view="diagram" hidden' in tab
+    drawing = tab[tab.index('data-view="diagram"'):]
+    assert "What it needs" in drawing and "What breaks if this goes down" in drawing
+    # One box each, web reached both from pve1 and through db.
+    for name in ("srv1", "pve1", "web", "db"):
+        assert drawing.count(f">{name}</text>") == 1, name
+    assert drawing.count('<g class="diagram-link') == 4 and "is-center" in drawing
+
+
+def test_a_record_that_needs_something_after_a_sibling_sits_below_it(client, h, admin):
+    from hyprvolt.core import depmap, relations
+    from hyprvolt.core.models import Entity
+    from hyprvolt.models import db as sa
+    srv, hv, web, db = _chain(client, h)
+    with client.application.test_request_context():
+        from flask_login import login_user
+        from hyprvolt.models import User
+        login_user(User.query.first())
+        entity = sa.session.get(Entity, hv["id"])
+        rows, _more, _ = depmap._side(relations.walk(entity, "dependents"), entity.id)
+    assert {d: [e.name for e in r] for d, r in rows.items()} == {1: ["db"], 2: ["web"]}
+
+
+def test_a_loop_is_drawn_dashed_and_a_lone_record_has_no_switch(client, h, admin):
+    a = make(client, h, "service", name="api")
+    b = make(client, h, "service", name="auth")
+    client.post("/api/relationships", json={"kind": "depends_on", "source_id": a["id"], "target_id": b["id"]}, headers=h)
+    client.post("/api/relationships", json={"kind": "depends_on", "source_id": b["id"], "target_id": a["id"]}, headers=h)
+    tab = client.get(f"/e/{a['id']}/sheet?tab=relationships").data.decode()
+    assert "diagram-link--loose" in tab and "A dashed line leads back into a loop." in tab
+    lonely = make(client, h, "vm", name="spare")
+    assert "data-views" not in client.get(f"/e/{lonely['id']}/sheet?tab=relationships").data.decode()
+
+
+def test_a_crowded_row_is_counted_and_keeps_what_leads_further(client, h, admin):
+    hv = make(client, h, "hypervisor", name="pve1")
+    guests = [make(client, h, "vm", name=f"vm{n}", **{"f.host": hv["id"]}) for n in range(7)]
+    make(client, h, "service", name="app", **{"f.host": guests[6]["id"]})
+    tab = client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode()
+    drawing = tab[tab.index('data-view="diagram"'):]
+    assert "3 more in the list" in drawing and ">vm6</text>" in drawing and ">app</text>" in drawing
+    assert sum(drawing.count(f">vm{n}</text>") for n in range(7)) == 4

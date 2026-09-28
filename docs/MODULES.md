@@ -266,6 +266,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `[data-new-type="rack"]`, `data-new-location`, `data-new-attach`, `data-new-link="affects:12"`, `data-new-name`, `data-new-fields='{"host": 12}'` | Opens the form for a new record, placed somewhere, attached as a document, linked to a record once saved (new record, kind, that record), with a name, or with fields filled in |
 | `[data-open="dialog-id"]`, `[data-close]` | Opens a dialog; closes the one it is in |
 | `form.dropzone` | Files dropped on it go in through its file input and the form is submitted |
+| `[data-views="key"]` (radios, a `.seg`), `[data-view="name"]` | Choosing a radio shows the tab's `[data-view]` panel of that value and hides the others; the choice is remembered in the browser under the key and applied whenever the tab is drawn. The dependency view's List and Diagram use it |
 | `[data-gallery]`, `a[data-gallery-item]`, `data-large`, `data-caption` | A click on an item opens the gallery's pictures in the viewer, at that one: `data-large` is what it shows, the link's `href` the original |
 | `a[data-entity="id"]` | Opens that record's sheet in place (`entity_link` makes these) |
 | `input[data-autosubmit]` | Submits its form when it changes |

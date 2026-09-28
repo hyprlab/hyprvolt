@@ -33,6 +33,7 @@ hyprvolt/
                    purge, history
     fields.py      field kinds: parsing, checking, display, search text
     relations.py   relationship kinds and the dependency walk
+    depmap.py      the dependency walk drawn as SVG, in the Relationships tab
     markdown.py    Markdown with [[slug]] links, through the sanitizer
     attachments.py files on disk
     images.py      a record's featured image and gallery, and their thumbnails

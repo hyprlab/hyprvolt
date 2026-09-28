@@ -1,6 +1,6 @@
 {# A record and everything linked to it: what it points at on the left, what
    points at it on the right. #}
-{% from "diagram/_node.html" import node %}
+{% from "partials/diagram_node.html" import node %}
 <div class="diagram-scroll">
 <svg class="diagram diagram--fit" width="{{ width }}" height="{{ height }}" viewBox="0 0 {{ width }} {{ height }}" role="img" aria-label="{{ entity.name }} and what it is linked to">
   {% for side in (left, right) %}{% for n in side %}
