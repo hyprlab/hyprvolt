@@ -60,8 +60,9 @@
     var el = document.getElementById("toast");
     if (!el) return;
     // A modal <dialog> paints above everything outside it, so a toast raised
-    // while a dialog is open has to live inside it to be seen at all.
-    var open = document.querySelector("dialog[open]");
+    // while a dialog is open has to live inside it to be seen at all; not in
+    // one on its way out (the sheet sliding away), or it goes with it.
+    var open = document.querySelector("dialog[open]:not(.is-closing)");
     var host = open || document.body;
     if (el.parentNode !== host) host.appendChild(el);
     clearTimeout(toastTimer);
@@ -243,6 +244,13 @@
       if (fromBackdrop && e.target === dialog && hitOutside(dialog, e)) close();
     });
   }
+  // A toast showing inside a dialog that closes moves out with it still showing.
+  document.querySelectorAll("dialog").forEach(function (dialog) {
+    dialog.addEventListener("close", function () {
+      var el = document.getElementById("toast");
+      if (el && el.parentNode === dialog) (document.querySelector("dialog[open]") || document.body).appendChild(el);
+    });
+  });
   document.querySelectorAll("dialog").forEach(function (dialog) {
     // A modal or the sheet closes only when asked to (its close button, or
     // Escape), never from a click beside it that could throw away a form
@@ -1040,6 +1048,7 @@
   // has nothing to do), "strip" (as walking, then drop ?open= from the entry
   // the page was loaded with).
   var leaving = null;
+  var forgetForward = false;     // the record ahead was deleted: the trail ends here
 
   function updateNav() {
     var back = document.getElementById("sheet-back"), fwd = document.getElementById("sheet-forward");
@@ -1111,7 +1120,14 @@
     var st = e.state;
     if (st && typeof st.sheetPos === "number" && trail[st.sheetPos]) {
       pos = st.sheetPos;
+      if (forgetForward) { trail = trail.slice(0, pos + 1); forgetForward = false; }
       openEntity(trail[pos].id, { tab: trail[pos].tab, nav: "pop" });
+    } else if (st && typeof st.sheetPos === "number") {
+      // A step the trail no longer has (after a reload, or a deleted record
+      // ahead): open what the address says, which starts a new trail.
+      var params = new URLSearchParams(location.search);
+      var id = parseInt(params.get("open"), 10);
+      if (id) openEntity(id, { tab: params.get("tab"), fromURL: true });
     } else if (sheet && sheet.open) {
       leaving = "closing";
       closeDialog(sheet);
@@ -1211,8 +1227,15 @@
       if (!current) return;
       var id = current.id;
       api("/api/entities/" + id + "/delete").then(function (data) {
-        closeDialog(sheet);
         removeCard(id);
+        if (pos > 0) {
+          // Reached from another record: back to it, and Forward no longer
+          // leads to the one just deleted.
+          forgetForward = true;
+          history.back();
+        } else {
+          closeDialog(sheet);
+        }
         // Undo instead of a confirm dialog: the delete only marks the
         // record, and restoring it brings back the same id and its links.
         offerUndo("Deleted", data.undo);

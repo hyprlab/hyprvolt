@@ -6,6 +6,12 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Changed
+- Deleting a record opened from another record goes back to that record, with Undo in the toast
+
+### Fixed
+- The Deleted toast, with its Undo, shows after deleting a record; it closed along with the record
+
 ## [1.2.0] — 2026-09-28
 
 ### Added
