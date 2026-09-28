@@ -548,9 +548,15 @@ def unique_slug(name: str) -> str:
 
 def reindex(entity: Entity) -> None:
     """Rebuild what search matches: the name, slug, notes and tags, every
-    searchable detail field and every custom field value."""
+    searchable detail field, every custom field value, and the names and
+    words of its attached files."""
+    from .models import Attachment
     parts = [entity.name, entity.slug, entity.notes or "", " ".join(entity.tag_names)]
     for f, value in field_values(entity):
         if f.search and value not in (None, ""):
             parts.append(F.display(f, value, live) if f.kind != "boolean" else "")
+    if entity.id is not None:
+        for name, text in (db.session.query(Attachment.filename, Attachment.text)
+                           .filter(Attachment.entity_id == entity.id, Attachment.deleted_at.is_(None))):
+            parts += [name, text or ""]
     entity.search_text = " ".join(p for p in parts if p).lower()

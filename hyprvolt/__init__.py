@@ -309,6 +309,8 @@ def _migrate(app: Flask) -> None:
     # Who may read a record: everyone, until a document is restricted.
     core.add_column("entities", "access", "VARCHAR(10) NOT NULL DEFAULT ''")
     core.add_index("ix_entities_access", "entities", ["access"])
+    # Search reads attached files; older ones are read by the worker.
+    core.add_column("attachments", "text", "TEXT")
 
 
 def _start_worker(app: Flask) -> None:

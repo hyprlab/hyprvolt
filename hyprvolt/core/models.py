@@ -174,6 +174,8 @@ class Attachment(db.Model):
     content_type = db.Column(db.String(120), nullable=False, default="application/octet-stream")
     size = db.Column(db.Integer, nullable=False, default=0)
     sha256 = db.Column(db.String(64), nullable=False, default="")
+    # What search reads in it: None until indexed, "" when there is nothing.
+    text = db.Column(db.Text)
     deleted_at = db.Column(db.DateTime)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime, nullable=False, default=utcnow)

@@ -237,6 +237,13 @@ at most, and a document can't be a page of itself or of one of its pages.
 A document's Linked from tab lists the documents that link to it; another
 record's Documents tab lists those that mention it.
 
+Search reads attached files too: a text file (notes, configs, scripts, CSV,
+JSON, logs) or a PDF is read when it is uploaded, and its words find the
+record it is attached to, as does its file name. Up to 200,000 characters of
+each file count. Files attached before this came in are read in the
+background, a few every ten minutes. A scanned PDF with no text layer has
+nothing to read.
+
 A document's "Visible to" narrows who can read it: everyone signed in (the
 default), editors and admins, or admins and the people given access to
 secrets in Settings > Admin. Anyone below the level never sees the document:
@@ -289,7 +296,7 @@ with a header row, up to 5 MB and 5,000 rows) becomes records of one kind:
 Settings > Admin exports the whole instance as one JSON file: every table
 and row, the modules' own included, with password hashes, secret values, API
 token hashes and the Turnstile secret left out. Attached files are listed but
-not included. It is for reading elsewhere, not for restoring: a backup from
+not included, nor the text search read from them. It is for reading elsewhere, not for restoring: a backup from
 Settings > Backups is. `flask export PATH` writes the same file from the
 server.
 

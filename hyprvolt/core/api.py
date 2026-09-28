@@ -364,6 +364,8 @@ def attachment_upload(entity_id):
         db.session.flush()
         files.remove_files(attachments=saved)
         return _fail(err)
+    db.session.flush()
+    records.reindex(entity)
     db.session.commit()
     return jsonify(ok=True, attachments=[attachment_json(a) for a in saved])
 
@@ -384,6 +386,8 @@ def attachment_delete(att_id):
     att.deleted_at = utcnow()
     records.audit(att_entity(att), "detached", [{"field": "attachment", "label": "Attachment",
                                                  "old": att.filename, "new": ""}])
+    db.session.flush()
+    records.reindex(att_entity(att))
     db.session.commit()
     return jsonify(ok=True, undo={"url": f"/api/attachments/{att.id}/restore", "body": {}})
 
@@ -396,6 +400,8 @@ def attachment_restore(att_id):
         att.deleted_at = None
         records.audit(att_entity(att), "attached", [{"field": "attachment", "label": "Attachment",
                                                      "old": "", "new": att.filename}])
+        db.session.flush()
+        records.reindex(att_entity(att))
         db.session.commit()
     return jsonify(ok=True, attachment=attachment_json(att))
 

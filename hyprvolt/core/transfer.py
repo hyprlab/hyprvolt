@@ -35,7 +35,8 @@ PREVIEW_ROWS = 60
 #: An import's upload is kept this long between its steps.
 KEEP_SECONDS = 24 * 3600
 #: Never in the JSON export: they unlock things, and a backup has them if needed.
-LEFT_OUT = {("users", "password_hash"), ("vault_secrets", "ciphertext"), ("api_tokens", "token_hash")}
+LEFT_OUT = {("users", "password_hash"), ("vault_secrets", "ciphertext"), ("api_tokens", "token_hash"),
+            ("attachments", "text"), ("entities", "search_text")}
 LEFT_OUT_SETTINGS = ("turnstile_secret_key",)
 
 
@@ -481,7 +482,8 @@ def export_all() -> dict:
         "app_version": __version__,
         "exported_at": utcnow().isoformat(timespec="seconds") + "Z",
         "left_out": ["users.password_hash", "vault_secrets.ciphertext", "api_tokens.token_hash",
-                     "settings.turnstile_secret_key", "attachment files"],
+                     "settings.turnstile_secret_key", "attachment files and the text read from them",
+                     "entities.search_text"],
         "modules": [{"id": m.id, "name": m.name, "enabled": reg.is_enabled(m.id),
                      "types": [t.key for t in m.types]} for m in reg.modules.values()],
         "tables": tables,

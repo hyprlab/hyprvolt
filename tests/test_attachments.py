@@ -88,3 +88,53 @@ def test_backup_archives_the_database_and_attachments(app, client, h, admin, tmp
 def test_backup_refuses_a_name_it_cannot_tell(app, tmp_path):
     result = app.test_cli_runner().invoke(args=["backup", str(tmp_path / "backup.zip")])
     assert result.exit_code != 0 and ".tar.gz" in result.output
+
+
+def minimal_pdf(words: str) -> bytes:
+    """A one-page PDF with a line of text, written by hand."""
+    stream = f"BT /F1 12 Tf 72 720 Td ({words}) Tj ET".encode()
+    objects = [b"<< /Type /Catalog /Pages 2 0 R >>",
+               b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+               b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
+               b"/Resources << /Font << /F1 5 0 R >> >> >>",
+               b"<< /Length " + str(len(stream)).encode() + b" >>\nstream\n" + stream + b"\nendstream",
+               b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
+    out, offsets = b"%PDF-1.4\n", []
+    for n, body in enumerate(objects, 1):
+        offsets.append(len(out))
+        out += f"{n} 0 obj\n".encode() + body + b"\nendobj\n"
+    xref = len(out)
+    out += f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n".encode()
+    out += b"".join(f"{o:010d} 00000 n \n".encode() for o in offsets)
+    out += f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode()
+    return out
+
+
+def test_attachment_contents_are_searchable(app, client, h, admin):
+    import io
+    server = make(client, h, "server", name="srv1")
+    doc = make(client, h, "document", name="Manual")
+    client.post(f"/api/entities/{server['id']}/attachments", headers=h, content_type="multipart/form-data",
+                data={"file": (io.BytesIO(b"backup target quokkaland on port 873"), "rsyncd.conf")})
+    client.post(f"/api/entities/{doc['id']}/attachments", headers=h, content_type="multipart/form-data",
+                data={"file": (io.BytesIO(minimal_pdf("Exporter wombat settings")), "guide.pdf",
+                               "application/pdf")})
+    found = lambda q: [e["name"] for e in client.get(f"/api/entities?q={q}").get_json()["entities"]]
+    assert found("quokkaland") == ["srv1"] and found("wombat") == ["Manual"] and found("rsyncd") == ["srv1"]
+    # A removed file takes its words with it, and Undo brings them back.
+    att = client.get(f"/api/entities/{server['id']}/attachments").get_json()["attachments"][0]
+    client.post(f"/api/attachments/{att['id']}/delete", headers=h)
+    assert found("quokkaland") == []
+    client.post(f"/api/attachments/{att['id']}/restore", headers=h)
+    assert found("quokkaland") == ["srv1"]
+    # Files attached before search read them are read by the worker.
+    from hyprvolt.core.attachments import index_pending
+    from hyprvolt.core.models import Attachment
+    from hyprvolt.models import db
+    with app.app_context():
+        Attachment.query.update({"text": None})
+        db.session.commit()
+        assert index_pending() == 2
+        db.session.commit()
+    assert found("wombat") == ["Manual"]
+    assert "quokkaland" not in client.get("/admin/export.json").data.decode()
