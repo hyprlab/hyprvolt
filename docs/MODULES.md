@@ -126,6 +126,9 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   rules that span fields or records: a gateway inside its subnet, a VLAN ID
   used once per network. It raises `Invalid` to refuse the save, and may
   tidy values (Network lower-cases a domain's name).
+- `overview(entity)` returns two pieces of HTML (render a template), shown
+  above the Overview's fields and below its Markdown: a document's page
+  path, and its pages with the ones either side.
 
 A `Field` has a `key` that must be a column of the detail table, a `label`,
 and a `kind`:

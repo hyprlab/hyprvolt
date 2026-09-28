@@ -81,3 +81,40 @@ def test_the_knowledge_base_cannot_be_turned_off(app):
         set_setting("module:documents:enabled", "0")
     with app.test_request_context():
         assert app.extensions[EXTENSION].is_enabled("documents")
+
+
+def manual(client, h):
+    top = make(client, h, "document", name="IMS Exporter", **{"f.body": "The front page."})
+    pages = [make(client, h, "document", name=n, **{"f.parent": top["id"], "f.position": p, "f.body": n})
+             for n, p in (("Setup", 20), ("Overview", 10), ("Troubleshooting", 30))]
+    return top, pages
+
+
+def test_documents_have_pages_in_order(client, h, admin):
+    top, (setup, overview, trouble) = manual(client, h)
+    sheet = client.get(f"/e/{top['id']}/sheet").data.decode()
+    assert sheet.index(">Overview</a>") < sheet.index(">Setup</a>") < sheet.index(">Troubleshooting</a>")
+    assert "Add a page" in sheet
+    page = client.get(f"/e/{setup['id']}/sheet").data.decode()
+    assert 'aria-label="Part of"' in page and ">IMS Exporter</a>" in page
+    assert "doc-pager-prev" in page and "Overview</a>" in page.split("doc-pager-prev")[1]
+    assert "Troubleshooting" in page.split("doc-pager-next")[1]
+    listed = client.get("/documents?f=top&view=list").data.decode()
+    assert ">IMS Exporter<" in listed and ">Setup<" not in listed
+
+
+def test_a_page_cannot_contain_itself(client, h, admin):
+    top, (setup, *_ ) = manual(client, h)
+    loop = client.post(f"/api/entities/{top['id']}", json={"f.parent": setup["id"]}, headers=h)
+    assert loop.status_code == 400 and "page of itself" in loop.get_json()["error"]
+    own = client.post(f"/api/entities/{top['id']}", json={"f.parent": top["id"]}, headers=h)
+    assert own.status_code == 400
+
+
+def test_a_document_lists_the_documents_that_link_to_it(client, h, admin):
+    target = make(client, h, "document", name="Glossary", slug="glossary")
+    make(client, h, "document", name="Setup", **{"f.body": "Terms are in [[glossary]]."})
+    make(client, h, "document", name="Unrelated", **{"f.body": "Nothing here, [[glossary-2]] is another."})
+    tab = client.get(f"/e/{target['id']}/sheet?tab=linked").data.decode()
+    assert ">Setup</a>" in tab and "Unrelated" not in tab
+    assert 'data-tab="linked"' in client.get(f"/e/{target['id']}/sheet").data.decode()

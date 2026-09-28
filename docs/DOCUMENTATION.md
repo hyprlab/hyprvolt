@@ -210,6 +210,33 @@ a number, a date, a choice list, a web address, or yes or no. They appear in
 the record's form and Overview, and search finds their values. Removing one
 removes its values too, with Undo.
 
+## The knowledge base
+
+Documents are Markdown pages: runbooks, how-tos, manuals. A document can
+stand alone, be attached to records (their Documents tab), and link to any
+record by writing its slug in double brackets, `[[pve1]]` or `[[pve1|the
+main host]]`. A link to a slug that matches nothing is struck through, so a
+broken link shows.
+
+- **Headings** keep their levels: `#` and `##` are sections, `###` and
+  below subsections. Each heading gets an anchor, `h-` and its words (a
+  heading "Setup" is `h-setup`), for links within the page, and a page with three or more headings opens with a
+  contents list.
+- **Code** in a fenced block names its language, ```` ```bash ````,
+  ```` ```powershell ````, ```` ```python ````, and is colored for it.
+- **Task lists**: `- [ ]` and `- [x]` items show as checkboxes.
+- **Tables** keep `colspan` and `rowspan` when written as HTML.
+
+A document can be a page of another: choose the parent in "Part of" and a
+number in "Order". The parent lists its pages in order, with an Add a page
+button; each page shows its path, such as IMS Exporter › Setup, and links
+to the pages before and after it. The sidebar's Top-level pages filter
+hides the pages, leaving the documents they belong to. Pages nest eight deep
+at most, and a document can't be a page of itself or of one of its pages.
+
+A document's Linked from tab lists the documents that link to it; another
+record's Documents tab lists those that mention it.
+
 ## The dashboard and reminders
 
 The dashboard counts what each module documents, lists what changed

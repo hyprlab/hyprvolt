@@ -11,6 +11,8 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Code blocks are colored for their language (```bash, ```powershell, ```python and the rest), with the language named above the block
 - Task lists: `- [ ]` and `- [x]` items show as checkboxes
 - An admin can set when a record was created, through the API, to keep the date a document was first written elsewhere; a record's header shows it
+- A document can be a page of another, in an order: the parent lists its pages, and each page shows its path and links to the pages before and after it. A sidebar filter shows the top-level pages only
+- A document's Linked from tab lists the documents that link to it
 - The API finds a record by its slug (`GET /api/entities/by-slug/<slug>`, or `?slug=` on the list) and creates or updates one by slug (`POST /api/entities/by-slug/<slug>`), so an import can run again without making copies
 
 ### Changed

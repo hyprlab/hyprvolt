@@ -85,7 +85,9 @@ def overview_tab(entity: Entity) -> str:
         if not groups or groups[-1]["label"] != f.group:
             groups.append({"label": f.group, "items": []})
         groups[-1]["items"].append(item)
+    above, below = etype.overview(entity) if etype and etype.overview else ("", "")
     return render_template("sheet/overview.html", entity=entity, etype=etype, groups=groups, prose=prose,
+                           above=Markup(above), below=Markup(below),
                            custom=custom, notes=markdown(entity.notes or ""),
                            crumbs=present.crumbs(entity.location_id),
                            status=records.status_label(entity))

@@ -1,0 +1,14 @@
+{# The documents that link to this one with [[its-slug]]. #}
+{% from "partials/macros.html" import entity_link %}
+{% if rows %}
+<ul class="manage-list">
+  {% for d in rows %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(d.view.id, d.view.name) }}</span>
+    {% if d.excerpt %}<span class="manage-sub">{{ d.excerpt }}</span>{% endif %}
+  </div></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hint">No other document links here yet. A link is written as <code>[[{{ doc.slug }}]]</code>.</p>
+{% endif %}

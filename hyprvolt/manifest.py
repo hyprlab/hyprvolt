@@ -80,6 +80,7 @@ class EntityType:
     name_from: str = ""              # a field whose value is the name: an IP's address
     inactive: tuple = ("retired",)   # statuses that need no reminders
     check: Callable | None = None    # check(entity, detail): rules across fields
+    overview: Callable | None = None # overview(entity) -> (html above, html below) the Overview
     module: str = ""                 # filled in by the registry
 
     def text(self, plural: bool = False) -> str:

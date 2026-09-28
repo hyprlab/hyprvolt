@@ -332,6 +332,8 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
         p.append(f"the type {t.key!r} takes its name from {t.name_from!r}, which is not one of its fields")
     if t.check is not None and not callable(t.check):
         p.append(f"the check of {t.key!r} is not callable")
+    if t.overview is not None and not callable(t.overview):
+        p.append(f"the overview of {t.key!r} is not callable")
     columns = set()
     if t.detail is not None:
         table = getattr(t.detail, "__table__", None)

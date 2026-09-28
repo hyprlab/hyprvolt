@@ -1,4 +1,5 @@
 {% from "partials/macros.html" import crumbs as crumb_nav, entity_link, tag_chips %}
+{{ above }}
 <dl class="kv">
   <div><dt>Status</dt><dd>{{ status }}</dd></div>
   {% if etype and etype.located_in != () %}
@@ -37,6 +38,8 @@
 {% for f, html in prose %}
 <div class="prose sheet-prose">{% if html %}{{ html }}{% else %}<p class="kv-empty">Nothing written yet.</p>{% endif %}</div>
 {% endfor %}
+
+{{ below }}
 
 {% if notes %}
 <p class="setting-label setting-label--spaced">Notes</p>

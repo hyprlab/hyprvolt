@@ -1,0 +1,22 @@
+{# A document's own pages in order, and the pages either side of it. #}
+{% from "partials/macros.html" import entity_link %}
+{% if children %}
+<p class="setting-label setting-label--spaced">Pages <span class="count">{{ children|length }}</span></p>
+<ol class="manage-list doc-pages">
+  {% for c in children %}
+  <li class="manage-item"><div class="manage-meta">
+    <span class="manage-title">{{ entity_link(c.view.id, c.view.name) }}{% if c.view.status != 'Current' %} <span class="chip chip--muted">{{ c.view.status }}</span>{% endif %}</span>
+    {% if c.excerpt %}<span class="manage-sub">{{ c.excerpt }}</span>{% endif %}
+  </div></li>
+  {% endfor %}
+</ol>
+{% endif %}
+{% if current_user.can_edit %}
+<div class="doc-actions"><button type="button" class="btn btn--ghost" data-new-type="document" data-new-fields='{"parent": {{ entity.id }}, "position": {{ (children|length + 1) * 10 }}}'>Add a page</button></div>
+{% endif %}
+{% if before or after %}
+<nav class="doc-pager" aria-label="Pages either side">
+  {% if before %}<a class="elink doc-pager-prev" href="/e/{{ before.id }}" data-entity="{{ before.id }}"><span class="hint">Previous</span>{{ before.name }}</a>{% endif %}
+  {% if after %}<a class="elink doc-pager-next" href="/e/{{ after.id }}" data-entity="{{ after.id }}"><span class="hint">Next</span>{{ after.name }}</a>{% endif %}
+</nav>
+{% endif %}

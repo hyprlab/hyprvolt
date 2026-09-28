@@ -1128,6 +1128,13 @@ button.ipcell { cursor: pointer; }
 .doc-contents li { margin: 2px 0; }
 .doc-contents a { text-decoration: none; }
 .doc-contents a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+/* A document's pages, and the pages either side of the one open. */
+.doc-pages { list-style: none; padding: 0; }
+.doc-pager { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+.doc-pager a { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-weight: 650; }
+.doc-pager a:hover { border-color: var(--accent); background: var(--wash); }
+.doc-pager .hint { font-size: 12px; font-weight: 500; }
+.doc-pager-next { grid-column: 2; text-align: right; }
 /* Task lists: - [ ] and - [x] items, with the checkbox in place of the bullet. */
 .prose li.task { list-style: none; margin-left: -1.3em; }
 .prose li.task input { accent-color: var(--accent); margin: 0 6px 0 0; vertical-align: -1px; }
