@@ -34,4 +34,5 @@ def test_the_command(app, client, h, admin):
 def test_only_admins_load_the_demo(client, h, admin, editor):
     other, oh = editor
     assert other.post("/admin/seed-demo", headers=oh).status_code == 403
-    assert "Load a demo homelab" not in other.get("/").data.decode()
+    # The button, not its words: the About section's changelog mentions it.
+    assert 'data-api-post="/admin/seed-demo"' not in other.get("/").data.decode()

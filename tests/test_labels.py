@@ -28,5 +28,5 @@ def test_labels_go_with_their_module(client, h, admin):
     make(client, h, "server", name="srv1")
     client.post("/admin/modules/labels", json={"enabled": False}, headers=h)
     assert client.get("/p/labels/print?list=all").status_code == 404
-    assert "Print labels" not in client.get("/hardware").data.decode()
+    assert 'href="/p/labels/print' not in client.get("/hardware").data.decode()
     assert client.get("/p/labels/print?list=nothing").status_code == 404
