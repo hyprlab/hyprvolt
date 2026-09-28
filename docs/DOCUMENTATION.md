@@ -17,9 +17,9 @@ creates the admin account. There is no default account or password. On an
 empty instance the dashboard offers to load a demo homelab to look around in;
 `flask seed-demo` does the same from the server.
 
-From a clone of the repository, `docker compose up -d --build` builds the
-image from source instead: `docker-compose.override.yml` is picked up
-automatically.
+From a clone of the repository, `docker compose up -d` runs the same
+published image. `tools/redeploy.sh` builds the image from the working tree
+instead, tagged `local`, and runs that.
 
 ## Configuration
 

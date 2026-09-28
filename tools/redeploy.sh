@@ -4,10 +4,16 @@
 # change; it publishes nothing.
 #
 #   tools/redeploy.sh
+#
+# The working tree is built as the image tag "local" and run with
+# IMAGE_TAG=local. docker compose up -d on its own runs the published image
+# (:latest), as it does for everyone who downloads docker-compose.yml.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-docker compose up -d --build
+image=$(docker compose config --images | head -1)
+docker build -t "${image%:*}:local" .
+IMAGE_TAG=local docker compose up -d
 port=$(docker compose port "$(docker compose config --services | head -1)" 8000 | cut -d: -f2)
 for _ in $(seq 1 30); do
     if curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1; then
