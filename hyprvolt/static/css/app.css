@@ -456,16 +456,15 @@ a.tagchip:hover { color: var(--ink); border-color: var(--line-strong); }
 html:has(dialog[open]) { overflow: hidden; }
 .modal[open] { animation: modal-in .22s cubic-bezier(.2, .9, .3, 1.2) both; }
 @keyframes modal-in { from { transform: translateY(14px) scale(.97); opacity: 0; } }
-/* One continuous upward pass: the sheet rises in from below the fold and keeps
-   going out through the top, handing the eye off to the toast that lands under
-   the topbar. .is-closing is set in JS, which delays dialog.close() by the same
-   300ms. */
+/* The sheet rises in from below the fold and drops back down the way it came
+   when it closes. .is-closing is set in JS, which delays dialog.close() by the
+   same 300ms. */
 .sheet[open] { animation: sheet-in .3s cubic-bezier(.16, .8, .3, 1) both; }
 .sheet.is-closing { animation: sheet-out .3s cubic-bezier(.5, 0, .75, .2) both; }
 .sheet[open]::backdrop { animation: scrim-in .3s ease both; }
 .sheet.is-closing::backdrop { animation: scrim-out .3s ease both; }
 @keyframes sheet-in { from { transform: translateY(100%); } }
-@keyframes sheet-out { to { transform: translateY(-100%); } }
+@keyframes sheet-out { to { transform: translateY(100%); } }
 @keyframes scrim-in { from { opacity: 0; } }
 @keyframes scrim-out { to { opacity: 0; } }
 

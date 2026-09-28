@@ -6,6 +6,10 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Changed
+- Windows such as the record form and Settings, and a record's sheet, no longer close on a click beside them; they close with their close button or Escape, so a form half filled in isn't lost
+- A record's sheet slides back down when it closes, the way it came in
+
 ## [1.0.0] — 2026-09-28
 
 ### Added

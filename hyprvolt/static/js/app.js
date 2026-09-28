@@ -199,8 +199,8 @@
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   }
 
-  // The sheet slides back out through the top before it actually closes, so
-  // every way of dismissing it routes through here (button, backdrop, Escape).
+  // The sheet slides back down out of view before it actually closes, so
+  // every way of dismissing it routes through here (its button, Escape).
   var SHEET_EXIT_MS = 300;   // keep in step with the sheet-out animation
   var sheetExitTimer = null;
   function closeDialog(dialog, then) {
@@ -244,7 +244,11 @@
     });
   }
   document.querySelectorAll("dialog").forEach(function (dialog) {
-    onBackdropClick(dialog, function () { closeDialog(dialog); });
+    // A modal or the sheet closes only when asked to (its close button, or
+    // Escape), never from a click beside it that could throw away a form
+    // half filled in. The search palette has no close button: a click
+    // outside it still dismisses it.
+    if (dialog.classList.contains("palette")) onBackdropClick(dialog, function () { closeDialog(dialog); });
     dialog.querySelectorAll("[data-close]").forEach(function (btn) {
       btn.addEventListener("click", function () { closeDialog(dialog); });
     });
