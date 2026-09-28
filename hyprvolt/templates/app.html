@@ -701,12 +701,14 @@
       <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     <div class="sheet-bar-actions">
-      <button class="iconbtn" id="sheet-prev" aria-label="Previous record" title="Previous (k)">
-        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
-      </button>
-      <button class="iconbtn" id="sheet-next" aria-label="Next record" title="Next (j)">
-        <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-      </button>
+      <div class="sheet-bar-nav" role="group" aria-label="Records visited">
+        <button class="iconbtn" id="sheet-back" aria-label="Back" title="Back to the record before" disabled>
+          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <button class="iconbtn" id="sheet-forward" aria-label="Forward" title="Forward" disabled>
+          <svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
       {% if current_user.can_edit %}
       <button class="iconbtn" id="sheet-edit" aria-label="Edit" title="Edit (e)">
         <svg viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2 2 0 0 0-3-3L5 17v3ZM13.5 6.5l3 3"/></svg>

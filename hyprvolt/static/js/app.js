@@ -1016,17 +1016,63 @@
   var sheetArticle = document.getElementById("sheet-article");
   var current = null;
 
-  function setOpenParam(id, tab) {
+  function openURL(id, tab) {
     var params = new URLSearchParams(location.search);
     if (id) params.set("open", id); else params.delete("open");
     if (id && tab && tab !== "overview") params.set("tab", tab); else params.delete("tab");
     var qs = params.toString();
-    history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
+    return location.pathname + (qs ? "?" + qs : "");
+  }
+  function setOpenParam(id, tab) {
+    history.replaceState(id ? history.state : null, "", openURL(id, tab));
+  }
+
+  // Where the sheet has been. A record opened from another (a link, a page's
+  // Next, j and k) is a step on the trail and an entry in the browser's
+  // history, so Back and Forward, the sheet's and the browser's alike, walk
+  // it; Back from the first record closes the sheet. history.state carries
+  // the step's place on the trail ({sheetPos}).
+  var trail = [], pos = -1;
+  var trailOwnsEntry = false;    // the sheet pushed the first entry (not a link or a reload)
+  // How a close and the history's moves line up: "closing" (Back closed the
+  // sheet; its close event has nothing to do), "walking" (the close button
+  // is taking the history back before the sheet; the popstate that follows
+  // has nothing to do), "strip" (as walking, then drop ?open= from the entry
+  // the page was loaded with).
+  var leaving = null;
+
+  function updateNav() {
+    var back = document.getElementById("sheet-back"), fwd = document.getElementById("sheet-forward");
+    if (back) back.disabled = pos <= 0;
+    if (fwd) fwd.disabled = pos < 0 || pos >= trail.length - 1;
+  }
+
+  function recordStep(id, tab, nav) {
+    var url = openURL(id, tab);
+    if (nav === "new" || nav === "restore") {
+      trail = [{ id: id, tab: tab }];
+      pos = 0;
+      trailOwnsEntry = nav === "new";
+      if (nav === "new") history.pushState({ sheetPos: 0 }, "", url);
+      else history.replaceState({ sheetPos: 0 }, "", url);
+    } else if (nav === "push") {
+      trail = trail.slice(0, pos + 1).concat([{ id: id, tab: tab }]);
+      pos += 1;
+      history.pushState({ sheetPos: pos }, "", url);
+    } else {
+      trail[pos] = { id: id, tab: tab };
+      history.replaceState({ sheetPos: pos }, "", url);
+    }
+    updateNav();
   }
 
   function openEntity(id, opts) {
     if (!sheet) return;
     opts = opts || {};
+    // A step on the trail, or the same record again (a tab, a refresh).
+    var nav = opts.nav || (opts.restoring || opts.fromURL ? "restore"
+                           : !sheet.open || pos < 0 ? "new"
+                           : current && current.id === id ? "replace" : "push");
     var before = sheet.scrollTop;
     fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview")).then(function (html) {
       sheetArticle.innerHTML = html;
@@ -1052,11 +1098,27 @@
       } else {
         sheet.scrollTop = opts.scroll || 0;
       }
-      setOpenParam(id, current.tab);
+      recordStep(id, current.tab, nav);
     }).catch(toastError);
   }
+
+  window.addEventListener("popstate", function (e) {
+    if (leaving === "walking" || leaving === "strip") {
+      if (leaving === "strip") setOpenParam(null);
+      leaving = null;
+      return;
+    }
+    var st = e.state;
+    if (st && typeof st.sheetPos === "number" && trail[st.sheetPos]) {
+      pos = st.sheetPos;
+      openEntity(trail[pos].id, { tab: trail[pos].tab, nav: "pop" });
+    } else if (sheet && sheet.open) {
+      leaving = "closing";
+      closeDialog(sheet);
+    }
+  });
   function refreshSheet() {
-    if (current && sheet && sheet.open) openEntity(current.id, { tab: current.tab, keepScroll: true });
+    if (current && sheet && sheet.open) openEntity(current.id, { tab: current.tab, keepScroll: true, nav: "replace" });
   }
 
   function updateSheetBar() {
@@ -1080,7 +1142,7 @@
     if (at !== -1 && ids[at + step] !== undefined) openEntity(ids[at + step], { tab: current.tab });
   }
   function openTab(key) {
-    if (current && key && key !== current.tab) openEntity(current.id, { tab: key, tabSwitch: true });
+    if (current && key && key !== current.tab) openEntity(current.id, { tab: key, tabSwitch: true, nav: "replace" });
   }
   function toggleArchive() {
     if (!current || current.deleted) return;
@@ -1104,7 +1166,23 @@
   if (sheet) {
     sheet.addEventListener("close", function () {
       current = null;
-      setOpenParam(null);
+      if (leaving === "closing") {
+        leaving = null;         // Back closed it: the address has already moved
+        pos = -1;
+        updateNav();
+        return;
+      }
+      var st = history.state;
+      if (st && typeof st.sheetPos === "number" && (st.sheetPos > 0 || trailOwnsEntry)) {
+        // Back to the page as it was before the sheet opened, so its steps
+        // don't linger in the browser's history.
+        leaving = trailOwnsEntry ? "walking" : "strip";
+        history.go(-(st.sheetPos + (trailOwnsEntry ? 1 : 0)));
+      } else {
+        setOpenParam(null);
+      }
+      pos = -1;
+      updateNav();
     });
     sheetArticle.addEventListener("click", function (e) {
       var tab = e.target.closest(".tab[data-tab]");
@@ -1119,8 +1197,10 @@
       e.preventDefault();
       openTab(next.getAttribute("data-tab"));
     });
-    document.getElementById("sheet-prev").addEventListener("click", function () { openSibling(-1); });
-    document.getElementById("sheet-next").addEventListener("click", function () { openSibling(1); });
+    document.getElementById("sheet-back").addEventListener("click", function () { if (pos > 0) history.back(); });
+    document.getElementById("sheet-forward").addEventListener("click", function () {
+      if (pos >= 0 && pos < trail.length - 1) history.forward();
+    });
     var editBtn = document.getElementById("sheet-edit");
     if (editBtn) editBtn.addEventListener("click", editCurrent);
     var archiveBtn = document.getElementById("sheet-archive");
@@ -1534,7 +1614,7 @@
   if (deepLink) {
     var sheetState = remembered && remembered.id === "sheet" ? remembered.state || {} : null;
     openEntity(deepLink, { tab: new URLSearchParams(location.search).get("tab"), restoring: !!sheetState,
-                           scroll: sheetState ? sheetState.scroll : 0 });
+                           fromURL: true, scroll: sheetState ? sheetState.scroll : 0 });
   } else if (remembered) {
     var toRestore = document.getElementById(remembered.id);
     if (toRestore && toRestore.tagName === "DIALOG" && toRestore.getAttribute("data-restore") !== "off" && remembered.id !== "sheet") {

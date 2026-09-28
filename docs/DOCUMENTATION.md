@@ -513,6 +513,7 @@ its database, without signing in. The image's `HEALTHCHECK` uses it, so
 | Ctrl K, ⌘K or `/` | anywhere | Search |
 | `n` | a page | New record (the menu of kinds, where there is more than one) |
 | `j`, `k` | a record | Next, previous in the list |
+| Back, Forward (the browser's, or ‹ › in the record's bar) | a record | The records opened one from another: a link, a page's Next, `j` and `k`. Back from the first one closes it |
 | `1` to `9`, ← → | a record | Its tabs |
 | `e`, `a`, `c` | a record | Edit, archive or unarchive, copy its link |
 | Esc | a dialog | Close it |

@@ -860,7 +860,10 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
 }
-.sheet-bar-actions { display: flex; gap: 4px; }
+.sheet-bar-actions { display: flex; align-items: center; gap: 4px; }
+/* Back and Forward through the records visited, set apart from the record's own actions. */
+.sheet-bar-nav { display: flex; gap: 4px; padding-right: 8px; margin-right: 4px; border-right: 1px solid var(--line); }
+.sheet-bar-nav .iconbtn[disabled] { opacity: .35; cursor: default; background: none; }
 .sheet-article { max-width: 660px; margin: 0 auto; padding: clamp(22px, 4vw, 44px) 20px 70px; }
 .sheet-article .kicker { margin-bottom: 14px; }
 .sheet-article .kicker::before {
