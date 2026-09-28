@@ -81,12 +81,17 @@ in the database until it is turned back on. A module that needs another is
 off while that one is: Hardware needs Locations, and Virtual and Network
 need Hardware. The knowledge base and Secrets are built in, and stay on.
 
-A location can be made another kind in its form, under Type: a room that
-is really a building, a shelf that is really a rack. It keeps its name,
-links, files and history, and the form shows the fields of the kind chosen.
-The change waits until everything fits: a building goes in a site, and a
-rack only in a room, so a room with racks in it becomes a building once
-they have moved; a rack is emptied first, and a shelf taken out of its rack.
+A location, a piece of hardware, or a VM or LXC container can be made
+another kind in its form, under Type: a room that is really a building, a
+server recorded as a NAS, a VM that is really an LXC container. It keeps its
+name, links, files and history, and the form shows the fields of the kind
+chosen; values the new kind has no field for are kept, and come back if it
+changes back. The change waits until everything fits: a building goes in a
+site and a rack only in a room, so a room with racks in it becomes a
+building once they have moved. A rack is emptied first, and anything
+mounted in one comes out before it becomes something that can't be. A
+device with software installed, or that services or hypervisors run on,
+stays a kind that can host them.
 
 Hardware's status is where a device is in its life: deployed, ordered, in
 stock, in repair, retired or disposed. Anything that goes in a rack has its

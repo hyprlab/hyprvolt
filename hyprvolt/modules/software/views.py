@@ -26,6 +26,17 @@ def is_host(etype) -> bool:
     return "host" in etype.traits
 
 
+def before_retype(entity: Entity, old, new) -> None:
+    """A host with software recorded on it stays a host until it is gone:
+    its Software tab would disappear with the installations still counted."""
+    if is_host(old) and not is_host(new):
+        n = Installation.query.filter_by(host_id=entity.id).count()
+        if n:
+            raise Invalid(f"{n} {'program is' if n == 1 else 'programs are'} installed on it, and a "
+                          f"{new.text()} can't have software. Remove {'it' if n == 1 else 'them'} "
+                          "from its Software tab first.")
+
+
 def has_software_tab(entity: Entity) -> bool:
     etype = registry().type(entity.type)
     return etype is not None and is_host(etype)

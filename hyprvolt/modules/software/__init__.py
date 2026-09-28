@@ -60,5 +60,6 @@ module = Module(
              ListFilter("over", "Licenses over their seats", views.over_seats),
              ListFilter("renewal", "License renewal soon", views.renewal_soon)),
     sheet_tabs=(Tab("software", "Software", views.host_tab, when=views.has_software_tab, count=views.host_count),),
+    before_retype=views.before_retype,
     seed=demo.seed,
 )

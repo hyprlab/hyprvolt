@@ -259,6 +259,6 @@ def test_the_form_offers_the_other_kinds_and_redraws_for_one(client, h, admin):
     as_rack = client.get(f"/e/{room['id']}/form?type=rack").data.decode()
     assert 'name="f.height_u"' in as_rack and 'value="42"' in as_rack and 'name="f.floor"' not in as_rack
     assert '<option value="rack" selected>' in as_rack
-    server = make(client, h, "server", name="pve1")
-    assert "data-retype" not in client.get(f"/e/{server['id']}/form").data.decode()
+    cluster = make(client, h, "cluster", name="Lab")
+    assert "data-retype" not in client.get(f"/e/{cluster['id']}/form").data.decode()
     assert "data-retype" not in client.get("/e/form?type=room").data.decode()

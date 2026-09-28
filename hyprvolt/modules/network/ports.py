@@ -16,6 +16,16 @@ def is_cabled(etype) -> bool:
     return "cabled" in etype.traits
 
 
+def before_retype(entity: Entity, old, new) -> None:
+    """Ports stay with a record that can have them: one that would lose
+    them keeps them until they are removed."""
+    if is_cabled(old) and not is_cabled(new):
+        n = Port.query.filter_by(device_id=entity.id).count()
+        if n:
+            raise Invalid(f"It has {n} {'port' if n == 1 else 'ports'}, and a {new.text()} can't. "
+                          f"Remove {'it' if n == 1 else 'them'} from its Ports tab first.")
+
+
 def ports_of(device_id: int) -> list[Port]:
     return (Port.query.filter_by(device_id=device_id).options(joinedload(Port.vlan), joinedload(Port.pair))
             .order_by(Port.position, Port.id).all())

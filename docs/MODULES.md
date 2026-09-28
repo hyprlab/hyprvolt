@@ -75,6 +75,7 @@ required.
 | `relation_kinds` | `RelationKind(key, label, reverse, impact)`s it adds to the core's: `label` reads from source to target ("runs on"), `reverse` the other way ("runs"), and `impact` is `source` (the source stops when the target goes down), `target`, or `none` (only a link); the dependency view follows only those with an impact |
 | `sheet_tabs` | `Tab(key, label, render, when=None, count=None)`s on records of any module, shown where `when(entity)` says; `count(entity)` puts a number beside the label |
 | `form_sections` | `FormSection`s in the record form of any module's types. See [Adding to other modules' forms](#adding-to-other-modules-forms) |
+| `before_retype` | `before_retype(entity, old, new)`, called when any record's type changes (`EntityType.becomes`), with both types. Raise `Invalid` to refuse while the record holds something of this module's that the new type couldn't: a rack mount (Locations), installed software (Software), ports (Network) |
 | `seed` | `seed(demo)`, its part of `flask seed-demo`. Seeds run in sidebar order, each after the modules it requires, built-in modules last, so a module later in the sidebar finds the records it links to |
 
 A manifest that fails validation is left out, logged, and listed in
@@ -127,13 +128,13 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   used once per network. It raises `Invalid` to refuse the save, and may
   tidy values (Network lower-cases a domain's name).
 - `becomes` lists the types a record of this one can be changed into, from
-  the Type choice in its form or `type` in the API: Locations lets a room
-  become a building. Each must be in the same module with the same detail
-  table (and the same `name_from`), so the record's values carry over. The
-  change is refused while the record's location, or anything located in it,
-  doesn't suit the new type. `before_retype(entity, new_type)` may refuse it
-  too, by raising `Invalid`, for what only the module knows: a rack with
-  things mounted in it.
+  the Type choice in its form or `type` in the API: a room can become a
+  building, a server a NAS, a VM an LXC container. Each must be in the same
+  module with the same detail table (and the same `name_from`), so the
+  record's values carry over. The core refuses the change while the
+  record's location, anything located in it, or a ref field pointing at it
+  (a service's Runs on) doesn't suit the new type. A module that attaches
+  data by trait refuses it for its own data with `Module.before_retype`.
 - `restrictable=True` gives the form a "Visible to" choice (everyone, editors,
   private) and hides the record from readers below it everywhere
   (`core/access.py`). Documents use it. Read records with `Entity.live()` or

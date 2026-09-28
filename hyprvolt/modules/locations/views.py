@@ -163,11 +163,11 @@ def is_rackmount(etype) -> bool:
     return "rackmount" in etype.traits
 
 
-def before_retype(entity: Entity, new) -> None:
-    """A rack stops being one only when it is empty, and a shelf in a rack
-    becomes something that can't be mounted only once it is out, so no
-    mount is left pointing at a record that can't have it."""
-    if entity.type == "rack" and new.key != "rack":
+def before_retype(entity: Entity, old, new) -> None:
+    """A rack stops being one only when it is empty, and anything in a rack
+    (a shelf, a server) becomes something that can't be mounted only once it
+    is out, so no mount is left pointing at a record that can't have it."""
+    if old.key == "rack" and new.key != "rack":
         n = RackMount.query.filter_by(rack_id=entity.id).count()
         if n:
             raise Invalid("1 thing is mounted in it. Take it out of the rack first." if n == 1 else

@@ -74,7 +74,7 @@
     {% endif %}
     {% if kinds %}
     <div class="field">
-      {{ head('ef-type', 'Type', 'What kind of record it is. Changing it keeps the record with its links, files and history, and the form shows the fields of the new type. What is inside it must be allowed in the new type: racks go in rooms, so a room with racks in it becomes a building only once they have moved.') }}
+      {{ head('ef-type', 'Type', 'What kind of record it is. Changing it keeps the record with its links, files and history, and the form shows the fields of the new type. The change waits until everything fits: what is in it, and anything pointing at it, must suit the new type.') }}
       <select id="ef-type" name="type" data-retype aria-describedby="ef-type-help">
         {% for t in kinds %}<option value="{{ t.key }}" {{ 'selected' if t.key == etype.key }}>{{ t.label }}</option>{% endfor %}
       </select>

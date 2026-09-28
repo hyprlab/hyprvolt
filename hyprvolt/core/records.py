@@ -166,6 +166,41 @@ def update(entity: Entity, data: dict, user=None) -> list[dict]:
     return changes
 
 
+def _listed(names: list[str], total: int) -> str:
+    names = names + ([f"{total - len(names)} more"] if total > len(names) else [])
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def _check_pointers(entity: Entity, etype, new) -> None:
+    """Refuse a new type that a field pointing at the record can't point at:
+    a service that runs on a server that would become a printer. Left alone,
+    the field would read as empty."""
+    reg = registry()
+    names, labels, total = [], [], 0
+    for t in reg.types.values():
+        for f in t.fields:
+            if f.kind != "ref" or not F.ref_allows(f, etype.key) or F.ref_allows(f, new.key):
+                continue
+            if f.relation:
+                q = (Entity.query.join(Relationship, Relationship.source_id == Entity.id)
+                     .filter(Relationship.kind == f.relation, Relationship.target_id == entity.id))
+            elif t.detail is not None and hasattr(t.detail, f.key):
+                q = Entity.query.join(t.detail, t.detail.entity_id == Entity.id) \
+                    .filter(getattr(t.detail, f.key) == entity.id)
+            else:
+                continue
+            q = access.visible(q.filter(Entity.type == t.key, Entity.deleted_at.is_(None)))
+            n = q.count()
+            if n:
+                total += n
+                names += [e.name for e in q.order_by(Entity.name).limit(3)]
+                labels += [f.label] if f.label not in labels else []
+    if total:
+        one = total == 1
+        raise Invalid(f"{_listed(names[:3], total)} {'points' if one else 'point'} at it ({', '.join(labels)}), "
+                      f"and can't point at a {new.text()}. Change {'that' if one else 'those'} first.")
+
+
 def _retype(entity: Entity, etype, key: str, data: dict) -> dict:
     """Make ``entity`` a ``key``, if its type may become one and it, and
     what is in it, are still where they may be. ``data`` gains the defaults
@@ -175,16 +210,16 @@ def _retype(entity: Entity, etype, key: str, data: dict) -> dict:
     if new is None or new.key not in etype.becomes or not reg.is_enabled(new.module):
         what = f"a {new.text()}" if new else "that"
         raise Invalid(f"A {etype.text()} can't be changed into {what}.")
-    if etype.before_retype is not None:
-        etype.before_retype(entity, new)
+    for module in reg.enabled_modules():
+        if module.before_retype is not None:
+            module.before_retype(entity, etype, new)
+    _check_pointers(entity, etype, new)
     inside = [e for e in Entity.query.filter(Entity.location_id == entity.id, Entity.deleted_at.is_(None))
               if reg.type(e.type) and reg.type(e.type).located_in is not None
               and new.key not in reg.type(e.type).located_in]
     if inside:
-        names = [e.name for e in inside[:3]] + ([f"{len(inside) - 3} more"] if len(inside) > 3 else [])
-        listed = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
         one = len(inside) == 1
-        raise Invalid(f"{listed} {'is' if one else 'are'} in it and can't be in a {new.text()}. "
+        raise Invalid(f"{_listed([e.name for e in inside[:3]], len(inside))} {'is' if one else 'are'} in it and can't be in a {new.text()}. "
                       f"Move {'it' if one else 'them'} first.")
     if "location_id" not in data and entity.location_id is not None:
         if new.located_in == ():

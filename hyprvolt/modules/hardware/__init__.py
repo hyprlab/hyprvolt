@@ -69,9 +69,14 @@ RACK = ("rackmount",) + NET
 HOST = ("host", "tls")
 
 
+KINDS = ("server", "network_device", "firewall", "access_point", "ups", "nas", "workstation", "printer",
+         "peripheral")
+
+
 def hardware(key, label, plural, icon, specs=(), traits=()):
+    # Any device can be made another kind: a server recorded as a NAS.
     return EntityType(key, label, plural, detail=HardwareDetail, statuses=STATUSES, icon=icon, traits=traits,
-                      inactive=views.GONE,
+                      inactive=views.GONE, becomes=tuple(k for k in KINDS if k != key),
                       fields=IDENTITY + tuple(specs) + PURCHASE)
 
 

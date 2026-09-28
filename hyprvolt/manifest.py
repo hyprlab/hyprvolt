@@ -83,7 +83,6 @@ class EntityType:
     overview: Callable | None = None # overview(entity) -> (html above, html below) the Overview
     restrictable: bool = False       # can be hidden from viewers (core/access.py)
     becomes: tuple = ()              # types a record can be changed into: same module, same detail
-    before_retype: Callable | None = None  # before_retype(entity, new_type): raise Invalid to refuse
     module: str = ""                 # filled in by the registry
 
     def text(self, plural: bool = False) -> str:
@@ -212,5 +211,6 @@ class Module:
     relation_kinds: tuple = ()
     sheet_tabs: tuple = ()           # tabs on any module's entities; use Tab.when
     form_sections: tuple = ()        # form sections on any module's types
+    before_retype: Callable | None = None  # before_retype(entity, old, new) on any type change; raise Invalid to refuse
     seed: Callable | None = None     # seed(demo) for flask seed-demo
     package: str = field(default="", compare=False)  # filled in by the registry

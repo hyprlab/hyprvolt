@@ -11,7 +11,7 @@ worked out, not stored.
 """
 from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, Tab, Widget
 
-from . import addresses, demo, dns, views
+from . import addresses, demo, dns, ports, views
 from .models import Cable, DnsRecord, NetworkDetail, Port
 
 NETWORK_KINDS = (("lan", "Local network"), ("wan", "Internet connection"), ("vpn", "VPN"), ("other", "Other"))
@@ -86,5 +86,6 @@ module = Module(
                 Tab("ports", "Ports", views.ports_tab, when=views.has_ports_tab, count=views.ports_count)),
     form_sections=(FormSection("addresses", "IP addresses", addresses.section_form, addresses.section_save,
                                when=addresses.is_addressable),),
+    before_retype=ports.before_retype,
     seed=demo.seed,
 )
