@@ -326,6 +326,9 @@ def edit_items(entity, etype, retyping: bool = False) -> dict:
         f = F.custom_field(cf)
         custom.append({"field": f, "name": "c." + cf.key, "value": F.from_text(f, values.get(cf.id, "")),
                        "choices": None})
-    sections = [{"section": s, "html": Markup(s.render(etype, entity))} for s in reg.form_sections(etype)]
+    # A choice can hide another module's section: a tower has no rack position.
+    hidden = {k for item in fields if item["value"] in item["field"].hides_when for k in item["field"].hides}
+    sections = [{"section": s, "html": Markup(s.render(etype, entity)), "hidden": s.key in hidden}
+                for s in reg.form_sections(etype)]
     return {"fields": fields, "custom": custom, "sections": sections,
             "locations": _location_choices(etype, entity)}

@@ -850,6 +850,7 @@
     var out = {};
     Array.prototype.forEach.call(form.elements, function (el) {
       if (!el.name || el.disabled || el.type === "file" || el.type === "submit") return;
+      if (el.closest("[data-section][hidden]")) return;   // hidden by a choice: left as it is
       out[el.name] = el.type === "checkbox" ? el.checked : el.value;
     });
     return out;
@@ -874,6 +875,19 @@
     location.assign(location.pathname + "?" + params.toString());
   }
 
+  // A choice that hides form sections, in the form and in an editor's
+  // Overview: a server made a tower loses its rack position section.
+  function showSections(select) {
+    var root = select.closest("form, [data-autosave]") || document;
+    var hide = select.getAttribute("data-hides-when").split(" ").indexOf(select.value) !== -1;
+    select.getAttribute("data-hides").split(" ").forEach(function (key) {
+      root.querySelectorAll('[data-section="' + key + '"]').forEach(function (s) { s.hidden = hide; });
+    });
+  }
+  document.addEventListener("change", function (e) {
+    if (e.target.matches && e.target.matches("select[data-hides]")) showSections(e.target);
+  });
+
   if (formSlot) {
     // Another type chosen for a record: the form for that type, with what
     // was typed carried over.
@@ -884,6 +898,7 @@
       delete values.type;
       loadForm("/e/" + form.getAttribute("data-id") + "/form?type=" + encodeURIComponent(select.value)).then(function (fresh) {
         fillForm(fresh, values);
+        fresh.querySelectorAll("select[data-hides]").forEach(showSections);
         var again = fresh.querySelector("select[data-retype]");
         if (again) again.focus();
       }).catch(toastError);

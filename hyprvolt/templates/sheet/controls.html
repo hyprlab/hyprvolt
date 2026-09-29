@@ -31,7 +31,8 @@
 {% elif f.kind == 'markdown' %}
   <textarea name="{{ item.name }}" rows="16" class="mono{{ ' ' ~ cls if cls }}" spellcheck="true" {{ described(id, f.help) }} {{ 'required' if f.required }}{% if save %} data-save{% endif %}>{{ v or '' }}</textarea>
 {% elif f.kind == 'select' %}
-  <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>
+  <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}
+          {%- if f.hides %} data-hides="{{ f.hides|join(' ') }}" data-hides-when="{{ f.hides_when|join(' ') }}"{% endif %}>
     {% if not f.required %}<option value="" data-none>Not set</option>{% endif %}
     {% for value, label in f.options %}<option value="{{ value }}" {{ 'selected' if v == value }}>{{ label }}</option>{% endfor %}
   </select>

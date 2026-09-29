@@ -113,8 +113,10 @@
 {% endif %}
 
 {% for item in sections %}
+<div data-section="{{ item.section.key }}"{{ ' hidden' if item.hidden }}>
 <p class="setting-label setting-label--spaced">{{ item.section.label }}</p>
 <div class="kv-section" data-save-group data-field>{{ item.html }}</div>
+</div>
 {% endfor %}
 
 {% for f, html, ctl in prose %}

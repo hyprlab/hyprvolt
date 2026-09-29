@@ -91,7 +91,8 @@ module = Module(
     models=(HardwareDetail,),
     types=(
         hardware("server", "Server", "Servers", SERVER, traits=RACK + HOST, specs=(
-            Field("kind", "Form factor", "select", options=FORM_FACTORS, group="Specs"),
+            Field("kind", "Form factor", "select", options=FORM_FACTORS, group="Specs",
+                  hides=("rack",), hides_when=("tower",)),
             CPU, CORES, RAM, STORAGE, NICS, POWER, OS)),
         hardware("network_device", "Network device", "Network gear", NETWORK, traits=RACK + HOST, specs=(
             Field("kind", "Kind", "select", options=NETWORK_KINDS, list=True, group="Specs"),

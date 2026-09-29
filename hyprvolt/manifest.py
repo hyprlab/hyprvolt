@@ -49,6 +49,8 @@ class Field:
     group: str = ""                  # a heading in the form and the Overview
     expires: bool = False            # date: when something ends or is due; reminded of
     remind: Callable | None = None   # expires: remind(detail) -> days ahead, or None for the window
+    hides: tuple = ()                # select: form sections (their keys) hidden while
+    hides_when: tuple = ()           # its value is one of these: a tower has no rack position
 
 
 @dataclass(frozen=True)

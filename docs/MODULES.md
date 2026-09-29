@@ -193,6 +193,10 @@ Overview) do what they say. `help` says what the field is for, in a sentence
 or two: the form shows it in a popover from an info button beside the label.
 Give every field one; a person new to the app should not have to guess. `list=True` puts the value in the list row,
 `card=True` on the card. `search=False` keeps it out of the search text.
+A `select` can hide another module's form sections while it has certain
+values: Hardware's form factor has `hides=("rack",)` and
+`hides_when=("tower",)`, so a tower server's form and Overview have no Rack
+position section. What a hidden section holds is left as it is.
 Admins can add fields without code (Settings > Custom fields), of the kinds
 `text`, `number`, `date`, `select`, `url` and `boolean`.
 

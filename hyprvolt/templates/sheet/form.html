@@ -79,8 +79,10 @@
   {% endif %}
 
   {% for item in sections %}
+  <div data-section="{{ item.section.key }}"{{ ' hidden' if item.hidden }}>
   <p class="setting-label setting-label--spaced">{{ item.section.label }}</p>
   {{ item.html }}
+  </div>
   {% endfor %}
 
   <div class="field form-notes">
