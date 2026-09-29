@@ -1,5 +1,5 @@
 """Relationships, both directions, and the dependency walk."""
-from .conftest import make
+from .conftest import make, section
 
 
 def link(client, h, kind, source, target, status=200):
@@ -119,7 +119,7 @@ def _chain(client, h):
 
 def test_the_dependency_view_switches_to_a_diagram(client, h, admin):
     srv, hv, web, db = _chain(client, h)
-    tab = client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode()
+    tab = section(client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode(), "relationships")
     # The diagram shows first; List is a click away.
     assert 'data-views="dependencies"' in tab and '<div data-view="diagram">' in tab
     assert '<div data-view="list" hidden>' in tab and 'value="diagram" checked' in tab
@@ -161,7 +161,7 @@ def test_a_crowded_row_draws_every_record(client, h, admin):
     hv = make(client, h, "hypervisor", name="pve1")
     guests = [make(client, h, "vm", name=f"vm{n}", **{"f.host": hv["id"]}) for n in range(9)]
     make(client, h, "service", name="app", **{"f.host": guests[6]["id"]})
-    tab = client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode()
+    tab = section(client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode(), "relationships")
     drawing = tab[tab.index('data-view="diagram"'):]
     assert all(f">vm{n}</text>" in drawing for n in range(9)) and ">app</text>" in drawing
     assert "more in the list" not in drawing and "data-zoom" in drawing

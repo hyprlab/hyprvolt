@@ -52,6 +52,8 @@ def tabs_for(entity: Entity) -> list[SheetTab]:
 @bp.route("/e/<int:entity_id>/sheet")
 @role("viewer")
 def sheet(entity_id):
+    """The record with every section, one after another; ``tab`` names the
+    one to scroll to, which the rail marks until the reader scrolls."""
     entity = entity_or_404(entity_id, deleted_ok=True)
     tabs = tabs_for(entity)
     key = request.args.get("tab") or "overview"
@@ -59,7 +61,7 @@ def sheet(entity_id):
     etype = registry().type(entity.type)
     return render_template(
         "sheet/sheet.html", entity=entity, etype=etype, tabs=tabs, tab=tab, access_short=access.SHORT,
-        panel=Markup(tab.render(entity)), crumbs=present.crumbs(entity.location_id),
+        sections=[(t, Markup(t.render(entity))) for t in tabs], crumbs=present.crumbs(entity.location_id),
         status=records.status_label(entity), icon=present.icon(etype),
         purge_days=int_setting("purge_days", 30), editable=etype is not None and can_edit_here(entity),
     )

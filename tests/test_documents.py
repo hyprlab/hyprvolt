@@ -1,6 +1,6 @@
 """Documents: Markdown through the sanitizer, [[slug]] links, and attaching
 a document to a record."""
-from .conftest import make
+from .conftest import make, section
 
 
 def render(app, text):
@@ -115,6 +115,6 @@ def test_a_document_lists_the_documents_that_link_to_it(client, h, admin):
     target = make(client, h, "document", name="Glossary", slug="glossary")
     make(client, h, "document", name="Setup", **{"f.body": "Terms are in [[glossary]]."})
     make(client, h, "document", name="Unrelated", **{"f.body": "Nothing here, [[glossary-2]] is another."})
-    tab = client.get(f"/e/{target['id']}/sheet?tab=linked").data.decode()
+    tab = section(client.get(f"/e/{target['id']}/sheet?tab=linked").data.decode(), "linked")
     assert ">Setup</a>" in tab and "Unrelated" not in tab
     assert 'data-tab="linked"' in client.get(f"/e/{target['id']}/sheet").data.decode()

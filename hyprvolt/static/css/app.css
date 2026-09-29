@@ -904,11 +904,12 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   .sheet-content {
     display: grid; grid-template-columns: var(--sheet-rail) minmax(0, 1fr);
     grid-template-areas: "nav head" "nav panel"; grid-template-rows: auto 1fr;
-    min-height: calc(100dvh - var(--sheet-bar));
+    min-height: 100dvh;   /* the bar floats over it now: the rail runs to the bottom */
   }
-  .sheet-head, .sheet-content > .tab-panel { width: 100%; max-width: 660px; justify-self: center; padding-inline: 20px; }
+  .sheet-head, .sheet-sections { width: 100%; max-width: 660px; justify-self: center; padding-inline: 20px; }
   .sheet-head { grid-area: head; padding-top: 64px; }
-  .sheet-content > .tab-panel { grid-area: panel; padding-bottom: 70px; }
+  .sheet-sections { grid-area: panel; padding-bottom: 70px; }
+  .sheet-section:last-child { min-height: calc(100dvh - 90px); }  /* the scroll offset and the padding below */
   .sheet-nav { grid-area: nav; background: var(--panel); border-right: 1px solid var(--line); padding: 18px 12px; }
   .sheet-nav .tabs {
     position: sticky; top: calc(var(--sheet-bar) + 18px);
@@ -965,14 +966,31 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .crumbs-sep { color: var(--faint); }
 .kv .crumbs { margin: 0; font-size: inherit; }
 
-/* Tabs in the sheet: a row that scrolls sideways on a phone. */
+/* A record's sections, one after another, each after the first under its
+   own heading. The last is at least a screen tall, so choosing it in the
+   rail can bring its heading to the top like the others. */
+.sheet-section { min-height: 0; scroll-margin-top: 24px; }
+.sheet-section + .sheet-section { margin-top: 44px; padding-top: 30px; border-top: 1px solid var(--line); }
+.sheet-section-title {
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 18px;
+  font-size: 20px; font-weight: 750; letter-spacing: -0.02em;
+}
+
+/* The sections' links in the sheet: a row that scrolls sideways on a phone,
+   kept under the bar while the record scrolls, and a rail on a wide screen. */
+@media (max-width: 900px) {
+  .sheet-nav { position: sticky; top: var(--sheet-bar); z-index: 4; background: var(--surface); margin: 0 -20px; padding: 0 20px; }
+  .sheet-nav .tabs { margin-bottom: 0; }
+  .sheet-sections { padding-top: 22px; }
+  .sheet-section:last-child { min-height: calc(100dvh - 175px); }
+}
 .tabs {
   display: flex; gap: 2px; margin: 6px 0 22px;
   border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none;
 }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
-  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  display: inline-flex; align-items: center; gap: 6px; flex: none; text-decoration: none;
   padding: 9px 9px 10px; margin-bottom: -1px;
   font-size: 13.5px; font-weight: 600; color: var(--muted);
   border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
@@ -980,7 +998,6 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .tab:hover { color: var(--ink); }
 .tab.is-active { color: var(--ink); border-bottom-color: var(--accent); }
 .tab .count { padding: 0 4px; min-width: 16px; }
-.tab-panel { min-height: 120px; }
 
 /* A record's fields: label left, value right; stacks on a phone. */
 .kv { margin: 0; display: grid; grid-template-columns: minmax(120px, 34%) 1fr; }

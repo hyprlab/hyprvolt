@@ -104,7 +104,9 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   is.
 - `located_in` limits where a record can be: `None` (the default) is any
   location type, `()` is none at all, or a tuple of type keys.
-- `tabs` are sheet tabs for this type only. They follow Overview.
+- `tabs` are sheet sections for this type only. They follow Overview. The
+  sheet shows every section at once, so each `render` runs whenever the
+  record opens: keep it quick, and give a long list a limit.
 - `icon` overrides the module's icon for this type.
 - `proper=True` keeps the label's capital inside a sentence ("New Docker
   host"). Without it, "New virtual machine"; a label that starts with an

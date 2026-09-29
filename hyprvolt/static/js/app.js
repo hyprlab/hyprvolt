@@ -1288,16 +1288,13 @@
       }
       if (opts.keepScroll) {
         sheet.scrollTop = before;
-      } else if (opts.tabSwitch) {
-        // Keep the section's start in view when it is shorter than the
-        // scroll: the tabs above it on a narrow screen, the section itself
-        // beside the rail, which stays put, on a wide one.
-        var tabs = sheetArticle.querySelector(".tabs");
-        var mark = sheetRail() ? sheetArticle.querySelector(".tab-panel") : tabs;
-        sheet.scrollTop = Math.min(before, mark ? mark.offsetTop - (sheetRail() ? 76 : 64) : 0);
+      } else if (!opts.scroll && current.tab !== "overview") {
+        scrollToSection(current.tab, false);
       } else {
         sheet.scrollTop = opts.scroll || 0;
       }
+      spyLock = null;
+      markSection(current.tab);
       recordStep(id, current.tab, nav);
     }).catch(toastError);
   }
@@ -1353,8 +1350,70 @@
   }
   // Wide enough for the sections' rail (app.css, .sheet-content).
   function sheetRail() { return window.matchMedia("(min-width: 901px)").matches; }
+  // Every section is on the page: choosing one scrolls to it, and scrolling
+  // marks the one being read in the rail (and in ?tab=, for a reload).
+  var spyLock = null, spyTimer = 0, spyFrame = 0;
+  function sectionOffset() {
+    if (sheetRail()) return 24;
+    var bar = sheet.querySelector(".sheet-bar"), nav = sheetArticle.querySelector(".sheet-nav");
+    return (bar ? bar.offsetHeight : 0) + (nav ? nav.offsetHeight : 0) + 14;
+  }
+  function scrollToSection(key, smooth) {
+    var section = document.getElementById("section-" + key);
+    if (!section) return;
+    var top = sheet.scrollTop + section.getBoundingClientRect().top - sheet.getBoundingClientRect().top - sectionOffset();
+    if (key === "overview") top = 0;
+    smooth = smooth && !prefersReducedMotion();
+    // The rail shows where it is going, not each section passed on the way.
+    spyLock = smooth ? key : null;
+    clearTimeout(spyTimer);
+    if (smooth) spyTimer = setTimeout(function () { spyLock = null; spySections(); }, 900);
+    sheet.scrollTo({ top: Math.max(0, top), behavior: smooth ? "smooth" : "auto" });
+  }
+  function markSection(key) {
+    sheetArticle.querySelectorAll(".sheet-nav .tab[data-tab]").forEach(function (tab) {
+      var on = tab.getAttribute("data-tab") === key;
+      tab.classList.toggle("is-active", on);
+      if (on) {
+        tab.setAttribute("aria-current", "true");
+        if (!sheetRail()) {       // the row scrolls sideways to keep it in view
+          var row = tab.parentNode;
+          if (tab.offsetLeft < row.scrollLeft || tab.offsetLeft + tab.offsetWidth > row.scrollLeft + row.clientWidth) {
+            row.scrollLeft = tab.offsetLeft - 20;
+          }
+        }
+      } else {
+        tab.removeAttribute("aria-current");
+      }
+    });
+    if (current && current.tab !== key) {
+      current.tab = key;
+      recordStep(current.id, key, "replace");
+    }
+  }
+  function spySections() {
+    spyFrame = 0;
+    if (!current || !sheet.open || spyLock) return;
+    var sections = sheetArticle.querySelectorAll(".sheet-section");
+    if (!sections.length) return;
+    var line = sheet.getBoundingClientRect().top + sectionOffset() + 40, key = sections[0].getAttribute("data-panel");
+    sections.forEach(function (section) {
+      if (section.getBoundingClientRect().top <= line) key = section.getAttribute("data-panel");
+    });
+    markSection(key);
+  }
+  if (sheet) {
+    sheet.addEventListener("scroll", function () {
+      if (!spyFrame) spyFrame = requestAnimationFrame(spySections);
+    }, { passive: true });
+    sheet.addEventListener("scrollend", function () {
+      if (spyLock) { clearTimeout(spyTimer); spyLock = null; }
+    });
+  }
   function openTab(key) {
-    if (current && key && key !== current.tab) openEntity(current.id, { tab: key, tabSwitch: true, nav: "replace" });
+    if (!current || !key) return;
+    markSection(key);
+    scrollToSection(key, true);
   }
   function toggleArchive() {
     if (!current || current.deleted) return;
@@ -1373,12 +1432,10 @@
   // field, on the Overview.
   function editCurrent() {
     if (!current || current.deleted) return;
-    var ready = current.tab === "overview" ? Promise.resolve()
-      : openEntity(current.id, { tab: "overview", tabSwitch: true, nav: "replace" });
-    Promise.resolve(ready).then(function () {
-      var first = sheetArticle.querySelector("[data-autosave] [data-save]:not([hidden])");
-      if (first) first.focus();
-    });
+    var first = sheetArticle.querySelector("[data-autosave] [data-save]:not([hidden])");
+    if (!first) return;
+    first.focus({ preventScroll: true });
+    scrollToSection("overview", true);
   }
 
   if (sheet) {
@@ -1404,11 +1461,13 @@
     });
     sheetArticle.addEventListener("click", function (e) {
       var tab = e.target.closest(".tab[data-tab]");
-      if (tab) openTab(tab.getAttribute("data-tab"));
+      if (!tab || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      e.preventDefault();
+      openTab(tab.getAttribute("data-tab"));
     });
     sheetArticle.addEventListener("keydown", function (e) {
-      // Arrow keys move along the sections (the WAI-ARIA tab pattern): up
-      // and down the rail, left and right along the row of tabs.
+      // Arrow keys move along the sections: up and down the rail, left and
+      // right along the row.
       var tab = e.target.closest(".tab[data-tab]");
       var keys = sheetRail() ? { ArrowDown: 1, ArrowUp: -1 } : { ArrowRight: 1, ArrowLeft: -1 };
       if (!tab || !(keys[e.key] || e.key === "Home" || e.key === "End")) return;
@@ -1416,6 +1475,7 @@
       var next = e.key === "Home" ? all[0] : e.key === "End" ? all[all.length - 1]
                : all[(all.indexOf(tab) + keys[e.key] + all.length) % all.length];
       e.preventDefault();
+      next.focus({ preventScroll: true });
       openTab(next.getAttribute("data-tab"));
     });
     document.getElementById("sheet-back").addEventListener("click", function () { if (pos > 0) history.back(); });

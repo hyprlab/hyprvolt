@@ -1,7 +1,8 @@
-{# The sheet's article: the record's header, its sections, and the open one.
-   Fetched by app.js (/e/<id>/sheet?tab=...) into the <dialog id="sheet">.
-   The sections are a rail down the left on a wide screen and a row of tabs
-   under the header on a narrow one; the CSS places them (.sheet-content). #}
+{# The sheet's article: the record's header and every one of its sections,
+   one after another. Fetched by app.js (/e/<id>/sheet?tab=...) into the
+   <dialog id="sheet">, which scrolls to ?tab=. The sections' links are a rail
+   down the left on a wide screen and a row under the header on a narrow one;
+   the CSS places them (.sheet-content), and app.js marks the one in view. #}
 {% from "partials/macros.html" import crumbs as crumb_nav, type_icon %}
 <div class="sheet-content" data-id="{{ entity.id }}" data-name="{{ entity.name }}" data-tab="{{ tab.key }}"
      data-archived="{{ '1' if entity.archived else '0' }}" data-deleted="{{ '1' if entity.deleted_at else '0' }}"
@@ -35,14 +36,21 @@
   </div>
 
   <nav class="sheet-nav" aria-label="Sections of {{ entity.name }}">
-    <div class="tabs" role="tablist" aria-label="Sections of {{ entity.name }}">
+    <div class="tabs">
       {% for t in tabs %}
-      <button type="button" class="tab {{ 'is-active' if t.key == tab.key }}" role="tab" data-tab="{{ t.key }}"
-              aria-selected="{{ 'true' if t.key == tab.key else 'false' }}" title="{{ t.label }}{% if loop.index < 10 %} ({{ loop.index }}){% endif %}">
+      <a href="#section-{{ t.key }}" class="tab {{ 'is-active' if t.key == tab.key }}" data-tab="{{ t.key }}"
+         {%- if t.key == tab.key %} aria-current="true"{% endif %} title="{{ t.label }}{% if loop.index < 10 %} ({{ loop.index }}){% endif %}">
         <span class="tab-label">{{ t.label }}</span>{% if t.count %}<span class="count">{{ t.count }}</span>{% endif %}
-      </button>
+      </a>
       {% endfor %}
     </div>
   </nav>
-  <section class="tab-panel" role="tabpanel" data-panel="{{ tab.key }}">{{ panel }}</section>
+  <div class="sheet-sections">
+    {% for t, html in sections %}
+    <section class="tab-panel sheet-section" id="section-{{ t.key }}" data-panel="{{ t.key }}" aria-label="{{ t.label }}">
+      {% if not loop.first %}<h2 class="sheet-section-title">{{ t.label }}{% if t.count %}<span class="count">{{ t.count }}</span>{% endif %}</h2>{% endif %}
+      {{ html }}
+    </section>
+    {% endfor %}
+  </div>
 </div>
