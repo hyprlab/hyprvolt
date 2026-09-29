@@ -6,6 +6,8 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+## [1.4.0-beta.1] — 2026-09-29
+
 ### Added
 - A beta channel: `IMAGE_TAG=beta` runs previews of the next release, numbered like `1.4.0-beta.1`, while `latest` stays on stable
 - The dependency view in a record's Relationships tab can be shown as a diagram: what it needs above the record, what breaks if it goes down below it, a row for each step away. It opens as the diagram; List and Diagram switch between the two, and the choice is remembered in the browser
