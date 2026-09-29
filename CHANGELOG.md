@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.1] — 2026-09-29
+## [1.4.0-beta.2] — 2026-09-29
 
 ### Added
 - A setting in Settings > Appearance to show a record one section at a time, as before, instead of all its sections on one page
