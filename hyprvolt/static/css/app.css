@@ -516,6 +516,9 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 }
 .modal-head h3 { font-size: 17px; font-weight: 750; letter-spacing: -0.02em; }
 .modal-body { display: flex; flex-direction: column; gap: 12px; padding: 16px 20px 20px; }
+/* Confirming an action first ([data-confirm]). */
+.confirm-text { font-size: 14.5px; color: var(--muted); line-height: 1.5; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 /* The record form: two columns of fields, long text across both. */
 #entity-modal { width: min(720px, calc(100vw - 32px)); }
 #entity-modal[open] { max-height: calc(100dvh - 48px); overflow-y: auto; }

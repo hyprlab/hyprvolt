@@ -13,7 +13,9 @@
         </div>
         {% if current_user.can_edit %}
         <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/api/relationships/{{ r.rel.id }}/delete"
-                data-then="sheet" data-done="Link removed" aria-label="Remove this link" title="Remove this link">
+                data-then="sheet" data-done="Link removed" aria-label="Remove this link" title="Remove this link"
+                data-confirm="Remove this link?" data-confirm-go="Remove link"
+                data-confirm-text="{{ entity.name }} and {{ r.other.name }} will no longer be linked. Both records stay.">
           <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
         {% endif %}

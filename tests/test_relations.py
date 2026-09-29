@@ -37,6 +37,13 @@ def test_removing_a_link_can_be_undone(client, h, admin):
     assert len(client.get(f"/api/entities/{a['id']}/relationships").get_json()["relationships"]) == 1
 
 
+def test_removing_a_link_asks_first(client, h, admin):
+    a, b = make(client, h, name="web"), make(client, h, name="db")
+    link(client, h, "depends_on", a, b)
+    tab = client.get(f"/e/{a['id']}/sheet?tab=relationships").get_data(as_text=True)
+    assert 'data-confirm="Remove this link?"' in tab and "web and db will no longer be linked" in tab
+    assert 'id="confirm-modal"' in client.get("/").get_data(as_text=True)
+
 def test_a_deleted_record_drops_out_of_links(client, h, admin):
     a, b = make(client, h, name="a"), make(client, h, name="b")
     link(client, h, "depends_on", a, b)

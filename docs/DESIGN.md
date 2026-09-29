@@ -82,6 +82,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.trace`, `.trace-path`, `.trace-hop`, `.trace-link` | A cable path inside a port's row, opened from a `<details>`: each port a pill, the cables and patch panels between them in small text |
 | `.empty`, `.empty--onboard`, `.pager`, `.pager-end` | Empty states and paging; `--onboard` is the first-run dashboard with the mark |
 | `.modal`, `.modal--wide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>` |
+| `#confirm-modal`, `.confirm-text`, `.confirm-actions` | The one confirmation dialog, filled in from the `data-confirm` button that opened it: a question, a line saying what happens, Cancel (focused) and the action |
 | `.form-grid`, `.form-wide`, `.form-check`, `.req` | The record form: two columns, long text across both, a required mark |
 | `.field-head`, `.infotip`, `.infotip-pop` | A field's label with an info button beside it; the button opens the field's help in a native popover (`popovertarget`), placed under it by app.js and closed by Escape, a click elsewhere or a scroll. The input names the help in `aria-describedby` too |
 | `.pickbtn` | A button standing in for a field: it opens the palette to choose a record |
@@ -127,7 +128,9 @@ Long-form text uses `.prose` at 16.5px and 1.72.
   success toast is for actions whose result is not already visible (a saved
   preference, a deleted record with Undo), not for every click.
 - **Undo instead of "Are you sure?"** for anything recoverable. A confirmation
-  dialog is kept for what can't be undone: deleting an account.
+  dialog is kept for what can't be undone, deleting an account, and for
+  removing a link between records, which always asks first (`data-confirm`)
+  and still offers Undo after.
 - **Edited where it is shown.** An editor changes a record in its Overview,
   one field at a time, saved on leaving the field; there is no Save button.
   A save that fails keeps the value, says why under the field, and holds

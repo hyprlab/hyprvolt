@@ -258,6 +258,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | --- | --- |
 | `form[data-api="/url"]` | Submitting posts its fields as JSON (as multipart with `enctype="multipart/form-data"`) |
 | `[data-api-post="/url"]`, `data-body='{…}'` | A click posts the body |
+| `data-confirm="Question?"`, `data-confirm-text`, `data-confirm-go` | Asks first in the confirmation dialog: the question, a line saying what happens, and the action button's label (Remove if not given). Every button that removes a link between records carries it |
 | `data-then="sheet"`, `"reload"` or `"remove"` | Afterwards: re-render the open sheet, reload the page, or remove the closest `[data-row]` |
 | `data-then="replace"`, `data-replace="id"` | Afterwards: the answer's `html` goes into that element (the next step of a flow, a check's result) |
 | `data-done="Message"` | The toast; with Undo when the response has `undo`. An answer's own `message` takes its place |

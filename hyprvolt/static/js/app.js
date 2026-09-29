@@ -824,6 +824,8 @@
   //                              page, or remove the closest [data-row]
   //   data-then="replace"        put the answer's html in #data-replace
   //   data-done="Message"        the toast, with Undo when the answer has one
+  //   data-confirm="Question?"   asks first, in #confirm-modal; data-confirm-text
+  //                              explains, data-confirm-go names the button
   //   [data-pick]                chooses a record in the palette; its id goes
   //                              into the form's data-pick-into field (other_id)
   //   [data-fill='{"a": 1}']     sets fields of its form (or data-fill-form)
@@ -1067,19 +1069,40 @@
     target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
   });
 
+  // [data-confirm]: the action waits for its button in the confirm modal.
+  // Cancel, Escape or closing it does nothing.
+  var confirmModal = document.getElementById("confirm-modal");
+  function confirmFirst(btn, go) {
+    if (!confirmModal || !btn.hasAttribute("data-confirm")) { go(); return; }
+    document.getElementById("confirm-title").textContent = btn.getAttribute("data-confirm");
+    var text = document.getElementById("confirm-text");
+    text.textContent = btn.getAttribute("data-confirm-text") || "";
+    text.hidden = !text.textContent;
+    var yes = document.getElementById("confirm-go");
+    yes.textContent = btn.getAttribute("data-confirm-go") || "Remove";
+    yes.onclick = function () {
+      yes.onclick = null;
+      confirmModal.close();
+      go();
+    };
+    confirmModal.showModal();
+  }
+
   document.addEventListener("click", function (e) {
     var print = e.target.closest("[data-print]");
     if (print) { e.preventDefault(); window.print(); return; }
     var btn = e.target.closest("[data-api-post]");
     if (btn) {
       e.preventDefault();
-      var body = {};
-      try { body = JSON.parse(btn.getAttribute("data-body") || "{}"); } catch (_) {}
-      btn.disabled = true;
-      api(btn.getAttribute("data-api-post"), body).then(function (data) {
-        btn.disabled = false;
-        afterAction(btn, data);
-      }).catch(function (err) { btn.disabled = false; toastError(err); });
+      confirmFirst(btn, function () {
+        var body = {};
+        try { body = JSON.parse(btn.getAttribute("data-body") || "{}"); } catch (_) {}
+        btn.disabled = true;
+        api(btn.getAttribute("data-api-post"), body).then(function (data) {
+          btn.disabled = false;
+          afterAction(btn, data);
+        }).catch(function (err) { btn.disabled = false; toastError(err); });
+      });
       return;
     }
     var pick = e.target.closest("[data-pick]");

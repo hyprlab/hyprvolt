@@ -9,7 +9,9 @@
     </div>
     {% if current_user.can_edit %}
     <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/api/relationships/{{ d.rel.id }}/delete"
-            data-then="sheet" data-done="Document detached" aria-label="Detach" title="Detach (the document stays)">
+            data-then="sheet" data-done="Document detached" aria-label="Detach" title="Detach (the document stays)"
+            data-confirm="Detach this document?" data-confirm-go="Detach"
+            data-confirm-text="{{ d.view.name }} will no longer be linked to {{ entity.name }}. The document stays.">
       <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     {% endif %}
