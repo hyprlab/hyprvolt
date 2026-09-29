@@ -674,6 +674,20 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .switch input:focus-visible + .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
 .switch input:disabled + .switch-track { opacity: .55; cursor: default; }
 .modules-list .manage-sub { white-space: normal; }
+/* Reordering by a handle ([data-sortable]): drag it, or focus it and use the
+   arrow keys. The item being moved is lifted off the list. */
+.sort-handle { flex: none; cursor: grab; touch-action: none; color: var(--faint); }
+.sort-handle:hover { color: var(--ink); }
+.sort-handle svg { stroke-width: 3; }
+[data-sort-item].is-sorting { position: relative; z-index: 2; background: var(--surface); box-shadow: var(--shadow-2); border-radius: var(--radius-sm); }
+[data-sort-item].is-sorting .sort-handle { cursor: grabbing; color: var(--ink); }
+body.is-sorting { cursor: grabbing; user-select: none; }
+.sort-group + .sort-group { margin-top: 18px; }
+.sort-group-head { display: flex; align-items: center; gap: 6px; margin: 0 0 4px -6px; }
+.sort-group-head .setting-label { margin: 0; }
+.modules-list .manage-item { gap: 10px; }
+.modules-list .sort-handle { margin-left: -6px; }
+.sort-reset { margin-top: 14px; }
 .module-icon { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--field); color: var(--muted); }
 .module-icon svg { width: 17px; height: 17px; }
 .customform { margin: 16px 0 6px; }

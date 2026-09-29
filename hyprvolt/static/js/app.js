@@ -433,6 +433,112 @@
     });
   });
 
+  // [data-sortable]: a list whose [data-sort-item] children move by their
+  // .sort-handle, dragged (mouse, pen or touch) or with ↑ and ↓ while it has
+  // focus. Each move fires a "sorted" event from the list; what the order
+  // means, and saving it, is up to whoever listens.
+  var sorting = null;
+  function sortItems(list) {
+    return Array.prototype.filter.call(list.children, function (el) { return el.hasAttribute("data-sort-item"); });
+  }
+  function sortParts(handle) {
+    var item = handle.closest("[data-sort-item]");
+    var list = item && item.parentNode;
+    return list && list.hasAttribute("data-sortable") ? { item: item, list: list } : null;
+  }
+  function sorted(list) { list.dispatchEvent(new CustomEvent("sorted", { bubbles: true })); }
+  document.addEventListener("pointerdown", function (e) {
+    var handle = e.target.closest(".sort-handle");
+    var parts = handle && sortParts(handle);
+    if (!parts || e.button !== 0) return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    sorting = { handle: handle, item: parts.item, list: parts.list, before: sortItems(parts.list).indexOf(parts.item) };
+    parts.item.classList.add("is-sorting");
+    document.body.classList.add("is-sorting");
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (!sorting) return;
+    // Near an edge of what scrolls around it, that scrolls, so a long list
+    // can be crossed in one drag.
+    var pane = sorting.list.closest(".settings-pane, .modal, .sheet");
+    if (pane) {
+      var box = pane.getBoundingClientRect();
+      if (e.clientY < box.top + 40) pane.scrollTop -= 14;
+      else if (e.clientY > box.bottom - 40) pane.scrollTop += 14;
+    }
+    // Goes before the first other item whose middle is below the pointer.
+    var others = sortItems(sorting.list).filter(function (el) { return el !== sorting.item; });
+    var next = others.find(function (el) {
+      var r = el.getBoundingClientRect();
+      return e.clientY < r.top + r.height / 2;
+    });
+    if (next ? sorting.item.nextElementSibling !== next : sortItems(sorting.list).pop() !== sorting.item) {
+      sorting.list.insertBefore(sorting.item, next || null);
+    }
+  });
+  function endSort() {
+    if (!sorting) return;
+    var s = sorting;
+    sorting = null;
+    s.item.classList.remove("is-sorting");
+    document.body.classList.remove("is-sorting");
+    if (sortItems(s.list).indexOf(s.item) !== s.before) sorted(s.list);
+    s.handle.focus({ preventScroll: true });
+  }
+  document.addEventListener("pointerup", endSort);
+  document.addEventListener("pointercancel", endSort);
+  document.addEventListener("keydown", function (e) {
+    var handle = e.target.closest && e.target.closest(".sort-handle");
+    var parts = handle && sortParts(handle);
+    if (!parts || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+    e.preventDefault();
+    var items = sortItems(parts.list), at = items.indexOf(parts.item);
+    var to = e.key === "ArrowUp" ? at - 1 : at + 1;
+    if (to < 0 || to >= items.length) return;
+    parts.list.insertBefore(parts.item, e.key === "ArrowUp" ? items[to] : items[to].nextElementSibling);
+    handle.focus({ preventScroll: true });
+    sorted(parts.list);
+  });
+
+  // Settings > Modules: the sidebar's order, saved as it changes; the
+  // sidebar behind the settings follows at once.
+  var sidebarOrder = document.querySelector("[data-sidebar-order]");
+  var orderReset = document.getElementById("sidebar-order-reset");
+  function arrangeSidebar(groups, modules) {
+    var blocks = document.querySelectorAll(".sidebar .sidebar-group[data-group]");
+    if (!blocks.length) return;
+    var parent = blocks[0].parentNode, after = blocks[blocks.length - 1].nextSibling;
+    groups.forEach(function (label) {
+      var block = parent.querySelector(':scope > .sidebar-group[data-group="' + CSS.escape(label) + '"]');
+      if (block) parent.insertBefore(block, after);
+    });
+    modules.forEach(function (id) {
+      var link = parent.querySelector('.navitem[data-module="' + CSS.escape(id) + '"]');
+      if (!link) return;
+      var nested = link.nextElementSibling && link.nextElementSibling.matches(".sidelist--nested") ? link.nextElementSibling : null;
+      link.parentNode.appendChild(link);
+      if (nested) link.parentNode.appendChild(nested);
+    });
+  }
+  if (sidebarOrder) {
+    sidebarOrder.addEventListener("sorted", function () {
+      var groups = Array.prototype.map.call(sidebarOrder.querySelectorAll("[data-group]"), function (el) { return el.getAttribute("data-group"); });
+      var modules = Array.prototype.map.call(sidebarOrder.querySelectorAll("[data-module]"), function (el) { return el.getAttribute("data-module"); });
+      api("/admin/sidebar-order", { groups: groups, modules: modules }).then(function () {
+        arrangeSidebar(groups, modules);
+        if (orderReset) orderReset.hidden = false;
+      }).catch(toastError);
+    });
+  }
+  if (orderReset) {
+    orderReset.addEventListener("click", function () {
+      api("/admin/sidebar-order", { reset: true }).then(function () {
+        reloadWith("The sidebar is back in its default order");
+      }).catch(toastError);
+    });
+  }
+
   var adduserForm = document.getElementById("admin-adduser");
   if (adduserForm) {
     adduserForm.addEventListener("submit", function (e) {

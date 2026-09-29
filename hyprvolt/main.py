@@ -284,10 +284,19 @@ def _modules_context() -> dict:
     modules = [{"module": m, "enabled": m.id in enabled,
                 "needs": [reg.module(r).name for r in m.requires if r not in enabled],
                 "count": sum(counts.get(t.key, 0) for t in m.types)} for m in reg.sidebar_order()]
+    # The same modules under their sidebar groups, which an admin reorders.
+    groups: list[dict] = []
+    for entry in modules:
+        if not groups or groups[-1]["label"] != entry["module"].group:
+            groups.append({"label": entry["module"].group, "modules": []})
+        groups[-1]["modules"].append(entry)
     fields: dict[str, list] = {}
     for cf in CustomField.query.order_by(CustomField.position, CustomField.id):
         fields.setdefault(cf.entity_type, []).append(cf)
-    return {"admin_modules": modules, "admin_module_errors": sorted(reg.errors.items()),
+    saved_groups, saved_modules = reg.saved_order()
+    return {"admin_modules": modules, "admin_module_groups": groups,
+            "admin_order_custom": bool(saved_groups or saved_modules),
+            "admin_module_errors": sorted(reg.errors.items()),
             "admin_custom_fields": fields, "custom_kind_labels": CUSTOM_KIND_LABELS}
 
 
@@ -586,6 +595,32 @@ def admin_module(module_id):
         return jsonify(error=f"{module.name} needs {' and '.join(off)}. Turn that on first."), 400
     set_setting(f"module:{module.id}:enabled", "1" if on else "0")
     return jsonify(ok=True, enabled=on)
+
+
+@bp.route("/admin/sidebar-order", methods=["POST"])
+@role("admin")
+def admin_sidebar_order():
+    """The sidebar's order: its groups, and the modules within each, as an
+    admin arranged them in Settings > Modules. ``reset`` goes back to the
+    modules' own order."""
+    import json
+    from .models import Setting
+    data = request.get_json(silent=True) or {}
+    reg = registry()
+    if data.get("reset"):
+        Setting.query.filter(Setting.key.in_(("sidebar:groups", "sidebar:modules"))).delete()
+        db.session.commit()
+        return jsonify(ok=True)
+    groups, modules = data.get("groups"), data.get("modules")
+    known_groups = {m.group for m in reg.modules.values()}
+    if (not isinstance(groups, list) or not isinstance(modules, list)
+            or not all(isinstance(x, str) for x in groups + modules)
+            or len(set(groups)) != len(groups) or len(set(modules)) != len(modules)
+            or not set(groups) <= known_groups or not set(modules) <= set(reg.modules)):
+        return jsonify(error="That order names a group or module this instance doesn't have. Reload and try again."), 400
+    set_setting("sidebar:groups", json.dumps(groups))
+    set_setting("sidebar:modules", json.dumps(modules))
+    return jsonify(ok=True)
 
 
 @bp.route("/admin/seed-demo", methods=["POST"])

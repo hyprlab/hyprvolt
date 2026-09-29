@@ -82,6 +82,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.trace`, `.trace-path`, `.trace-hop`, `.trace-link` | A cable path inside a port's row, opened from a `<details>`: each port a pill, the cables and patch panels between them in small text |
 | `.empty`, `.empty--onboard`, `.pager`, `.pager-end` | Empty states and paging; `--onboard` is the first-run dashboard with the mark |
 | `.modal`, `.modal--wide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>` |
+| `[data-sortable]`, `[data-sort-item]`, `.sort-handle`, `.sort-group` | A list reordered by hand: each item's grip handle drags it (mouse, pen or touch, scrolling its pane at the edges), or moves it with ↑ and ↓ while focused. A move fires `sorted` from the list, and its listener saves the order. Settings > Modules uses it for the sidebar |
 | `#confirm-modal`, `.confirm-text`, `.confirm-actions` | The one confirmation dialog, filled in from the `data-confirm` button that opened it: a question, a line saying what happens, Cancel (focused) and the action |
 | `.form-grid`, `.form-wide`, `.form-check`, `.req` | The record form: two columns, long text across both, a required mark |
 | `.field-head`, `.infotip`, `.infotip-pop` | A field's label with an info button beside it; the button opens the field's help in a native popover (`popovertarget`), placed under it by app.js and closed by Escape, a click elsewhere or a scroll. The input names the help in `aria-describedby` too |

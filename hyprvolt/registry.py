@@ -68,11 +68,43 @@ class Registry:
         return self.types.get(key)
 
     def sidebar_order(self, modules=None) -> list[Module]:
+        """Modules by group, then within their group: in the order an admin
+        set in Settings > Modules, and otherwise by each module's ``order``.
+        Anything the saved order doesn't name (a new module, a new group)
+        follows what it does, in the default order."""
         modules = list(self.modules.values()) if modules is None else modules
-        group_rank = {}
-        for m in sorted(modules, key=lambda m: m.order):
-            group_rank.setdefault(m.group, len(group_rank))
-        return sorted(modules, key=lambda m: (group_rank[m.group], m.order, m.name))
+        saved_groups, saved_modules = self.saved_order()
+        default = {}
+        for m in sorted(self.modules.values(), key=lambda m: m.order):
+            default.setdefault(m.group, len(default))
+
+        def group_rank(group):
+            return (0, saved_groups.index(group)) if group in saved_groups else (1, default.get(group, 0))
+
+        def rank(m):
+            own = (0, saved_modules.index(m.id)) if m.id in saved_modules else (1, m.order, m.name)
+            return (group_rank(m.group), own)
+        return sorted(modules, key=rank)
+
+    def saved_order(self) -> tuple[list[str], list[str]]:
+        """The sidebar's groups and modules as an admin ordered them, read
+        once per request; two empty lists until one does."""
+        if not _has_g():
+            return [], []       # outside the app (a test of the registry alone)
+        cached = g.get("_sidebar_order")
+        if cached is not None:
+            return cached
+        import json
+        from .models import get_setting
+        out = []
+        for key in ("sidebar:groups", "sidebar:modules"):
+            try:
+                value = json.loads(get_setting(key) or "[]")
+            except ValueError:
+                value = []
+            out.append([x for x in value if isinstance(x, str)] if isinstance(value, list) else [])
+        g._sidebar_order = (out[0], out[1])
+        return g._sidebar_order
 
     # ———— Enabled or not ————
 

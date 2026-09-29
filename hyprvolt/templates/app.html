@@ -558,25 +558,39 @@
     {% if current_user.is_admin %}
     <section class="settings-pane" data-pane="modules" id="settings-modules" role="tabpanel" aria-labelledby="settings-tab-modules" tabindex="0">
       <p class="hint">A module that is turned off disappears from the sidebar, search, the dashboard and every record's tabs. Its records stay in the database and come back when it is turned on again.</p>
-      <ul class="manage-list modules-list">
-        {% for entry in admin_modules %}
-        {% set m = entry.module %}
-        <li class="manage-item" data-row>
-          <span class="module-icon">{{ type_icon(m.icon) }}</span>
-          <div class="manage-meta">
-            <span class="manage-title">{{ m.name }}{% if m.core %} <span class="chip chip--muted">built in</span>{% endif %}</span>
-            <span class="manage-sub">{{ m.description or '' }}</span>
-            <span class="manage-sub">{{ m.types|map(attribute='plural')|join(', ') }} · {{ entry.count }} {{ 'record' if entry.count == 1 else 'records' }}</span>
-            {% if entry.needs %}<span class="manage-sub">Off while {{ entry.needs|join(' and ') }} {{ 'is' if entry.needs|length == 1 else 'are' }} off.</span>{% endif %}
+      <p class="hint" id="sort-hint">Drag a group or a module by its handle to change the sidebar's order, or focus the handle and use ↑ and ↓. Modules move within their group.</p>
+      {% set grip %}<svg viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></svg>{% endset %}
+      <div class="sort-groups" data-sortable data-sidebar-order>
+        {% for group in admin_module_groups %}
+        <section class="sort-group" data-sort-item data-group="{{ group.label }}">
+          <div class="sort-group-head">
+            <button type="button" class="iconbtn iconbtn--sm sort-handle" aria-label="Move the {{ group.label }} group" aria-describedby="sort-hint">{{ grip }}</button>
+            <p class="setting-label">{{ group.label }}</p>
           </div>
-          <label class="switch" title="{{ 'Built in' if m.core else ('Needs ' ~ entry.needs|join(' and ')) if entry.needs else ('Turn off' if entry.enabled else 'Turn on') }}">
-            <input type="checkbox" data-module-toggle="{{ m.id }}" {{ 'checked' if entry.enabled }} {{ 'disabled' if m.core or entry.needs }}
-                   aria-label="{{ m.name }} is {{ 'on' if entry.enabled else 'off' }}">
-            <span class="switch-track"></span>
-          </label>
-        </li>
+          <ul class="manage-list modules-list" data-sortable>
+            {% for entry in group.modules %}
+            {% set m = entry.module %}
+            <li class="manage-item" data-row data-sort-item data-module="{{ m.id }}">
+              <button type="button" class="iconbtn iconbtn--sm sort-handle" aria-label="Move {{ m.name }}" aria-describedby="sort-hint">{{ grip }}</button>
+              <span class="module-icon">{{ type_icon(m.icon) }}</span>
+              <div class="manage-meta">
+                <span class="manage-title">{{ m.name }}{% if m.core %} <span class="chip chip--muted">built in</span>{% endif %}</span>
+                <span class="manage-sub">{{ m.description or '' }}</span>
+                <span class="manage-sub">{{ m.types|map(attribute='plural')|join(', ') }} · {{ entry.count }} {{ 'record' if entry.count == 1 else 'records' }}</span>
+                {% if entry.needs %}<span class="manage-sub">Off while {{ entry.needs|join(' and ') }} {{ 'is' if entry.needs|length == 1 else 'are' }} off.</span>{% endif %}
+              </div>
+              <label class="switch" title="{{ 'Built in' if m.core else ('Needs ' ~ entry.needs|join(' and ')) if entry.needs else ('Turn off' if entry.enabled else 'Turn on') }}">
+                <input type="checkbox" data-module-toggle="{{ m.id }}" {{ 'checked' if entry.enabled }} {{ 'disabled' if m.core or entry.needs }}
+                       aria-label="{{ m.name }} is {{ 'on' if entry.enabled else 'off' }}">
+                <span class="switch-track"></span>
+              </label>
+            </li>
+            {% endfor %}
+          </ul>
+        </section>
         {% endfor %}
-      </ul>
+      </div>
+      <button type="button" class="btn btn--xs btn--ghost sort-reset" id="sidebar-order-reset" {% if not admin_order_custom %}hidden{% endif %}>Put the default order back</button>
       {% if admin_module_errors %}
       <p class="setting-label setting-label--spaced">Left out because of an error</p>
       <ul class="manage-list">

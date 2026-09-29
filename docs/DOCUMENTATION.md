@@ -81,6 +81,12 @@ in the database until it is turned back on. A module that needs another is
 off while that one is: Hardware needs Locations, and Virtual and Network
 need Hardware. The knowledge base and Secrets are built in, and stay on.
 
+An admin also sets the sidebar's order there: drag a group, or a module
+within its group, by its handle, or focus the handle and use ↑ and ↓. The
+order is saved as it changes, for every account, and Put the default order
+back undoes it. A record's sections from other modules follow the same
+order.
+
 A location, a piece of hardware, or a VM or LXC container can be made
 another kind in its Overview, under Type: a room that is really a building, a
 server recorded as a NAS, a VM that is really an LXC container. It keeps its

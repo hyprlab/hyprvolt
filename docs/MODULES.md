@@ -59,7 +59,7 @@ required.
 | --- | --- |
 | `id` | 2 to 31 lower-case letters, digits and underscores, starting with a letter; the URL (`/<id>`) and the name of its settings. Can't be a word the core uses (`all`, `api`, `admin`, `search`, …) |
 | `name`, `description`, `icon` | What the sidebar, dashboard and Settings > Modules show. `icon` is the inside of a 24×24 stroked `<svg>`, like every icon in the app |
-| `group`, `order` | Where it sits in the sidebar: under the `group` heading, sorted by `order` |
+| `group`, `order` | Where it sits in the sidebar: under the `group` heading, sorted by `order`. That is the default; an admin can reorder the groups and the modules within them in Settings > Modules, and a module the saved order doesn't name follows the ones it does |
 | `requires` | Ids of modules it builds on. They migrate and seed first; a module whose requirement is missing is left out, and one whose requirement is turned off is off too. A module that only takes part through traits (Services pointing at hosts) needs no requirement |
 | `core` | Built in; it can't be turned off. The knowledge base and Secrets are |
 | `models` | Its SQLAlchemy models, for the record; importing the package is what registers them |
