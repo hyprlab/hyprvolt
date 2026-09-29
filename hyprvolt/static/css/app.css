@@ -867,7 +867,7 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 /* The sections' rail is added to the sheet's width, so the record's own
    column is the same 660px with or without it. */
 .sheet {
-  --sheet-rail: 220px;
+  --sheet-rail: 240px;
   --sheet-bar: 55px;
   width: min(calc(840px + var(--sheet-rail)), 100vw); height: 100dvh; max-height: 100dvh;
   margin: 0 auto; overflow-y: auto; overscroll-behavior: contain;
@@ -886,8 +886,20 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .sheet-bar-nav { display: flex; gap: 4px; padding-right: 8px; margin-right: 4px; border-right: 1px solid var(--line); }
 .sheet-bar-nav .iconbtn[disabled] { opacity: .35; cursor: default; background: none; }
 .sheet-article { max-width: 660px; margin: 0 auto; padding: clamp(22px, 4vw, 44px) 20px 70px; }
-/* Wide: the rail down the left, the header and the open section beside it. */
+/* Wide: the rail down the left, the header and the open section beside it.
+   The bar's record actions sit at the top of the rail, and its close button
+   alone at the top right; the bar itself is no longer a band across. */
 @media (min-width: 901px) {
+  .sheet-bar {
+    margin-bottom: calc(-1 * var(--sheet-bar)); padding: 10px 12px;
+    background: none; backdrop-filter: none; border-bottom: 0; pointer-events: none;
+  }
+  .sheet-bar > * { pointer-events: auto; }
+  .sheet-bar-actions { width: calc(var(--sheet-rail) - 24px); justify-content: space-between; gap: 2px; }
+  .sheet-bar-actions .iconbtn { width: 32px; height: 32px; }
+  .sheet-bar-nav { gap: 2px; padding-right: 6px; margin-right: 0; }
+  .sheet-bar > [data-close] { background: var(--surface); }
+  .sheet-bar > [data-close]:hover { background: var(--hover); }
   .sheet-article { max-width: none; padding: 0; }
   .sheet-content {
     display: grid; grid-template-columns: var(--sheet-rail) minmax(0, 1fr);
@@ -895,7 +907,7 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
     min-height: calc(100dvh - var(--sheet-bar));
   }
   .sheet-head, .sheet-content > .tab-panel { width: 100%; max-width: 660px; justify-self: center; padding-inline: 20px; }
-  .sheet-head { grid-area: head; padding-top: 44px; }
+  .sheet-head { grid-area: head; padding-top: 64px; }
   .sheet-content > .tab-panel { grid-area: panel; padding-bottom: 70px; }
   .sheet-nav { grid-area: nav; background: var(--panel); border-right: 1px solid var(--line); padding: 18px 12px; }
   .sheet-nav .tabs {
