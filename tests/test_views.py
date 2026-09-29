@@ -1,6 +1,7 @@
 """The pages and fragments the interface is built from: lists, the sheet and
 its tabs, the form, and the dashboard."""
 import io
+import re
 
 from .conftest import make
 
@@ -19,6 +20,19 @@ def test_a_module_list_and_its_sidebar(client, h, admin):
     assert "Blue box" in body and "blue" in body            # the list field shows in the row
     assert 'href="/example?tag=lab"' in body                 # tags filter within the module
     assert client.get("/nosuchmodule").status_code == 404
+
+
+def test_the_new_menu_offers_every_enabled_module_on_every_page(client, h, admin):
+    def offered(url):
+        page = client.get(url).data.decode()
+        menu = page.split('id="new-menu"')[1].split("</div>\n        </div>")[0]
+        return set(re.findall(r'data-new-type="([a-z_]+)"', menu))
+    everything = offered("/")
+    assert {"server", "vm", "subnet", "vendor", "document"} <= everything
+    for url in ("/network", "/hardware?view=list", "/contacts"):
+        assert offered(url) == everything, url
+    client.post("/admin/modules/contacts", json={"enabled": False}, headers=h)
+    assert "vendor" not in offered("/network")
 
 
 def test_the_sheet_has_the_core_sections_one_after_another(client, h, admin):

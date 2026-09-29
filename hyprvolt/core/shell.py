@@ -77,18 +77,16 @@ def context(active_module=None, active_type=None, active_filter=None, active_tag
         "nav_tags": tag_counts(keys),
         "nav_special": special,
         "active_tag": active_tag,
-        "new_menu": new_menu(active_module),
+        "new_menu": new_menu(),
         "list_pages": [(m, p) for m in reg.enabled_modules() for p in m.pages if p.from_list],
         "module_panes": [(m, m.settings_pane) for m in reg.enabled_modules()
                          if m.settings_pane and (current_user.is_admin or not m.settings_pane.admin)],
     }
 
 
-def new_menu(active_module=None) -> list[dict]:
-    """What the "New" button offers: the page's module's types, or every
-    type, grouped by module."""
+def new_menu() -> list[dict]:
+    """What the "New" button offers: every enabled type, grouped by module in
+    the sidebar's order, whichever page it is on."""
     if not current_user.can_edit:
         return []
-    reg = registry()
-    modules = [active_module] if active_module else reg.enabled_modules()
-    return [{"module": m, "types": list(m.types)} for m in modules if m.types]
+    return [{"module": m, "types": list(m.types)} for m in registry().enabled_modules() if m.types]
