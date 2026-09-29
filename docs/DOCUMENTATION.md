@@ -359,6 +359,12 @@ them all. Errors are
 
 ## Records
 
+A record shows all of its sections, Overview first, one after another. The
+list of them beside it (above it on a narrow screen) marks the one being
+read, and choosing one scrolls there. Settings > Appearance can show one
+section at a time instead, for each account: then choosing a section shows
+that one alone.
+
 A record's Relationships tab ends with its dependency view: what breaks if
 it goes down, and what it needs, followed through the links that carry a
 dependency (runs on, hosted by, depends on, installed on, powered by). It

@@ -909,7 +909,7 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   .sheet-head, .sheet-sections { width: 100%; max-width: 660px; justify-self: center; padding-inline: 20px; }
   .sheet-head { grid-area: head; padding-top: 64px; }
   .sheet-sections { grid-area: panel; padding-bottom: 70px; }
-  .sheet-section:last-child { min-height: calc(100dvh - 90px); }  /* the scroll offset and the padding below */
+  [data-scroll="1"] .sheet-section:last-child { min-height: calc(100dvh - 90px); }  /* the scroll offset and the padding below */
   .sheet-nav { grid-area: nav; background: var(--panel); border-right: 1px solid var(--line); padding: 18px 12px; }
   .sheet-nav .tabs {
     position: sticky; top: calc(var(--sheet-bar) + 18px);
@@ -982,7 +982,7 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   .sheet-nav { position: sticky; top: var(--sheet-bar); z-index: 4; background: var(--surface); margin: 0 -20px; padding: 0 20px; }
   .sheet-nav .tabs { margin-bottom: 0; }
   .sheet-sections { padding-top: 22px; }
-  .sheet-section:last-child { min-height: calc(100dvh - 175px); }
+  [data-scroll="1"] .sheet-section:last-child { min-height: calc(100dvh - 175px); }
 }
 .tabs {
   display: flex; gap: 2px; margin: 6px 0 22px;

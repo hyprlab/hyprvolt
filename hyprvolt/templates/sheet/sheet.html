@@ -2,9 +2,11 @@
    one after another. Fetched by app.js (/e/<id>/sheet?tab=...) into the
    <dialog id="sheet">, which scrolls to ?tab=. The sections' links are a rail
    down the left on a wide screen and a row under the header on a narrow one;
-   the CSS places them (.sheet-content), and app.js marks the one in view. #}
+   the CSS places them (.sheet-content), and app.js marks the one in view.
+   An account can turn that off (record_scroll): then the page holds the one
+   section ?tab= names, and choosing another fetches it. #}
 {% from "partials/macros.html" import crumbs as crumb_nav, type_icon %}
-<div class="sheet-content" data-id="{{ entity.id }}" data-name="{{ entity.name }}" data-tab="{{ tab.key }}"
+<div class="sheet-content" data-id="{{ entity.id }}" data-name="{{ entity.name }}" data-tab="{{ tab.key }}" data-scroll="{{ '1' if scroll else '0' }}"
      data-archived="{{ '1' if entity.archived else '0' }}" data-deleted="{{ '1' if entity.deleted_at else '0' }}"
      {%- if editable %} data-autosave="/api/entities/{{ entity.id }}"{% endif %}>
   <div class="sheet-head">

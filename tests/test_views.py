@@ -101,3 +101,16 @@ def test_user_text_is_escaped_everywhere(client, h, admin):
                 f"/e/{g['id']}/sheet?tab=history"):
         body = client.get(url).data.decode()
         assert "<script>alert" not in body and "<b>x</b>" not in body and "<i>c</i>" not in body, url
+
+
+def test_an_account_can_see_one_section_at_a_time(client, h, admin):
+    g = make(client, h, name="Blue box")
+    page = client.get("/").get_data(as_text=True)
+    assert 'id="record-scroll" checked' in page
+    assert client.post("/settings", json={"record_scroll": False}, headers=h).status_code == 200
+    body = client.get(f"/e/{g['id']}/sheet?tab=history").data.decode()
+    assert 'data-scroll="0"' in body and body.count('data-panel="') == 1 and 'data-panel="history"' in body
+    assert body.count('<a href="#section-') == 7                  # the rail still lists them all
+    assert 'id="record-scroll" >' in client.get("/").get_data(as_text=True)
+    client.post("/settings", json={"record_scroll": True}, headers=h)
+    assert client.get(f"/e/{g['id']}/sheet").data.decode().count('data-panel="') == 7

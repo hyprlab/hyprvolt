@@ -330,6 +330,18 @@
     });
   }
 
+  var recordScroll = document.getElementById("record-scroll");
+  if (recordScroll) {
+    recordScroll.addEventListener("change", function () {
+      api("/settings", { record_scroll: recordScroll.checked })
+        .then(function () {
+          toast(recordScroll.checked ? "A record shows all its sections" : "A record shows one section at a time");
+          refreshSheet();    // an open record follows at once
+        })
+        .catch(toastError);
+    });
+  }
+
   var acctName = document.getElementById("acct-name");
   if (acctName) {
     acctName.addEventListener("change", function () {
@@ -1288,7 +1300,14 @@
       }
       if (opts.keepScroll) {
         sheet.scrollTop = before;
-      } else if (!opts.scroll && current.tab !== "overview") {
+      } else if (opts.tabSwitch) {
+        // One section at a time: keep the section's start in view when it is
+        // shorter than the scroll, under the row of links on a narrow screen.
+        var mark = sheetArticle.querySelector(".sheet-sections");
+        var top = mark ? sheet.scrollTop + mark.getBoundingClientRect().top - sheet.getBoundingClientRect().top
+                         - sectionOffset() + 14 : 0;
+        sheet.scrollTop = Math.min(before, Math.max(0, top));
+      } else if (!opts.scroll && current.tab !== "overview" && allSections()) {
         scrollToSection(current.tab, false);
       } else {
         sheet.scrollTop = opts.scroll || 0;
@@ -1353,6 +1372,11 @@
   // Every section is on the page: choosing one scrolls to it, and scrolling
   // marks the one being read in the rail (and in ?tab=, for a reload).
   var spyLock = null, spyTimer = 0, spyFrame = 0;
+  // Unless the account shows one section at a time (Settings, record_scroll).
+  function allSections() {
+    var root = sheetArticle.querySelector(".sheet-content");
+    return !!root && root.getAttribute("data-scroll") === "1";
+  }
   function sectionOffset() {
     if (sheetRail()) return 24;
     var bar = sheet.querySelector(".sheet-bar"), nav = sheetArticle.querySelector(".sheet-nav");
@@ -1393,7 +1417,7 @@
   }
   function spySections() {
     spyFrame = 0;
-    if (!current || !sheet.open || spyLock) return;
+    if (!current || !sheet.open || spyLock || !allSections()) return;
     var sections = sheetArticle.querySelectorAll(".sheet-section");
     if (!sections.length) return;
     var line = sheet.getBoundingClientRect().top + sectionOffset() + 40, key = sections[0].getAttribute("data-panel");
@@ -1412,6 +1436,10 @@
   }
   function openTab(key) {
     if (!current || !key) return;
+    if (!allSections()) {
+      if (key !== current.tab) openEntity(current.id, { tab: key, tabSwitch: true, nav: "replace" });
+      return;
+    }
     markSection(key);
     scrollToSection(key, true);
   }
@@ -1432,10 +1460,14 @@
   // field, on the Overview.
   function editCurrent() {
     if (!current || current.deleted) return;
-    var first = sheetArticle.querySelector("[data-autosave] [data-save]:not([hidden])");
-    if (!first) return;
-    first.focus({ preventScroll: true });
-    scrollToSection("overview", true);
+    var ready = allSections() || current.tab === "overview" ? Promise.resolve()
+      : openEntity(current.id, { tab: "overview", tabSwitch: true, nav: "replace" });
+    Promise.resolve(ready).then(function () {
+      var first = sheetArticle.querySelector("[data-autosave] [data-save]:not([hidden])");
+      if (!first) return;
+      first.focus({ preventScroll: true });
+      scrollToSection("overview", true);
+    });
   }
 
   if (sheet) {

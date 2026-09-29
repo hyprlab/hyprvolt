@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- A setting in Settings > Appearance to show a record one section at a time, as before, instead of all its sections on one page
 - A beta channel: `IMAGE_TAG=beta` runs previews of the next release, numbered like `1.4.0-beta.1`, while `latest` stays on stable
 - The dependency view in a record's Relationships tab can be shown as a diagram: what it needs above the record, what breaks if it goes down below it, a row for each step away. It opens as the diagram; List and Diagram switch between the two, and the choice is remembered in the browser
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram

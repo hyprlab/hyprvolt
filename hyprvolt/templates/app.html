@@ -288,6 +288,10 @@
         <input type="checkbox" id="infinite-scroll" {{ 'checked' if current_user.infinite_scroll }}>
         <span>Load more records automatically as you scroll</span>
       </label>
+      <label class="check setting-row">
+        <input type="checkbox" id="record-scroll" {{ 'checked' if current_user.record_scroll }}>
+        <span>Show all of a record's sections on one page, following them as you scroll</span>
+      </label>
     </section>
 
     <section class="settings-pane" data-pane="account" id="settings-account" role="tabpanel" aria-labelledby="settings-tab-account" tabindex="0">
