@@ -182,7 +182,14 @@ def listing() -> list[dict]:
 
 
 def _version(text) -> tuple:
-    return tuple(int(x) for x in re.findall(r"\d+", str(text or "0"))[:3])
+    """A version in SemVer order: 1.4.0-beta.2 comes after 1.4.0-beta.1 and
+    before 1.4.0, so a beta won't restore a backup its stable made."""
+    core, _, pre = str(text or "0").partition("-")
+    numbers = tuple(int(x) for x in re.findall(r"\d+", core)[:3])
+    numbers += (0,) * (3 - len(numbers))
+    if not pre:
+        return numbers + (1,)
+    return numbers + (0,) + tuple((0, int(p), "") if p.isdigit() else (1, 0, p) for p in pre.split("."))
 
 
 def inspect(path: Path) -> dict:

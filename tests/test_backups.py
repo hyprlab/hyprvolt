@@ -188,3 +188,10 @@ def test_the_commands_share_the_archive(app, client, h, admin):
     make(client, h, "server", name="srv2")
     result = runner.invoke(args=["restore", path])
     assert result.exit_code == 0 and "Restored 1 records" in result.output
+
+
+def test_versions_compare_in_semver_order():
+    from hyprvolt.core.backups import _version
+    order = ["1.3.0", "1.3.1", "1.4.0-beta.1", "1.4.0-beta.2", "1.4.0-beta.10", "1.4.0", "2.0.0-beta.1", "2.0.0"]
+    assert sorted(order, key=_version) == order
+    assert _version("1.4.0") == _version("1.4.0") and _version(None) < _version("0.1.0")
