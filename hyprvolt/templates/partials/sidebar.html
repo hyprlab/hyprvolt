@@ -41,7 +41,7 @@
     {% endfor %}
     {% for f in entry.filters %}
     <li><a class="sideitem {{ 'is-active' if f.active }}" href="{{ url_for('main.module_list', module_id=m.id, f=f.filter.key) }}">
-      <span class="sideitem-title">{{ f.filter.label }}</span>{% if f.count %}<span class="count count--alert">{{ f.count }}</span>{% endif %}</a></li>
+      <span class="sideitem-title">{{ f.filter.label }}</span>{% if f.count %}<span class="count {{ 'count--alert' if f.filter.alert }}">{{ f.count }}</span>{% endif %}</a></li>
     {% endfor %}
     {% for p in entry.pages %}
     <li><a class="sideitem {{ 'is-active' if p.active }}" href="{{ url_for('main.module_page', module_id=m.id, key=p.page.key) }}">

@@ -114,10 +114,12 @@ class FormSection:
 @dataclass(frozen=True)
 class ListFilter:
     """A sidebar filter with a live count. ``apply(query)`` narrows a query
-    over live entities of the module; the core counts and pages it."""
+    over live entities of the module; the core counts and pages it. The
+    count is red, as something to see to, unless ``alert`` is False."""
     key: str
     label: str
     apply: Callable
+    alert: bool = True
 
 
 @dataclass(frozen=True)

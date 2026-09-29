@@ -9,7 +9,7 @@ class NetworkDetail(EntityDetail, db.Model):
     __tablename__ = "network_details"
 
     kind = db.Column(db.String(10))            # networks: lan, wan, vpn, other
-    provider = db.Column(db.String(120))       # networks: the ISP
+    circuit_id = db.Column(db.String(120))     # internet connections: the ISP's name for the line
     public_ips = db.Column(db.String(300))
     bandwidth = db.Column(db.String(120))
     network = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)

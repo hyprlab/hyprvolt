@@ -67,7 +67,7 @@ required.
 | `blueprint` | A Flask blueprint named like the module, mounted at `/<id>`. Optional |
 | `types` | Its `EntityType`s. See [Entity types and fields](#entity-types-and-fields) |
 | `search` | `search(query, limit)` returning `SearchResult`s for the palette, for things that aren't records (an IP address, a DNS name). Records are searched without it |
-| `filters` | `ListFilter(key, label, apply)`s: sidebar entries with live counts under the module. `apply(query)` narrows a query of the module's live records |
+| `filters` | `ListFilter(key, label, apply)`s: sidebar entries with live counts under the module. `apply(query)` narrows a query of the module's live records. The count is red, as something to see to; `alert=False` for a filter that is only a view, such as Network's internet connections |
 | `widgets` | `Widget(key, label, render, wide=False)`s on the dashboard; `wide` spans the row |
 | `pages` | `Page(key, label, render, sidebar=True, from_list=False)`s: pages of their own in the shell, at `/p/<module>/<key>`. `render()` returns the HTML and reads `request.args`. `sidebar` lists the page under the module (a module of pages alone is one sidebar link, to its first); `from_list` offers it in every list's export menu with the list's filters, and `records_listed(name, limit)` in main.py turns those into records. Diagram and Asset labels are the examples |
 | `jobs` | `Job`s the worker runs, each at most every `minutes`. Dates that come due need no job: mark the field `expires` |

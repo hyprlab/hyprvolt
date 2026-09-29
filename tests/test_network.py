@@ -275,6 +275,41 @@ def test_filters_for_loose_addresses_and_renewals(client, h, admin):
     assert ">example.net<" in due and ">example.org<" not in due
 
 
+def test_internet_connections_have_a_circuit_and_a_filter(client, h, admin):
+    wan = make(client, h, "network", name="Fiber", **{"f.kind": "wan", "f.circuit_id": "SC-88213"})
+    make(client, h, "network", name="Home LAN", **{"f.kind": "lan"})
+    assert wan["fields"]["circuit_id"] == "SC-88213"
+    listed = client.get("/network?f=internet&view=list").data.decode()
+    assert ">Fiber<" in listed and ">Home LAN<" not in listed
+    # A view, not something to see to: its count isn't red.
+    entry = listed.split("Internet connections</span>")[1].split("</a>")[0]
+    assert ">1<" in entry and "count--alert" not in entry
+    # The ISP is a vendor, chosen in the Supplier section, not a line of text.
+    form = client.get(f"/e/form?type=network&id={wan['id']}").data.decode()
+    assert "s.supplier.vendor_id" in form and 'name="f.provider"' not in form
+
+
+def test_a_typed_provider_moves_to_the_notes(app, client, h, admin):
+    from hyprvolt.migrate import Migrator
+    from hyprvolt.models import db
+    from hyprvolt.modules.network import _provider_to_notes
+    wan = make(client, h, "network", name="Internet", notes="Bridge mode.", **{"f.kind": "wan"})
+    bare = make(client, h, "network", name="Backup line", **{"f.kind": "wan"})
+    with app.app_context():
+        db.session.execute(db.text("ALTER TABLE network_details ADD COLUMN provider VARCHAR(120)"))
+        db.session.execute(db.text("UPDATE network_details SET provider = 'Springfield Cable' WHERE entity_id = :i"),
+                           {"i": wan["id"]})
+        db.session.execute(db.text("UPDATE network_details SET provider = 'LTE Co' WHERE entity_id = :i"),
+                           {"i": bare["id"]})
+        db.session.commit()
+        for _ in range(2):
+            _provider_to_notes(Migrator("network"))
+    with app.app_context():
+        from hyprvolt.core.models import Entity
+        notes = {e.name: e.notes for e in Entity.query.filter_by(type="network")}
+    assert notes == {"Internet": "Bridge mode.\n\nProvider: Springfield Cable", "Backup line": "Provider: LTE Co"}
+
+
 def test_network_off_hides_its_parts_on_other_records(client, h, admin):
     server = make(client, h, "server", name="srv1")
     client.post("/admin/modules/network", json={"enabled": False}, headers=h)

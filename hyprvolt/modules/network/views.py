@@ -148,6 +148,11 @@ def records_count(domain: Entity):
 
 # ———— Sidebar filters and the dashboard ————
 
+def internet_connections(query):
+    wan = db.session.query(NetworkDetail.entity_id).filter(NetworkDetail.kind == "wan")
+    return query.filter(Entity.type == "network", Entity.id.in_(wan))
+
+
 def ips_without_device(query):
     live_ids = db.session.query(Entity.id).filter(Entity.deleted_at.is_(None))
     loose = db.session.query(NetworkDetail.entity_id).filter(

@@ -9,7 +9,9 @@ address is a record of its own, named by its address, and belongs to the
 most specific subnet that holds it; which addresses of a subnet are free is
 worked out, not stored.
 """
-from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, Tab, Widget
+from hyprvolt.core.models import Entity
+from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, Step, Tab, Widget
+from hyprvolt.models import db
 
 from . import addresses, demo, dns, ports, views
 from .models import Cable, DnsRecord, NetworkDetail, Port
@@ -17,6 +19,29 @@ from .models import Cable, DnsRecord, NetworkDetail, Port
 NETWORK_KINDS = (("lan", "Local network"), ("wan", "Internet connection"), ("vpn", "VPN"), ("other", "Other"))
 IP_STATUSES = (("active", "In use"), ("reserved", "Reserved"), ("retired", "Retired"))
 DOMAIN_STATUSES = (("active", "Active"), ("planned", "Planned"), ("retired", "Expired or given up"))
+
+
+
+def _provider_to_notes(m):
+    """The ISP was once a line of text on a network. It is a vendor now, in
+    the Supplier section, and a vendor can't be guessed from text: what was
+    typed goes to the end of the network's notes, where it can still be
+    read and searched."""
+    m.add_column("network_details", "circuit_id", "VARCHAR(120)")
+    if not m.has_column("network_details", "provider"):
+        return
+
+    def move():
+        rows = db.session.execute(db.text(
+            "SELECT entity_id, provider FROM network_details WHERE provider IS NOT NULL AND provider != ''")).all()
+        for entity_id, provider in rows:
+            entity = db.session.get(Entity, entity_id)
+            if entity is not None:
+                line = f"Provider: {provider}"
+                entity.notes = f"{entity.notes.rstrip()}\n\n{line}" if entity.notes.strip() else line
+        db.session.execute(db.text("UPDATE network_details SET provider = NULL"))
+    m.once("provider-to-notes", move)
+
 
 NETWORK_REF = Field("network", "Network", "ref", types=("network",), list=True)
 
@@ -38,14 +63,17 @@ module = Module(
     order=40,
     requires=("hardware",),
     models=(NetworkDetail, Port, Cable, DnsRecord),
+    migrations=(Step("provider-to-notes", _provider_to_notes),),
     blueprint=views.bp,
     types=(
         EntityType("network", "Network", "Networks", detail=NetworkDetail, located_in=None, icon=NETWORK,
                    traits=("supplied",),
                    fields=(Field("kind", "Kind", "select", options=NETWORK_KINDS, card=True, list=True),
-                           Field("provider", "Provider", list=True, help="For an internet connection: the ISP."),
                            Field("public_ips", "Public addresses", help="203.0.113.24, or a range."),
-                           Field("bandwidth", "Bandwidth", help="1 Gb/s down, 40 Mb/s up.")),
+                           Field("bandwidth", "Bandwidth", help="1 Gb/s down, 40 Mb/s up."),
+                           Field("circuit_id", "Circuit ID",
+                                 help="For an internet connection: what the ISP calls this line when you report "
+                                      "a fault. The ISP itself goes in Supplier, as a vendor.")),
                    tabs=(Tab("contents", "VLANs and subnets", views.network_tab, count=views.network_count),)),
         EntityType("vlan", "VLAN", "VLANs", detail=NetworkDetail, located_in=(), icon=VLAN,
                    check=addresses.check_vlan,
@@ -78,7 +106,8 @@ module = Module(
                    tabs=(Tab("records", "DNS records", views.records_tab, count=views.records_count),)),
     ),
     search=dns.search,
-    filters=(ListFilter("unassigned", "Addresses without a device", views.ips_without_device),
+    filters=(ListFilter("internet", "Internet connections", views.internet_connections, alert=False),
+             ListFilter("unassigned", "Addresses without a device", views.ips_without_device),
              ListFilter("renewal", "Domain renewal soon", views.renewal_soon)),
     widgets=(Widget("subnets", "Subnets", views.subnets_widget),),
     sheet_tabs=(Tab("addresses", "Addresses", views.addresses_tab, when=views.has_addresses_tab,

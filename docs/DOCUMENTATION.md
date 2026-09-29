@@ -125,7 +125,11 @@ up to a /22 as a grid: used, reserved, held for DHCP or free. Choosing a free
 address records it. Anything with network ports has a Ports tab: add ports
 in a run (Port 1 to 24, or a patch panel's Front and Rear pairs), set a
 port's VLANs, and cable it to another device's port; a cabled port's path
-can be traced to the far end through patch panels. A domain's DNS records
+can be traced to the far end through patch panels. An internet connection
+is a network of the kind Internet connection, with its public addresses,
+bandwidth and circuit ID; the ISP is a vendor, chosen in its Supplier
+section, with the contract for the line. The sidebar lists internet
+connections. A domain's DNS records
 are written down by hand in its DNS records tab, and an A record or a CNAME
 that leads to a recorded address links to the device holding it. The
 palette finds DNS names and MAC addresses. The sidebar lists addresses with
