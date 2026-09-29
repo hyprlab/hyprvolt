@@ -288,6 +288,10 @@
         <input type="checkbox" id="infinite-scroll" {{ 'checked' if current_user.infinite_scroll }}>
         <span>Load more records automatically as you scroll</span>
       </label>
+      <label class="check setting-row">
+        <input type="checkbox" id="record-scroll" {{ 'checked' if current_user.record_scroll }}>
+        <span>Show all of a record's sections on one page, following them as you scroll</span>
+      </label>
     </section>
 
     <section class="settings-pane" data-pane="account" id="settings-account" role="tabpanel" aria-labelledby="settings-tab-account" tabindex="0">
@@ -728,6 +732,20 @@
     </button>
   </div>
   <article class="sheet-article" id="sheet-article"></article>
+</dialog>
+
+<!-- ————— Confirming an action first (app.js, [data-confirm]) ————— -->
+<dialog class="modal" id="confirm-modal" aria-labelledby="confirm-title" aria-describedby="confirm-text" data-restore="off">
+  <div class="modal-head">
+    <h3 id="confirm-title">Are you sure?</h3>
+  </div>
+  <div class="modal-body">
+    <p class="confirm-text" id="confirm-text"></p>
+    <div class="confirm-actions">
+      <button type="button" class="btn btn--ghost" data-close autofocus>Cancel</button>
+      <button type="button" class="btn btn--danger" id="confirm-go">Remove</button>
+    </div>
+  </div>
 </dialog>
 
 <!-- ————— Picture viewer: a record's pictures, large (app.js, [data-gallery]) ————— -->

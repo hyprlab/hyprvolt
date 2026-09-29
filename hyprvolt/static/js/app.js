@@ -232,7 +232,7 @@
 
   // A click on a modal's ::backdrop is dispatched to the <dialog> itself, so
   // target identity alone can't tell it from a click on the dialog's own
-  // chrome: the sheet's 840px shell is wider than its 660px article column, so
+  // chrome: the sheet's shell is wider than its 660px article column, so
   // its side gutters are the dialog element too. Compare the pointer with the
   // dialog's box (which follows the open/close transform) instead, and require
   // the press to have started outside as well, so a text selection dragged off
@@ -325,6 +325,18 @@
       api("/settings", { infinite_scroll: infinite.checked })
         .then(function () {
           toast(infinite.checked ? "Records load as you scroll" : "Load more records by hand");
+        })
+        .catch(toastError);
+    });
+  }
+
+  var recordScroll = document.getElementById("record-scroll");
+  if (recordScroll) {
+    recordScroll.addEventListener("change", function () {
+      api("/settings", { record_scroll: recordScroll.checked })
+        .then(function () {
+          toast(recordScroll.checked ? "A record shows all its sections" : "A record shows one section at a time");
+          refreshSheet();    // an open record follows at once
         })
         .catch(toastError);
     });
@@ -824,6 +836,8 @@
   //                              page, or remove the closest [data-row]
   //   data-then="replace"        put the answer's html in #data-replace
   //   data-done="Message"        the toast, with Undo when the answer has one
+  //   data-confirm="Question?"   asks first, in #confirm-modal; data-confirm-text
+  //                              explains, data-confirm-go names the button
   //   [data-pick]                chooses a record in the palette; its id goes
   //                              into the form's data-pick-into field (other_id)
   //   [data-fill='{"a": 1}']     sets fields of its form (or data-fill-form)
@@ -1067,19 +1081,40 @@
     target.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
   });
 
+  // [data-confirm]: the action waits for its button in the confirm modal.
+  // Cancel, Escape or closing it does nothing.
+  var confirmModal = document.getElementById("confirm-modal");
+  function confirmFirst(btn, go) {
+    if (!confirmModal || !btn.hasAttribute("data-confirm")) { go(); return; }
+    document.getElementById("confirm-title").textContent = btn.getAttribute("data-confirm");
+    var text = document.getElementById("confirm-text");
+    text.textContent = btn.getAttribute("data-confirm-text") || "";
+    text.hidden = !text.textContent;
+    var yes = document.getElementById("confirm-go");
+    yes.textContent = btn.getAttribute("data-confirm-go") || "Remove";
+    yes.onclick = function () {
+      yes.onclick = null;
+      confirmModal.close();
+      go();
+    };
+    confirmModal.showModal();
+  }
+
   document.addEventListener("click", function (e) {
     var print = e.target.closest("[data-print]");
     if (print) { e.preventDefault(); window.print(); return; }
     var btn = e.target.closest("[data-api-post]");
     if (btn) {
       e.preventDefault();
-      var body = {};
-      try { body = JSON.parse(btn.getAttribute("data-body") || "{}"); } catch (_) {}
-      btn.disabled = true;
-      api(btn.getAttribute("data-api-post"), body).then(function (data) {
-        btn.disabled = false;
-        afterAction(btn, data);
-      }).catch(function (err) { btn.disabled = false; toastError(err); });
+      confirmFirst(btn, function () {
+        var body = {};
+        try { body = JSON.parse(btn.getAttribute("data-body") || "{}"); } catch (_) {}
+        btn.disabled = true;
+        api(btn.getAttribute("data-api-post"), body).then(function (data) {
+          btn.disabled = false;
+          afterAction(btn, data);
+        }).catch(function (err) { btn.disabled = false; toastError(err); });
+      });
       return;
     }
     var pick = e.target.closest("[data-pick]");
@@ -1266,12 +1301,19 @@
       if (opts.keepScroll) {
         sheet.scrollTop = before;
       } else if (opts.tabSwitch) {
-        // Keep the tabs in view when the new tab is shorter than the scroll.
-        var tabs = sheetArticle.querySelector(".tabs");
-        sheet.scrollTop = Math.min(before, tabs ? tabs.offsetTop - 64 : 0);
+        // One section at a time: keep the section's start in view when it is
+        // shorter than the scroll, under the row of links on a narrow screen.
+        var mark = sheetArticle.querySelector(".sheet-sections");
+        var top = mark ? sheet.scrollTop + mark.getBoundingClientRect().top - sheet.getBoundingClientRect().top
+                         - sectionOffset() + 14 : 0;
+        sheet.scrollTop = Math.min(before, Math.max(0, top));
+      } else if (!opts.scroll && current.tab !== "overview" && allSections()) {
+        scrollToSection(current.tab, false);
       } else {
         sheet.scrollTop = opts.scroll || 0;
       }
+      spyLock = null;
+      markSection(current.tab);
       recordStep(id, current.tab, nav);
     }).catch(toastError);
   }
@@ -1325,8 +1367,81 @@
     var at = ids.indexOf(current.id);
     if (at !== -1 && ids[at + step] !== undefined) openEntity(ids[at + step], { tab: current.tab });
   }
+  // Wide enough for the sections' rail (app.css, .sheet-content).
+  function sheetRail() { return window.matchMedia("(min-width: 901px)").matches; }
+  // Every section is on the page: choosing one scrolls to it, and scrolling
+  // marks the one being read in the rail (and in ?tab=, for a reload).
+  var spyLock = null, spyTimer = 0, spyFrame = 0;
+  // Unless the account shows one section at a time (Settings, record_scroll).
+  function allSections() {
+    var root = sheetArticle.querySelector(".sheet-content");
+    return !!root && root.getAttribute("data-scroll") === "1";
+  }
+  function sectionOffset() {
+    if (sheetRail()) return 24;
+    var bar = sheet.querySelector(".sheet-bar"), nav = sheetArticle.querySelector(".sheet-nav");
+    return (bar ? bar.offsetHeight : 0) + (nav ? nav.offsetHeight : 0) + 14;
+  }
+  function scrollToSection(key, smooth) {
+    var section = document.getElementById("section-" + key);
+    if (!section) return;
+    var top = sheet.scrollTop + section.getBoundingClientRect().top - sheet.getBoundingClientRect().top - sectionOffset();
+    if (key === "overview") top = 0;
+    smooth = smooth && !prefersReducedMotion();
+    // The rail shows where it is going, not each section passed on the way.
+    spyLock = smooth ? key : null;
+    clearTimeout(spyTimer);
+    if (smooth) spyTimer = setTimeout(function () { spyLock = null; spySections(); }, 900);
+    sheet.scrollTo({ top: Math.max(0, top), behavior: smooth ? "smooth" : "auto" });
+  }
+  function markSection(key) {
+    sheetArticle.querySelectorAll(".sheet-nav .tab[data-tab]").forEach(function (tab) {
+      var on = tab.getAttribute("data-tab") === key;
+      tab.classList.toggle("is-active", on);
+      if (on) {
+        tab.setAttribute("aria-current", "true");
+        if (!sheetRail()) {       // the row scrolls sideways to keep it in view
+          var row = tab.parentNode;
+          if (tab.offsetLeft < row.scrollLeft || tab.offsetLeft + tab.offsetWidth > row.scrollLeft + row.clientWidth) {
+            row.scrollLeft = tab.offsetLeft - 20;
+          }
+        }
+      } else {
+        tab.removeAttribute("aria-current");
+      }
+    });
+    if (current && current.tab !== key) {
+      current.tab = key;
+      recordStep(current.id, key, "replace");
+    }
+  }
+  function spySections() {
+    spyFrame = 0;
+    if (!current || !sheet.open || spyLock || !allSections()) return;
+    var sections = sheetArticle.querySelectorAll(".sheet-section");
+    if (!sections.length) return;
+    var line = sheet.getBoundingClientRect().top + sectionOffset() + 40, key = sections[0].getAttribute("data-panel");
+    sections.forEach(function (section) {
+      if (section.getBoundingClientRect().top <= line) key = section.getAttribute("data-panel");
+    });
+    markSection(key);
+  }
+  if (sheet) {
+    sheet.addEventListener("scroll", function () {
+      if (!spyFrame) spyFrame = requestAnimationFrame(spySections);
+    }, { passive: true });
+    sheet.addEventListener("scrollend", function () {
+      if (spyLock) { clearTimeout(spyTimer); spyLock = null; }
+    });
+  }
   function openTab(key) {
-    if (current && key && key !== current.tab) openEntity(current.id, { tab: key, tabSwitch: true, nav: "replace" });
+    if (!current || !key) return;
+    if (!allSections()) {
+      if (key !== current.tab) openEntity(current.id, { tab: key, tabSwitch: true, nav: "replace" });
+      return;
+    }
+    markSection(key);
+    scrollToSection(key, true);
   }
   function toggleArchive() {
     if (!current || current.deleted) return;
@@ -1345,11 +1460,13 @@
   // field, on the Overview.
   function editCurrent() {
     if (!current || current.deleted) return;
-    var ready = current.tab === "overview" ? Promise.resolve()
+    var ready = allSections() || current.tab === "overview" ? Promise.resolve()
       : openEntity(current.id, { tab: "overview", tabSwitch: true, nav: "replace" });
     Promise.resolve(ready).then(function () {
       var first = sheetArticle.querySelector("[data-autosave] [data-save]:not([hidden])");
-      if (first) first.focus();
+      if (!first) return;
+      first.focus({ preventScroll: true });
+      scrollToSection("overview", true);
     });
   }
 
@@ -1376,15 +1493,21 @@
     });
     sheetArticle.addEventListener("click", function (e) {
       var tab = e.target.closest(".tab[data-tab]");
-      if (tab) openTab(tab.getAttribute("data-tab"));
+      if (!tab || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      e.preventDefault();
+      openTab(tab.getAttribute("data-tab"));
     });
     sheetArticle.addEventListener("keydown", function (e) {
-      // Arrow keys move along the tabs (the WAI-ARIA tab pattern).
+      // Arrow keys move along the sections: up and down the rail, left and
+      // right along the row.
       var tab = e.target.closest(".tab[data-tab]");
-      if (!tab || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return;
+      var keys = sheetRail() ? { ArrowDown: 1, ArrowUp: -1 } : { ArrowRight: 1, ArrowLeft: -1 };
+      if (!tab || !(keys[e.key] || e.key === "Home" || e.key === "End")) return;
       var all = Array.prototype.slice.call(sheetArticle.querySelectorAll(".tab[data-tab]"));
-      var next = all[(all.indexOf(tab) + (e.key === "ArrowRight" ? 1 : -1) + all.length) % all.length];
+      var next = e.key === "Home" ? all[0] : e.key === "End" ? all[all.length - 1]
+               : all[(all.indexOf(tab) + keys[e.key] + all.length) % all.length];
       e.preventDefault();
+      next.focus({ preventScroll: true });
       openTab(next.getAttribute("data-tab"));
     });
     document.getElementById("sheet-back").addEventListener("click", function () { if (pos > 0) history.back(); });

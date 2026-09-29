@@ -1,5 +1,5 @@
 """Relationships, both directions, and the dependency walk."""
-from .conftest import make
+from .conftest import make, section
 
 
 def link(client, h, kind, source, target, status=200):
@@ -36,6 +36,13 @@ def test_removing_a_link_can_be_undone(client, h, admin):
     client.post(undo["url"], json=undo["body"], headers=h)
     assert len(client.get(f"/api/entities/{a['id']}/relationships").get_json()["relationships"]) == 1
 
+
+def test_removing_a_link_asks_first(client, h, admin):
+    a, b = make(client, h, name="web"), make(client, h, name="db")
+    link(client, h, "depends_on", a, b)
+    tab = client.get(f"/e/{a['id']}/sheet?tab=relationships").get_data(as_text=True)
+    assert 'data-confirm="Remove this link?"' in tab and "web and db will no longer be linked" in tab
+    assert 'id="confirm-modal"' in client.get("/").get_data(as_text=True)
 
 def test_a_deleted_record_drops_out_of_links(client, h, admin):
     a, b = make(client, h, name="a"), make(client, h, name="b")
@@ -112,7 +119,7 @@ def _chain(client, h):
 
 def test_the_dependency_view_switches_to_a_diagram(client, h, admin):
     srv, hv, web, db = _chain(client, h)
-    tab = client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode()
+    tab = section(client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode(), "relationships")
     # The diagram shows first; List is a click away.
     assert 'data-views="dependencies"' in tab and '<div data-view="diagram">' in tab
     assert '<div data-view="list" hidden>' in tab and 'value="diagram" checked' in tab
@@ -154,7 +161,7 @@ def test_a_crowded_row_draws_every_record(client, h, admin):
     hv = make(client, h, "hypervisor", name="pve1")
     guests = [make(client, h, "vm", name=f"vm{n}", **{"f.host": hv["id"]}) for n in range(9)]
     make(client, h, "service", name="app", **{"f.host": guests[6]["id"]})
-    tab = client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode()
+    tab = section(client.get(f"/e/{hv['id']}/sheet?tab=relationships").data.decode(), "relationships")
     drawing = tab[tab.index('data-view="diagram"'):]
     assert all(f">vm{n}</text>" in drawing for n in range(9)) and ">app</text>" in drawing
     assert "more in the list" not in drawing and "data-zoom" in drawing

@@ -1,9 +1,15 @@
-{# The sheet's article: the record's header, its tabs, and the open tab.
-   Fetched by app.js (/e/<id>/sheet?tab=...) into the <dialog id="sheet">. #}
+{# The sheet's article: the record's header and every one of its sections,
+   one after another. Fetched by app.js (/e/<id>/sheet?tab=...) into the
+   <dialog id="sheet">, which scrolls to ?tab=. The sections' links are a rail
+   down the left on a wide screen and a row under the header on a narrow one;
+   the CSS places them (.sheet-content), and app.js marks the one in view.
+   An account can turn that off (record_scroll): then the page holds the one
+   section ?tab= names, and choosing another fetches it. #}
 {% from "partials/macros.html" import crumbs as crumb_nav, type_icon %}
-<div class="sheet-content" data-id="{{ entity.id }}" data-name="{{ entity.name }}" data-tab="{{ tab.key }}"
+<div class="sheet-content" data-id="{{ entity.id }}" data-name="{{ entity.name }}" data-tab="{{ tab.key }}" data-scroll="{{ '1' if scroll else '0' }}"
      data-archived="{{ '1' if entity.archived else '0' }}" data-deleted="{{ '1' if entity.deleted_at else '0' }}"
      {%- if editable %} data-autosave="/api/entities/{{ entity.id }}"{% endif %}>
+  <div class="sheet-head">
   {% if entity.deleted_at %}
   <div class="banner banner--danger">
     <span>Deleted {{ entity.deleted_at|ago }}. It is purged {{ purge_days }} days after it was deleted.</span>
@@ -29,14 +35,24 @@
   <p class="sheet-meta" data-live="meta">{% if (entity.updated_at - entity.created_at).days >= 1 %}Created <time datetime="{{ entity.created_at.isoformat() }}Z">{{ (entity.created_at|local)[:10] }}</time> · {% endif %}Updated {{ entity.updated_at|ago }}{% if entity.updated_by %} by {{ entity.updated_by.display_name }}{% endif %}
     {%- if entity.access %} · <span class="chip chip--muted">{{ access_short[entity.access] }}</span>{% endif %}
     · <code class="slug" title="Link to it from a document with [[{{ entity.slug }}]]">{{ entity.slug }}</code></p>
+  </div>
 
-  <div class="tabs" role="tablist" aria-label="Sections of {{ entity.name }}">
-    {% for t in tabs %}
-    <button type="button" class="tab {{ 'is-active' if t.key == tab.key }}" role="tab" data-tab="{{ t.key }}"
-            aria-selected="{{ 'true' if t.key == tab.key else 'false' }}" title="{{ t.label }}{% if loop.index < 10 %} ({{ loop.index }}){% endif %}">
-      {{ t.label }}{% if t.count %}<span class="count">{{ t.count }}</span>{% endif %}
-    </button>
+  <nav class="sheet-nav" aria-label="Sections of {{ entity.name }}">
+    <div class="tabs">
+      {% for t in tabs %}
+      <a href="#section-{{ t.key }}" class="tab {{ 'is-active' if t.key == tab.key }}" data-tab="{{ t.key }}"
+         {%- if t.key == tab.key %} aria-current="true"{% endif %} title="{{ t.label }}{% if loop.index < 10 %} ({{ loop.index }}){% endif %}">
+        <span class="tab-label">{{ t.label }}</span>{% if t.count %}<span class="count">{{ t.count }}</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  </nav>
+  <div class="sheet-sections">
+    {% for t, html in sections %}
+    <section class="tab-panel sheet-section" id="section-{{ t.key }}" data-panel="{{ t.key }}" aria-label="{{ t.label }}">
+      {% if not loop.first %}<h2 class="sheet-section-title">{{ t.label }}{% if t.count %}<span class="count">{{ t.count }}</span>{% endif %}</h2>{% endif %}
+      {{ html }}
+    </section>
     {% endfor %}
   </div>
-  <section class="tab-panel" role="tabpanel" data-panel="{{ tab.key }}">{{ panel }}</section>
 </div>

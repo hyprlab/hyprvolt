@@ -9,9 +9,14 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [1.4.0-beta.1] — 2026-09-29
 
 ### Added
+- A setting in Settings > Appearance to show a record one section at a time, as before, instead of all its sections on one page
 - A beta channel: `IMAGE_TAG=beta` runs previews of the next release, numbered like `1.4.0-beta.1`, while `latest` stays on stable
 - The dependency view in a record's Relationships tab can be shown as a diagram: what it needs above the record, what breaks if it goes down below it, a row for each step away. It opens as the diagram; List and Diagram switch between the two, and the choice is remembered in the browser
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
+
+### Changed
+- A record shows all of its sections (Overview, Relationships, History and the rest) one after another instead of one tab at a time. A list of them down its left side marks the one being read as it scrolls, and choosing one scrolls there smoothly. Back, Forward and the record's actions sit above the list, and the close button on its own at the top right. The record is wider by as much as the list, so its content has the same room as before. On a screen 900 pixels wide or less the list is a row under the header that stays in view while the record scrolls, and ↑ and ↓ move through the list where ← and → moved along the tabs
+- Removing a link between two records asks first, in a dialog, and so do detaching a document and taking a record off a maintenance window or change. Undo still follows
 
 ## [1.3.0] — 2026-09-28
 

@@ -104,3 +104,8 @@ def make(client, h, type_="gadget", **data):
     resp = client.post("/api/entities", json={"type": type_, **data}, headers=h)
     assert resp.status_code == 200, resp.get_json()
     return resp.get_json()["entity"]
+
+
+def section(html: str, key: str) -> str:
+    """One section of a record's sheet, which holds every section."""
+    return html.split(f'data-panel="{key}"', 1)[1].split('data-panel="', 1)[0]

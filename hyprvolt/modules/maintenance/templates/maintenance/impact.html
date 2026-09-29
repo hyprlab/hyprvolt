@@ -20,7 +20,9 @@
     </div>
     {% if current_user.can_edit %}
     <button type="button" class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/api/relationships/{{ links[v.id] }}/delete"
-            data-then="sheet" data-done="Removed" aria-label="Remove {{ v.name }}" title="Remove from this {{ 'window' if window else 'change' }}">
+            data-then="sheet" data-done="Removed" aria-label="Remove {{ v.name }}" title="Remove from this {{ 'window' if window else 'change' }}"
+            data-confirm="Remove {{ v.name }} from this {{ 'window' if window else 'change' }}?" data-confirm-go="Remove"
+            data-confirm-text="It is no longer linked to {{ entity.name }}. The record itself stays.">
       <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     {% endif %}

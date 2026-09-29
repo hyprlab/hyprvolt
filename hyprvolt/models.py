@@ -35,6 +35,9 @@ class User(UserMixin, db.Model):
     theme = db.Column(db.String(10), default="system", nullable=False)     # system|light|dark
     view_mode = db.Column(db.String(10), default="cards", nullable=False)  # cards|list
     infinite_scroll = db.Column(db.Boolean, default=True, nullable=False)
+    # A record's sections all on one page, followed as it scrolls; off, one
+    # section at a time.
+    record_scroll = db.Column(db.Boolean, default=True, nullable=False)
     # Secrets are their own permission for viewers and editors, granted per
     # account by an admin. Admins have it always: they can do everything.
     can_see_secrets = db.Column(db.Boolean, default=False, nullable=False)

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from .conftest import make
+from .conftest import make, section
 from .test_attachments import upload
 
 
@@ -47,7 +47,7 @@ def test_the_featured_image_has_its_own_place(client, h, admin):
     # It is not one of the attachments.
     listed = client.get(f"/api/entities/{box['id']}/attachments").get_json()["attachments"]
     assert [a["id"] for a in listed] == [photo["id"]]
-    tab = client.get(f"/e/{box['id']}/sheet?tab=attachments").get_data(as_text=True)
+    tab = section(client.get(f"/e/{box['id']}/sheet?tab=attachments").get_data(as_text=True), "attachments")
     assert "front.jpg" not in tab and "rack.jpg" in tab
     history = client.get(f"/e/{box['id']}/sheet?tab=history").get_data(as_text=True)
     assert "Featured image" in history and "front.jpg" in history

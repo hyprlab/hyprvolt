@@ -359,6 +359,12 @@ them all. Errors are
 
 ## Records
 
+A record shows all of its sections, Overview first, one after another. The
+list of them beside it (above it on a narrow screen) marks the one being
+read, and choosing one scrolls there. Settings > Appearance can show one
+section at a time instead, for each account: then choosing a section shows
+that one alone.
+
 A record's Relationships tab ends with its dependency view: what breaks if
 it goes down, and what it needs, followed through the links that carry a
 dependency (runs on, hosted by, depends on, installed on, powered by). It
@@ -568,7 +574,7 @@ its database, without signing in. The image's `HEALTHCHECK` uses it, so
 | `n` | a page | New record (the menu of kinds, where there is more than one) |
 | `j`, `k` | a record | Next, previous in the list |
 | Back, Forward (the browser's, or ‹ › in the record's bar) | a record | The records opened one from another: a link, a page's Next, `j` and `k`. Back from the first one closes it |
-| `1` to `9`, ← → | a record | Its tabs |
+| `1` to `9`, ↑ ↓ (← → on a narrow screen) | a record | Scroll to its sections |
 | `e`, `a`, `c` | a record | Edit (the cursor in its first field), archive or unarchive, copy its link |
 | Esc | a dialog | Close it |
 

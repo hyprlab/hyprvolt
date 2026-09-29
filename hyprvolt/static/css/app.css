@@ -516,6 +516,9 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 }
 .modal-head h3 { font-size: 17px; font-weight: 750; letter-spacing: -0.02em; }
 .modal-body { display: flex; flex-direction: column; gap: 12px; padding: 16px 20px 20px; }
+/* Confirming an action first ([data-confirm]). */
+.confirm-text { font-size: 14.5px; color: var(--muted); line-height: 1.5; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 /* The record form: two columns of fields, long text across both. */
 #entity-modal { width: min(720px, calc(100vw - 32px)); }
 #entity-modal[open] { max-height: calc(100dvh - 48px); overflow-y: auto; }
@@ -861,8 +864,12 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .palette-empty { padding: 18px 12px 14px; text-align: center; font-size: 13.5px; color: var(--muted); }
 
 /* ————— Detail sheet ————— */
+/* The sections' rail is added to the sheet's width, so the record's own
+   column is the same 660px with or without it. */
 .sheet {
-  width: min(840px, 100vw); height: 100dvh; max-height: 100dvh;
+  --sheet-rail: 240px;
+  --sheet-bar: 55px;
+  width: min(calc(840px + var(--sheet-rail)), 100vw); height: 100dvh; max-height: 100dvh;
   margin: 0 auto; overflow-y: auto; overscroll-behavior: contain;
   border-left: 1px solid var(--line); border-right: 1px solid var(--line);
 }
@@ -879,6 +886,44 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .sheet-bar-nav { display: flex; gap: 4px; padding-right: 8px; margin-right: 4px; border-right: 1px solid var(--line); }
 .sheet-bar-nav .iconbtn[disabled] { opacity: .35; cursor: default; background: none; }
 .sheet-article { max-width: 660px; margin: 0 auto; padding: clamp(22px, 4vw, 44px) 20px 70px; }
+/* Wide: the rail down the left, the header and the open section beside it.
+   The bar's record actions sit at the top of the rail, and its close button
+   alone at the top right; the bar itself is no longer a band across. */
+@media (min-width: 901px) {
+  .sheet-bar {
+    margin-bottom: calc(-1 * var(--sheet-bar)); padding: 10px 12px;
+    background: none; backdrop-filter: none; border-bottom: 0; pointer-events: none;
+  }
+  .sheet-bar > * { pointer-events: auto; }
+  .sheet-bar-actions { width: calc(var(--sheet-rail) - 24px); justify-content: space-between; gap: 2px; }
+  .sheet-bar-actions .iconbtn { width: 32px; height: 32px; }
+  .sheet-bar-nav { gap: 2px; padding-right: 6px; margin-right: 0; }
+  .sheet-bar > [data-close] { background: var(--surface); }
+  .sheet-bar > [data-close]:hover { background: var(--hover); }
+  .sheet-article { max-width: none; padding: 0; }
+  .sheet-content {
+    display: grid; grid-template-columns: var(--sheet-rail) minmax(0, 1fr);
+    grid-template-areas: "nav head" "nav panel"; grid-template-rows: auto 1fr;
+    min-height: 100dvh;   /* the bar floats over it now: the rail runs to the bottom */
+  }
+  .sheet-head, .sheet-sections { width: 100%; max-width: 660px; justify-self: center; padding-inline: 20px; }
+  .sheet-head { grid-area: head; padding-top: 64px; }
+  .sheet-sections { grid-area: panel; padding-bottom: 70px; }
+  [data-scroll="1"] .sheet-section:last-child { min-height: calc(100dvh - 90px); }  /* the scroll offset and the padding below */
+  .sheet-nav { grid-area: nav; background: var(--panel); border-right: 1px solid var(--line); padding: 18px 12px; }
+  .sheet-nav .tabs {
+    position: sticky; top: calc(var(--sheet-bar) + 18px);
+    flex-direction: column; margin: 0; border: 0; overflow: visible;
+  }
+  .sheet-nav .tab {
+    width: 100%; padding: 8px 10px; margin: 0; border: 0; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 500; text-align: left;
+    transition: background .15s, color .15s;
+  }
+  .sheet-nav .tab-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sheet-nav .tab:hover { background: var(--hover); }
+  .sheet-nav .tab.is-active { font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+}
 .sheet-article .kicker { margin-bottom: 14px; }
 .sheet-article .kicker::before {
   content: ""; width: 14px; height: 4px; border-radius: 2px; background: var(--accent); display: inline-block;
@@ -921,14 +966,31 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .crumbs-sep { color: var(--faint); }
 .kv .crumbs { margin: 0; font-size: inherit; }
 
-/* Tabs in the sheet: a row that scrolls sideways on a phone. */
+/* A record's sections, one after another, each after the first under its
+   own heading. The last is at least a screen tall, so choosing it in the
+   rail can bring its heading to the top like the others. */
+.sheet-section { min-height: 0; scroll-margin-top: 24px; }
+.sheet-section + .sheet-section { margin-top: 44px; padding-top: 30px; border-top: 1px solid var(--line); }
+.sheet-section-title {
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 18px;
+  font-size: 20px; font-weight: 750; letter-spacing: -0.02em;
+}
+
+/* The sections' links in the sheet: a row that scrolls sideways on a phone,
+   kept under the bar while the record scrolls, and a rail on a wide screen. */
+@media (max-width: 900px) {
+  .sheet-nav { position: sticky; top: var(--sheet-bar); z-index: 4; background: var(--surface); margin: 0 -20px; padding: 0 20px; }
+  .sheet-nav .tabs { margin-bottom: 0; }
+  .sheet-sections { padding-top: 22px; }
+  [data-scroll="1"] .sheet-section:last-child { min-height: calc(100dvh - 175px); }
+}
 .tabs {
   display: flex; gap: 2px; margin: 6px 0 22px;
   border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none;
 }
 .tabs::-webkit-scrollbar { display: none; }
 .tab {
-  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  display: inline-flex; align-items: center; gap: 6px; flex: none; text-decoration: none;
   padding: 9px 9px 10px; margin-bottom: -1px;
   font-size: 13.5px; font-weight: 600; color: var(--muted);
   border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
@@ -936,7 +998,6 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .tab:hover { color: var(--ink); }
 .tab.is-active { color: var(--ink); border-bottom-color: var(--accent); }
 .tab .count { padding: 0 4px; min-width: 16px; }
-.tab-panel { min-height: 120px; }
 
 /* A record's fields: label left, value right; stacks on a phone. */
 .kv { margin: 0; display: grid; grid-template-columns: minmax(120px, 34%) 1fr; }

@@ -82,12 +82,13 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.trace`, `.trace-path`, `.trace-hop`, `.trace-link` | A cable path inside a port's row, opened from a `<details>`: each port a pill, the cables and patch panels between them in small text |
 | `.empty`, `.empty--onboard`, `.pager`, `.pager-end` | Empty states and paging; `--onboard` is the first-run dashboard with the mark |
 | `.modal`, `.modal--wide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>` |
+| `#confirm-modal`, `.confirm-text`, `.confirm-actions` | The one confirmation dialog, filled in from the `data-confirm` button that opened it: a question, a line saying what happens, Cancel (focused) and the action |
 | `.form-grid`, `.form-wide`, `.form-check`, `.req` | The record form: two columns, long text across both, a required mark |
 | `.field-head`, `.infotip`, `.infotip-pop` | A field's label with an info button beside it; the button opens the field's help in a native popover (`popovertarget`), placed under it by app.js and closed by Escape, a click elsewhere or a scroll. The input names the help in `aria-describedby` too |
 | `.pickbtn` | A button standing in for a field: it opens the palette to choose a record |
 | `.settings`, `.settings-nav`, `.settings-navitem`, `.settings-head`, `.settings-pane` | The settings window: a rail of sections beside the chosen one; on phones a list that slides into each section |
-| `.sheet`, `.sheet-bar`, `.sheet-bar-nav`, `.sheet-article`, `.sheet-notes`, `.prose` | The full-height detail view: on the left of its bar, Back and Forward through the records visited, then the record's actions; close on the right. A record's notes come first in its Overview |
-| `.tabs`, `.tab`, `.tab-panel` | The sheet's sections. The active tab is underlined in the accent; the row scrolls sideways on a phone |
+| `.sheet`, `.sheet-bar`, `.sheet-bar-nav`, `.sheet-article`, `.sheet-head`, `.sheet-notes`, `.prose` | The full-height detail view: Back and Forward through the records visited, then the record's actions, and close apart from them. Wider than 900px the actions head the sections' rail and close stays at the top right on its own; narrower, they share a bar across the top, close on the right. A record's notes come first in its Overview |
+| `.sheet-nav`, `.tabs`, `.tab`, `.sheet-sections`, `.sheet-section`, `.sheet-section-title`, `.tab-panel` | The sheet's sections, all on the page one after another, each after the first under its own heading; the last is at least a screen tall so its heading can reach the top. Their links jump there with a smooth scroll, and the one being read is marked as the sheet scrolls. Wider than 900px the links are a rail down the sheet's left, like the settings rail, with the chosen one in `--selected` with an accent edge; the rail is added to the sheet's width, so the record's column stays 660px. Narrower, they are a row under the header that stays under the bar while the record scrolls, the marked one underlined in the accent and scrolled into view |
 | `.crumbs`, `.crumbs-sep` | Where a record is: its locations, outermost first, each a link |
 | `.kv`, `.kv-empty`, `.kv-long` | A record's fields: label and value in two columns, stacked on a phone |
 | `.kv--edit`, `.kv-edit`, `.kv-input`, `.kv-open`, `.sheet-title-input`, `.field-error` | A record edited in place: each control reads as its value, lined up with the text, until hovered (an outline) or focused (a field); an empty one says Not set in `--faint`. `.kv-open` holds the button that opens a linked record or URL; `.field-error` is a failed save's message under its field |
@@ -127,7 +128,9 @@ Long-form text uses `.prose` at 16.5px and 1.72.
   success toast is for actions whose result is not already visible (a saved
   preference, a deleted record with Undo), not for every click.
 - **Undo instead of "Are you sure?"** for anything recoverable. A confirmation
-  dialog is kept for what can't be undone: deleting an account.
+  dialog is kept for what can't be undone, deleting an account, and for
+  removing a link between records, which always asks first (`data-confirm`)
+  and still offers Undo after.
 - **Edited where it is shown.** An editor changes a record in its Overview,
   one field at a time, saved on leaving the field; there is no Save button.
   A save that fails keeps the value, says why under the field, and holds

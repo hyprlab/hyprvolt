@@ -352,6 +352,8 @@ def settings():
         current_user.view_mode = data["view_mode"]
     if "infinite_scroll" in data:
         current_user.infinite_scroll = bool(data["infinite_scroll"])
+    if "record_scroll" in data:
+        current_user.record_scroll = bool(data["record_scroll"])
     db.session.commit()
     return jsonify(ok=True)
 

@@ -21,18 +21,22 @@ def test_a_module_list_and_its_sidebar(client, h, admin):
     assert client.get("/nosuchmodule").status_code == 404
 
 
-def test_the_sheet_has_the_core_tabs(client, h, admin):
+def test_the_sheet_has_the_core_sections_one_after_another(client, h, admin):
     g = make(client, h, name="Blue box", **{"f.color": "blue"}, notes="Under **the** desk.")
     body = client.get(f"/e/{g['id']}/sheet").data.decode()
-    tabs = [part.split('"')[0] for part in body.split('role="tab" data-tab="')[1:]]
-    assert tabs == ["overview", "relationships", "documents", "secrets", "attachments", "history", "changes"]
+    links = [part.split('data-tab="')[1].split('"')[0] for part in body.split('<a href="#section-')[1:]]
+    order = ["overview", "relationships", "documents", "secrets", "attachments", "history", "changes"]
+    assert links == order
+    # Every section is on the page, in the rail's order.
+    sections = [part.split('"')[0] for part in body.split('data-panel="')[1:]]
+    assert sections == order and body.count('class="sheet-section-title"') == len(order) - 1
     # An editor edits the fields in place; the notes stay formatted.
     assert "<strong>the</strong>" in body and 'name="f.color"' in body and "data-autosave" in body
-    for tab in ("relationships", "documents", "attachments", "history"):
-        resp = client.get(f"/e/{g['id']}/sheet?tab={tab}")
-        assert resp.status_code == 200 and f'data-panel="{tab}"' in resp.data.decode()
-    # An unknown tab falls back to the Overview.
-    assert 'data-panel="overview"' in client.get(f"/e/{g['id']}/sheet?tab=nope").data.decode()
+    # ?tab= names the section to start at, and the rail marks it.
+    page = client.get(f"/e/{g['id']}/sheet?tab=history").data.decode()
+    assert 'data-tab="history" aria-current="true"' in page and 'data-tab="history"' in page.split('class="sheet-content"')[1][:200]
+    # An unknown one falls back to the Overview.
+    assert 'data-tab="overview" aria-current="true"' in client.get(f"/e/{g['id']}/sheet?tab=nope").data.decode()
 
 
 def test_the_documents_tab_lists_attached_and_mentioning_documents(client, h, admin):
@@ -97,3 +101,16 @@ def test_user_text_is_escaped_everywhere(client, h, admin):
                 f"/e/{g['id']}/sheet?tab=history"):
         body = client.get(url).data.decode()
         assert "<script>alert" not in body and "<b>x</b>" not in body and "<i>c</i>" not in body, url
+
+
+def test_an_account_can_see_one_section_at_a_time(client, h, admin):
+    g = make(client, h, name="Blue box")
+    page = client.get("/").get_data(as_text=True)
+    assert 'id="record-scroll" checked' in page
+    assert client.post("/settings", json={"record_scroll": False}, headers=h).status_code == 200
+    body = client.get(f"/e/{g['id']}/sheet?tab=history").data.decode()
+    assert 'data-scroll="0"' in body and body.count('data-panel="') == 1 and 'data-panel="history"' in body
+    assert body.count('<a href="#section-') == 7                  # the rail still lists them all
+    assert 'id="record-scroll" >' in client.get("/").get_data(as_text=True)
+    client.post("/settings", json={"record_scroll": True}, headers=h)
+    assert client.get(f"/e/{g['id']}/sheet").data.decode().count('data-panel="') == 7
