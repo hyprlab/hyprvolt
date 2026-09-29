@@ -48,7 +48,7 @@ def test_the_guests_tab_weighs_what_is_given_against_the_hardware(client, h, adm
     assert ">over<" not in tab and ">srv1</a>" in tab
     assert 'data-new-type="vm" data-new-fields=\'{"host": ' + str(pve["id"]) + "}'" in tab
     sheet = client.get(f"/e/{pve['id']}/sheet").data.decode()
-    assert 'Guests<span class="count">3</span>' in sheet
+    assert 'Guests</span><span class="count">3</span>' in sheet
     # Starting the big one hands out more memory than there is.
     off = client.get("/api/entities?q=off&type=vm").get_json()["entities"][0]
     client.post(f"/api/entities/{off['id']}", json={"status": "running"}, headers=h)

@@ -864,8 +864,12 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .palette-empty { padding: 18px 12px 14px; text-align: center; font-size: 13.5px; color: var(--muted); }
 
 /* ————— Detail sheet ————— */
+/* The sections' rail is added to the sheet's width, so the record's own
+   column is the same 660px with or without it. */
 .sheet {
-  width: min(840px, 100vw); height: 100dvh; max-height: 100dvh;
+  --sheet-rail: 220px;
+  --sheet-bar: 55px;
+  width: min(calc(840px + var(--sheet-rail)), 100vw); height: 100dvh; max-height: 100dvh;
   margin: 0 auto; overflow-y: auto; overscroll-behavior: contain;
   border-left: 1px solid var(--line); border-right: 1px solid var(--line);
 }
@@ -882,6 +886,31 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 .sheet-bar-nav { display: flex; gap: 4px; padding-right: 8px; margin-right: 4px; border-right: 1px solid var(--line); }
 .sheet-bar-nav .iconbtn[disabled] { opacity: .35; cursor: default; background: none; }
 .sheet-article { max-width: 660px; margin: 0 auto; padding: clamp(22px, 4vw, 44px) 20px 70px; }
+/* Wide: the rail down the left, the header and the open section beside it. */
+@media (min-width: 901px) {
+  .sheet-article { max-width: none; padding: 0; }
+  .sheet-content {
+    display: grid; grid-template-columns: var(--sheet-rail) minmax(0, 1fr);
+    grid-template-areas: "nav head" "nav panel"; grid-template-rows: auto 1fr;
+    min-height: calc(100dvh - var(--sheet-bar));
+  }
+  .sheet-head, .sheet-content > .tab-panel { width: 100%; max-width: 660px; justify-self: center; padding-inline: 20px; }
+  .sheet-head { grid-area: head; padding-top: 44px; }
+  .sheet-content > .tab-panel { grid-area: panel; padding-bottom: 70px; }
+  .sheet-nav { grid-area: nav; background: var(--panel); border-right: 1px solid var(--line); padding: 18px 12px; }
+  .sheet-nav .tabs {
+    position: sticky; top: calc(var(--sheet-bar) + 18px);
+    flex-direction: column; margin: 0; border: 0; overflow: visible;
+  }
+  .sheet-nav .tab {
+    width: 100%; padding: 8px 10px; margin: 0; border: 0; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 500; text-align: left;
+    transition: background .15s, color .15s;
+  }
+  .sheet-nav .tab-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sheet-nav .tab:hover { background: var(--hover); }
+  .sheet-nav .tab.is-active { font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+}
 .sheet-article .kicker { margin-bottom: 14px; }
 .sheet-article .kicker::before {
   content: ""; width: 14px; height: 4px; border-radius: 2px; background: var(--accent); display: inline-block;

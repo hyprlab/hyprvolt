@@ -12,6 +12,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- A record's sections (Overview, Relationships, History and the rest) are a list down its left side instead of a row of tabs, and the record is wider by as much, so its content has the same room as before. On a screen 900 pixels wide or less they stay a row of tabs, and ↑ and ↓ move through the list where ← and → moved along the tabs
 - Removing a link between two records asks first, in a dialog, and so do detaching a document and taking a record off a maintenance window or change. Undo still follows
 
 ## [1.3.0] — 2026-09-28

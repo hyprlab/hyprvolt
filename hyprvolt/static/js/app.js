@@ -232,7 +232,7 @@
 
   // A click on a modal's ::backdrop is dispatched to the <dialog> itself, so
   // target identity alone can't tell it from a click on the dialog's own
-  // chrome: the sheet's 840px shell is wider than its 660px article column, so
+  // chrome: the sheet's shell is wider than its 660px article column, so
   // its side gutters are the dialog element too. Compare the pointer with the
   // dialog's box (which follows the open/close transform) instead, and require
   // the press to have started outside as well, so a text selection dragged off
@@ -1289,9 +1289,12 @@
       if (opts.keepScroll) {
         sheet.scrollTop = before;
       } else if (opts.tabSwitch) {
-        // Keep the tabs in view when the new tab is shorter than the scroll.
+        // Keep the section's start in view when it is shorter than the
+        // scroll: the tabs above it on a narrow screen, the section itself
+        // beside the rail, which stays put, on a wide one.
         var tabs = sheetArticle.querySelector(".tabs");
-        sheet.scrollTop = Math.min(before, tabs ? tabs.offsetTop - 64 : 0);
+        var mark = sheetRail() ? sheetArticle.querySelector(".tab-panel") : tabs;
+        sheet.scrollTop = Math.min(before, mark ? mark.offsetTop - (sheetRail() ? 76 : 64) : 0);
       } else {
         sheet.scrollTop = opts.scroll || 0;
       }
@@ -1348,6 +1351,8 @@
     var at = ids.indexOf(current.id);
     if (at !== -1 && ids[at + step] !== undefined) openEntity(ids[at + step], { tab: current.tab });
   }
+  // Wide enough for the sections' rail (app.css, .sheet-content).
+  function sheetRail() { return window.matchMedia("(min-width: 901px)").matches; }
   function openTab(key) {
     if (current && key && key !== current.tab) openEntity(current.id, { tab: key, tabSwitch: true, nav: "replace" });
   }
@@ -1402,11 +1407,14 @@
       if (tab) openTab(tab.getAttribute("data-tab"));
     });
     sheetArticle.addEventListener("keydown", function (e) {
-      // Arrow keys move along the tabs (the WAI-ARIA tab pattern).
+      // Arrow keys move along the sections (the WAI-ARIA tab pattern): up
+      // and down the rail, left and right along the row of tabs.
       var tab = e.target.closest(".tab[data-tab]");
-      if (!tab || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return;
+      var keys = sheetRail() ? { ArrowDown: 1, ArrowUp: -1 } : { ArrowRight: 1, ArrowLeft: -1 };
+      if (!tab || !(keys[e.key] || e.key === "Home" || e.key === "End")) return;
       var all = Array.prototype.slice.call(sheetArticle.querySelectorAll(".tab[data-tab]"));
-      var next = all[(all.indexOf(tab) + (e.key === "ArrowRight" ? 1 : -1) + all.length) % all.length];
+      var next = e.key === "Home" ? all[0] : e.key === "End" ? all[all.length - 1]
+               : all[(all.indexOf(tab) + keys[e.key] + all.length) % all.length];
       e.preventDefault();
       openTab(next.getAttribute("data-tab"));
     });
