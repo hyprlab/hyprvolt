@@ -46,7 +46,7 @@ Subjects follow [Conventional Commits](https://www.conventionalcommits.org):
   plus the app's own: `core`, `api`, `cli`, and each module's id
   (`locations`, `documents`). Leave it out only when there is no single place.
 - An issue number goes at the end: `fix(auth): keep the next page after sign-in (#12)`.
-- Releases: `chore(release): 1.4.0`.
+- Releases: `chore(release): 1.4.0`, `chore(release): 1.5.0-beta.1`.
 
 The body is optional and short: why the change exists, never what the diff
 already says. Past 100 words the detail belongs in `docs/` or `CHANGELOG.md`,
@@ -149,7 +149,9 @@ Every reply to an issue or pull request written by an agent begins with
 - No thanks, no pleasantries, no em dashes. Plain, brief, human.
 - Anything the user has to do (send a log, try something, check a setting) is
   a numbered list, one request per item.
-- Fixed in a release: name the version and how to update. Reply once the image
+- Fixed in a beta: name the beta version and say it reaches stable with the
+  next stable release. The issue closes when that stable ships.
+- Fixed in a stable: name the version and how to update. Reply once the image
   is pushed, not before.
 
 ```

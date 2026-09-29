@@ -65,3 +65,51 @@ def test_documentation_check_passes():
     result = subprocess.run([sys.executable, str(ROOT / "tools" / "check-docs.py")],
                             capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_betas_number_and_describe_themselves_by_semver(tmp_path):
+    """A beta is the coming stable plus -beta.K: K counts that version's
+    betas, a breaking change moves the version, and each beta's notes list
+    what changed since the one before it, the first since the last stable."""
+    import os
+    import shutil
+    (tmp_path / "tools").mkdir()
+    for name in ("next-version.sh", "release-notes.sh"):
+        shutil.copy(ROOT / "tools" / name, tmp_path / "tools" / name)
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "__init__.py").write_text('__version__ = "1.3.0"\n')
+    (tmp_path / "CHANGELOG.md").write_text(
+        "# Changelog\n\n## Unreleased\n\n## [1.4.0-beta.2] — 2026-10-02\n\n- Two\n\n"
+        "## [1.4.0-beta.1] — 2026-10-01\n\n- One\n\n## [1.3.0] — 2026-09-28\n\n- Old\n")
+    env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
+           "GIT_AUTHOR_NAME": "T", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "T", "GIT_COMMITTER_EMAIL": "t@example.com"}
+
+    def run(*args):
+        out = subprocess.run(args, cwd=tmp_path, env=env, capture_output=True, text=True)
+        assert out.returncode == 0, out.stderr
+        return out.stdout.strip()
+
+    def commit(subject):
+        run("git", "commit", "-q", "--allow-empty", "-m", subject)
+
+    run("git", "init", "-q", "-b", "main")
+    run("git", "add", ".")
+    commit("chore(release): 1.3.0")
+    run("git", "tag", "v1.3.0")
+    commit("feat: draw it")
+    assert run("tools/next-version.sh") == "1.4.0"
+    assert run("tools/next-version.sh", "beta") == "1.4.0-beta.1"
+    run("git", "tag", "v1.4.0-beta.1")
+    commit("fix: mend it")
+    assert run("tools/next-version.sh", "beta") == "1.4.0-beta.2"
+    run("git", "tag", "v1.4.0-beta.2")
+
+    first = run("tools/release-notes.sh", "1.4.0-beta.1")
+    assert first.startswith("- One") and "- feat: draw it" in first and "mend" not in first
+    second = run("tools/release-notes.sh", "1.4.0-beta.2")
+    assert second.startswith("- Two") and "- fix: mend it" in second and "draw" not in second
+
+    commit("feat!: rename the API")
+    assert run("tools/next-version.sh", "beta") == "2.0.0-beta.1"
+    assert run("tools/next-version.sh") == "2.0.0"

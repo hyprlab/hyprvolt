@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Say which version SemVer calls for, from the commits since the last stable.
 #
-#   tools/next-version.sh           # the next release
+#   tools/next-version.sh           # the next stable
+#   tools/next-version.sh beta      # the next beta of it: X.Y.Z-beta.K
 #   tools/next-version.sh --why     # also list the commits that decided it
 #
 # The Conventional Commit types decide it: a "!" or a BREAKING CHANGE footer is
@@ -10,14 +11,17 @@
 # do not force a release at all. docs/RELEASING.md has the judgment calls this
 # cannot make: a schema change an older version can't read is MAJOR however
 # the commit was typed.
+#
+# A beta previews the stable the commits call for, so its X.Y.Z is worked out
+# the same way, against the last stable, and K counts that version's betas. A
+# breaking change after 1.4.0-beta.2 makes the next beta 2.0.0-beta.1.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-WHY=0
+CHANNEL=stable; WHY=0
 for arg in "$@"; do
     case "$arg" in
-        stable) ;;
-        beta) echo "This project has no beta channel." >&2; exit 1 ;;
+        stable|beta) CHANNEL="$arg" ;;
         --why) WHY=1 ;;
         *) echo "unknown: $arg" >&2; exit 1 ;;
     esac
@@ -64,4 +68,9 @@ case "$level" in
     patch) next="$MA.$MI.$((PA + 1))" ;;
     none)  echo "Nothing since ${last:-the start} calls for a release." >&2; exit 2 ;;
 esac
+
+if [ "$CHANNEL" = beta ]; then
+    k=$(git tag -l "v$next-beta.*" | sed 's/.*-beta\.//' | grep -xE '[0-9]+' | sort -n | tail -1 || true)
+    next="$next-beta.$(( ${k:-0} + 1 ))"
+fi
 echo "$next"

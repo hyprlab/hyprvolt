@@ -29,7 +29,7 @@ Everything is optional. Put values in a `.env` file next to
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `IMAGE_TAG` | `latest` | The image to run: `latest` for every release, or a version to pin |
+| `IMAGE_TAG` | `latest` | The image to run: `latest` for stable, `beta`, or a version to pin |
 | `APP_NAME` | `Hyprvolt` | What the app calls itself |
 | `APP_TAGLINE` | `IT documentation for on-premise infrastructure.` | The line under the name on the sign-in page and in About |
 | `SECRET_KEY` | generated | Signs sessions. If unset, one is generated and kept in the volume |
@@ -468,11 +468,14 @@ For testing, Cloudflare publishes
 that always pass: site key `1x00000000000000000000AA`, secret
 `1x0000000000000000000000000000000AA`.
 
-## Versions
+## Channels
 
-`latest`, the default, follows every release. `IMAGE_TAG=1.1.0` pins one
-version, and `IMAGE_TAG=1.1` takes that line's patches only. There is no beta
-channel.
+`latest`, the default, follows stable releases. `IMAGE_TAG=beta` follows the
+betas: previews of the next release, such as `1.4.0-beta.2`, published while
+it is refined. Betas can break things; back up first. `IMAGE_TAG=1.3.0` pins
+one version, and `IMAGE_TAG=1.3` takes that line's patches only. Switching
+back from `beta` to `latest` works as long as the beta did not run a
+migration the stable can't read, which the changelog says.
 
 ## Behind a reverse proxy
 

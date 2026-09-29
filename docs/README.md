@@ -10,7 +10,7 @@ this directory is listed below; `tools/check-docs.py` fails if one is not.
 | [MODULES.md](MODULES.md) | Writing a module: the manifest, entity types and fields, routes, migrations, tests |
 | [DESIGN.md](DESIGN.md) | The design system: tokens, components, and the interface rules |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Commits, prose style, code, credit, issue replies |
-| [RELEASING.md](RELEASING.md) | SemVer, when releases happen, and the ship procedure |
+| [RELEASING.md](RELEASING.md) | SemVer, the beta and stable channels, and the ship procedure |
 | [SECURITY.md](SECURITY.md) | What the app defends against, and how to report a problem |
 | [CREDITS.md](CREDITS.md) | Who contributed what |
 

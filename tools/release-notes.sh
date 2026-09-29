@@ -2,13 +2,15 @@
 # Print the GitHub release body for one version.
 #
 #   tools/release-notes.sh 1.3.0 > /tmp/notes.md
+#   tools/release-notes.sh 1.4.0-beta.2 > /tmp/notes.md   # on the beta branch
 #
 # The body is that version's CHANGELOG section and nothing else. Never hand
 # CHANGELOG.md itself to `gh release create`: every release page would carry
 # the whole history.
 #
-# With the tag pushed, it appends a "What's changed" list against the previous
-# release's tag and a compare link.
+# With the tag pushed, it appends a "What's changed" list and a compare link:
+# a stable against the previous stable, a beta against the previous beta of
+# the same version, and the first beta of a version against the last stable.
 #
 # GitHub keeps every line break in a release body, so paragraphs and list items
 # are unwrapped to one line each. An @handle keeps its @ only if the person is
@@ -17,7 +19,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${1:?usage: tools/release-notes.sh X.Y.Z}"
+VERSION="${1:?usage: tools/release-notes.sh X.Y.Z[-beta.K]}"
 TAG="v$VERSION"
 
 {
@@ -45,10 +47,13 @@ print(re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip())
 PY
 
 if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+    stables=$(git tag -l 'v*' --sort=-v:refname | grep -vE -- '-' || true)
     if [[ "$VERSION" == *-* ]]; then
-        prev=$(git tag -l 'v*-*' --sort=-v:refname | grep -vx "$TAG" | head -1 || true)
+        base="${VERSION%%-*}"
+        prev=$(git tag -l "v$base-beta.*" --sort=-v:refname | awk -v t="$TAG" 'f { print; exit } $0 == t { f = 1 }')
+        [ -n "$prev" ] || prev=$(printf '%s\n' "$stables" | head -1)
     else
-        prev=$(git tag -l 'v*' --sort=-v:refname | grep -vE -- '-' | grep -vx "$TAG" | head -1 || true)
+        prev=$(printf '%s\n' "$stables" | grep -vx "$TAG" | head -1 || true)
     fi
     if [ -n "$prev" ]; then
         echo

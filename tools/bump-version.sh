@@ -3,6 +3,9 @@
 #
 #   tools/bump-version.sh 1.3.0
 #
+# For a stable. A beta's version is set by tools/prepare-release.sh beta, on
+# the beta branch, so main's changelog keeps its Unreleased section.
+#
 # It edits __version__ and CHANGELOG.md and runs check-docs. It does not
 # commit, tag or push: docs/RELEASING.md is the procedure around it.
 set -euo pipefail
