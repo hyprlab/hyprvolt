@@ -1,5 +1,9 @@
 """Ports on devices and the cables between them, and tracing a cable path
-from one end to the other through any patch panels on the way."""
+from one end to the other through any patch panels on the way.
+
+A device is cabled as a whole unless its ports are recorded one by one
+(``PortsRecorded``): each cable then ends at a port with no name, made with
+the cable and removed with it."""
 from sqlalchemy.orm import joinedload
 
 from hyprvolt.core import records
@@ -7,7 +11,7 @@ from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity
 from hyprvolt.models import db
 
-from .models import PORT_KINDS, SPEEDS, Cable, Port
+from .models import PORT_KINDS, SPEEDS, Cable, Port, PortsRecorded
 
 MAX_PORTS = 128
 
@@ -22,8 +26,31 @@ def before_retype(entity: Entity, old, new) -> None:
     if is_cabled(old) and not is_cabled(new):
         n = Port.query.filter_by(device_id=entity.id).count()
         if n:
-            raise Invalid(f"It has {n} {'port' if n == 1 else 'ports'}, and a {new.text()} can't. "
-                          f"Remove {'it' if n == 1 else 'them'} from its Ports tab first.")
+            raise Invalid(f"It has {n} {'port or cable' if n == 1 else 'ports or cables'}, and a {new.text()} "
+                          f"can't. Remove {'it' if n == 1 else 'them'} from its Cabling tab first.")
+
+
+def records_ports(device_id: int) -> bool:
+    return db.session.get(PortsRecorded, device_id) is not None
+
+
+def recorded_ids() -> set[int]:
+    return {i for (i,) in db.session.query(PortsRecorded.device_id)}
+
+
+def record_ports(device: Entity, on: bool, user=None) -> list[dict]:
+    """Turn recording each port on or off. Off keeps the ports it has, out
+    of sight, and its cables; on shows them again."""
+    on, was = _bool(on), records_ports(device.id)
+    if was == on:
+        return []
+    if on:
+        db.session.add(PortsRecorded(device_id=device.id))
+    else:
+        db.session.delete(db.session.get(PortsRecorded, device.id))
+    db.session.flush()
+    return [{"field": "cabling", "label": "Record each port", "old": "Yes" if was else "No",
+             "new": "Yes" if on else "No"}]
 
 
 def ports_of(device_id: int) -> list[Port]:
@@ -177,7 +204,8 @@ def add_ports(device: Entity, data: dict, user=None) -> list[Port]:
         made += pair
     if made:
         text = made[0].name if len(made) == 1 else f"{made[0].name} to {made[-1].name} ({len(made)})"
-        records.audit(device, "added ports", [{"field": "ports", "label": "Ports", "old": "", "new": text}], user)
+        changes = [{"field": "ports", "label": "Ports", "old": "", "new": text}] + record_ports(device, True)
+        records.audit(device, "added ports", changes, user)
     return made
 
 
@@ -243,12 +271,32 @@ def edit_port(port: Port, data: dict, user=None) -> None:
         records.audit(port.device, "edited a port", changes, user)
 
 
-def connect(port: Port, other: Port, data: dict, user=None) -> Cable:
-    if port.id == other.id:
-        raise Invalid("A cable needs two different ports.")
-    if port.pair_id == other.id:
-        raise Invalid("Those two are the front and rear of the same patch panel port.")
-    for p in (port, other):
+def _device_end(device: Entity) -> Port:
+    """A port with no name on a device cabled as a whole, for one cable."""
+    last = db.session.query(db.func.max(Port.position)).filter(Port.device_id == device.id).scalar() or 0
+    port = Port(device_id=device.id, name="", position=last + 1)
+    db.session.add(port)
+    db.session.flush()
+    return port
+
+
+def connect(port: Port | Entity, other: Port | Entity, data: dict, user=None) -> Cable:
+    """Cable two ends, each a port or a device whose ports aren't recorded
+    (which gets a port with no name for it)."""
+    ends = [port, other]
+    for end in ends:
+        if isinstance(end, Entity) and records_ports(end.id):
+            raise Invalid(f"{end.name} has its ports recorded one by one: choose one of them.")
+    devices = [e.id if isinstance(e, Entity) else e.device_id for e in ends]
+    if devices[0] == devices[1] and any(isinstance(e, Entity) for e in ends):
+        raise Invalid("A cable goes to another device.")
+    named = [e for e in ends if isinstance(e, Port)]
+    if len(named) == 2:
+        if port.id == other.id:
+            raise Invalid("A cable needs two different ports.")
+        if port.pair_id == other.id:
+            raise Invalid("Those two are the front and rear of the same patch panel port.")
+    for p in named:
         existing = cable_of(p)
         if existing is not None:
             raise Invalid(f"{p.label} already has a cable, to {existing.other(p).label}.")
@@ -259,22 +307,39 @@ def connect(port: Port, other: Port, data: dict, user=None) -> Cable:
         raise Invalid("The length must be a number of meters.") from None
     if length is not None and not 0 < length <= 10_000:
         raise Invalid("The length must be between 0 and 10,000 meters.")
+    port, other = (_device_end(e) if isinstance(e, Entity) else e for e in ends)
     cable = Cable(a_id=port.id, b_id=other.id, label=_text(data, "label", 60), color=_text(data, "color", 30),
                   length_m=length)
     db.session.add(cable)
     db.session.flush()
     for p, o in ((port, other), (other, port)):
-        records.audit(p.device, "cabled", [{"field": "cable", "label": p.name, "old": "", "new": o.label}], user)
+        records.audit(p.device, "cabled", [{"field": "cable", "label": p.name or "Cable", "old": "",
+                                            "new": o.label}], user)
     return cable
 
 
+def end_json(port: Port, far: bool = False) -> dict:
+    """One end of a cable as the cable route takes it: a port by its id, or
+    a device cabled as a whole by the device's."""
+    if not port.name:
+        return {"other_device_id" if far else "device_id": port.device_id}
+    return {"other_id" if far else "port_id": port.id}
+
+
 def disconnect(cable: Cable) -> dict:
-    """Remove a cable; returns what puts it back."""
-    snapshot = {"port_id": cable.a_id, "other_id": cable.b_id, "label": cable.label, "color": cable.color,
+    """Remove a cable, and the ports with no name it ended at; returns what
+    puts it back."""
+    a, b = cable.a, cable.b
+    snapshot = {**end_json(a), **end_json(b, far=True), "label": cable.label, "color": cable.color,
                 "length_m": cable.length_m}
-    for p, o in ((cable.a, cable.b), (cable.b, cable.a)):
-        records.audit(p.device, "uncabled", [{"field": "cable", "label": p.name, "old": o.label, "new": ""}])
+    for p, o in ((a, b), (b, a)):
+        records.audit(p.device, "uncabled", [{"field": "cable", "label": p.name or "Cable", "old": o.label,
+                                              "new": ""}])
     db.session.delete(cable)
+    db.session.flush()
+    for p in (a, b):
+        if not p.name:
+            db.session.delete(p)
     return snapshot
 
 
@@ -285,24 +350,29 @@ def remove_port(port: Port) -> dict:
     cable = cable_of(port)
     if cable is not None:
         other = cable.other(port)
-        snapshot["cable"] = {"other_id": other.id, "label": cable.label, "color": cable.color,
+        snapshot["cable"] = {**end_json(other, far=True), "label": cable.label, "color": cable.color,
                              "length_m": cable.length_m}
         db.session.delete(cable)
+        db.session.flush()
+        if not other.name:
+            db.session.delete(other)
     if port.pair is not None:
         port.pair.pair_id = None
-    records.audit(port.device, "removed a port", [{"field": "ports", "label": "Port", "old": port.name, "new": ""}])
+    records.audit(port.device, "removed a port", [{"field": "ports", "label": "Port", "old": port.name or "Cable",
+                                                   "new": ""}])
     db.session.delete(port)
     return snapshot
 
 
 def restore_port(device: Entity, data: dict) -> Port:
-    if any(p.name.lower() == str(data.get("name") or "").lower() for p in ports_of(device.id)):
-        raise Invalid(f"{device.name} has a port called {data.get('name')} again.")
+    name = _text(data, "name", 60) or "Port"
+    if any(p.name.lower() == name.lower() for p in ports_of(device.id)):
+        raise Invalid(f"{device.name} has a port called {name} again.")
     try:
         position = int(data.get("position") or 0)
     except (TypeError, ValueError):
         position = 0
-    port = Port(device_id=device.id, name=_text(data, "name", 60) or "Port", position=position,
+    port = Port(device_id=device.id, name=name, position=position,
                 kind=_kind(data), speed_mbps=_speed(data), poe=_bool(data.get("poe") or False),
                 mac=_text(data, "mac", 17), vlan_id=_vlan(data), tagged=_text(data, "tagged", 200),
                 description=_text(data, "description", 200))
@@ -316,7 +386,12 @@ def restore_port(device: Entity, data: dict) -> Port:
         port.pair_id, pair.pair_id = pair.id, port.id
     cable = data.get("cable") if isinstance(data.get("cable"), dict) else {}
     other = db.session.get(Port, _int_or_none(cable.get("other_id")) or 0)
-    if other is not None and records.live(other.device_id) is not None and cable_of(other) is None:
+    if other is not None and (records.live(other.device_id) is None or cable_of(other) is not None):
+        other = None
+    far = records.live(_int_or_none(cable.get("other_device_id")) or 0)
+    if other is None and far is not None and not records_ports(far.id):
+        other = far
+    if other is not None:
         connect(port, other, cable)
     records.audit(device, "added ports", [{"field": "ports", "label": "Ports", "old": "", "new": port.name}])
     return port

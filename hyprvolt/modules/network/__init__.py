@@ -4,7 +4,8 @@ hand.
 
 Other modules' types take part through traits: ``addressable`` ones (a
 server, a VM) get an IP addresses section in their form and an Addresses
-tab, ``cabled`` ones (anything with network ports) a Ports tab. An IP
+tab, ``cabled`` ones (anything with network ports) a Cabling tab. A cable
+goes to a device as a whole unless its ports are recorded. An IP
 address is a record of its own, named by its address, and belongs to the
 most specific subnet that holds it; which addresses of a subnet are free is
 worked out, not stored.
@@ -14,7 +15,7 @@ from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module
 from hyprvolt.models import db
 
 from . import addresses, demo, dns, ports, views
-from .models import Cable, DnsRecord, NetworkDetail, Port
+from .models import Cable, DnsRecord, NetworkDetail, Port, PortsRecorded
 
 NETWORK_KINDS = (("lan", "Local network"), ("wan", "Internet connection"), ("vpn", "VPN"), ("other", "Other"))
 IP_STATUSES = (("active", "In use"), ("reserved", "Reserved"), ("retired", "Retired"))
@@ -43,6 +44,13 @@ def _provider_to_notes(m):
     m.once("provider-to-notes", move)
 
 
+def _ports_recorded(m):
+    """Cables once needed a port at each end. A device that has ports keeps
+    them on show; any other is cabled as a whole."""
+    m.once("ports-recorded", lambda: db.session.execute(db.text(
+        "INSERT OR IGNORE INTO network_ports_recorded (device_id) SELECT DISTINCT device_id FROM network_ports")))
+
+
 NETWORK_REF = Field("network", "Network", "ref", types=("network",), list=True)
 
 ICON = ('<circle cx="12" cy="5.5" r="2"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/>'
@@ -62,8 +70,8 @@ module = Module(
     group="Infrastructure",
     order=40,
     requires=("hardware",),
-    models=(NetworkDetail, Port, Cable, DnsRecord),
-    migrations=(Step("provider-to-notes", _provider_to_notes),),
+    models=(NetworkDetail, Port, Cable, DnsRecord, PortsRecorded),
+    migrations=(Step("provider-to-notes", _provider_to_notes), Step("ports-recorded", _ports_recorded)),
     blueprint=views.bp,
     types=(
         EntityType("network", "Network", "Networks", detail=NetworkDetail, located_in=None, icon=NETWORK,
@@ -112,7 +120,7 @@ module = Module(
     widgets=(Widget("subnets", "Subnets", views.subnets_widget),),
     sheet_tabs=(Tab("addresses", "Addresses", views.addresses_tab, when=views.has_addresses_tab,
                     count=views.addresses_count),
-                Tab("ports", "Ports", views.ports_tab, when=views.has_ports_tab, count=views.ports_count)),
+                Tab("ports", "Cabling", views.ports_tab, when=views.has_ports_tab, count=views.ports_count)),
     form_sections=(FormSection("addresses", "IP addresses", addresses.section_form, addresses.section_save,
                                when=addresses.is_addressable),),
     before_retype=ports.before_retype,

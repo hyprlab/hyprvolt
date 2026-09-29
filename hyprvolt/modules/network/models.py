@@ -1,6 +1,7 @@
 """Network's tables: one detail table for its five types (a column each type
 uses or leaves empty), and three of its own for what is too many to be
-records: the ports on devices, the cables between them, and DNS records."""
+records: the ports on devices, the cables between them, and DNS records;
+and which devices have their ports recorded one by one."""
 from hyprvolt.core.models import Entity, EntityDetail
 from hyprvolt.models import db, utcnow
 
@@ -35,9 +36,19 @@ SPEEDS = ((100, "100 Mb"), (1000, "1 GbE"), (2500, "2.5 GbE"), (5000, "5 GbE"), 
           (25000, "25 GbE"), (40000, "40 GbE"), (100000, "100 GbE"))
 
 
+class PortsRecorded(db.Model):
+    """A device whose ports are recorded one by one. Any other device is
+    cabled as a whole: each of its cables ends at a port with no name,
+    made with the cable and removed with it."""
+    __tablename__ = "network_ports_recorded"
+
+    device_id = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="CASCADE"), primary_key=True)
+
+
 class Port(db.Model):
     """A port on a device. A patch panel's front and rear ports are paired
-    (``pair_id``): a trace goes in at one and out at the other."""
+    (``pair_id``): a trace goes in at one and out at the other. A port with
+    no name is where a cable meets a device as a whole."""
     __tablename__ = "network_ports"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -60,7 +71,7 @@ class Port(db.Model):
 
     @property
     def label(self) -> str:
-        return f"{self.device.name} {self.name}"
+        return f"{self.device.name} {self.name}".strip()
 
 
 class Cable(db.Model):

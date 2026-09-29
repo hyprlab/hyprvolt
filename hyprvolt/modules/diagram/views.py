@@ -37,7 +37,9 @@ def _cabled_to(entity: Entity) -> list[tuple[Entity, str]]:
         end = path[-1]["port"] if path and "port" in path[-1] else None
         if end is None or end.device_id == entity.id or end.device.deleted_at is not None:
             continue
-        out.append((end.device, f"{port.name} to {end.name}"))
+        # A device cabled as a whole has no port name to show.
+        label = f"{port.name} to {end.name}" if port.name and end.name else f"to {end.name}" if end.name else port.name
+        out.append((end.device, label))
     return out
 
 
@@ -47,7 +49,7 @@ def _neighbors(entity: Entity) -> tuple[list, list]:
     out, inn = [], []
     for r in relations.for_entity(entity):
         (out if r["outgoing"] else inn).append((r["other"], r["label"]))
-    out += [(e, "cabled " + label) for e, label in _cabled_to(entity)]
+    out += [(e, f"cabled {label}".strip()) for e, label in _cabled_to(entity)]
     return out, inn
 
 

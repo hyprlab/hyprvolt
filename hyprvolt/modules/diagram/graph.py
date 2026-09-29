@@ -56,7 +56,7 @@ class Edge:
 
     def title(self, nodes) -> str:
         a, b = nodes[self.a].entity.name, nodes[self.b].entity.name
-        text = f"{a} {self.ends[0]} to {b} {self.ends[1]}".replace("  ", " ") if self.cabled else f"{a} to {b}"
+        text = f"{a} {self.ends[0]} to {b} {self.ends[1]}".replace("  ", " ").strip() if self.cabled else f"{a} to {b}"
         if self.via:
             text += " through " + ", ".join(self.via)
         if self.vlans:

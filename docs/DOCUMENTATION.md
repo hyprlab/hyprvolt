@@ -122,10 +122,15 @@ holds it, and one taken off the list is deleted (it can be restored from
 Recently deleted), or only unassigned if it has notes or tags. An address can
 belong to one record at a time. A subnet's Addresses tab draws an IPv4 subnet
 up to a /22 as a grid: used, reserved, held for DHCP or free. Choosing a free
-address records it. Anything with network ports has a Ports tab: add ports
-in a run (Port 1 to 24, or a patch panel's Front and Rear pairs), set a
-port's VLANs, and cable it to another device's port; a cabled port's path
-can be traced to the far end through patch panels. An internet connection
+address records it. Anything with network ports has a Cabling tab. A cable
+goes to the device as a whole, to another device or to one of its ports,
+with no ports to set up first. To be more exact about a device, turn on
+Record each port, the switch at the top of its Cabling tab: then add its
+ports in a run (Port 1 to 24, or a patch panel's Front and Rear pairs), set
+a port's VLANs, and cable each port; a patch panel needs its ports recorded
+for a path to go through it. Turning it off again keeps the ports, out of
+sight. A cabled port's path can be traced to the far end through patch
+panels. An internet connection
 is a network of the kind Internet connection, with its public addresses,
 bandwidth and circuit ID; the ISP is a vendor, chosen in its Supplier
 section, with the contract for the line. The sidebar lists internet
@@ -362,7 +367,7 @@ them all. Errors are
 | `GET /export/<module>.csv` | A module's records as CSV, with the list's filters |
 | `GET /locations/racks/<id>/elevation` | A rack's units and what occupies them |
 | `GET /network/subnets/<id>/addresses` | A subnet's recorded addresses and how many are free |
-| `GET /network/devices/<id>/ports`, `GET /network/ports/<id>/trace` | A device's ports and cables; a cable path |
+| `GET /network/devices/<id>/ports`, `GET /network/ports/<id>/trace` | A device's ports and cables (a port with no name is where a cable meets a device cabled as a whole); a cable path |
 | `GET /network/domains/<id>/records` | A domain's DNS records |
 | `GET /software/titles/<id>/installations`, `GET /software/hosts/<id>/installations` | Where a title is installed; what a host has |
 | `GET /vault/entities/<id>/secrets` | A record's secrets, without their values, for an account with access |

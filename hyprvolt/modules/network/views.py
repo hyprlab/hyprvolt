@@ -98,6 +98,9 @@ def has_ports_tab(entity: Entity) -> bool:
 
 
 def ports_tab(device: Entity) -> str:
+    """Its cables, and with its ports recorded, every port. A device whose
+    ports aren't recorded is cabled as a whole."""
+    recorded = ports.records_ports(device.id)
     rows = ports.ports_of(device.id)
     cables = ports.cables_for(rows)
     items = []
@@ -106,35 +109,47 @@ def ports_tab(device: Entity) -> str:
         other = cable.other(p) if cable else None
         if other is not None and other.device.deleted_at is not None:
             other = None
+        if not recorded and other is None:
+            continue
         items.append({"port": p, "cable": cable if other else None, "other": other,
                       "trace": ports.trace(p) if other else [],
                       "facts": [x for x in (ports.kind_label(p.kind), ports.speed_label(p.speed_mbps),
                                             "PoE" if p.poe else "", p.vlan.name if p.vlan and not p.vlan.deleted_at else "",
-                                            f"tagged {p.tagged}" if p.tagged else "", p.mac, p.description) if x]})
-    # Where this device's free ports can be cabled to: every other device's
-    # free ports, grouped by device.
+                                            f"tagged {p.tagged}" if p.tagged else "", p.mac, p.description) if x]
+                      if p.name else []})
+    own_free = [i["port"] for i in items if i["cable"] is None] if recorded else []
+    detail = db.session.get(HardwareDetail, device.id)
+    vlans = present.views(Entity.live().filter(Entity.type == "vlan").order_by(Entity.name).all())
+    return render_template("network/ports.html", device=device, items=items, recorded=recorded,
+                           targets=_targets(device), own_free=own_free, kinds=PORT_KINDS, speeds=SPEEDS,
+                           vlans=vlans, is_panel=detail is not None and detail.kind == "patch_panel",
+                           count=detail.ports if detail is not None and detail.ports else None)
+
+
+def _targets(device: Entity) -> dict:
+    """Where a cable from this device can go: other devices cabled as a
+    whole, and the free ports of those with their ports recorded."""
+    reg = registry()
+    keys = [t.key for t in reg.enabled_types() if ports.is_cabled(t)]
+    recorded = ports.recorded_ids()
+    wholes = [e for e in Entity.live().filter(Entity.type.in_(keys), Entity.id != device.id).order_by(Entity.name)
+              if e.id not in recorded]
     taken = {i for c in db.session.query(Cable.a_id, Cable.b_id) for i in c}
     groups = {}
     for p in (Port.query.join(Entity, Entity.id == Port.device_id).options(contains_eager(Port.device))
-              .filter(Entity.deleted_at.is_(None), Port.device_id != device.id)
+              .filter(Entity.deleted_at.is_(None), Entity.type.in_(keys), Port.device_id != device.id,
+                      Port.device_id.in_(recorded), Port.name != "")
               .order_by(Entity.name, Port.position)):
         if p.id not in taken:
             groups.setdefault(p.device.name, []).append(p)
-    free = [{"device": name, "ports": ps} for name, ps in groups.items()]
-    own_free = [i["port"] for i in items if i["cable"] is None]
-    vlans = present.views(Entity.live().filter(Entity.type == "vlan").order_by(Entity.name).all())
-    return render_template("network/ports.html", device=device, items=items, free=free, own_free=own_free,
-                           kinds=PORT_KINDS, speeds=SPEEDS, vlans=vlans,
-                           is_panel=_detail_kind(device) == "patch_panel")
-
-
-def _detail_kind(device):
-    d = db.session.get(HardwareDetail, device.id)
-    return d.kind if d else None
+    return {"devices": wholes, "ports": [{"device": name, "ports": ps} for name, ps in groups.items()]}
 
 
 def ports_count(device: Entity):
-    return Port.query.filter_by(device_id=device.id).count() or None
+    """The cables it has."""
+    return (Port.query.join(Cable, (Cable.a_id == Port.id) | (Cable.b_id == Port.id))
+            .filter(Port.device_id == device.id).count() or None)
+
 
 
 def records_tab(domain: Entity) -> str:
@@ -232,6 +247,18 @@ def port_add(device_id):
     return jsonify(ok=True, ports=[ports.port_json(p) for p in made])
 
 
+@bp.route("/devices/<int:device_id>/ports/recorded", methods=["POST"])
+@role("editor")
+def ports_recorded(device_id):
+    """``on``: record each of the device's ports, or cable it as a whole."""
+    device = _device(device_id)
+    changes = ports.record_ports(device, _body().get("on") or False)
+    if changes:
+        records.audit(device, "edited", changes)
+    db.session.commit()
+    return jsonify(ok=True, recorded=ports.records_ports(device.id))
+
+
 @bp.route("/devices/<int:device_id>/ports/restore", methods=["POST"])
 @role("editor")
 def port_restore(device_id):
@@ -263,6 +290,10 @@ def port_edit(port_id=None):
 @role("editor")
 def port_delete(port_id):
     port = _port(port_id)
+    cable = ports.cable_of(port)
+    if not port.name and cable is not None:
+        # A port with no name is only there for its cable.
+        return cable_delete(cable.id)
     device_id = port.device_id
     snapshot = ports.remove_port(port)
     db.session.commit()
@@ -286,21 +317,35 @@ def port_trace(port_id):
     return jsonify(path=path)
 
 
+def _end(data, port_key, device_key):
+    """One end of a new cable: a port, or a device cabled as a whole. The
+    form's choice of the far end comes as ``to``: "port:12" or "device:5"."""
+    if port_key == "other_id" and ":" in str(data.get("to") or ""):
+        kind, _, value = str(data["to"]).partition(":")
+        data = {port_key: value} if kind == "port" else {device_key: value}
+    if _id(data, port_key):
+        return _port(_id(data, port_key))
+    if _id(data, device_key):
+        return _device(_id(data, device_key))
+    raise Invalid("Choose what the cable goes to." if port_key == "other_id" else "Choose where the cable starts.")
+
+
 @bp.route("/cables", methods=["POST"])
 @role("editor")
 def cable_create():
-    """``port_id`` and ``other_id``, with an optional ``label``, ``color``
-    and ``length_m``."""
+    """From ``port_id`` (or ``device_id``, a device cabled as a whole) to
+    ``other_id`` (or ``other_device_id``), with an optional ``label``,
+    ``color`` and ``length_m``."""
     data = _body()
     try:
-        if not data.get("other_id"):
-            raise Invalid("Choose the port at the other end.")
-        port, other = _port(_id(data, "port_id")), _port(_id(data, "other_id"))
+        port = _end(data, "port_id", "device_id")
+        other = _end(data, "other_id", "other_device_id")
         cable = ports.connect(port, other, data)
     except Invalid as err:
         return _fail(err)
     db.session.commit()
-    return jsonify(ok=True, cable={"id": cable.id, "a": cable.a_id, "b": cable.b_id, "trace": ports.trace_text(port)})
+    return jsonify(ok=True, cable={"id": cable.id, "a": cable.a_id, "b": cable.b_id,
+                                   "trace": ports.trace_text(cable.a)})
 
 
 @bp.route("/cables/<int:cable_id>/delete", methods=["POST"])

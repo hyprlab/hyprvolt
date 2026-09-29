@@ -223,16 +223,74 @@ def test_a_port_is_changed_from_the_sheet(client, h, admin):
     assert any(i["title"] == "aa:bb:cc:00:11:22" and i["id"] == switch["id"] for g in found for i in g["items"])
 
 
+def test_a_device_is_cabled_as_a_whole_until_its_ports_are_recorded(client, h, admin):
+    switch, panel, pc, ports = rack(client, h)
+    desk = make(client, h, "workstation", name="desk")
+    printer = make(client, h, "printer", name="lp")
+    tab = client.get(f"/e/{desk['id']}/sheet?tab=ports").data.decode()
+    assert "Connect a cable" in tab and "Add ports" not in tab
+    assert f'value="device:{printer["id"]}"' in tab and f'value="port:{ports["sw1 Port 2"]["id"]}"' in tab
+    assert f'value="device:{switch["id"]}"' not in tab
+    # To a switch's port, and to another device as a whole.
+    post(client, h, "/network/cables", device_id=desk["id"], to=f"port:{ports['sw1 Port 2']['id']}", label="C2")
+    post(client, h, "/network/cables", device_id=desk["id"], other_device_id=printer["id"])
+    ends = client.get(f"/network/devices/{desk['id']}/ports").get_json()["ports"]
+    assert [(p["name"], p["cable"]["to"]) for p in ends] == [("", "sw1 Port 2"), ("", "lp")]
+    tab = client.get(f"/e/{desk['id']}/sheet?tab=ports").data.decode()
+    assert "2 cables." in tab and "sw1</a> Port 2" in tab
+    assert "has its ports recorded" in post(client, h, "/network/cables", 400, device_id=desk["id"],
+                                            other_device_id=switch["id"])["error"]
+    assert "another device" in post(client, h, "/network/cables", 400, device_id=desk["id"],
+                                    other_device_id=desk["id"])["error"]
+    # A cable's ends with no name go with it, and come back with Undo.
+    undo = post(client, h, f"/network/cables/{ends[1]['cable']['id']}/delete")["undo"]
+    assert len(client.get(f"/network/devices/{printer['id']}/ports").get_json()["ports"]) == 0
+    post(client, h, undo["url"], **undo["body"])
+    assert client.get(f"/network/devices/{printer['id']}/ports").get_json()["ports"][0]["cable"]["to"] == "desk"
+    # Its switch records its ports and shows the ends to be named; off again
+    # hides a free port.
+    assert 'data-autosubmit aria-label="Record each port"' in tab
+    assert post(client, h, f"/network/devices/{desk['id']}/ports/recorded", on=True)["recorded"] is True
+    assert history(client, desk["id"])[0]["changes"][0]["label"] == "Record each port"
+    tab = client.get(f"/e/{desk['id']}/sheet?tab=ports").data.decode()
+    assert "No port named" in tab and "Add ports" in tab and 'data-autosubmit checked' in tab
+    post(client, h, "/network/ports/edit", port_id=ends[0]["id"], name="eth0")
+    post(client, h, f"/network/devices/{desk['id']}/ports", prefix="wlan", first=0, last=0)
+    post(client, h, f"/network/devices/{desk['id']}/ports/recorded", on=False)
+    tab = client.get(f"/e/{desk['id']}/sheet?tab=ports").data.decode().split('id="section-ports"')[1]
+    tab = tab.split("</section>")[0]
+    assert "eth0" in tab and "wlan0" not in tab
+    assert len(client.get(f"/network/devices/{desk['id']}/ports").get_json()["ports"]) == 3
+
+
+def test_devices_with_ports_record_them_after_an_upgrade(app, client, h, admin):
+    switch, panel, pc, ports = rack(client, h)
+    desk = make(client, h, "workstation", name="desk")
+    from hyprvolt.migrate import Migrator
+    from hyprvolt.models import db
+    from hyprvolt.modules.network import _ports_recorded
+    from hyprvolt.modules.network.models import PortsRecorded
+    with app.app_context():
+        PortsRecorded.query.delete()
+        db.session.execute(db.text("DELETE FROM settings WHERE key = 'migration:network:ports-recorded'"))
+        db.session.commit()
+        _ports_recorded(Migrator("network"))
+        got = {r.device_id for r in PortsRecorded.query}
+    assert got == {switch["id"], panel["id"], pc["id"]}
+
+
 def test_viewers_see_ports_but_cannot_change_them(client, h, admin, viewer):
     switch, panel, pc, ports = rack(client, h)
     other, oh = viewer
     assert other.get(f"/network/devices/{switch['id']}/ports").status_code == 200
     assert other.get(f"/network/ports/{ports['sw1 Port 1']['id']}/trace").status_code == 200
     for url, body in ((f"/network/devices/{switch['id']}/ports", {}), ("/network/cables", {}),
+                      (f"/network/devices/{switch['id']}/ports/recorded", {"on": False}),
                       (f"/network/ports/{ports['sw1 Port 1']['id']}/delete", {}), ("/network/ports/edit", {})):
         assert other.post(url, json=body, headers=oh).status_code == 403, url
-    tab = other.get(f"/e/{switch['id']}/sheet?tab=ports").data.decode()
-    assert "Add ports" not in tab and "data-api-post" not in tab
+    tab = other.get(f"/e/{switch['id']}/sheet?tab=ports").data.decode().split('id="section-ports"')[1]
+    tab = tab.split("</section>")[0]
+    assert "Add ports" not in tab and "data-api-post" not in tab and "Record each port" not in tab
 
 
 # ———— Domains and DNS ————
@@ -315,7 +373,7 @@ def test_network_off_hides_its_parts_on_other_records(client, h, admin):
     client.post("/admin/modules/network", json={"enabled": False}, headers=h)
     assert "s.addresses" not in client.get("/e/form?type=server").data.decode()
     sheet = client.get(f"/e/{server['id']}/sheet").data.decode()
-    assert "Ports" not in sheet.split('class="tabs"')[1].split("</nav>")[0]
+    assert "Cabling" not in sheet.split('class="tabs"')[1].split("</nav>")[0]
     assert client.get(f"/network/devices/{server['id']}/ports").status_code == 404
 
 

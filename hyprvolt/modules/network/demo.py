@@ -1,6 +1,6 @@
 """The demo homelab's network: four VLANs and their subnets behind edge-fw,
-the switch's ports, a patch panel between the office and the rack, and two
-domains. The devices' addresses come from Hardware's and Virtual's demos,
+the switch's ports, a patch panel between the office and the rack, a desk
+PC and a printer cabled as a whole, and two domains. The devices' addresses come from Hardware's and Virtual's demos,
 through the IP addresses form section."""
 from datetime import date, timedelta
 
@@ -45,12 +45,11 @@ def seed(demo):
     add("modem", prefix="LAN ", first=1, last=1, kind="rj45", speed_mbps=1000)
     add("ups1", prefix="NMC ", first=1, last=1, kind="rj45", speed_mbps=100)
     add("ap-office", prefix="eth", first=0, last=0, kind="rj45", speed_mbps=1000)
-    add("desk-pc", prefix="eth", first=0, last=0, kind="rj45", speed_mbps=1000)
-    add("printer", prefix="eth", first=0, last=0, kind="rj45", speed_mbps=100)
 
     def port(key, name):
-        if device(key) is None:
-            return None
+        """A port by its name, or with no name, the device as a whole."""
+        if device(key) is None or name is None:
+            return device(key)
         return next((p for p in ports.ports_of(device(key).id) if p.name == name), None)
 
     idrac = port("srv1", "0")
@@ -61,8 +60,8 @@ def seed(demo):
         return vlans[vid].id if vlans.get(vid) else None
 
     for name, vid, tagged in (("Port 2", 10, ""), ("Port 3", 20, ""), ("Port 4", 20, ""), ("Port 5", 30, ""),
-                              ("Port 6", 10, ""), ("Port 8", 10, "20, 30, 40"), ("Port 24", None, "10, 20, 30, 40"),
-                              ("Port 25", 20, "10")):
+                              ("Port 6", 10, ""), ("Port 7", 30, ""), ("Port 8", 10, "20, 30, 40"),
+                              ("Port 24", None, "10, 20, 30, 40"), ("Port 25", 20, "10")):
         p = port("sw-core", name)
         if p is not None:
             ports.edit_port(p, {"vlan_id": vlan_id(vid) or "", "tagged": tagged,
@@ -76,7 +75,9 @@ def seed(demo):
             (("ups1", "NMC 1"), ("sw-core", "Port 6"), {"label": "C06", "color": "gray"}),
             (("edge-fw", "igc1"), ("sw-core", "Port 24"), {"label": "C24", "color": "yellow"}),
             (("edge-fw", "igc0"), ("modem", "LAN 1"), {"label": "WAN", "color": "red"}),
-            (("desk-pc", "eth0"), ("pp1", "Rear 1"), {"label": "Office jack 1", "length_m": 18}),
+            (("desk-pc", None), ("pp1", "Rear 1"), {"label": "Office jack 1", "length_m": 18}),
+            (("printer", None), ("pp1", "Rear 2"), {"label": "Office jack 2", "length_m": 16}),
+            (("pp1", "Front 2"), ("sw-core", "Port 7"), {"label": "P02", "length_m": 0.3}),
             (("pp1", "Front 1"), ("sw-core", "Port 5"), {"label": "P01", "length_m": 0.3}),
             (("ap-office", "eth0"), ("pp1", "Rear 4"), {"label": "Office ceiling", "length_m": 22}),
             (("pp1", "Front 4"), ("sw-core", "Port 8"), {"label": "P04", "length_m": 0.3})):
