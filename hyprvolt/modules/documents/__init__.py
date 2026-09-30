@@ -10,7 +10,7 @@ Built in (``core=True``): the Documents tab every record has comes from here,
 so it can't be turned off.
 """
 from hyprvolt.core.models import EntityDetail
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Step, Tab
+from hyprvolt.manifest import EntityType, Field, ListFilter, Module, SetupFinish, Step, Tab
 from hyprvolt.models import db
 
 ICON = '<path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20V3.5Z"/><path d="M14 3.5V8h4M10 12h5M10 15.5h5"/>'
@@ -64,7 +64,12 @@ module = Module(
         Tab("documents", "Documents", lambda e: views.documents_tab(e),
             when=lambda e: e.type != "document", count=lambda e: views.count(e)),
     ),
+    setup_finish=(SetupFinish("runbook", "Start the site's runbook",
+                              "One document for when something breaks: it links to everything recorded here, "
+                              "with headings for who to call, what to check first and how to recover.",
+                              make=lambda site, found, user: runbook.make(site, found, user),
+                              made=lambda site: runbook.made(site), open_label="Open the site's runbook"),),
     seed=lambda demo_: demo.seed(demo_),
 )
 
-from . import demo, views  # noqa: E402  (after DocumentBody, which views imports)
+from . import demo, runbook, views  # noqa: E402  (after DocumentBody, which views imports)

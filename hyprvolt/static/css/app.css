@@ -1603,6 +1603,14 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 /* Save and continue comes first, so Enter does it, and shows last. */
 .guide-nav-go { flex-direction: row-reverse; }
 .guide .manage-list { max-width: 640px; }
+.guide-next {
+  display: flex; align-items: center; gap: 18px; max-width: 640px; margin: 0 0 20px; padding: 16px 18px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+}
+.guide-next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.guide-next-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.guide-next .btn { flex: none; }
+@media (max-width: 560px) { .guide-next { flex-direction: column; align-items: stretch; } }
 /* Narrow, the steps are the "Step 3 of 14" line above each one. */
 @media (max-width: 900px) {
   .guide { grid-template-columns: minmax(0, 1fr); }

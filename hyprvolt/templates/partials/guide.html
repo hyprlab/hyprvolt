@@ -63,7 +63,7 @@
   {% if intro %}
     <p class="guide-count">{{ 'Welcome' if fresh else 'Overview' }}</p>
     <h2 class="guide-title">{% if fresh %}Let's document your first site{% else %}Set up a site, step by step{% endif %}</h2>
-    <p class="guide-intro">Hyprvolt segments records into the {{ groups|length }} main categories shown below, each with
+    <p class="guide-intro">This guide covers the {{ groups|length }} main categories of a site, shown below, each with
       its own set of subcategories. These records can then be linked to form relationships as part of the
       documentation system.</p>
     <ol class="guide-plan">
@@ -91,6 +91,16 @@
     <h2 class="guide-title">{{ scope.name if scope else 'The site' }} is written down</h2>
     <p class="guide-intro">Each record has more to fill in when you are ready: open it from the dashboard or the sidebar.
       A step can be run again at any time to add what was left out.</p>
+    {% for x in finishes %}
+    <form class="guide-next" method="post" action="{{ url_for('guide.finish', key=x.finish.key, site=scope.id) }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="guide-next-text">
+        <span class="guide-next-title">{{ 'Your runbook' if x.made else 'Next, write it down' }}</span>
+        <span class="hint">{{ x.finish.text }}</span>
+      </div>
+      <button class="btn btn--primary">{{ x.finish.open_label if x.made and x.finish.open_label else x.finish.label }}</button>
+    </form>
+    {% endfor %}
     <ul class="manage-list">
       {% for s in summary %}
       <li class="manage-item">
@@ -107,7 +117,7 @@
         <a class="btn btn--ghost" href="{{ url_for('guide.start') }}">Set up another site</a>
       </div>
       <div class="guide-nav-side guide-nav-go">
-        <a class="btn btn--primary" href="{{ url_for('main.index') }}">Open the dashboard</a>
+        <a class="btn {{ 'btn--ghost' if finishes else 'btn--primary' }}" href="{{ url_for('main.index') }}">Open the dashboard</a>
         {% if diagram %}<a class="btn btn--ghost" href="{{ url_for('main.module_page', module_id='diagram', key='network') }}">See the network diagram</a>{% endif %}
       </div>
     </div>

@@ -173,6 +173,22 @@ class SetupStep:
 
 
 @dataclass(frozen=True)
+class SetupFinish:
+    """What the site setup guide's last page offers to do with the site just
+    set up: the knowledge base starts its runbook. ``make(site, found, user)``
+    does it and returns the record to open next, ``found`` being what the
+    guide's steps recorded in the site: [{"group", "title", "records"}].
+    ``made(site)`` returns the record made before, if any, so the page offers
+    to open that instead."""
+    key: str
+    label: str                       # the button: "Start the site's runbook"
+    text: str                        # a sentence beside it
+    make: Callable
+    made: Callable | None = None
+    open_label: str = ""             # the button once made: "Open the site's runbook"
+
+
+@dataclass(frozen=True)
 class Widget:
     """A dashboard card. ``render()`` returns HTML."""
     key: str
@@ -265,5 +281,6 @@ class Module:
     form_sections: tuple = ()        # form sections on any module's types
     before_retype: Callable | None = None  # before_retype(entity, old, new) on any type change; raise Invalid to refuse
     setup: tuple = ()                # SetupSteps of the site setup guide
+    setup_finish: tuple = ()         # SetupFinishes: what its last page offers to do
     seed: Callable | None = None     # seed(demo) for flask seed-demo
     package: str = field(default="", compare=False)  # filled in by the registry

@@ -387,6 +387,13 @@ Steps of turned-off modules are left out. The guide has the screen to
 itself, the first time and every time after: no sidebar, search or New menu,
 only the steps. The app comes back at the end, or with Exit setup at the top.
 
+The last page counts what each step recorded and offers to start the site's
+runbook: a draft document in the knowledge base, attached to the site, that
+links to every room, device, subnet and service the guide recorded, with
+headings to fill in for who to call, what to check when the internet is
+down, what to do when something else breaks, and backups and recovery. Once
+it exists, the same button opens it.
+
 Each step is a few fields to a row, and Add another adds a row, so every
 endpoint or every service can go in at once. Save and continue saves the
 step and goes on; Save and add more saves it and stays, so a room can go in

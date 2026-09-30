@@ -166,6 +166,11 @@ def _existing(step, scope) -> list:
     with its own save, lines of text."""
     if step.save is not None:
         return list(step.existing(scope)) if step.existing else []
+    return present.views(_found(step, scope))
+
+
+def _found(step, scope) -> list[Entity]:
+    """The records of a step of records, in this site."""
     kinds = _kinds(step)
     rows = Entity.live().filter(Entity.type.in_({k.type for k in kinds})).order_by(Entity.name).all()
     place_ids = {i for i, _ in _places(scope)}
@@ -180,7 +185,7 @@ def _existing(step, scope) -> list:
                                         if n.startswith("f."))
                for k in kinds):
             out.append(e)
-    return present.views(out)
+    return out
 
 
 # ———— Saving a step ————
@@ -289,8 +294,38 @@ def done():
     summary = [{"step": s, "count": len(_existing(s, scope))} for s in _steps() if not s.scope]
     reg = registry()
     diagram = reg.is_enabled("diagram") and reg.module("diagram") is not None
+    # What modules offer to do with the site now: the knowledge base's runbook.
+    finishes = [{"finish": f, "made": f.made(scope) if f.made else None}
+                for f in reg.setup_finishes()] if scope is not None else []
     return _page(render_template("partials/guide.html", done=True, steps=_steps(), groups=_groups(_steps()),
-                                 scope=scope, summary=summary, diagram=diagram, url=_url))
+                                 scope=scope, summary=summary, diagram=diagram, finishes=finishes, url=_url))
+
+
+def _open(entity):
+    """A record in the app, its sheet open over its module's list."""
+    return url_for("main.module_list", module_id=entity.module, open=entity.id)
+
+
+@bp.route("/site-setup/finish/<key>", methods=["POST"])
+@role("editor")
+def finish(key):
+    """Do what a module offers on the last page (SetupFinish), for the site
+    of ``?site=``, and open the record it made; one made before is opened."""
+    scope = _scope()
+    f = next((f for f in registry().setup_finishes() if f.key == key), None)
+    if f is None or scope is None:
+        abort(404, description="There is nothing to do for that site.")
+    entity = f.made(scope) if f.made else None
+    if entity is None:
+        found = [{"group": s.group, "title": s.title, "records": _found(s, scope)}
+                 for s in _steps() if not s.scope and s.save is None]
+        try:
+            entity = f.make(scope, [x for x in found if x["records"]], None)
+        except Invalid as err:
+            db.session.rollback()
+            abort(400, description=str(err))
+        db.session.commit()
+    return redirect(_open(entity))
 
 
 @bp.route("/site-setup/<key>", methods=["GET", "POST"])

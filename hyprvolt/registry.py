@@ -31,7 +31,7 @@ from werkzeug.routing import BaseConverter
 
 from .core.relations import CORE_KINDS
 from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, FormSection, Job, ListFilter, Module, Page,
-                       Pane, RelationKind, SetupField, SetupKind, SetupStep, Step, Tab, Widget)
+                       Pane, RelationKind, SetupField, SetupFinish, SetupKind, SetupStep, Step, Tab, Widget)
 
 log = logging.getLogger(__name__)
 
@@ -174,6 +174,9 @@ class Registry:
     def setup_steps(self) -> list[SetupStep]:
         """The site setup guide's steps from turned-on modules, in order."""
         return sorted((s for m in self.enabled_modules() for s in m.setup), key=lambda s: s.order)
+
+    def setup_finishes(self) -> list[SetupFinish]:
+        return [f for m in self.enabled_modules() for f in m.setup_finish]
 
     def form_sections(self, etype: EntityType) -> list[FormSection]:
         """What turned-on modules add to the form of ``etype``."""
@@ -335,6 +338,9 @@ def validate(m: Module, reg: Registry) -> list[str]:
         others.add(getattr(section, "key", None))
     own = {t.key for t in m.types if isinstance(t, EntityType)}
     others = {s.key for o in reg.modules.values() for s in o.setup}
+    for finish in m.setup_finish:
+        if not isinstance(finish, SetupFinish) or not callable(finish.make) or not ID_RE.match(finish.key or ""):
+            p.append(f"{finish!r} is not a SetupFinish with a lower-case key and a make function")
     for step in m.setup:
         if not isinstance(step, SetupStep):
             p.append(f"{step!r} is not a SetupStep")

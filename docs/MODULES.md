@@ -76,6 +76,7 @@ required.
 | `sheet_tabs` | `Tab(key, label, render, when=None, count=None)`s on records of any module, shown where `when(entity)` says; `count(entity)` puts a number beside the label |
 | `form_sections` | `FormSection`s in the record form of any module's types. See [Adding to other modules' forms](#adding-to-other-modules-forms) |
 | `setup` | `SetupStep`s of the site setup guide. See [Steps of the site setup guide](#steps-of-the-site-setup-guide) |
+| `setup_finish` | `SetupFinish`es: what the guide's last page offers to do with the site set up, such as the knowledge base's runbook |
 | `before_retype` | `before_retype(entity, old, new)`, called when any record's type changes (`EntityType.becomes`), with both types. Raise `Invalid` to refuse while the record holds something of this module's that the new type couldn't: a rack mount (Locations), installed software (Software), ports (Network) |
 | `seed` | `seed(demo)`, its part of `flask seed-demo`. Seeds run in sidebar order, each after the modules it requires, built-in modules last, so a module later in the sidebar finds the records it links to |
 
@@ -255,6 +256,12 @@ SetupStep("gear", "Network gear", "What connects everything, from where the inte
 - A step that makes something other than records (Network's cables) has
   `save(values, scope, user)` instead of `kinds`, `existing(scope)` listing
   what is there, and `SetupField(..., choices=fn)` for its choices.
+- A `SetupFinish(key, label, text, make, made=None, open_label="")` is
+  offered on the guide's last page. `make(site, found, user)` gets what the
+  steps recorded in the site, `[{"group", "title", "records"}]`, and returns
+  the record to open; `made(site)` finds one made before, which is opened
+  instead. The knowledge base's runbook (`modules/documents/runbook.py`) is
+  the worked example.
 - A step is saved whole or not at all: an `Invalid` from any row undoes the
   step and is shown with the row's name. Rows with no name are skipped.
 

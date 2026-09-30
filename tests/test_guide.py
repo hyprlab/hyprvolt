@@ -1,7 +1,7 @@
 """The site setup guide: its steps from the modules, in order; a site walked
 from the site itself out to its endpoints and cables, several records a
 step; a step saved whole or not at all; and who may use it."""
-from hyprvolt.manifest import Module, SetupKind, SetupStep
+from hyprvolt.manifest import Module, SetupFinish, SetupKind, SetupStep
 from hyprvolt.registry import Registry, validate
 
 
@@ -27,7 +27,7 @@ def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
     assert "Load a demo homelab instead" in page
     for group in ("Place", "Network", "Equipment", "What runs", "Endpoints"):
         assert f'<p class="guide-group">{group}</p>' in page
-    assert "into the 5 main categories" in page
+    assert "This guide covers the 5 main categories of a site" in page
     for plan in ("Site, buildings, rooms, and racks", "Vendors, internet connections, VLANs, and subnets",
                  "Network gear, servers, and storage", "Endpoints and cables"):
         assert f'<span class="guide-plan-steps">{plan}</span>' in page
@@ -104,6 +104,29 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     assert "Home is written down" in done and "2 recorded" in done
 
 
+def test_the_last_page_starts_the_site_runbook(client, h, admin):
+    step(client, h, "site", r0={"name": "Home"})
+    site = entities(client, "site")[0]
+    step(client, h, "rooms", site["id"], r0={"name": "Basement", "location_id": site["id"]})
+    step(client, h, "subnets", site["id"], r0={"name": "LAN", "f.cidr": "10.0.20.0/24"})
+    done = client.get(f"/site-setup/done?site={site['id']}").data.decode()
+    assert "Next, write it down" in done and "Start the site&#39;s runbook" in done
+    resp = client.post(f"/site-setup/finish/runbook?site={site['id']}", headers=h)
+    doc = entities(client, "document")[0]
+    assert resp.status_code == 302 and resp.headers["Location"].endswith(f"/documents?open={doc['id']}")
+    room = entities(client, "room")[0]
+    body = doc["fields"]["body"]
+    assert doc["name"] == "Home runbook" and doc["status"] == "draft"
+    assert f"## Place\n\n- Buildings and rooms: [[{room['slug']}]]" in body
+    assert "## Network" in body and "## Who to call" in body and "## Backups and recovery" in body
+    assert "Home runbook" in client.get(f"/e/{site['id']}/sheet?tab=documents").data.decode()
+    # Once made, it is opened rather than made again.
+    assert "Open the site&#39;s runbook" in client.get(f"/site-setup/done?site={site['id']}").data.decode()
+    client.post(f"/site-setup/finish/runbook?site={site['id']}", headers=h)
+    assert len(entities(client, "document")) == 1
+    assert client.post("/site-setup/finish/nothing?site=1", headers=h).status_code == 404
+
+
 def test_a_step_is_saved_whole_or_not_at_all(client, h, admin):
     step(client, h, "site", r0={"name": "Home"})
     resp = step(client, h, "subnets", r0={"name": "Good", "f.cidr": "10.0.20.0/24"},
@@ -138,6 +161,8 @@ def test_a_module_steps_are_checked():
     bad = Module(id="gadgets", name="Gadgets", setup=(
         SetupStep("things", "Things", "", 10, kinds=(SetupKind("Server", "server"),)),
         SetupStep("nothing", "Nothing", "", 20)))
+    bad.setup_finish = (SetupFinish("Bad Key", "x", "x", make=None),)
     problems = " ".join(validate(bad, Registry()))
+    assert "is not a SetupFinish" in problems
     assert "makes 'server', not one of the module's types" in problems
     assert "needs either kinds of record or a save function" in problems
