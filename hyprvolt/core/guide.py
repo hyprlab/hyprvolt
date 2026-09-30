@@ -251,12 +251,19 @@ def _page(html):
 
 
 def _groups(steps) -> list[dict]:
-    """The steps under their group headings, in order."""
+    """The steps under their group headings, in order, each group with its
+    ``plan``: what its steps cover, as the overview says it ("Site,
+    buildings, rooms, and racks")."""
     out = []
     for n, s in enumerate(steps):
         if not out or out[-1]["label"] != s.group:
             out.append({"label": s.group, "steps": []})
         out[-1]["steps"].append((n, s))
+    for g in out:
+        words = [w.strip() for _, s in g["steps"] for w in (s.plan or s.title.lower()).split(",")]
+        text = words[0] if len(words) == 1 else " and ".join(words) if len(words) == 2 else \
+            ", ".join(words[:-1]) + ", and " + words[-1]
+        g["plan"] = text[:1].upper() + text[1:]
     return out
 
 

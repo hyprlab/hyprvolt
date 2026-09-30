@@ -164,6 +164,7 @@ class SetupStep:
     intro: str
     order: int
     group: str = ""
+    plan: str = ""                   # what it covers on the first page, lower case: "buildings, rooms"
     fields: tuple = ()
     kinds: tuple = ()
     scope: bool = False

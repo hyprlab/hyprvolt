@@ -52,7 +52,7 @@ module = Module(
     widgets=(Widget("services", "Services", views.services_widget),),
     setup=(SetupStep("services", "Services", "What people use: a website, file sharing, a media server, "
                      "DNS. Say what each runs on, so a host going down shows what goes with it.", 90,
-                     group="What runs", kinds=(SetupKind("Service", "service"),),
+                     group="What runs", plan="services", kinds=(SetupKind("Service", "service"),),
                      fields=(SetupField("name", placeholder="Jellyfin"), SetupField("f.kind"), SetupField("f.host"),
                              SetupField("f.url"))),),
     seed=demo.seed,

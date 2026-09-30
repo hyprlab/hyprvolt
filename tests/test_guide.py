@@ -27,6 +27,10 @@ def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
     assert "Load a demo homelab instead" in page
     for group in ("Place", "Network", "Equipment", "What runs", "Endpoints"):
         assert f'<p class="guide-group">{group}</p>' in page
+    assert "into the 5 main categories" in page
+    for plan in ("Site, buildings, rooms, and racks", "Vendors, internet connections, VLANs, and subnets",
+                 "Network gear, servers, and storage", "Endpoints and cables"):
+        assert f'<span class="guide-plan-steps">{plan}</span>' in page
     # Once something is recorded it is the guide's overview, run again.
     step(client, h, "site", r0={"name": "Home"})
     page = client.get("/site-setup").data.decode()

@@ -63,19 +63,19 @@
   {% if intro %}
     <p class="guide-count">{{ 'Welcome' if fresh else 'Overview' }}</p>
     <h2 class="guide-title">{% if fresh %}Let's document your first site{% else %}Set up a site, step by step{% endif %}</h2>
-    <p class="guide-intro">{{ steps|length }} short steps take you from the site itself out to the devices people use and
-      the cables between them. Each asks for a few things only: a name, where it is, perhaps an address. The rest can
-      be filled in later, on each record.</p>
+    <p class="guide-intro">Hyprvolt segments records into the {{ groups|length }} main categories shown below, each with
+      its own set of subcategories. These records can then be linked to form relationships as part of the
+      documentation system.</p>
     <ol class="guide-plan">
       {% for g in groups %}
       <li>
         <span class="guide-plan-head">{{ g.label or 'Steps' }}</span>
-        <span class="guide-plan-steps">{% for n, s in g.steps %}{{ s.title }}{{ ', ' if not loop.last }}{% endfor %}</span>
+        <span class="guide-plan-steps">{{ g.plan }}</span>
       </li>
       {% endfor %}
     </ol>
-    <p class="guide-intro">Add as many rows as you like at each step: every room, every server, every endpoint. A step
-      that doesn't apply can be skipped, and the guide can be run again at any time from New.</p>
+    <p class="guide-intro">Add as many rows as you like at each step. A step that doesn't apply can be skipped, and the
+      guide can be run again at any time from the New + menu.</p>
     <div class="guide-nav">
       <div class="guide-nav-side">
         <a class="btn btn--ghost" href="{{ url_for('main.index') }}">{{ 'Not now' if fresh else 'Back to the dashboard' }}</a>

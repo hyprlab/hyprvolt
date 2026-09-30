@@ -71,7 +71,8 @@ module = Module(
     form_sections=(FormSection("supplier", "Supplier", views.supplier_form, views.supplier_save,
                                when=views.is_supplied),),
     setup=(SetupStep("vendors", "Vendors", "Who you buy from and call when something breaks: your internet "
-                     "provider first, then the makers and shops behind your equipment.", 35, group="Network",
+                     "provider first, then the makers and shops behind your equipment.", 35,
+                     group="Network", plan="vendors",
                      kinds=(SetupKind("Vendor", "vendor"),),
                      fields=(SetupField("name", placeholder="Springfield Cable"), SetupField("f.support_phone"),
                              SetupField("f.website"), SetupField("f.account_number"))),),

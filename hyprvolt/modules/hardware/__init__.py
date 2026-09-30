@@ -125,7 +125,7 @@ module = Module(
     setup=(
         SetupStep("gear", "Network gear", "What connects everything, from where the internet comes in: the "
                   "modem, the router or firewall, then switches, access points and patch panels.", 60,
-                  group="Equipment",
+                  group="Equipment", plan="network gear",
                   kinds=(SetupKind("Modem", "network_device", {"f.kind": "modem"}),
                          SetupKind("Router", "network_device", {"f.kind": "router"}),
                          SetupKind("Firewall", "firewall"),
@@ -135,12 +135,12 @@ module = Module(
                   fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
         SetupStep("servers", "Servers and storage", "The machines that run things and keep data: servers, "
-                  "NAS boxes, and the UPS that keeps them up.", 70, group="Equipment",
+                  "NAS boxes, and the UPS that keeps them up.", 70, group="Equipment", plan="servers, storage",
                   kinds=(SetupKind("Server", "server"), SetupKind("NAS", "nas"), SetupKind("UPS", "ups")),
                   fields=(SetupField("name", placeholder="srv1"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
         SetupStep("endpoints", "Endpoints", "What people use at the edge of the network: computers, printers "
-                  "and other devices. Add them all here, one row each.", 100, group="Endpoints",
+                  "and other devices. Add them all here, one row each.", 100, group="Endpoints", plan="endpoints",
                   kinds=(SetupKind("Workstation", "workstation"), SetupKind("Printer", "printer"),
                          SetupKind("Peripheral", "peripheral")),
                   fields=(SetupField("name", placeholder="desk-pc"), SetupField("location_id"),
