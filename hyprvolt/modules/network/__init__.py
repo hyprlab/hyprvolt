@@ -11,7 +11,8 @@ most specific subnet that holds it; which addresses of a subnet are free is
 worked out, not stored.
 """
 from hyprvolt.core.models import Entity
-from hyprvolt.manifest import (EntityType, Field, FormSection, ListFilter, Module, SetupField, SetupKind, SetupStep,
+from hyprvolt.manifest import (EntityType, Field, FormSection, ListFilter, Module, RelationKind, SetupField, SetupKind,
+                               SetupStep,
                                Step, Tab, Widget)
 from hyprvolt.models import db
 
@@ -191,6 +192,10 @@ module = Module(
                                  help="The ISP's side of the line, which your router sends everything to."),
                            Field("dns_servers", "DNS servers", shown_when=STATIC,
                                  help="The ISP's, if it gave any. Separated by commas."),
+                           Field("comes_in_at", "Comes in at", "ref", types=views.GATEWAY_TYPES,
+                                 relation="comes_in_at", shown_when=WAN,
+                                 help="The modem, router or firewall the line plugs into. If it goes down, so "
+                                      "does the line."),
                            Field("circuit_id", "Circuit ID", shown_when=WAN,
                                  help="For an internet connection: what the ISP calls this line when you report "
                                       "a fault. The ISP itself goes in Supplier, as a vendor.")),
@@ -236,7 +241,11 @@ module = Module(
                     count=views.addresses_count),
                 Tab("ports", "Cabling", views.ports_tab, when=views.has_ports_tab, count=views.ports_count)),
     form_sections=(FormSection("addresses", "IP addresses", addresses.section_form, addresses.section_save,
-                               when=addresses.is_addressable, values=addresses.section_values),),
+                               when=addresses.is_addressable, values=addresses.section_values),
+                   FormSection("internet", "Internet connection", views.internet_form, views.internet_save,
+                               when=views.is_gateway_gear, values=views.internet_values,
+                               choices=views.internet_choices)),
+    relation_kinds=(RelationKind("comes_in_at", "comes in at", "brings in", impact="source"),),
     before_retype=ports.before_retype,
     setup=(
         SetupStep("internet", "Internet connection", "How the site reaches the internet: each line from an "

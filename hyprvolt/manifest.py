@@ -111,13 +111,15 @@ class FormSection:
     record is saved through ``records``, stores them or raises ``Invalid``,
     and returns the changes for the history: [{"field", "label", "old",
     "new"}]. ``values(entity)``, if given, returns what the section holds as
-    those same names ({"list": "10.0.20.5"}), for the site setup guide's rows."""
+    those same names ({"list": "10.0.20.5"}), for the site setup guide's rows;
+    ``choices(name)`` the options of one that is a choice."""
     key: str
     label: str
     render: Callable
     save: Callable
     when: Callable | None = None
     values: Callable | None = None   # values(entity) -> {name: value}: what it holds now
+    choices: Callable | None = None  # choices(name) -> [(value, label)]: a choice's options, for the guide
 
 
 @dataclass(frozen=True)
@@ -155,6 +157,7 @@ class SetupField:
     types: tuple = ()
     choices: Callable | None = None
     newline: bool = False            # starts a new line of the row: download and upload, then the IP
+    kinds: tuple = ()                # only in rows of these kinds (their labels): a modem's internet line
 
 
 @dataclass(frozen=True)

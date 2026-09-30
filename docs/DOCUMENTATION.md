@@ -147,7 +147,12 @@ speeds (each a number with Mb/s or Gb/s chosen beside it), a Dynamic or
 Static switch for its IP address, and circuit ID. Static shows the line's
 fixed address, subnet mask (255.255.255.248 or /29), gateway and DNS
 servers; a gateway outside the address's network is refused. Dynamic hides
-them and keeps what was there; the ISP is a vendor, chosen in its Supplier
+them and keeps what was there. Its Comes in at names the modem, router or
+firewall the line plugs into (also set from that device's Internet
+connection section, and in the guide's Network gear step): the device then
+brings in the line, the network diagram draws the line above it, and the
+line depends on it. A modem in bridge mode has no address on your network
+and can be left without one; the ISP is a vendor, chosen in its Supplier
 section, with the contract for the line. The sidebar lists internet
 connections. A domain's DNS records
 are written down by hand in its DNS records tab, and an A record or a CNAME

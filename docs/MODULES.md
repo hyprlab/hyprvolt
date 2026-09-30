@@ -272,6 +272,9 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
   needs a `label` and is left out where the section doesn't apply, and
   `types=("vendor",)` makes it a choice of those records. A saved row shows
   what the section holds through its `FormSection.values(entity)`.
+- `SetupField(..., kinds=("Modem", "Router", "Firewall"))` puts a column in
+  rows of those kinds only, shown as a row's kind is chosen: the Network
+  gear step's Internet connection.
 - `SetupField(..., newline=True)` starts a new line of the row, so what
   belongs together reads together: the internet connection's speeds, then
   its IP address switch, then the static fields.
@@ -321,6 +324,9 @@ FormSection("rack", "Rack position", render=rack_form, save=rack_save,
 - `values(entity)`, optional, returns what the section holds under the same
   names (`{"list": "10.0.20.5"}`), so the site setup guide's rows can show
   it. Network's addresses and Contacts' supplier sections have one.
+  `choices(name)`, optional, gives the options of a field of it that is a
+  choice, for the guide's column: Network's Internet connection section
+  offers only internet connections.
 - The API takes the same values as `s.rack.position_u` or nested as
   `"sections": {"rack": {"position_u": 12}}`. A save that doesn't name the
   section leaves its values alone.

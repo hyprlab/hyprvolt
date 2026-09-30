@@ -1230,7 +1230,7 @@
       if (!ctl) return;
       var holder = ctl.closest("[data-when]");
       var value = ctl.type === "checkbox" ? (ctl.checked ? "1" : "0") : ctl.value;
-      el.hidden = !!(holder && holder.hidden) || value !== el.getAttribute("data-when-is");
+      el.hidden = !!(holder && holder.hidden) || el.getAttribute("data-when-is").split(" ").indexOf(value) === -1;
     });
   }
   document.addEventListener("change", function (e) {

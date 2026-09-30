@@ -6,8 +6,9 @@ the panels named on it. A "connected to" link between two cabled devices
 that no cable joins is an edge too, drawn dashed. Everything is read in a
 handful of queries and laid out here, so the template only draws.
 
-The layout is in tiers from the internet side: modems first, then routers
-and firewalls, then outwards by distance. Within a tier, each node sits
+The layout is in tiers from the internet side: the internet connections
+(each linked to the device it comes in at), then modems, then routers and
+firewalls, then outwards by distance. Within a tier, each node sits
 near the average place of its neighbors in the tier above, which keeps most
 lines from crossing.
 """
@@ -136,6 +137,17 @@ def network() -> tuple[dict[int, Node], list[Edge]]:
         devices.setdefault(b.id, b)
         joined.add(frozenset((a.id, b.id)))
         edges.append(Edge(a.id, b.id, cabled=False, vlans=r.note or ""))
+    # Where the internet comes in: each connection, drawn above the device it
+    # plugs into (Network's "comes in at").
+    lines = Relationship.query.filter_by(kind="comes_in_at").all()
+    ends_of = _live_devices({i for r in lines for i in (r.source_id, r.target_id)})
+    for r in lines:
+        line, device = ends_of.get(r.source_id), ends_of.get(r.target_id)
+        if line is None or device is None:
+            continue
+        devices.setdefault(line.id, line)
+        devices.setdefault(device.id, device)
+        edges.append(Edge(line.id, device.id))
     # A device only on the way (a patch panel) is named on its links, not drawn.
     ends = {i for e in edges for i in (e.a, e.b)}
     nodes = {i: Node(e) for i, e in devices.items() if i in ends}
@@ -143,12 +155,15 @@ def network() -> tuple[dict[int, Node], list[Edge]]:
 
 
 def _rank(nodes) -> dict[int, int]:
-    """How far upstream each device is: modems 0, routers and firewalls 1."""
+    """How far upstream each device is: the internet connections first, then
+    modems, then routers and firewalls."""
     kinds = dict(db.session.query(HardwareDetail.entity_id, HardwareDetail.kind)
                  .filter(HardwareDetail.entity_id.in_(list(nodes))))
     out = {}
     for i, n in nodes.items():
-        if n.entity.type == "firewall":
+        if n.entity.type == "network":
+            out[i] = -1
+        elif n.entity.type == "firewall":
             out[i] = 1
         elif kinds.get(i) in FIRST and n.entity.type == "network_device":
             out[i] = FIRST[kinds[i]]

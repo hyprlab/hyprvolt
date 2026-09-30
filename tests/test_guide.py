@@ -129,6 +129,12 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     add(client, h, "gear", site["id"], **{"_kind": "3", "name": "sw1", "location_id": rack["id"],
                                           "s.addresses.list": "10.0.20.2"})
     add(client, h, "gear", site["id"], **{"_kind": "1", "name": "fw1", "location_id": rack["id"]})
+    # The Internet connection column: only in a modem's, router's or firewall's row.
+    page = client.get(f"/site-setup/gear?site={site['id']}").data.decode()
+    assert 'data-when="_kind" data-when-is="0 1 2"><span class="field-label">Internet connection' in page
+    assert f'<option value="{wan["id"]}" >Fiber</option>' in page.replace("selected", "")
+    switch_row = page.split('data-name="sw1"')[1].split("</fieldset>")[0]
+    assert 'data-when="_kind" data-when-is="0 1 2" hidden>' in switch_row
     sw = next(e for e in entities(client, "network_device") if e["name"] == "sw1")
     assert sw["fields"]["kind"] == "switch" and any(e["name"] == "10.0.20.2" for e in entities(client, "ip_address"))
     # A row's kind changed: a router into a firewall, another type.

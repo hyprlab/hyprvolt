@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 
 from hyprvolt.core import present, records, reminders
 from hyprvolt.core.fields import Invalid
-from hyprvolt.core.models import Entity
+from hyprvolt.core.models import Entity, Relationship
 from hyprvolt.models import db
 from hyprvolt.modules.hardware.models import HardwareDetail
 from hyprvolt.permissions import role
@@ -140,6 +140,67 @@ def records_tab(domain: Entity) -> str:
 
 def records_count(domain: Entity):
     return DnsRecord.query.filter_by(domain_id=domain.id).count() or None
+
+
+# ———— Where the internet comes in: the Internet connection section ————
+
+#: What a line from the ISP can come in at.
+GATEWAY_TYPES = ("network_device", "firewall")
+
+
+def is_gateway_gear(etype) -> bool:
+    return etype.key in GATEWAY_TYPES
+
+
+def _lines() -> list[Entity]:
+    """Every internet connection: a network of the kind wan."""
+    wan = db.session.query(NetworkDetail.entity_id).filter(NetworkDetail.kind == "wan")
+    return Entity.live().filter(Entity.type == "network", Entity.id.in_(wan)).order_by(Entity.name).all()
+
+
+def _line_of(device: Entity):
+    """The internet connection that comes in at a device, if any."""
+    rel = (Relationship.query.join(Entity, Entity.id == Relationship.source_id)
+           .filter(Relationship.kind == "comes_in_at", Relationship.target_id == device.id,
+                   Entity.deleted_at.is_(None)).order_by(Relationship.id).first())
+    return records.live(rel.source_id) if rel else None
+
+
+def internet_choices(name) -> list[tuple[int, str]]:
+    return [(e.id, e.name) for e in _lines()]
+
+
+def internet_values(device) -> dict:
+    line = _line_of(device)
+    return {"line": line.id if line else ""}
+
+
+def internet_form(etype, device) -> str:
+    line = _line_of(device) if device is not None else None
+    return render_template("network/internet_form.html", lines=internet_choices("line"),
+                           line_id=line.id if line else None)
+
+
+def internet_save(device, values, user) -> list[dict]:
+    """Which line comes in at the device, kept as that connection's Comes in
+    at: the line chosen points here, and one that did and isn't chosen no
+    longer does. A second line (dual WAN) is set from its own record."""
+    if "line" not in values:
+        return []
+    wanted = None
+    if values["line"] not in (None, "", 0, "0"):
+        wanted = records.live(values["line"])
+        if wanted is None or wanted.id not in {e.id for e in _lines()}:
+            raise Invalid("Choose an internet connection that exists.")
+    current = _line_of(device)
+    if (wanted and current and wanted.id == current.id) or (wanted is None and current is None):
+        return []
+    if current is not None:
+        records.update(current, {"f.comes_in_at": ""}, user)
+    if wanted is not None:
+        records.update(wanted, {"f.comes_in_at": device.id}, user)
+    return [{"field": "internet", "label": "Internet connection", "old": current.name if current else "",
+             "new": wanted.name if wanted else ""}]
 
 
 # ———— The site setup guide's cables step ————

@@ -156,14 +156,20 @@ def columns(step, scope) -> list[dict]:
             else:
                 col["kind"] = "text"
         elif sf.name.startswith("s."):
-            key = sf.name.split(".")[1]
-            if not any(s.key == key for t in types for s in reg.form_sections(t)):
+            key, name = sf.name.split(".")[1], sf.name.split(".", 2)[2]
+            section = next((s for t in types for s in reg.form_sections(t) if s.key == key), None)
+            if section is None:
                 continue
-            if sf.types:
-                choices = _records_of(sf.types)
-                col.update(kind="select", choices=choices)
+            if section.choices is not None:
+                col.update(kind="select", choices=section.choices(name))
+            elif sf.types:
+                col.update(kind="select", choices=_records_of(sf.types))
         elif sf.choices is not None:
             col.update(kind="select", choices=sf.choices(scope))
+        if sf.kinds and len(kinds) > 1:
+            # Only in rows of those kinds: shown as the row's kind is chosen.
+            col["when"] = ("_kind", " ".join(str(i) for i, k in enumerate(kinds) if k.label in sf.kinds))
+            col["only"] = {i for i, k in enumerate(kinds) if k.label in sf.kinds}
         cols.append(col)
     return cols
 
@@ -296,6 +302,8 @@ def _row(step, cols, entity) -> dict:
                 held.setdefault(key, section.values(entity) or {})
                 values[n] = held[key].get(name, "")
     gone = {"f." + k for k in F.hidden_keys(etype.fields, own)}
+    kind = int(values["_kind"]) if "_kind" in values else 0
+    gone |= {c["name"] for c in cols if "only" in c and kind not in c["only"]}
     return {"id": entity.id, "label": entity.name, "values": values, "absent": absent, "text": {}, "locked": (),
             "hidden": {c["name"] for c in cols if c["name"] in gone}}
 
@@ -388,6 +396,7 @@ def _new_hidden(step, cols) -> set:
     values = {f.key: f.default for f in etype.fields}
     values.update({n[2:]: v for n, v in kinds[0].values.items() if n.startswith("f.")})
     gone = {"f." + k for k in F.hidden_keys(etype.fields, values)}
+    gone |= {c["name"] for c in cols if "only" in c and 0 not in c["only"]}
     return {c["name"] for c in cols if c["name"] in gone}
 
 

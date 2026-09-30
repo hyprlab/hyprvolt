@@ -427,6 +427,32 @@ def test_a_static_line_has_its_address_mask_gateway_and_dns(client, h, admin, vi
     assert "Download" not in seen and "Circuit ID" not in seen and "IP address" not in seen
 
 
+def test_a_line_comes_in_at_its_modem_router_or_firewall(client, h, admin):
+    fiber = make(client, h, "network", name="Fiber", **{"f.kind": "wan"})
+    lte = make(client, h, "network", name="LTE", **{"f.kind": "wan"})
+    make(client, h, "network", name="Home LAN", **{"f.kind": "lan"})
+    modem = make(client, h, "network_device", name="Modem", **{"f.kind": "modem"})
+    # From the device: its Internet connection section, offering only lines.
+    form = client.get(f"/e/{modem['id']}/form").data.decode()
+    assert 'name="s.internet.line"' in form and ">Fiber<" in form and ">Home LAN<" not in form
+    client.post(f"/api/entities/{modem['id']}", json={"s.internet.line": fiber["id"]}, headers=h)
+    got = client.get(f"/api/entities/{fiber['id']}").get_json()["entity"]["fields"]
+    assert got["comes_in_at"] == modem["id"]
+    rels = client.get(f"/api/entities/{modem['id']}/relationships").get_json()["relationships"]
+    assert any(r["other"]["id"] == fiber["id"] and r["label"] == "brings in" for r in rels)
+    # Another line chosen: the first no longer comes in there.
+    client.post(f"/api/entities/{modem['id']}", json={"s.internet.line": lte["id"]}, headers=h)
+    assert client.get(f"/api/entities/{fiber['id']}").get_json()["entity"]["fields"]["comes_in_at"] is None
+    assert client.get(f"/api/entities/{lte['id']}").get_json()["entity"]["fields"]["comes_in_at"] == modem["id"]
+    client.post(f"/api/entities/{modem['id']}", json={"s.internet.line": ""}, headers=h)
+    assert client.get(f"/api/entities/{lte['id']}").get_json()["entity"]["fields"]["comes_in_at"] is None
+    # A switch is network gear too, but a workstation has no such section.
+    pc = make(client, h, "workstation", name="pc")
+    assert "s.internet" not in client.get(f"/e/{pc['id']}/form").data.decode()
+    bad = client.post(f"/api/entities/{modem['id']}", json={"s.internet.line": pc["id"]}, headers=h)
+    assert bad.status_code == 400 and "internet connection that exists" in bad.get_json()["error"]
+
+
 def test_a_line_with_addresses_becomes_static(app, client, h, admin):
     from hyprvolt.migrate import Migrator
     from hyprvolt.models import db

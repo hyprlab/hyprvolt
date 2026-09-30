@@ -87,7 +87,14 @@ SETUP_HELP = {
         "Network gear is what moves traffic: the modem or ONT, the router or firewall, switches, access "
         "points and patch panels. Give each its management address; it is recorded as an IP address in its "
         "subnet.",
-        "Computers and storage come next, and cabling everything together is the last step.",
+        "The device the ISP's line plugs into gets that line as its Internet connection, so a line that "
+        "goes down points straight at it.",
+        "A modem in bridge mode passes the internet through to your router, which gets the public address; "
+        "the modem has no address on your network, so leave its IP address empty (or give its status page's "
+        "address, such as 192.168.100.1). A modem that is the gateway, the ISP's own router, has an address "
+        "on your network, usually 192.168.1.1, which is also your subnet's gateway.",
+        "Public addresses belong to the internet connection, not to the device. Computers and storage come "
+        "next, and cabling everything together is the last step.",
     ),
     "servers": (
         "Servers, NAS boxes and UPSes: the machines that run things, keep data, and keep the power on. A "
@@ -159,7 +166,9 @@ module = Module(
                          SetupKind("Access point", "access_point"),
                          SetupKind("Patch panel", "network_device", {"f.kind": "patch_panel"})),
                   fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"), SetupField("f.model"),
-                          SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
+                          SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"),
+                          SetupField("s.internet.line", "Internet connection",
+                                     kinds=("Modem", "Router", "Firewall")))),
         SetupStep("servers", "Servers and storage", "The machines that run things and keep data: servers, "
                   "NAS boxes, and the UPS that keeps them up.", 70, group="Equipment",
                   help=SETUP_HELP["servers"], plan="servers, storage",

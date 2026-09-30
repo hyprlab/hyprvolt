@@ -22,6 +22,13 @@ def test_the_diagram_draws_cables_through_patch_panels(client, h, admin):
     assert 'href="/p/diagram/network"' in sidebar
 
 
+def test_the_internet_is_drawn_coming_in_at_its_device(client, h, admin):
+    modem = make(client, h, "network_device", name="modem", **{"f.kind": "modem"})
+    make(client, h, "network", name="Fiber", **{"f.kind": "wan", "f.comes_in_at": modem["id"]})
+    page = client.get("/p/diagram/network").data.decode()
+    assert page.count('class="diagram-node') == 2 and page.index(">Fiber<") < page.index(">modem<")
+
+
 def test_an_empty_network_says_what_to_do(client, h, admin):
     assert "No cables yet" in client.get("/p/diagram/network").data.decode()
 

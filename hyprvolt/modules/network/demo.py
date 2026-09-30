@@ -13,6 +13,9 @@ def seed(demo):
              download=1000, upload=40, static_ip=True, public_ips="203.0.113.26",
              netmask="255.255.255.248", gateway="203.0.113.25", dns_servers="203.0.113.53, 203.0.113.54",
              notes="The modem is in bridge mode; edge-fw holds the public address.")
+    # The line comes in at the cable modem, which passes it on to edge-fw.
+    if demo.get("modem") is not None:
+        demo.link("comes_in_at", "wan", "modem")
     vlans = {}
     for vid, name, cidr, extra in (
             (10, "Management", "10.0.10.0/24", {}),
