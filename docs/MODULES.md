@@ -196,8 +196,9 @@ Overview) do what they say. `help` says what the field is for, in a sentence
 or two: the form shows it in a popover from an info button beside the label.
 Give every field one; a person new to the app should not have to guess. `list=True` puts the value in the list row,
 `card=True` on the card. `search=False` keeps it out of the search text.
-A `boolean` with `switch=("Dynamic", "Static")` is a switch that reads as
-its state, in the form, the Overview and the site setup guide.
+A `boolean` with `switch=("Dynamic", "Static")` is a switch between the two,
+the first on the left and the second on the right, in the form, the
+Overview and the site setup guide.
 `shown_when=("static_ip", True)` shows a field only while an earlier field
 of the type has that value, and hides it again when it hasn't (a field
 following a hidden one is hidden too); what it holds is kept. Network's
@@ -266,6 +267,9 @@ SetupStep("gear", "Network gear", "What connects everything, from where the inte
   needs a `label` and is left out where the section doesn't apply, and
   `types=("vendor",)` makes it a choice of those records. A saved row shows
   what the section holds through its `FormSection.values(entity)`.
+- `SetupField(..., newline=True)` starts a new line of the row, so what
+  belongs together reads together: the internet connection's speeds, then
+  its IP address switch, then the static fields.
 - `scope=True` marks the step whose record the steps after it are about
   (the site). Only Locations has one.
 - `tree=True` shows the step's records as a tree under the site instead of

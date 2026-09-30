@@ -1218,6 +1218,18 @@
     box.querySelector("input[name]").dispatchEvent(new Event("change", { bubbles: true }));
   });
 
+  // A choice between two states (.switch--choice): a word picks its own
+  // side, rather than flipping the switch whichever side it is on.
+  document.addEventListener("click", function (e) {
+    var side = e.target.closest && e.target.closest(".switch--choice .switch-side");
+    if (!side) return;
+    e.preventDefault();
+    var input = side.parentNode.querySelector("input"), want = side.classList.contains("switch-on");
+    if (input.disabled || input.checked === want) return;
+    input.checked = want;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
   // A field shown only while another has a value ([data-when] names that
   // one, [data-when-is] the value: "1" for a switch that is on), in a form,
   // a guide row or an editor's Overview. One that follows a field hidden

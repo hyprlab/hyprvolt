@@ -152,6 +152,7 @@ class SetupField:
     placeholder: str = ""
     types: tuple = ()
     choices: Callable | None = None
+    newline: bool = False            # starts a new line of the row: download and upload, then the IP
 
 
 @dataclass(frozen=True)

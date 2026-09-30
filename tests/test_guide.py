@@ -110,8 +110,12 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     assert f'<option value="{isp["id"]}" selected>Springfield Cable</option>' in page     # the provider, as saved
     # Dynamic or Static: the static line's fields only while the switch is on.
     new_row = page.split("data-row-new")[1]
-    assert '<span class="switch-off">Dynamic</span>' in new_row
+    assert '<span class="switch-side switch-off">Dynamic</span>' in new_row
     assert 'data-when="f.static_ip" data-when-is="1" hidden><span class="field-label">Static IP' in new_row
+    # Each part on its own line: the speeds, the switch, the static fields (the
+    # line break hidden with them).
+    assert new_row.count('class="guide-break"') == 3
+    assert '<span class="guide-break" aria-hidden="true" data-when="f.static_ip" data-when-is="1" hidden>' in new_row
     change(client, h, "internet", wan["id"], "f.static_ip", True, site["id"])
     change(client, h, "internet", wan["id"], "f.public_ips", "203.0.113.26", site["id"])
     assert change(client, h, "internet", wan["id"], "f.netmask", "/29", site["id"])["value"] == "255.255.255.248"

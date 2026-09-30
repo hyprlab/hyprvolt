@@ -66,7 +66,8 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.seg`, `.seg--xs` | Segmented control over radio inputs; `--xs` inside a list row (a user's role) |
 | `.guide-body`, `.guide-top` (sticky, the brand always in sight), `.guide`, `.guide-next`, `.guide-tree`, `.tree`, `.tree-row`, `.tree-handle`, `.guide-rail`, `.guide-step`, `.guide-row`, `.guide-nav` | The site setup guide, on a page of its own (`guide.html`: the brand and Exit setup, no shell): its steps down the side (the one being done marked as the settings rail marks its section), a step's rows as panels of fields, and Back and Skip on the left, the step's saves on the right |
 | `.speed` | A speed: its number and, beside it, Mb/s or Gb/s (`[data-speed]` keeps the megabits in the input that is saved) |
-| `.switch--text`, `.switch-off`, `.switch-on` | A switch that says which way it is (Dynamic, Static), for a Field with `switch`; `[data-when]` shows the fields that follow it |
+| `.switch--choice`, `.switch-side` | A choice between two states for a Field with `switch`: the first word on the left, the second on the right, the knob sliding to the one chosen and that word in ink; a word picks its own side. `[data-when]` shows the fields that follow it |
+| `.guide-break` | A new line in a guide row (`SetupField.newline`), hidden with the field it comes before |
 | `.switch`, `.switch-track` | An on/off switch over a checkbox, for something that takes effect at once (a module) |
 | `.theme-picker`, `.theme-chip` | Chip-style radio group |
 | `.chip`, `.chip--muted`, `.count`, `.count--alert`, `.title-chip` | Small labels and counters. `--alert` is a count that needs attention (conflicts); a `.title-chip` link clears a filter |

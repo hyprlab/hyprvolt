@@ -28,12 +28,15 @@
 {%- if f.shown_when %} data-when="{{ prefix }}{{ f.shown_when[0] }}" data-when-is="{{ when_value(f.shown_when[1]) }}"{% if item.hidden %} hidden{% endif %}{% endif -%}
 {%- endmacro %}
 
-{# A yes or no that reads as its two states (Field.switch): Dynamic, Static. #}
+{# A choice between two states (Field.switch): the first on the left, the
+   second on the right, the knob sliding to the one chosen. A word chooses
+   its own side (app.js, .switch--choice). #}
 {% macro switch(name, on, labels, attrs='', disabled=false) %}
-<label class="switch switch--text">
+<label class="switch switch--choice">
   <input type="checkbox" name="{{ name }}" value="1" {{ 'checked' if on }} {{ attrs }}{{ ' disabled' if disabled }}>
+  <span class="switch-side switch-off">{{ labels[0] }}</span>
   <span class="switch-track"></span>
-  <span class="switch-off">{{ labels[0] }}</span><span class="switch-on">{{ labels[1] }}</span>
+  <span class="switch-side switch-on">{{ labels[1] }}</span>
 </label>
 {% endmacro %}
 
