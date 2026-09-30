@@ -242,15 +242,18 @@ SetupStep("gear", "Network gear", "What connects everything, from where the inte
                   SetupField("f.model"), SetupField("s.addresses.list", "IP address")))
 ```
 
-- Each row of a step is a record, made through `records.create` with the
-  row's values under the record form's names. `kinds` are what a row can
+- Each row of a step is a record: the blank row at the end is made through
+  `records.create` with its values under the record form's names, and a
+  field of a saved row is saved alone through `records.update` as it
+  changes. `kinds` are what a row can
   be, each a type of the module's own and the values it starts with; with
   more than one, each row chooses.
 - `fields` are the row's columns, by their form names. `f.<field>` takes its
   label and control from the type's `Field`; `location_id` offers the site
   being set up and everything in it, the site chosen; `s.<section>.<name>`
   needs a `label` and is left out where the section doesn't apply, and
-  `types=("vendor",)` makes it a choice of those records.
+  `types=("vendor",)` makes it a choice of those records. A saved row shows
+  what the section holds through its `FormSection.values(entity)`.
 - `scope=True` marks the step whose record the steps after it are about
   (the site). Only Locations has one.
 - `tree=True` shows the step's records as a tree under the site instead of
@@ -258,16 +261,19 @@ SetupStep("gear", "Network gear", "What connects everything, from where the inte
   dragged to another level and deleted in place, each change saved at once
   through the records API. Locations' Buildings and rooms is one.
 - A step that makes something other than records (Network's cables) has
-  `save(values, scope, user)` instead of `kinds`, `existing(scope)` listing
-  what is there, and `SetupField(..., choices=fn)` for its choices.
+  `save(values, scope, user)` instead of `kinds`, `rows(scope)` listing what
+  is there as rows (`{"id", "label", "values", "text", "locked"}`; a locked
+  column shows its text rather than a control), `update(id, values, user)`
+  and `delete(id)` (returning its Undo), and `SetupField(..., choices=fn)`
+  for its choices.
 - A `SetupFinish(key, label, text, make, made=None, open_label="")` is
   offered on the guide's last page. `make(site, found, user)` gets what the
   steps recorded in the site, `[{"group", "title", "records"}]`, and returns
   the record to open; `made(site)` finds one made before, which is opened
   instead. The knowledge base's runbook (`modules/documents/runbook.py`) is
   the worked example.
-- A step is saved whole or not at all: an `Invalid` from any row undoes the
-  step and is shown with the row's name. Rows with no name are skipped.
+- Each change is saved on its own: an `Invalid` is shown under its row and
+  saves nothing.
 
 ## Adding to other modules' forms
 
@@ -291,6 +297,9 @@ FormSection("rack", "Rack position", render=rack_form, save=rack_save,
   `[{"field", "label", "old", "new"}]`. To move the record, it calls
   `records.move(entity, place)` and returns that change too; the history
   shows one line per field.
+- `values(entity)`, optional, returns what the section holds under the same
+  names (`{"list": "10.0.20.5"}`), so the site setup guide's rows can show
+  it. Network's addresses and Contacts' supplier sections have one.
 - The API takes the same values as `s.rack.position_u` or nested as
   `"sections": {"rack": {"position_u": 12}}`. A save that doesn't name the
   section leaves its values alone.
@@ -330,7 +339,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `[data-gallery]`, `a[data-gallery-item]`, `data-large`, `data-caption` | A click on an item opens the gallery's pictures in the viewer, at that one: `data-large` is what it shows, the link's `href` the original |
 | `a[data-entity="id"]` | Opens that record's sheet in place (`entity_link` makes these) |
 | `input[data-autosubmit]` | Submits its form when it changes |
-| `[data-repeat]` | Rows of a form, as many as wanted: `[data-repeat-add]` copies its `<template data-repeat-template>`, numbering `__n__` in the names on; `[data-repeat-remove]` takes a row out |
+| `select[data-go]` | Goes to the page its chosen option's value names |
 | `[data-print]` | Prints the page; print styles hide the shell |
 | `[data-reveal="/url"]`, `data-reveal-into="id"` | Posts to the URL and shows the answer's `value` in that element, until a second click or 30 seconds (the vault's Show); the element's `data-mask` is what it shows otherwise |
 | `[data-copy="text"]`, `[data-copy-url="/url"]` | Copies the text, or posts to the URL and copies the answer's `value` |

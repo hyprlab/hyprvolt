@@ -78,6 +78,12 @@ def supplier_form(etype, entity) -> str:
                            vendor_id=vendor[0].id if vendor else None, contract_id=contract[0].id if contract else None)
 
 
+def supplier_values(entity) -> dict:
+    vendor = _linked("supplied_by", source_id=entity.id, types=("vendor",))
+    contract = _linked("covered_by", source_id=entity.id, types=("contract",))
+    return {"vendor_id": vendor[0].id if vendor else "", "contract_id": contract[0].id if contract else ""}
+
+
 def _relink(entity, kind, type_key, raw, label, user) -> list[dict]:
     current = _linked(kind, source_id=entity.id, types=(type_key,))
     new = None

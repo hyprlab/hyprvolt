@@ -1582,10 +1582,6 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 .guide-count { font-size: 12px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); margin: 4px 0 6px; }
 .guide-title { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 8px; }
 .guide-intro { font-size: 14.5px; color: var(--muted); line-height: 1.55; max-width: 64ch; margin: 0 0 18px; }
-.guide-added { font-size: 13.5px; font-weight: 600; color: var(--ink); margin: 0 0 14px; }
-.guide-existing { margin: 0 0 18px; }
-.guide-chips { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.guide-chips li { padding: 3px 10px; border-radius: 99px; background: var(--panel); border: 1px solid var(--line); font-size: 13px; }
 .guide-pick { max-width: 360px; margin-bottom: 16px; }
 .guide-rows { display: flex; flex-direction: column; gap: 10px; }
 .guide-row {
@@ -1596,10 +1592,18 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 .guide-row > .guide-wide { flex: 2 1 200px; }
 .guide-check { flex: none; padding-bottom: 11px; }
 .guide-remove { flex: none; margin-bottom: 6px; }
-.guide-add { margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; }
-.guide-add svg { width: 15px; height: 15px; }
-.guide-form .form-error { margin: 14px 0 0; }
-.guide-form > .hint, .guide-nav + .hint { margin-top: 16px; }
+.guide-row { transition: opacity .15s; }
+.guide-row.is-saving { opacity: .7; }
+.guide-row--new { border-style: dashed; background: transparent; }
+.guide-add-row { flex: none; margin-bottom: 1px; }
+.guide-row-error { flex-basis: 100%; margin: 0; }
+.guide-locked { flex: 1 1 150px; min-width: 0; }
+.guide-locked-text {
+  display: block; padding: 10px 0; font-size: 14.5px; font-weight: 600; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.guide-rows [aria-invalid="true"] { border-color: var(--danger); }
+.guide-nav + .hint { margin-top: 16px; }
 .guide-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 22px; }
 .guide-nav-side { display: flex; flex-wrap: wrap; gap: 10px; }
 /* Save and continue comes first, so Enter does it, and shows last. */

@@ -980,10 +980,7 @@
   //   [data-views="key"]         radios that show one [data-view] panel of
   //                              the tab (a list or a diagram), remembered
   //                              in this browser under the key
-  //   [data-repeat]              rows of a form ([data-repeat-row]): its
-  //                              [data-repeat-add] copies its <template
-  //                              data-repeat-template>, "__n__" in names
-  //                              numbered on; [data-repeat-remove] takes one out
+  //   select[data-go]            goes to the page its chosen option names
   function afterAction(el, data) {
     var then = el.getAttribute("data-then");
     // An answer that says what happened ("12 made, 2 skipped") wins over
@@ -1198,37 +1195,130 @@
     else toast(e.key === "ArrowRight" ? "There is no place above it that can hold it." : "It can't go up another level.");
   });
 
-  // Rows of a form, as many as are wanted (the site setup guide).
-  document.addEventListener("click", function (e) {
-    var add = e.target.closest("[data-repeat-add]");
-    var box = add ? add.form && add.form.querySelector("[data-repeat]") : null;
-    if (box) {
-      var tpl = box.querySelector("template[data-repeat-template]");
-      var n = box.querySelectorAll("[data-repeat-row]").length;
-      while (box.querySelector('[name^="r' + n + '|"]')) n++;
+  // A choice that is a page: the site setup guide's choice of site.
+  document.addEventListener("change", function (e) {
+    var select = e.target.closest && e.target.closest("select[data-go]");
+    if (select && select.value) location.href = select.value;
+  });
+
+  // A step of rows in the site setup guide ([data-rows]): each row a record,
+  // each field saved as it changes; the blank row at the end added once it
+  // has a name (Enter, its Add button, or leaving it); a row deleted after
+  // asking, with Undo. Adding or deleting draws the rows again.
+  var rowAdding = null;          // the add on its way, so Continue waits for it
+  function rowsOf(el) { return el.closest("[data-rows]"); }
+  function rowValue(el) { return el.type === "checkbox" ? el.checked : el.value; }
+  function rowError(row, message) {
+    var p = row.querySelector(".guide-row-error");
+    if (p) { p.textContent = message || ""; p.hidden = !message; }
+  }
+  function redrawRows(box, then) {
+    return fetchHTML(box.getAttribute("data-rows-url")).then(function (html) {
       var holder = document.createElement("div");
-      holder.innerHTML = tpl.innerHTML.replace(/__n__/g, n);
-      var row = holder.firstElementChild;
-      box.insertBefore(row, tpl);
-      // Into the first thing to type (the name), past a choice of kind.
-      var first = row.querySelector("input[type=text]") || row.querySelector("input, select");
-      if (first) first.focus();
+      holder.innerHTML = html;
+      var fresh = holder.querySelector("[data-rows]");
+      box.replaceWith(fresh);
+      if (then) then(fresh);
+      return fresh;
+    });
+  }
+  function focusNewRow(box) {
+    var row = box.querySelector("[data-row-new]");
+    var first = row && (row.querySelector("input[type=text]") || row.querySelector("input, select"));
+    if (first) first.focus();
+  }
+  // Worth adding: a name, or in a row with none (a cable), anything chosen.
+  function newRowFilled(row) {
+    var name = row.querySelector('[name="name"]');
+    if (name) return !!name.value.trim();
+    return Array.prototype.some.call(row.querySelectorAll("select, input[type=text]"), function (el) {
+      return !!el.value.trim();
+    });
+  }
+  // Once only: a row being added (or gone from the page, drawn again) is
+  // left alone, and the add is done only when the rows are drawn again, so
+  // the focus leaving the old row doesn't add it a second time.
+  function addRow(row) {
+    if (rowAdding) return rowAdding;
+    if (!row.isConnected || row.hasAttribute("data-adding") || !newRowFilled(row)) return Promise.resolve(true);
+    var box = rowsOf(row), values = {};
+    row.querySelectorAll("[name]").forEach(function (el) { values[el.name] = rowValue(el); });
+    row.setAttribute("data-adding", "");
+    rowError(row, null);
+    row.classList.add("is-saving");
+    rowAdding = api(box.getAttribute("data-create"), { values: values }).then(function (data) {
+      if (data && data.go) { location.href = data.go; return false; }
+      return redrawRows(box, focusNewRow).then(function () { rowAdding = null; return true; },
+                                               function () { rowAdding = null; return true; });
+    }, function (err) {
+      rowAdding = null;
+      row.removeAttribute("data-adding");
+      row.classList.remove("is-saving");
+      rowError(row, err.message);
+      return false;
+    });
+    return rowAdding;
+  }
+  document.addEventListener("change", function (e) {
+    var el = e.target, row = el.closest && el.closest("[data-row]");
+    if (!row || !rowsOf(row) || !el.name) return;
+    rowError(row, null);
+    el.removeAttribute("aria-invalid");
+    row.classList.add("is-saving");
+    api(row.getAttribute("data-update"), { name: el.name, value: rowValue(el) }).then(function () {
+      row.classList.remove("is-saving");
+      if (el.name === "name") row.setAttribute("data-name", el.value.trim());
+      // Another kind can have other fields (a printer has no Used by).
+      if (el.name === "_kind") redrawRows(rowsOf(row));
+    }, function (err) {
+      row.classList.remove("is-saving");
+      el.setAttribute("aria-invalid", "true");
+      rowError(row, err.message);
+    });
+  });
+  document.addEventListener("keydown", function (e) {
+    var el = e.target;
+    if (e.key !== "Enter" || !el.closest || el.tagName !== "INPUT" || el.type === "checkbox") return;
+    var fresh = el.closest("[data-row-new]"), saved = el.closest("[data-row]");
+    if (fresh && rowsOf(fresh)) { e.preventDefault(); addRow(fresh); }
+    else if (saved && rowsOf(saved)) { e.preventDefault(); el.blur(); }
+  });
+  document.addEventListener("focusout", function (e) {
+    var row = e.target.closest && e.target.closest("[data-row-new]");
+    if (!row || !rowsOf(row) || !row.querySelector('[name="name"]')) return;
+    var next = e.relatedTarget;
+    if (next && (row.contains(next) || next.matches("[data-rows-continue]"))) return;   // Continue adds it
+    addRow(row);
+  });
+  document.addEventListener("click", function (e) {
+    var add = e.target.closest("[data-row-add]");
+    if (add && rowsOf(add)) { addRow(add.closest("[data-row-new]")); return; }
+    var go = e.target.closest("[data-rows-continue]");
+    if (go) {
+      var pending = document.querySelector("[data-rows] [data-row-new]");
+      if (!pending || !newRowFilled(pending)) return;
+      e.preventDefault();
+      addRow(pending).then(function (ok) { if (ok) location.href = go.href; });
       return;
     }
-    var remove = e.target.closest("[data-repeat-remove]");
-    if (!remove) return;
-    var gone = remove.closest("[data-repeat-row]"), rows = gone.parentNode.querySelectorAll("[data-repeat-row]");
-    if (rows.length > 1) {
-      var next = gone.nextElementSibling && gone.nextElementSibling.matches("[data-repeat-row]") ? gone.nextElementSibling : rows[0] === gone ? rows[1] : rows[0];
-      gone.remove();
-      var target = next.querySelector("input, select");
-      if (target) target.focus();
-    } else {
-      // The last row is emptied rather than removed.
-      gone.querySelectorAll("input[type=text], input[type=number]").forEach(function (i) { i.value = ""; });
-      gone.querySelectorAll("input[type=checkbox]").forEach(function (i) { i.checked = false; });
-    }
+    var del = e.target.closest("[data-row-delete]");
+    if (!del || !rowsOf(del)) return;
+    var row = del.closest("[data-row]"), box = rowsOf(del);
+    del.setAttribute("data-confirm", "Delete " + row.getAttribute("data-name") + "?");
+    del.setAttribute("data-confirm-text", "It goes to Recently deleted, where it can be restored until purged, and Undo brings it back.");
+    del.setAttribute("data-confirm-go", "Delete");
+    confirmFirst(del, function () {
+      api(row.getAttribute("data-delete")).then(function (data) {
+        redrawRows(box).then(function () {
+          offerUndo("Deleted", data.undo, function () {
+            var now = document.querySelector("[data-rows]");
+            if (now) redrawRows(now);
+          });
+        });
+      }).catch(toastError);
+    });
   });
+
   document.addEventListener("change", function (e) {
     var input = e.target.closest("input[data-autosubmit]");
     if (input && input.form && input.form.hasAttribute("data-api")) submitApiForm(input.form);

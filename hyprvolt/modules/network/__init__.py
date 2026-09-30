@@ -123,7 +123,7 @@ module = Module(
                     count=views.addresses_count),
                 Tab("ports", "Cabling", views.ports_tab, when=views.has_ports_tab, count=views.ports_count)),
     form_sections=(FormSection("addresses", "IP addresses", addresses.section_form, addresses.section_save,
-                               when=addresses.is_addressable),),
+                               when=addresses.is_addressable, values=addresses.section_values),),
     before_retype=ports.before_retype,
     setup=(
         SetupStep("internet", "Internet connection", "How the site reaches the internet: each line from an "
@@ -147,7 +147,8 @@ module = Module(
         SetupStep("cables", "Cables", "What plugs into what, from each endpoint back to the switch. A device "
                   "is cabled as a whole; one with its ports recorded offers its free ports.", 110,
                   group="Endpoints", plan="cables",
-                  save=views.setup_cable, existing=views.setup_cables,
+                  save=views.setup_cable, rows=views.setup_rows, update=views.setup_update,
+                  delete=views.setup_delete,
                   fields=(SetupField("from", "From", choices=views.setup_ends),
                           SetupField("to", "To", choices=views.setup_ends),
                           SetupField("label", "Label", placeholder="C12"))),

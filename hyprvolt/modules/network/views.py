@@ -167,13 +167,33 @@ def setup_cable(values, scope, user) -> None:
                   {"label": values.get("label", "")}, user)
 
 
-def setup_cables(scope) -> list[str]:
+def setup_rows(scope) -> list[dict]:
+    """Every cable as a row: its ends as text, its label to change."""
     out = []
     eager = (joinedload(Cable.a).joinedload(Port.device), joinedload(Cable.b).joinedload(Port.device))
     for c in Cable.query.options(*eager):
         if c.a.device.deleted_at is None and c.b.device.deleted_at is None:
-            out.append(f"{c.a.label} to {c.b.label}")
-    return sorted(out, key=str.lower)
+            out.append({"id": c.id, "label": f"the cable from {c.a.label} to {c.b.label}",
+                        "values": {"label": c.label}, "text": {"from": c.a.label, "to": c.b.label},
+                        "locked": ("from", "to"), "absent": ()})
+    return sorted(out, key=lambda r: (r["text"]["from"].lower(), r["text"]["to"].lower()))
+
+
+def _setup_cable_or_404(cable_id) -> Cable:
+    cable = db.session.get(Cable, cable_id)
+    if cable is None:
+        abort(404, description="That cable no longer exists.")
+    return cable
+
+
+def setup_update(cable_id, values, user) -> None:
+    if "label" not in values:
+        raise Invalid("Only a cable's label can be changed here; delete it and connect it again to move it.")
+    ports.relabel(_setup_cable_or_404(cable_id), values["label"], user)
+
+
+def setup_delete(cable_id) -> dict:
+    return {"url": "/network/cables", "body": ports.disconnect(_setup_cable_or_404(cable_id))}
 
 
 # ———— Sidebar filters and the dashboard ————

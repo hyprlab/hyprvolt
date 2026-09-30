@@ -345,6 +345,17 @@ def end_json(port: Port, far: bool = False) -> dict:
     return {"other_id" if far else "port_id": port.id}
 
 
+def relabel(cable: Cable, label, user=None) -> None:
+    """A cable's label, changed, in the history of both its devices."""
+    new, old = _text({"label": label}, "label", 60), cable.label
+    if new == old:
+        return
+    cable.label = new
+    for p, o in ((cable.a, cable.b), (cable.b, cable.a)):
+        records.audit(p.device, "edited a cable", [{"field": "cable", "label": f"{p.name or 'Cable'} to {o.label}",
+                                                     "old": old, "new": new}], user)
+
+
 def disconnect(cable: Cable) -> dict:
     """Remove a cable, and the ports with no name it ended at; returns what
     puts it back."""

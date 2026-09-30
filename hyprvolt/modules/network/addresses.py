@@ -242,6 +242,10 @@ def section_form(etype, entity) -> str:
     return render_template("network/addresses_form.html", current=current)
 
 
+def section_values(entity) -> dict:
+    return {"list": ", ".join(d.address for _, d in addresses_of(entity))}
+
+
 def section_save(entity, values, user) -> list[dict]:
     """Make the record's addresses the ones listed: new ones become IP
     address records assigned to it, and one taken off the list is deleted

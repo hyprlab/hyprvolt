@@ -1,45 +1,7 @@
 {# The site setup guide (core/guide.py): its steps down the side under
    their groups; first what the guide covers (where a new install starts),
-   then one step's rows, each a record to make, and at the end what the
-   site has.
-   Rows are fields named r<n>|<form name>; Add another copies the row in
-   the <template> ([data-repeat] in app.js). #}
-{% macro choice_options(choices, v) %}
-  {%- for c in choices %}
-    {%- if c is mapping %}<optgroup label="{{ c.label }}">{{ choice_options(c.options, v) }}</optgroup>
-    {%- else %}<option value="{{ c[0] }}" {{ 'selected' if c[0]|string == v|string }}>{{ c[1] }}</option>{% endif %}
-  {%- endfor %}
-{%- endmacro %}
-{% macro row_html(n, row) %}
-<fieldset class="guide-row" data-repeat-row>
-  <legend class="visually-hidden">{{ step.title }}, row {{ n + 1 if n is number else '' }}</legend>
-  {% for c in cols %}
-  {% set v = row.get(c.name, c.default if c.default is not none else '') %}
-  {% if c.kind == 'check' %}
-  <label class="check guide-check"><input type="checkbox" name="r{{ n }}|{{ c.name }}" value="1" {{ 'checked' if v }}><span>{{ c.label }}</span></label>
-  {% else %}
-  <label class="field {{ 'guide-wide' if c.name == 'name' }}"><span class="field-label">{{ c.label }}</span>
-    {% if c.kind == 'select' %}
-    <select name="r{{ n }}|{{ c.name }}">
-      {% if not c.required %}<option value="">Not set</option>{% endif %}
-      {{ choice_options(c.choices, v) }}
-    </select>
-    {% else %}
-    <input type="{{ 'number' if c.kind == 'number' else 'text' }}" name="r{{ n }}|{{ c.name }}" value="{{ v }}"
-           {%- if c.placeholder %} placeholder="{{ c.placeholder }}"{% endif %}{% if c.kind == 'number' %} step="any"{% endif %}
-           autocomplete="off" spellcheck="false" maxlength="500">
-    {% endif %}
-  </label>
-  {% endif %}
-  {% endfor %}
-  {% if not step.scope %}
-  <button type="button" class="iconbtn iconbtn--sm guide-remove" data-repeat-remove aria-label="Remove this row" title="Remove this row">
-    <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-  </button>
-  {% endif %}
-</fieldset>
-{% endmacro %}
-
+   then one step at a time, its rows (partials/guide_rows.html) or its tree
+   (guide_tree.html) saved as they change, and at the end what the site has. #}
 <div class="guide">
   <nav class="guide-rail" aria-label="Steps">
     <a href="{{ url_for('guide.start', site=scope.id if scope else none) }}" class="guide-step{{ ' is-active' if intro }}"
@@ -125,64 +87,24 @@
     <p class="guide-count">Step {{ index + 1 }} of {{ steps|length }}{% if step.group %} · {{ step.group }}{% endif %}{% if scope and not step.scope %} · {{ scope.name }}{% endif %}</p>
     <h2 class="guide-title">{{ step.title }}</h2>
     <p class="guide-intro">{{ step.intro }}</p>
-    {% if step.tree %}
-    {% if tree_html %}{{ tree_html }}{% else %}
+    {% if step.scope and sites %}
+    <label class="field guide-pick"><span class="field-label">Site</span>
+      <select data-go>
+        {% for id, name in sites %}<option value="{{ url(step.key, none, site=id) }}" {{ 'selected' if scope and scope.id == id }}>{{ name }}</option>{% endfor %}
+        <option value="{{ url(step.key, none, new=1) }}" {{ 'selected' if not scope }}>A new site</option>
+      </select></label>
+    {% endif %}
+    {% if body %}{{ body }}{% else %}
     <p class="hint">These go in a site: choose or add the site in step 1 first.</p>{% endif %}
     <div class="guide-nav">
       <div class="guide-nav-side">
         <a class="btn btn--ghost" href="{{ url(back, scope) if back else url_for('guide.start', site=scope.id if scope else none) }}">Back</a>
       </div>
       <div class="guide-nav-side guide-nav-go">
-        <a class="btn btn--primary" href="{{ url(following, scope) }}">Continue</a>
+        <a class="btn btn--primary" href="{{ url(following, scope) }}" data-rows-continue>Continue</a>
       </div>
     </div>
     <p class="hint">Each change is saved as you make it.</p>
-    {% else %}
-    {% if added %}<p class="guide-added" role="status">{{ added }} added. Add more, or continue.</p>{% endif %}
-    {% if existing %}
-    <div class="guide-existing">
-      <span class="setting-label">Already recorded</span>
-      <ul class="guide-chips">
-        {% for e in existing[:30] %}
-        <li>{{ e if e is string else e.name }}</li>
-        {% endfor %}
-        {% if existing|length > 30 %}<li class="hint">and {{ existing|length - 30 }} more</li>{% endif %}
-      </ul>
-    </div>
-    {% endif %}
-
-    <form method="post" action="{{ url(step.key, scope) }}" class="guide-form">
-      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-      {% if step.scope and choices %}
-      <label class="field guide-pick"><span class="field-label">Continue with one already recorded</span>
-        <select name="existing">
-          <option value="">No, a new one below</option>
-          {% for id, name in choices %}<option value="{{ id }}" {{ 'selected' if scope and scope.id == id }}>{{ name }}</option>{% endfor %}
-        </select></label>
-      {% endif %}
-      <div class="guide-rows" data-repeat>
-        {% for row in rows %}{{ row_html(loop.index0, row) }}{% endfor %}
-        <template data-repeat-template>{{ row_html('__n__', {}) }}</template>
-      </div>
-      {% if not step.scope %}
-      <button type="button" class="btn btn--ghost btn--sm guide-add" data-repeat-add>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add another</button>
-      {% endif %}
-      {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
-      <div class="guide-nav">
-        <div class="guide-nav-side">
-          <a class="btn btn--ghost" href="{{ url(back, scope) if back else url_for('guide.start', site=scope.id if scope else none) }}">Back</a>
-          <a class="btn btn--ghost" href="{{ url(following, scope) }}">Skip</a>
-        </div>
-        {# The first button is what Enter does: Save and continue. #}
-        <div class="guide-nav-side guide-nav-go">
-          <button class="btn btn--primary" name="then" value="next">Save and continue</button>
-          {% if not step.scope %}<button class="btn btn--ghost" name="then" value="more">Save and add more</button>{% endif %}
-        </div>
-      </div>
-      <p class="hint">Rows left empty are skipped, and so is a step with none filled in.</p>
-    </form>
-    {% endif %}
   {% endif %}
   </div>
 </div>

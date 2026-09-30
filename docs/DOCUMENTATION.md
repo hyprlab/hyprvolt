@@ -407,13 +407,17 @@ inside the place above it and ← takes it out a level. The × beside a place
 deletes it, and a building goes with the rooms in it: the dialog asks first
 and says how many, and Undo brings them all back.
 
-Every other step is a few fields to a row, and Add another adds a row, so
-every endpoint or every service can go in at once. Save and continue saves
-the step and goes on; Save and add more saves it and stays. Rows left empty are skipped, Skip goes on without
-saving, and the steps down the side go straight to any of them. A step with
-a mistake saves nothing and says which row is wrong. What each step has
-already recorded in the site is listed above its rows, so the guide can be
-run again to add what was left out, or for another site.
+Every other step is a list of rows, one record a row: what the site has
+already, and a blank row at the end. Typing a name in the blank row and
+pressing Enter (or its Add button, or moving on from it) adds it, and a new
+blank row appears for the next, so every endpoint or every service goes in
+one after another. Any field of a row is changed in place and saved when it
+is left, a row's kind too (a router into a firewall); a change that doesn't
+fit says why under the row and saves nothing. The × on a row deletes it,
+asked first and with Undo. Continue goes on, adding a row still being typed
+first, and the steps down the side go straight to any of them. On the first
+step, the Site choice picks another site, or a new one; the guide can be run
+again to add what was left out, or for another site.
 
 ## Records
 

@@ -350,6 +350,8 @@ def validate(m: Module, reg: Registry) -> list[str]:
         others.add(step.key)
         if bool(step.kinds) == (step.save is not None):
             p.append(f"the setup step {step.key!r} needs either kinds of record or a save function")
+        elif step.save is not None and not callable(step.rows):
+            p.append(f"the setup step {step.key!r} saves rows of its own, so it needs a rows function")
         for k in step.kinds:
             if not isinstance(k, SetupKind) or k.type not in own:
                 p.append(f"the setup step {step.key!r} makes {getattr(k, 'type', k)!r}, not one of the module's types")

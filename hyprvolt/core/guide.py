@@ -4,11 +4,13 @@ itself out to the endpoints and the cables between them.
 The steps come from the turned-on modules (``Module.setup``, SetupStep in
 manifest.py), in their ``order``: Locations asks for the site and its rooms,
 Network for the internet connection and subnets, Hardware for the gear,
-the servers and the endpoints, and so on. Each step is a short form of rows,
-one record a row, with as many rows as the person wants; every row is made
-through ``records.create``, as the record form would, and a step is saved
-whole or not at all. The site chosen in the first step (``?site=``) is where
-the later steps' records are placed by default.
+the servers and the endpoints, and so on. Each step is a list of rows, one
+record a row: what is recorded already, each field saved as it changes
+(``records.update``), and a blank row at the end that becomes a record
+(``records.create``) once it has a name. Rows are deleted in place, asked
+first, with Undo. A step of places that hold each other is a tree instead.
+The site chosen in the first step (``?site=``) is where the later steps'
+records are placed by default.
 """
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
@@ -17,15 +19,11 @@ from markupsafe import Markup
 from ..models import db
 from ..permissions import role
 from ..registry import current as registry
-from . import present, records
+from . import records
 from .fields import Invalid
 from .models import Entity
 
 bp = Blueprint("guide", __name__)
-
-#: The most rows one save takes.
-MAX_ROWS = 50
-
 
 def _steps():
     return registry().setup_steps()
@@ -46,9 +44,10 @@ def _kinds(step):
 # ———— The site the guide is about ————
 
 def _scope():
-    """The site of ``?site=``; or, when there is one site, that one."""
+    """The site of ``?site=``; or, when there is one site, that one;
+    ``?new=1`` is none, for a new site."""
     keys = [k.type for s in _steps() if s.scope for k in s.kinds]
-    if not keys:
+    if not keys or request.args.get("new"):
         return None
     given = records.live(request.args.get("site", type=int) or 0)
     if given is not None and given.type in keys:
@@ -83,8 +82,10 @@ def _places(scope) -> list[tuple[int, str]]:
 
 
 def _inside(entity, scope, place_ids) -> bool:
+    """In the site, or in no place at all (so a row set to no place stays
+    in its step rather than vanishing from it)."""
     etype = registry().type(entity.type)
-    if scope is None or etype is None or etype.located_in == ():
+    if scope is None or etype is None or etype.located_in == () or entity.location_id is None:
         return True
     return entity.location_id in place_ids or entity.id == scope.id
 
@@ -161,12 +162,11 @@ def columns(step, scope) -> list[dict]:
     return cols
 
 
-def _existing(step, scope) -> list:
-    """What the step has made already, in this site: records, or for a step
-    with its own save, lines of text."""
+def _count(step, scope) -> int:
+    """How many of the step's records (or rows) the site has."""
     if step.save is not None:
-        return list(step.existing(scope)) if step.existing else []
-    return present.views(_found(step, scope))
+        return len(step.rows(scope)) if step.rows else 0
+    return len(_found(step, scope))
 
 
 def _found(step, scope) -> list[Entity]:
@@ -247,58 +247,134 @@ def _tree_html(step, scope) -> str:
     return render_template("partials/guide_tree.html", step=step, tree=tree(step, scope), scope=scope)
 
 
-# ———— Saving a step ————
+# ———— A step of rows: each a record, saved as it changes ————
 
-def _rows(form) -> list[dict]:
-    """The rows sent: fields named "r<n>|<name>", in the order of n."""
-    rows = {}
-    for key, value in form.items(multi=False):
-        head, sep, name = key.partition("|")
-        if sep and head[:1] == "r" and head[1:].isdigit():
-            rows.setdefault(int(head[1:]), {})[name] = value.strip()
-    return [rows[n] for n in sorted(rows)][:MAX_ROWS]
-
-
-def _filled(row, cols) -> bool:
-    """A row counts once it has a name, or in a step of other rows (a
-    cable), anything chosen or typed; what a row starts with (the site, the
-    first kind) doesn't count."""
-    if any(c["name"] == "name" for c in cols):
-        return bool(row.get("name"))
-    return any(row.get(c["name"]) and str(row.get(c["name"])) != str(c.get("default", ""))
-               for c in cols if c["kind"] != "check" and c["name"] != "_kind")
-
-
-def save(step, cols, rows, scope, user) -> list:
-    """Make every filled row, or none: raises Invalid naming the row."""
+def _kind_index(step, entity) -> int:
+    """Which of the step's kinds a record is: its type, and a preset it has
+    (a switch is network gear of the kind switch)."""
     kinds = _kinds(step)
-    made = []
-    for n, row in enumerate(rows, 1):
-        if not _filled(row, cols):
+    detail = records.detail_of(entity)
+    for i, k in enumerate(kinds):
+        if k.type == entity.type and all(getattr(detail, n[2:], None) == v for n, v in k.values.items()
+                                         if n.startswith("f.")):
+            return i
+    return next((i for i, k in enumerate(kinds) if k.type == entity.type), 0)
+
+
+def _row(step, cols, entity) -> dict:
+    """A record as a row: {"id", "label", "values" {column: value},
+    "absent" (columns its type doesn't have: a printer has no Used by)}."""
+    reg = registry()
+    etype = reg.type(entity.type)
+    own = records.own_values(entity)
+    sections = {s.key: s for s in reg.form_sections(etype)}
+    held, values, absent = {}, {}, set()
+    for c in cols:
+        n = c["name"]
+        if n == "_kind":
+            values[n] = str(_kind_index(step, entity))
+        elif n == "name":
+            values[n] = entity.name
+        elif n == "location_id":
+            values[n] = entity.location_id or ""
+        elif n.startswith("f."):
+            if n[2:] not in own:
+                absent.add(n)
+            values[n] = "" if own.get(n[2:]) is None else own[n[2:]]
+        elif n.startswith("s."):
+            _, key, name = n.split(".", 2)
+            section = sections.get(key)
+            if section is None:
+                absent.add(n)
+            elif section.values is not None:
+                held.setdefault(key, section.values(entity) or {})
+                values[n] = held[key].get(name, "")
+    return {"id": entity.id, "label": entity.name, "values": values, "absent": absent, "text": {}, "locked": ()}
+
+
+def rows_of(step, cols, scope) -> list[dict]:
+    """The step's rows, one a record (or for a step with its own save, what
+    its ``rows`` gives)."""
+    if step.save is not None:
+        return list(step.rows(scope)) if step.rows else []
+    found = ([scope] if scope is not None else []) if step.scope else _found(step, scope)
+    return [_row(step, cols, e) for e in found]
+
+
+def _truthy(value) -> bool:
+    return value in (True, "1", "on", "true")
+
+
+def create_row(step, cols, values, scope, user=None):
+    """A new row, made: the record, or what the step's ``save`` makes."""
+    if step.save is not None:
+        step.save(values, scope, user)
+        return None
+    kinds = _kinds(step)
+    try:
+        kind = kinds[int(values.get("_kind") or 0)]
+    except (TypeError, ValueError, IndexError):
+        raise Invalid("Choose what it is.") from None
+    data = dict(kind.values)
+    for c in cols:
+        value = values.get(c["name"])
+        if c["name"] == "_kind":
             continue
+        if c["kind"] == "check":
+            data[c["name"]] = _truthy(value)
+        elif value not in (None, ""):
+            data[c["name"]] = value
+    return records.create(kind.type, data, user)
+
+
+def _record_of(step, row_id):
+    entity = records.live(row_id)
+    if entity is None or entity.type not in {k.type for k in _kinds(step)}:
+        abort(404, description="That record no longer exists.")
+    return entity
+
+
+def update_row(step, cols, row_id, name, value, user=None) -> None:
+    """One field of a row, saved. A new kind is a new preset, or a new type
+    where the record's type can become it (a router into a firewall)."""
+    if step.save is not None:
+        if step.update is None:
+            raise Invalid("This can't be changed here; delete it and add it again.")
+        step.update(row_id, {name: value}, user)
+        return
+    entity = _record_of(step, row_id)
+    col = next((c for c in cols if c["name"] == name), None)
+    if col is None:
+        raise Invalid("That can't be changed here.")
+    if name == "_kind":
         try:
-            if step.save is not None:
-                step.save(row, scope, user)
-                made.append(row)
-                continue
-            try:
-                kind = kinds[int(row.get("_kind") or 0)]
-            except (ValueError, IndexError):
-                raise Invalid("Choose what it is.") from None
-            data = dict(kind.values)
-            for c in cols:
-                if c["name"] == "_kind":
-                    continue
-                value = row.get(c["name"], "")
-                if c["kind"] == "check":
-                    data[c["name"]] = value in ("1", "on", "true")
-                elif value != "":
-                    data[c["name"]] = value
-            made.append(records.create(kind.type, data, user))
-        except Invalid as err:
-            what = row.get("name") or f"row {n}"
-            raise Invalid(f"{what[:1].upper()}{what[1:]}: {err}") from None
-    return made
+            kind = _kinds(step)[int(value)]
+        except (TypeError, ValueError, IndexError):
+            raise Invalid("Choose what it is.") from None
+        data = dict(kind.values)
+        if kind.type != entity.type:
+            data["type"] = kind.type
+    else:
+        data = {name: _truthy(value) if col["kind"] == "check" else value}
+    records.update(entity, data, user)
+
+
+def delete_row(step, row_id) -> dict:
+    """A row, deleted; returns its Undo."""
+    if step.save is not None:
+        if step.delete is None:
+            raise Invalid("This can't be deleted here.")
+        return step.delete(row_id)
+    entity = _record_of(step, row_id)
+    records.delete(entity)
+    return {"url": url_for("api.entity_restore", entity_id=entity.id), "body": {}}
+
+
+def _rows_html(step, scope) -> str:
+    cols = columns(step, scope)
+    return render_template("partials/guide_rows.html", step=step, cols=cols, rows=rows_of(step, cols, scope),
+                           scope=scope, new=not (step.scope and scope is not None),
+                           site={"site": scope.id} if scope is not None else {})
 
 
 # ———— Pages ————
@@ -350,7 +426,7 @@ def start():
 @role("editor")
 def done():
     scope = _scope()
-    summary = [{"step": s, "count": len(_existing(s, scope))} for s in _steps() if not s.scope]
+    summary = [{"step": s, "count": _count(s, scope)} for s in _steps() if not s.scope]
     reg = registry()
     diagram = reg.is_enabled("diagram") and reg.module("diagram") is not None
     # What modules offer to do with the site now: the knowledge base's runbook.
@@ -426,37 +502,80 @@ def tree_restore(key):
     return jsonify(ok=True)
 
 
-@bp.route("/site-setup/<key>", methods=["GET", "POST"])
+def _body() -> dict:
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else {}
+
+
+def _row_step(key):
+    step = _step_or_404(key)
+    if step.tree:
+        abort(404)
+    return step
+
+
+@bp.route("/site-setup/<key>/rows")
+@role("editor")
+def rows_part(key):
+    """A step's rows alone, redrawn after a row is added or deleted."""
+    return _rows_html(_row_step(key), _scope())
+
+
+@bp.route("/site-setup/<key>/rows", methods=["POST"])
+@role("editor")
+def row_create(key):
+    """``values``: a new row's, by column. The site's own step answers with
+    where to go next: the same step, about the new site."""
+    step, scope = _row_step(key), _scope()
+    try:
+        made = create_row(step, columns(step, scope), _body().get("values") or {}, scope)
+    except Invalid as err:
+        db.session.rollback()
+        return jsonify(error=str(err)), 400
+    db.session.commit()
+    if step.scope and made is not None:
+        return jsonify(ok=True, go=_url(step.key, made))
+    return jsonify(ok=True)
+
+
+@bp.route("/site-setup/<key>/rows/<int:row_id>", methods=["POST"])
+@role("editor")
+def row_update(key, row_id):
+    """``name`` and ``value``: one field of a row, saved."""
+    step, scope = _row_step(key), _scope()
+    data = _body()
+    try:
+        update_row(step, columns(step, scope), row_id, str(data.get("name") or ""), data.get("value"))
+    except Invalid as err:
+        db.session.rollback()
+        return jsonify(error=str(err)), 400
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@bp.route("/site-setup/<key>/rows/<int:row_id>/delete", methods=["POST"])
+@role("editor")
+def row_delete(key, row_id):
+    try:
+        undo = delete_row(_row_step(key), row_id)
+    except Invalid as err:
+        db.session.rollback()
+        return jsonify(error=str(err)), 400
+    db.session.commit()
+    return jsonify(ok=True, undo=undo)
+
+
+@bp.route("/site-setup/<key>")
 @role("editor")
 def step(key):
     steps = _steps()
     current = _step_or_404(key)
     index = steps.index(current)
     scope = _scope()
-    cols = columns(current, scope)
-    rows, error, count = None, "", 0
-    if request.method == "POST":
-        rows = _rows(request.form)
-        chosen = records.live(request.form.get("existing", type=int) or 0) if current.scope else None
-        try:
-            made = save(current, cols, rows, scope, None)
-        except Invalid as err:
-            db.session.rollback()
-            error = str(err)
-        else:
-            db.session.commit()
-            if current.scope:
-                scope = next((m for m in made if isinstance(m, Entity)), None) or chosen or scope
-            if request.form.get("then") == "more":
-                return redirect(_url(current.key, scope, added=len(made)))
-            following = steps[index + 1].key if index + 1 < len(steps) else "done"
-            return redirect(_url(following, scope))
-    count = request.args.get("added", type=int) or 0
-    choices = _records_of({k.type for k in _kinds(current)}) if current.scope else []
-    tree_html = Markup(_tree_html(current, scope)) if current.tree else None
+    body = (_tree_html(current, scope) if scope is not None else "") if current.tree else _rows_html(current, scope)
+    sites = _records_of({k.type for k in _kinds(current)}) if current.scope else []
     return _page(render_template(
         "partials/guide.html", done=False, steps=steps, groups=_groups(steps), step=current, index=index,
-        scope=scope, cols=cols, tree_html=tree_html,
-        rows=rows or [{}], error=error, added=count, existing=_existing(current, scope), choices=choices,
+        scope=scope, body=Markup(body), sites=sites,
         back=steps[index - 1].key if index else None,
         following=steps[index + 1].key if index + 1 < len(steps) else "done", url=_url))

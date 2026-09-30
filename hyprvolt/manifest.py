@@ -105,12 +105,14 @@ class FormSection:
     ``save(entity, values, user)`` gets those values as a dict when the
     record is saved through ``records``, stores them or raises ``Invalid``,
     and returns the changes for the history: [{"field", "label", "old",
-    "new"}]."""
+    "new"}]. ``values(entity)``, if given, returns what the section holds as
+    those same names ({"list": "10.0.20.5"}), for the site setup guide's rows."""
     key: str
     label: str
     render: Callable
     save: Callable
     when: Callable | None = None
+    values: Callable | None = None   # values(entity) -> {name: value}: what it holds now
 
 
 @dataclass(frozen=True)
@@ -152,9 +154,12 @@ class SetupField:
 @dataclass(frozen=True)
 class SetupStep:
     """A step of the site setup guide (core/guide.py), from the site out to
-    the endpoints. Each row makes a record of one of ``kinds``; or, with
-    ``save``, ``save(values, scope, user)`` does what the step is for (a
-    cable) and ``existing(scope)`` lists what is there. ``scope``: the step
+    the endpoints. Each row is a record of one of ``kinds``, edited and saved
+    in place; or, with ``save``, ``save(values, scope, user)`` makes what the
+    step is for (a cable), ``rows(scope)`` lists what is there as rows
+    ({"id", "label", "values", "text", "locked"}: locked columns show the
+    text instead of a control), ``update(id, values, user)`` changes one and
+    ``delete(id)`` deletes one, returning its Undo ({"url", "body"}). ``scope``: the step
     chooses the site the steps after it are about. ``tree``: instead of rows,
     the step's records are a tree under the site, by where each is (the
     kinds' ``located_in``), added in place, dragged to another level, and
@@ -173,7 +178,9 @@ class SetupStep:
     scope: bool = False
     tree: bool = False               # records that hold each other (buildings, rooms) as a tree
     save: Callable | None = None
-    existing: Callable | None = None
+    rows: Callable | None = None
+    update: Callable | None = None
+    delete: Callable | None = None
 
 
 @dataclass(frozen=True)
