@@ -383,7 +383,9 @@ covers, in five parts: the place (the site, its buildings and rooms,
 racks), the network (vendors, the internet connection, VLANs, subnets), the
 equipment (network gear, servers and storage), what runs (hypervisors,
 virtual machines, services), and the endpoints and the cables between them.
-Steps of turned-off modules are left out.
+Steps of turned-off modules are left out. The guide has the screen to
+itself, the first time and every time after: no sidebar, search or New menu,
+only the steps. The app comes back at the end, or with Exit setup at the top.
 
 Each step is a few fields to a row, and Add another adds a row, so every
 endpoint or every service can go in at once. Save and continue saves the

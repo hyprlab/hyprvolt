@@ -33,6 +33,16 @@ def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
     assert "Set up a site, step by step" in page and "Load a demo homelab instead" not in page
 
 
+def test_the_guide_has_the_page_to_itself(client, h, admin):
+    """No sidebar, search or New menu around it: only the guide and a way out,
+    the first time and every time after."""
+    step(client, h, "site", r0={"name": "Home"})
+    for url in ("/site-setup", "/site-setup/rooms", "/site-setup/done"):
+        page = client.get(url).data.decode()
+        assert 'class="guide-body"' in page and "Exit setup" in page, url
+        assert 'id="sidebar"' not in page and 'id="new-btn"' not in page and "searchpill" not in page, url
+
+
 def test_the_steps_run_from_the_site_to_the_cables(client, h, admin):
     page = client.get("/site-setup/site").data.decode()
     assert "Step 1 of" in page and "· Place" in page

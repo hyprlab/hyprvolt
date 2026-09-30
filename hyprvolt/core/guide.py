@@ -17,7 +17,7 @@ from markupsafe import Markup
 from ..models import db
 from ..permissions import role
 from ..registry import current as registry
-from . import present, records, shell
+from . import present, records
 from .fields import Invalid
 from .models import Entity
 
@@ -245,10 +245,9 @@ def _url(key, scope, **args):
     return url_for("guide.step", key=key, **args) if key != "done" else url_for("guide.done", **args)
 
 
-def _page(html, title="Set up a site"):
-    from ..main import _admin_context      # the shell's settings window, as every page has
-    return render_template("app.html", page="module", page_html=Markup(html), title=title,
-                           **shell.context(special="guide"), **_admin_context())
+def _page(html):
+    """The guide on a page of its own, without the app around it."""
+    return render_template("guide.html", page_html=Markup(html))
 
 
 def _groups(steps) -> list[dict]:

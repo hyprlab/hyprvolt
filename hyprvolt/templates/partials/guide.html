@@ -4,7 +4,6 @@
    site has.
    Rows are fields named r<n>|<form name>; Add another copies the row in
    the <template> ([data-repeat] in app.js). #}
-{% from "partials/macros.html" import entity_link %}
 {% macro choice_options(choices, v) %}
   {%- for c in choices %}
     {%- if c is mapping %}<optgroup label="{{ c.label }}">{{ choice_options(c.options, v) }}</optgroup>
@@ -122,7 +121,7 @@
       <span class="setting-label">Already recorded</span>
       <ul class="guide-chips">
         {% for e in existing[:30] %}
-        <li>{% if e is string %}{{ e }}{% else %}{{ entity_link(e.id, e.name) }}{% endif %}</li>
+        <li>{{ e if e is string else e.name }}</li>
         {% endfor %}
         {% if existing|length > 30 %}<li class="hint">and {{ existing|length - 30 }} more</li>{% endif %}
       </ul>

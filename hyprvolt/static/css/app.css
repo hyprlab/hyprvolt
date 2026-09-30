@@ -1541,6 +1541,14 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 /* The site setup guide (partials/guide.html): its steps down the side, the
    one being done marked as the settings rail marks its section, and the
    step's rows, each a record to make. */
+.guide-body { min-height: 100dvh; }
+.guide-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  max-width: 1180px; margin: 0 auto; padding: 22px clamp(16px, 3.5vw, 36px) 0;
+}
+.guide-exit { font-size: 13.5px; font-weight: 550; color: var(--muted); }
+.guide-exit:hover { color: var(--ink); }
+.guide-wrap { max-width: 1180px; margin: 0 auto; padding: clamp(22px, 4vw, 44px) clamp(16px, 3.5vw, 36px) 60px; }
 .guide { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(20px, 3vw, 40px); max-width: 1180px; }
 .guide-rail { position: sticky; top: 16px; align-self: start; }
 .guide-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }

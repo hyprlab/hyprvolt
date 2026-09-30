@@ -1,0 +1,15 @@
+{# The site setup guide's own page (core/guide.py): the guide and nothing
+   else of the app, no sidebar, search or New, so the one thing to do is the
+   step in front of you. The normal interface comes back when it is done,
+   or through Exit setup. #}
+{% extends "base.html" %}
+{% block title %}Set up a site — {{ app_name }}{% endblock %}
+{% block bodyclass %}guide-body{% endblock %}
+{% block body %}
+<header class="guide-top">
+  <span class="brand">{% include "partials/mark.html" %}<span class="wordmark">{{ app_name }}</span></span>
+  <a class="guide-exit" href="{{ url_for('main.index') }}">Exit setup</a>
+</header>
+<main class="guide-wrap">{{ page_html }}</main>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+{% endblock %}
