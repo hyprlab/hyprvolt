@@ -147,8 +147,9 @@ module = Module(
     filters=(ListFilter("warranty_soon", "Warranty ending soon", views.warranty_soon),
              ListFilter("warranty_over", "Out of warranty", views.warranty_over)),
     setup=(
-        SetupStep("gear", "Network gear", "What connects everything, from where the internet comes in: the "
-                  "modem, the router or firewall, then switches, access points and patch panels.", 60,
+        SetupStep("gear", "Network gear", "The equipment that ties your network together. Start where the "
+                  "internet comes in, with the modem and the router or firewall, then add your switches, access "
+                  "points and patch panels.", 60,
                   group="Equipment",
                   help=SETUP_HELP["gear"], plan="network gear",
                   kinds=(SetupKind("Modem", "network_device", {"f.kind": "modem"}),

@@ -253,7 +253,7 @@ covers, in lower case, commas between several: `"buildings, rooms"`; the
 group's steps read as one list, "Site, buildings, rooms, and racks".
 
 ```python
-SetupStep("gear", "Network gear", "What connects everything, from where the internet comes in.", 60,
+SetupStep("gear", "Network gear", "The equipment that ties your network together.", 60,
           kinds=(SetupKind("Router", "network_device", {"f.kind": "router"}),
                  SetupKind("Firewall", "firewall")),
           fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"),
