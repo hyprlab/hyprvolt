@@ -11,6 +11,7 @@ whole or not at all. The site chosen in the first step (``?site=``) is where
 the later steps' records are placed by default.
 """
 from flask import Blueprint, abort, redirect, render_template, request, url_for
+from flask_login import current_user
 from markupsafe import Markup
 
 from ..models import db
@@ -250,13 +251,29 @@ def _page(html, title="Set up a site"):
                            **shell.context(special="guide"), **_admin_context())
 
 
+def _groups(steps) -> list[dict]:
+    """The steps under their group headings, in order."""
+    out = []
+    for n, s in enumerate(steps):
+        if not out or out[-1]["label"] != s.group:
+            out.append({"label": s.group, "steps": []})
+        out[-1]["steps"].append((n, s))
+    return out
+
+
 @bp.route("/site-setup")
 @role("editor")
 def start():
+    """What the guide covers, before its first step. A new install comes
+    here straight from creating the admin account."""
     steps = _steps()
     if not steps:
         abort(404, description="No module has a setup step.")
-    return redirect(url_for("guide.step", key=steps[0].key, **request.args))
+    reg = registry()
+    fresh = Entity.live().filter(Entity.type.in_(reg.enabled_type_keys())).first() is None
+    seed = fresh and current_user.is_admin and any(m.seed for m in reg.enabled_modules())
+    return _page(render_template("partials/guide.html", intro=True, done=False, steps=steps, groups=_groups(steps),
+                                 scope=_scope(), fresh=fresh, seed=seed, url=_url))
 
 
 @bp.route("/site-setup/done")
@@ -266,8 +283,8 @@ def done():
     summary = [{"step": s, "count": len(_existing(s, scope))} for s in _steps() if not s.scope]
     reg = registry()
     diagram = reg.is_enabled("diagram") and reg.module("diagram") is not None
-    return _page(render_template("partials/guide.html", done=True, steps=_steps(), scope=scope,
-                                 summary=summary, diagram=diagram, url=_url))
+    return _page(render_template("partials/guide.html", done=True, steps=_steps(), groups=_groups(_steps()),
+                                 scope=scope, summary=summary, diagram=diagram, url=_url))
 
 
 @bp.route("/site-setup/<key>", methods=["GET", "POST"])
@@ -298,7 +315,7 @@ def step(key):
     count = request.args.get("added", type=int) or 0
     choices = _records_of({k.type for k in _kinds(current)}) if current.scope else []
     return _page(render_template(
-        "partials/guide.html", done=False, steps=steps, step=current, index=index, scope=scope, cols=cols,
+        "partials/guide.html", done=False, steps=steps, groups=_groups(steps), step=current, index=index, scope=scope, cols=cols,
         rows=rows or [{}], error=error, added=count, existing=_existing(current, scope), choices=choices,
         back=steps[index - 1].key if index else None,
         following=steps[index + 1].key if index + 1 < len(steps) else "done", url=_url))

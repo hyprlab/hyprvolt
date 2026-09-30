@@ -21,11 +21,23 @@ def step(client, h, key, site=None, then="next", **rows):
     return client.post(url, data=data, headers=h)
 
 
+def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
+    page = client.get("/site-setup").data.decode()
+    assert "Now, document your first site" in page and "Start with the site" in page
+    assert "Load a demo homelab instead" in page
+    for group in ("Place", "Network", "Equipment", "What runs", "Endpoints"):
+        assert f'<p class="guide-group">{group}</p>' in page
+    # Once something is recorded it is the guide's overview, run again.
+    step(client, h, "site", r0={"name": "Home"})
+    page = client.get("/site-setup").data.decode()
+    assert "Set up a site, step by step" in page and "Load a demo homelab instead" not in page
+
+
 def test_the_steps_run_from_the_site_to_the_cables(client, h, admin):
-    page = client.get("/site-setup", follow_redirects=True).data.decode()
-    assert "Step 1 of" in page and "The site" in page
+    page = client.get("/site-setup/site").data.decode()
+    assert "Step 1 of" in page and "· Place" in page
     assert page.index("Buildings and rooms") < page.index("Internet connection") < page.index("Network gear") \
-        < page.index("Endpoints") < page.index("<span>Cables</span>")
+        < page.index("<span>Endpoints</span>") < page.index("<span>Cables</span>")
 
 
 def test_a_site_is_set_up_step_by_step(client, h, admin):

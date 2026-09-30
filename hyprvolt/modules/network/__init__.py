@@ -127,24 +127,24 @@ module = Module(
     before_retype=ports.before_retype,
     setup=(
         SetupStep("internet", "Internet connection", "How the site reaches the internet: each line from an "
-                  "ISP, with the provider chosen from the vendors. Most places have one.", 40,
+                  "ISP, with the provider chosen from the vendors. Most places have one.", 40, group="Network",
                   kinds=(SetupKind("Internet connection", "network", {"f.kind": "wan"}),),
                   fields=(SetupField("name", placeholder="Fiber"), SetupField("location_id"),
                           SetupField("s.supplier.vendor_id", "Provider", types=("vendor",)),
                           SetupField("f.bandwidth", placeholder="1 Gb/s"), SetupField("f.public_ips"),
                           SetupField("f.circuit_id"))),
         SetupStep("vlans", "VLANs", "The VLANs the network is split into, each with its number. Skip this if "
-                  "the network is one flat LAN.", 45,
+                  "the network is one flat LAN.", 45, group="Network",
                   kinds=(SetupKind("VLAN", "vlan"),),
                   fields=(SetupField("name", placeholder="Servers"), SetupField("f.vid"))),
         SetupStep("subnets", "Subnets", "The address ranges in use, such as 192.168.1.0/24, with their gateway. "
-                  "Addresses recorded in the later steps are found in these.", 50,
+                  "Addresses recorded in the later steps are found in these.", 50, group="Network",
                   kinds=(SetupKind("Subnet", "subnet"),),
                   fields=(SetupField("name", placeholder="Servers"), SetupField("f.cidr", placeholder="10.0.20.0/24"),
                           SetupField("f.gateway", placeholder="10.0.20.1"), SetupField("f.vlan"),
                           SetupField("f.dhcp_range"))),
         SetupStep("cables", "Cables", "What plugs into what, from each endpoint back to the switch. A device "
-                  "is cabled as a whole; one with its ports recorded offers its free ports.", 110,
+                  "is cabled as a whole; one with its ports recorded offers its free ports.", 110, group="Endpoints",
                   save=views.setup_cable, existing=views.setup_cables,
                   fields=(SetupField("from", "From", choices=views.setup_ends),
                           SetupField("to", "To", choices=views.setup_ends),

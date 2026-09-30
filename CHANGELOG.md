@@ -7,7 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
-- A guide that documents a site step by step, from the site out to the endpoints: its rooms, racks, vendors, internet connection, VLANs, subnets, network gear, servers, hypervisors, virtual machines, services, endpoints and the cables between them. Each step takes as many rows as wanted, so all the endpoints or all the services go in at once. It opens from New > Set up a site, step by step, and from the empty dashboard
+- A guide that documents a site step by step, from the site out to the endpoints: its rooms, racks, vendors, internet connection, VLANs, subnets, network gear, servers, hypervisors, virtual machines, services, endpoints and the cables between them. Each step takes as many rows as wanted, so all the endpoints or all the services go in at once. A new install goes into it straight after creating the admin account, starting with a page that says what it covers; later it opens from New > Set up a site, step by step, and from the empty dashboard
 - A device can be cabled to another without recording its ports: in its Cabling tab (Ports before), Connect a cable offers other devices as a whole, and the ports of devices that have them recorded. Record each port, a switch at the top of the Cabling tab, turns on ports to name and cable one by one, as before. A device that already has ports keeps them recorded
 - An admin can change the order of the sidebar in Settings > Modules: drag its groups, and the modules within each group, by their handles, or move them with the arrow keys. Put the default order back undoes it
 - A setting in Settings > Appearance to show a record one section at a time, as before, instead of all its sections on one page

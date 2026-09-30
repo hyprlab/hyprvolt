@@ -13,9 +13,11 @@ docker compose up -d
 ```
 
 Open `http://<host>:8101`. The first visit opens the setup wizard, which
-creates the admin account. There is no default account or password. On an
-empty instance the dashboard offers to load a demo homelab to look around in;
-`flask seed-demo` does the same from the server.
+creates the admin account, then goes on into the guide that documents the
+first site a step at a time ([Setting up a site](#setting-up-a-site)). There
+is no default account or password. The guide's first page, and the dashboard
+while the instance is empty, offer to load a demo homelab to look around in
+instead; `flask seed-demo` does the same from the server.
 
 From a clone of the repository, `docker compose up -d` runs the same
 published image. `tools/redeploy.sh` builds the image from the working tree
@@ -374,11 +376,14 @@ them all. Errors are
 
 ## Setting up a site
 
-New > Set up a site, step by step (and the empty dashboard) opens a guide
-that documents a site a step at a time: the site, its buildings and rooms,
-racks, vendors, the internet connection, VLANs, subnets, network gear,
-servers and storage, hypervisors, virtual machines, services, endpoints,
-and the cables between them. Steps of turned-off modules are left out.
+A new install goes from the setup wizard straight into a guide that
+documents a site a step at a time; New > Set up a site, step by step (and
+the empty dashboard) opens it again later. Its first page says what it
+covers, in five parts: the place (the site, its buildings and rooms,
+racks), the network (vendors, the internet connection, VLANs, subnets), the
+equipment (network gear, servers and storage), what runs (hypervisors,
+virtual machines, services), and the endpoints and the cables between them.
+Steps of turned-off modules are left out.
 
 Each step is a few fields to a row, and Add another adds a row, so every
 endpoint or every service can go in at once. Save and continue saves the

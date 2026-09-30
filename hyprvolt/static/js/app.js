@@ -955,6 +955,7 @@
   //   [data-api-post="/url"]     posts data-body (JSON) and then does data-then
   //   data-then="sheet|reload|remove"  re-render the open sheet, reload the
   //                              page, or remove the closest [data-row]
+  //   data-then="go"             go to the page in data-go ("/" if none)
   //   data-then="replace"        put the answer's html in #data-replace
   //   data-done="Message"        the toast, with Undo when the answer has one
   //   data-confirm="Question?"   asks first, in #confirm-modal; data-confirm-text
@@ -988,6 +989,9 @@
     if (then === "reload") {
       if (done) queueToast(done);
       location.reload();
+    } else if (then === "go") {
+      if (done) queueToast(done);
+      location.href = el.getAttribute("data-go") || "/";
     } else if (then === "remove") {
       var row = el.closest("[data-row]");
       if (row) row.remove();

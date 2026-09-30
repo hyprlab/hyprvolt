@@ -1,5 +1,7 @@
-{# The site setup guide (core/guide.py): its steps down the side, and one
-   step's rows, each a record to make; or, at the end, what the site has.
+{# The site setup guide (core/guide.py): its steps down the side under
+   their groups; first what the guide covers (where a new install starts),
+   then one step's rows, each a record to make, and at the end what the
+   site has.
    Rows are fields named r<n>|<form name>; Add another copies the row in
    the <template> ([data-repeat] in app.js). #}
 {% from "partials/macros.html" import entity_link %}
@@ -41,19 +43,51 @@
 
 <div class="guide">
   <nav class="guide-rail" aria-label="Steps">
-    <ol class="guide-steps">
-      {% for s in steps %}
-      {% set here = not done and s.key == step.key %}
-      <li><a href="{{ url(s.key, scope) }}" class="guide-step{{ ' is-active' if here }}{{ ' is-past' if done or loop.index0 < index }}"
-             {%- if here %} aria-current="step"{% endif %}><span class="guide-num">{{ loop.index }}</span><span>{{ s.title }}</span></a></li>
+    <a href="{{ url_for('guide.start', site=scope.id if scope else none) }}" class="guide-step{{ ' is-active' if intro }}"
+       {%- if intro %} aria-current="step"{% endif %}>
+      <span class="guide-num"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><span>Overview</span></a>
+    {% for g in groups %}
+    {% if g.label %}<p class="guide-group">{{ g.label }}</p>{% endif %}
+    <ol class="guide-steps" start="{{ g.steps[0][0] + 1 }}">
+      {% for n, s in g.steps %}
+      {% set here = not done and not intro and s.key == step.key %}
+      <li><a href="{{ url(s.key, scope) }}" class="guide-step{{ ' is-active' if here }}{{ ' is-past' if done or (not intro and n < index) }}"
+             {%- if here %} aria-current="step"{% endif %}><span class="guide-num">{{ n + 1 }}</span><span>{{ s.title }}</span></a></li>
       {% endfor %}
-      <li><a href="{{ url('done', scope) }}" class="guide-step{{ ' is-active' if done }}"{% if done %} aria-current="step"{% endif %}>
-        <span class="guide-num"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span>Done</span></a></li>
     </ol>
+    {% endfor %}
+    <a href="{{ url('done', scope) }}" class="guide-step guide-step--end{{ ' is-active' if done }}"{% if done %} aria-current="step"{% endif %}>
+      <span class="guide-num"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span>Done</span></a>
   </nav>
 
   <div class="guide-main">
-  {% if done %}
+  {% if intro %}
+    <p class="guide-count">{{ 'Welcome' if fresh else 'Overview' }}</p>
+    <h2 class="guide-title">{{ 'Now, document your first site' if fresh else 'Set up a site, step by step' }}</h2>
+    <p class="guide-intro">{{ steps|length }} short steps take you from the site itself out to the devices people use and
+      the cables between them. Each asks for a few things only: a name, where it is, perhaps an address. The rest can
+      be filled in later, on each record.</p>
+    <ol class="guide-plan">
+      {% for g in groups %}
+      <li>
+        <span class="guide-plan-head">{{ g.label or 'Steps' }}</span>
+        <span class="guide-plan-steps">{% for n, s in g.steps %}{{ s.title }}{{ ', ' if not loop.last }}{% endfor %}</span>
+      </li>
+      {% endfor %}
+    </ol>
+    <p class="guide-intro">Add as many rows as you like at each step: every room, every server, every endpoint. A step
+      that doesn't apply can be skipped, and the guide can be run again at any time from New.</p>
+    <div class="guide-nav">
+      <div class="guide-nav-side">
+        <a class="btn btn--ghost" href="{{ url_for('main.index') }}">{{ 'Not now' if fresh else 'Back to the dashboard' }}</a>
+        {% if seed %}<button type="button" class="btn btn--ghost" data-api-post="/admin/seed-demo" data-then="go" data-go="{{ url_for('main.index') }}"
+                data-done="The demo homelab is loaded">Load a demo homelab instead</button>{% endif %}
+      </div>
+      <div class="guide-nav-side guide-nav-go">
+        <a class="btn btn--primary" href="{{ url(steps[0].key, scope) }}">{{ 'Start with the site' if fresh else 'Start' }}</a>
+      </div>
+    </div>
+  {% elif done %}
     <p class="guide-count">Done{% if scope %} · {{ scope.name }}{% endif %}</p>
     <h2 class="guide-title">{{ scope.name if scope else 'The site' }} is written down</h2>
     <p class="guide-intro">Each record has more to fill in when you are ready: open it from the dashboard or the sidebar.
@@ -79,7 +113,7 @@
       </div>
     </div>
   {% else %}
-    <p class="guide-count">Step {{ index + 1 }} of {{ steps|length }}{% if scope and not step.scope %} · {{ scope.name }}{% endif %}</p>
+    <p class="guide-count">Step {{ index + 1 }} of {{ steps|length }}{% if step.group %} · {{ step.group }}{% endif %}{% if scope and not step.scope %} · {{ scope.name }}{% endif %}</p>
     <h2 class="guide-title">{{ step.title }}</h2>
     <p class="guide-intro">{{ step.intro }}</p>
     {% if added %}<p class="guide-added" role="status">{{ added }} added. Add more, or continue.</p>{% endif %}
@@ -115,7 +149,7 @@
       {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
       <div class="guide-nav">
         <div class="guide-nav-side">
-          {% if back %}<a class="btn btn--ghost" href="{{ url(back, scope) }}">Back</a>{% endif %}
+          <a class="btn btn--ghost" href="{{ url(back, scope) if back else url_for('guide.start', site=scope.id if scope else none) }}">Back</a>
           <a class="btn btn--ghost" href="{{ url(following, scope) }}">Skip</a>
         </div>
         {# The first button is what Enter does: Save and continue. #}

@@ -156,11 +156,14 @@ class SetupStep:
     ``save``, ``save(values, scope, user)`` does what the step is for (a
     cable) and ``existing(scope)`` lists what is there. ``scope``: the step
     chooses the site the steps after it are about. ``order`` places it among
-    every module's steps."""
+    every module's steps; ``group`` names the stretch of the guide it is in
+    (Place, Network, Equipment, What runs, Endpoints), a heading over its
+    steps."""
     key: str
     title: str
     intro: str
     order: int
+    group: str = ""
     fields: tuple = ()
     kinds: tuple = ()
     scope: bool = False

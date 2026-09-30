@@ -2,8 +2,9 @@
 
 Shown exactly once: while the instance has zero users, every request is steered
 to /setup. The wizard creates the admin account and the initial instance
-settings in one POST, signs the admin in, and hands over to the app. There is
-no seeded account and no default password.
+settings in one POST, signs the admin in, and hands over to the site setup
+guide (core/guide.py), which walks the first site through. There is no seeded
+account and no default password.
 """
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import login_user

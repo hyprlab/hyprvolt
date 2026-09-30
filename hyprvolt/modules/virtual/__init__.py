@@ -109,12 +109,12 @@ module = Module(
     widgets=(Widget("hypervisors", "Hypervisors", views.hypervisor_widget),),
     setup=(
         SetupStep("hypervisors", "Hypervisors", "What runs virtual machines: Proxmox, ESXi or Hyper-V, each on "
-                  "the server it is installed on. Skip this if nothing is virtualized.", 80,
+                  "the server it is installed on. Skip this if nothing is virtualized.", 80, group="What runs",
                   kinds=(SetupKind("Hypervisor", "hypervisor"),),
                   fields=(SetupField("name", placeholder="pve1"), SetupField("f.platform"), SetupField("f.host"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.21"))),
         SetupStep("guests", "Virtual machines and containers", "The virtual machines and LXC containers, each "
-                  "on its hypervisor.", 85,
+                  "on its hypervisor.", 85, group="What runs",
                   kinds=(SetupKind("Virtual machine", "vm"), SetupKind("LXC container", "lxc")),
                   fields=(SetupField("name", placeholder="docker1"), SetupField("f.host"), SetupField("f.os"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.21"))),
