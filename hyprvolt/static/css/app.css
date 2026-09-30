@@ -1603,6 +1603,42 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 /* Save and continue comes first, so Enter does it, and shows last. */
 .guide-nav-go { flex-direction: row-reverse; }
 .guide .manage-list { max-width: 640px; }
+/* A tree step: the site and the places in it, each inside the one it is in,
+   a line down the left of each level. */
+.guide-tree { max-width: 760px; }
+.tree, .tree-children { list-style: none; margin: 0; padding: 0; }
+.tree { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 8px; }
+.tree-children { margin-left: 22px; padding-left: 12px; border-left: 1px solid var(--line-strong); }
+.tree-node--root > .tree-children { margin-left: 14px; }
+.tree-children:empty { display: none; }
+.tree-row {
+  display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 8px; border-radius: var(--radius-sm);
+  transition: background .12s, box-shadow .12s;
+}
+.tree-row:hover { background: var(--hover); }
+.tree-node--root > .tree-row { font-weight: 700; }
+.tree-icon svg { width: 17px; height: 17px; color: var(--muted); }
+.tree-name { font-size: 14.5px; font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-kind { font-size: 12px; color: var(--faint); }
+.tree-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: none; }
+.tree-handle { margin-left: -4px; }
+.tree-node.is-dragging > .tree-row { opacity: .45; }
+.tree-node.is-drop > .tree-row { background: var(--selected); box-shadow: inset 0 0 0 2px var(--accent); }
+.tree-ghost {
+  position: fixed; left: 0; top: 0; z-index: 90; pointer-events: none; padding: 6px 12px; border-radius: var(--radius-sm);
+  background: var(--surface); box-shadow: var(--shadow-2); font-size: 13.5px; font-weight: 600; color: var(--ink);
+}
+.tree-adding { padding: 4px 0 6px 8px; }
+.tree-adding form { display: flex; flex-direction: column; gap: 4px; max-width: 360px; }
+.tree-adding input {
+  width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--accent);
+  background: var(--field); color: var(--ink); font: inherit; font-size: 14px;
+}
+.guide-tree > .hint { margin-top: 10px; }
+@media (max-width: 560px) {
+  .tree-row { flex-wrap: wrap; }
+  .tree-actions { margin-left: 0; width: 100%; padding-left: 30px; }
+}
 .guide-next {
   display: flex; align-items: center; gap: 18px; max-width: 640px; margin: 0 0 20px; padding: 16px 18px;
   border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);

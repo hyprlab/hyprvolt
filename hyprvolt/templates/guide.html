@@ -12,4 +12,14 @@
 </header>
 <main class="guide-wrap">{{ page_html }}</main>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<dialog class="modal" id="confirm-modal" aria-labelledby="confirm-title" aria-describedby="confirm-text" data-restore="off">
+  <div class="modal-head"><h3 id="confirm-title">Are you sure?</h3></div>
+  <div class="modal-body">
+    <p class="confirm-text" id="confirm-text"></p>
+    <div class="confirm-actions">
+      <button type="button" class="btn btn--ghost" data-close autofocus>Cancel</button>
+      <button type="button" class="btn btn--danger" id="confirm-go">Remove</button>
+    </div>
+  </div>
+</dialog>
 {% endblock %}

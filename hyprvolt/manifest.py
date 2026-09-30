@@ -155,7 +155,10 @@ class SetupStep:
     the endpoints. Each row makes a record of one of ``kinds``; or, with
     ``save``, ``save(values, scope, user)`` does what the step is for (a
     cable) and ``existing(scope)`` lists what is there. ``scope``: the step
-    chooses the site the steps after it are about. ``order`` places it among
+    chooses the site the steps after it are about. ``tree``: instead of rows,
+    the step's records are a tree under the site, by where each is (the
+    kinds' ``located_in``), added in place, dragged to another level, and
+    saved as that happens. ``order`` places it among
     every module's steps; ``group`` names the stretch of the guide it is in
     (Place, Network, Equipment, What runs, Endpoints), a heading over its
     steps."""
@@ -168,6 +171,7 @@ class SetupStep:
     fields: tuple = ()
     kinds: tuple = ()
     scope: bool = False
+    tree: bool = False               # records that hold each other (buildings, rooms) as a tree
     save: Callable | None = None
     existing: Callable | None = None
 

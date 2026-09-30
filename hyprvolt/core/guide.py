@@ -188,6 +188,38 @@ def _found(step, scope) -> list[Entity]:
     return out
 
 
+# ———— A step of records that hold each other: the tree ————
+
+def tree(step, scope) -> dict | None:
+    """The site and the step's records under it, each where it is:
+    {"entity", "type", "accepts" [kinds it can hold], "children", "root"}.
+    A record whose place is outside the site, or gone, isn't in it."""
+    if scope is None:
+        return None
+    reg = registry()
+    kinds = _kinds(step)
+
+    def accepts(type_key):
+        return [k for k in kinds if reg.type(k.type).located_in is None or type_key in reg.type(k.type).located_in]
+    rows = Entity.live().filter(Entity.type.in_({k.type for k in kinds})).all()
+    below = {}
+    for e in rows:
+        below.setdefault(e.location_id, []).append(e)
+    order = {k.type: n for n, k in enumerate(kinds)}
+
+    def node(e, root=False, seen=()):
+        children = [node(c, seen=seen + (e.id,)) for c in
+                    sorted(below.get(e.id, []), key=lambda c: (order.get(c.type, 9), c.name.lower()))
+                    if c.id not in seen]
+        etype = reg.type(e.type)
+        return {"entity": e, "type": etype, "accepts": accepts(e.type), "children": children, "root": root}
+    return node(scope, root=True)
+
+
+def _tree_html(step, scope) -> str:
+    return render_template("partials/guide_tree.html", step=step, tree=tree(step, scope), scope=scope)
+
+
 # ———— Saving a step ————
 
 def _rows(form) -> list[dict]:
@@ -328,6 +360,16 @@ def finish(key):
     return redirect(_open(entity))
 
 
+@bp.route("/site-setup/<key>/tree")
+@role("editor")
+def tree_part(key):
+    """A tree step's tree alone, redrawn after each change."""
+    current = _step_or_404(key)
+    if not current.tree:
+        abort(404)
+    return _tree_html(current, _scope())
+
+
 @bp.route("/site-setup/<key>", methods=["GET", "POST"])
 @role("editor")
 def step(key):
@@ -355,8 +397,10 @@ def step(key):
             return redirect(_url(following, scope))
     count = request.args.get("added", type=int) or 0
     choices = _records_of({k.type for k in _kinds(current)}) if current.scope else []
+    tree_html = Markup(_tree_html(current, scope)) if current.tree else None
     return _page(render_template(
-        "partials/guide.html", done=False, steps=steps, groups=_groups(steps), step=current, index=index, scope=scope, cols=cols,
+        "partials/guide.html", done=False, steps=steps, groups=_groups(steps), step=current, index=index,
+        scope=scope, cols=cols, tree_html=tree_html,
         rows=rows or [{}], error=error, added=count, existing=_existing(current, scope), choices=choices,
         back=steps[index - 1].key if index else None,
         following=steps[index + 1].key if index + 1 < len(steps) else "done", url=_url))

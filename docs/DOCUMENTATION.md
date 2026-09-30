@@ -394,10 +394,17 @@ headings to fill in for who to call, what to check when the internet is
 down, what to do when something else breaks, and backups and recovery. Once
 it exists, the same button opens it.
 
-Each step is a few fields to a row, and Add another adds a row, so every
-endpoint or every service can go in at once. Save and continue saves the
-step and goes on; Save and add more saves it and stays, so a room can go in
-the building just added. Rows left empty are skipped, Skip goes on without
+Buildings and rooms is a tree of the site: each place shows inside the one
+it is in, and its + buttons add a building or a room right there, saved as
+Enter is pressed, with the next name typed straight after. A room is in a
+building or straight in the site. Dragging a place by its handle onto another puts it inside that one, and
+onto the site brings it back to the top; with the handle focused, → puts it
+inside the place above it and ← takes it out a level. A place with nothing
+in it can be deleted there, asked first and with Undo.
+
+Every other step is a few fields to a row, and Add another adds a row, so
+every endpoint or every service can go in at once. Save and continue saves
+the step and goes on; Save and add more saves it and stays. Rows left empty are skipped, Skip goes on without
 saving, and the steps down the side go straight to any of them. A step with
 a mistake saves nothing and says which row is wrong. What each step has
 already recorded in the site is listed above its rows, so the guide can be

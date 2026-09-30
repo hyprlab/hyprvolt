@@ -109,12 +109,11 @@ module = Module(
                   kinds=(SetupKind("Site", "site"),),
                   fields=(SetupField("name", placeholder="Home"), SetupField("f.address"), SetupField("f.city"),
                           SetupField("f.country"))),
-        SetupStep("rooms", "Buildings and rooms", "The rooms that hold equipment: a closet, an office, a "
-                  "basement. For a room in a building of its own, add the building, choose Save and add more, "
-                  "then add its rooms in it.", 20, group="Place", plan="buildings, rooms",
-                  kinds=(SetupKind("Room", "room"), SetupKind("Building", "building")),
-                  fields=(SetupField("name", placeholder="Basement"), SetupField("location_id", "In"),
-                          SetupField("f.floor"))),
+        SetupStep("rooms", "Buildings and rooms", "Places on-site that hold equipment. For a room in a building of "
+                  "its own, add the building, then add its rooms in it.", 20,
+                  group="Place", plan="buildings, rooms", tree=True,
+                  kinds=(SetupKind("Building", "building"), SetupKind("Room", "room")),
+                  fields=(SetupField("name"),)),
         SetupStep("racks", "Racks", "Racks, and shelves in a room or a rack. Skip this if nothing is racked.", 30,
                   group="Place", plan="racks", kinds=(SetupKind("Rack", "rack"), SetupKind("Shelf", "shelf")),
                   fields=(SetupField("name", placeholder="Rack 1"), SetupField("location_id", "In"),

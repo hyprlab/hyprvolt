@@ -4,6 +4,8 @@ step; a step saved whole or not at all; and who may use it."""
 from hyprvolt.manifest import Module, SetupFinish, SetupKind, SetupStep
 from hyprvolt.registry import Registry, validate
 
+from .conftest import make
+
 
 def entities(client, type_):
     """Every record of a type, each in full (with its fields)."""
@@ -58,22 +60,21 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     resp = step(client, h, "site", r0={"name": "Home", "f.city": "Springfield"})
     site = entities(client, "site")[0]
     assert resp.status_code == 302 and resp.headers["Location"].endswith(f"/site-setup/rooms?site={site['id']}")
+    # Rooms are a tree, each saved as it is added, through the records API.
+    basement = make(client, h, "room", name="Basement", location_id=site["id"])
     # Several rows at once; an empty row is skipped; Save and add more stays.
-    resp = step(client, h, "rooms", site["id"], then="more", r0={"name": "Basement", "location_id": site["id"]},
-                r1={"name": "", "location_id": site["id"]}, r2={"name": "Office", "location_id": site["id"]})
-    assert resp.headers["Location"].endswith(f"/site-setup/rooms?added=2&site={site['id']}")
+    resp = step(client, h, "vendors", site["id"], then="more", r0={"name": "Springfield Cable"}, r1={"name": ""},
+                r2={"name": "Ubiquiti"})
+    assert resp.headers["Location"].endswith(f"/site-setup/vendors?added=2&site={site['id']}")
     page = client.get(resp.headers["Location"]).data.decode()
-    assert "2 added" in page and "Basement" in page.split("Already recorded")[1]
-    basement = next(r for r in entities(client, "room") if r["name"] == "Basement")
-    assert basement["location"]["id"] == site["id"]
+    assert "2 added" in page and "Springfield Cable" in page.split("Already recorded")[1]
     # Where a record goes is chosen among the site's places, the site first.
     page = client.get(f"/site-setup/racks?site={site['id']}").data.decode()
     assert f'<option value="{basement["id"]}" >Basement</option>' in page.replace("selected", "")
     step(client, h, "racks", site["id"], r0={"name": "Rack 1", "location_id": basement["id"], "f.height_u": "24"})
     rack = entities(client, "rack")[0]
     assert rack["fields"]["height_u"] == 24 and rack["fields"]["numbering"] == "bottom"
-    step(client, h, "vendors", site["id"], r0={"name": "Springfield Cable"})
-    isp = entities(client, "vendor")[0]
+    isp = next(v for v in entities(client, "vendor") if v["name"] == "Springfield Cable")
     step(client, h, "internet", site["id"],
          r0={"name": "Fiber", "location_id": site["id"], "s.supplier.vendor_id": isp["id"], "f.bandwidth": "1 Gb/s"})
     wan = entities(client, "network")[0]
@@ -107,7 +108,7 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
 def test_the_last_page_starts_the_site_runbook(client, h, admin):
     step(client, h, "site", r0={"name": "Home"})
     site = entities(client, "site")[0]
-    step(client, h, "rooms", site["id"], r0={"name": "Basement", "location_id": site["id"]})
+    make(client, h, "room", name="Basement", location_id=site["id"])
     step(client, h, "subnets", site["id"], r0={"name": "LAN", "f.cidr": "10.0.20.0/24"})
     done = client.get(f"/site-setup/done?site={site['id']}").data.decode()
     assert "Next, write it down" in done and "Start the site&#39;s runbook" in done
@@ -125,6 +126,34 @@ def test_the_last_page_starts_the_site_runbook(client, h, admin):
     client.post(f"/site-setup/finish/runbook?site={site['id']}", headers=h)
     assert len(entities(client, "document")) == 1
     assert client.post("/site-setup/finish/nothing?site=1", headers=h).status_code == 404
+
+
+def test_buildings_and_rooms_are_a_tree_of_the_site(client, h, admin):
+    step(client, h, "site", r0={"name": "Home"})
+    site = entities(client, "site")[0]
+    page = client.get(f"/site-setup/rooms?site={site['id']}").data.decode()
+    assert "Places on-site that hold equipment." in page and "data-tree" in page and "data-repeat" not in page
+    assert f'data-node="{site["id"]}" data-type="site" data-name="Home"\n    data-accepts="building room"' in page
+    assert ">Continue</a>" in page and "Save and continue" not in page
+    # Building 1 > Office 1 and Closet 1; a room holds nothing of this step.
+    b1 = make(client, h, "building", name="Building 1", location_id=site["id"])
+    office = make(client, h, "room", name="Office 1", location_id=b1["id"])
+    closet = make(client, h, "room", name="Closet 1", location_id=site["id"])
+    tree = client.get(f"/site-setup/rooms/tree?site={site['id']}").data.decode()
+    order = [tree.index(f'data-name="{n}"') for n in ("Home", "Building 1", "Office 1", "Closet 1")]
+    assert order == sorted(order)
+    office_node = tree.split(f'data-node="{office["id"]}"')[1]
+    assert 'data-accepts=""' in office_node.split("\n")[1] and "Add a room in Office 1" not in tree
+    # Only a place with nothing in it can be deleted from the tree.
+    assert 'aria-label="Delete Office 1"' in tree and 'aria-label="Delete Building 1"' not in tree
+    # Moving a level: a room into the building; not into a room, and a
+    # building not into a room either.
+    client.post(f"/api/entities/{closet['id']}", json={"location_id": b1["id"]}, headers=h)
+    assert client.get(f"/api/entities/{closet['id']}").get_json()["entity"]["location"]["id"] == b1["id"]
+    for moving, into in ((closet, office), (b1, office)):
+        wrong = client.post(f"/api/entities/{moving['id']}", json={"location_id": into["id"]}, headers=h)
+        assert wrong.status_code == 400 and "can only be in a" in wrong.get_json()["error"]
+    assert client.get("/site-setup/vendors/tree").status_code == 404
 
 
 def test_a_step_is_saved_whole_or_not_at_all(client, h, admin):

@@ -1034,6 +1034,159 @@
     e.preventDefault();
     submitApiForm(form);
   });
+  // A tree of places (the site setup guide's Buildings and rooms): each
+  // is added where its + button is, moved by dragging its handle onto
+  // another (or with → and ←), and deleted, every change saved at once
+  // through the records API; then the tree is drawn again from the server.
+  function treeOf(el) { return el.closest("[data-tree]"); }
+  function treeNode(el) { return el && el.closest(".tree-node"); }
+  function treeAccepts(node, type) {
+    return (node.getAttribute("data-accepts") || "").split(" ").indexOf(type) !== -1;
+  }
+  function redrawTree(tree, then) {
+    return fetchHTML(tree.getAttribute("data-tree-url")).then(function (html) {
+      var holder = document.createElement("div");
+      holder.innerHTML = html;
+      var fresh = holder.querySelector("[data-tree]");
+      tree.replaceWith(fresh);
+      if (then) then(fresh);
+      return fresh;
+    });
+  }
+  function treeFind(tree, id) { return tree.querySelector('.tree-node[data-node="' + id + '"]'); }
+  function openTreeAdd(node, type, label) {
+    var list = node.querySelector(":scope > .tree-children");
+    var open = list.querySelector(":scope > .tree-adding");
+    if (open) open.remove();
+    var li = document.createElement("li");
+    li.className = "tree-adding";
+    var form = document.createElement("form");
+    var input = document.createElement("input");
+    input.type = "text";
+    input.maxLength = 200;
+    input.autocomplete = "off";
+    input.placeholder = label + " name";
+    input.setAttribute("aria-label", "Name of the new " + label.toLowerCase() + " in " + node.getAttribute("data-name"));
+    var hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = "Enter adds it, and the next one can be typed straight away. Esc stops.";
+    form.appendChild(input);
+    form.appendChild(hint);
+    li.appendChild(form);
+    list.appendChild(li);
+    input.focus();
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = input.value.trim();
+      if (!name) return;
+      input.disabled = true;
+      api("/api/entities", { type: type, name: name, location_id: node.getAttribute("data-node") }).then(function () {
+        var id = node.getAttribute("data-node");
+        redrawTree(treeOf(node), function (fresh) {
+          var again = treeFind(fresh, id);
+          if (again) openTreeAdd(again, type, label);
+        });
+      }).catch(function (err) { input.disabled = false; input.focus(); toastError(err); });
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { e.preventDefault(); li.remove(); }
+    });
+  }
+  function moveTreeNode(node, target) {
+    var id = node.getAttribute("data-node"), tree = treeOf(node);
+    api("/api/entities/" + id, { location_id: target.getAttribute("data-node") }).then(function () {
+      redrawTree(tree, function (fresh) {
+        var moved = treeFind(fresh, id), handle = moved && moved.querySelector(".tree-handle");
+        if (handle) handle.focus({ preventScroll: true });
+      });
+    }).catch(toastError);
+  }
+  // Where a place can go: a place that takes its kind, not itself or
+  // anything inside it, and not where it already is.
+  function treeDropOk(node, target) {
+    if (!target || target === node || node.contains(target)) return false;
+    if (treeNode(node.parentNode) === target) return false;
+    return treeAccepts(target, node.getAttribute("data-type"));
+  }
+  document.addEventListener("click", function (e) {
+    var add = e.target.closest("[data-tree-add]");
+    if (add && treeOf(add)) {
+      openTreeAdd(treeNode(add), add.getAttribute("data-tree-add"), add.getAttribute("data-tree-label"));
+      return;
+    }
+    var del = e.target.closest("[data-tree-delete]");
+    if (!del || !treeOf(del)) return;
+    var node = treeNode(del), tree = treeOf(del);
+    del.setAttribute("data-confirm", "Delete " + node.getAttribute("data-name") + "?");
+    del.setAttribute("data-confirm-text", "It goes to Recently deleted, where it can be restored until it is purged.");
+    del.setAttribute("data-confirm-go", "Delete");
+    confirmFirst(del, function () {
+      api("/api/entities/" + node.getAttribute("data-node") + "/delete").then(function (data) {
+        redrawTree(tree).then(function () {
+          offerUndo("Deleted", data.undo, function () {
+            var now = document.querySelector("[data-tree]");
+            if (now) redrawTree(now);
+          });
+        });
+      }).catch(toastError);
+    });
+  });
+  var treeDrag = null;
+  document.addEventListener("pointerdown", function (e) {
+    var handle = e.target.closest(".tree-handle");
+    if (!handle || !treeOf(handle) || e.button !== 0) return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    var node = treeNode(handle), ghost = document.createElement("div");
+    ghost.className = "tree-ghost";
+    ghost.textContent = node.getAttribute("data-name");
+    document.body.appendChild(ghost);
+    treeDrag = { node: node, handle: handle, ghost: ghost, target: null };
+    node.classList.add("is-dragging");
+    document.body.classList.add("is-sorting");
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (!treeDrag) return;
+    treeDrag.ghost.style.transform = "translate(" + (e.clientX + 14) + "px, " + (e.clientY + 10) + "px)";
+    var under = document.elementFromPoint(e.clientX, e.clientY);
+    var row = under && under.closest(".tree-row");
+    var target = row && treeOf(row) === treeOf(treeDrag.node) ? treeNode(row) : null;
+    if (!treeDropOk(treeDrag.node, target)) target = null;
+    if (target !== treeDrag.target) {
+      if (treeDrag.target) treeDrag.target.classList.remove("is-drop");
+      if (target) target.classList.add("is-drop");
+      treeDrag.target = target;
+    }
+  });
+  function endTreeDrag() {
+    if (!treeDrag) return;
+    var d = treeDrag;
+    treeDrag = null;
+    d.ghost.remove();
+    d.node.classList.remove("is-dragging");
+    document.body.classList.remove("is-sorting");
+    if (d.target) { d.target.classList.remove("is-drop"); moveTreeNode(d.node, d.target); }
+    else d.handle.focus({ preventScroll: true });
+  }
+  document.addEventListener("pointerup", endTreeDrag);
+  document.addEventListener("pointercancel", endTreeDrag);
+  document.addEventListener("keydown", function (e) {
+    var handle = e.target.closest && e.target.closest(".tree-handle");
+    if (!handle || !treeOf(handle) || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return;
+    e.preventDefault();
+    var node = treeNode(handle), parent = treeNode(node.parentNode), target;
+    if (e.key === "ArrowRight") {
+      // Into the place just above it, at its own level.
+      var prev = node.previousElementSibling;
+      while (prev && !prev.matches(".tree-node")) prev = prev.previousElementSibling;
+      target = prev;
+    } else {
+      target = parent && treeNode(parent.parentNode);
+    }
+    if (treeDropOk(node, target)) moveTreeNode(node, target);
+    else toast(e.key === "ArrowRight" ? "There is no place above it that can hold it." : "It can't go up another level.");
+  });
+
   // Rows of a form, as many as are wanted (the site setup guide).
   document.addEventListener("click", function (e) {
     var add = e.target.closest("[data-repeat-add]");

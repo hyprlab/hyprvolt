@@ -253,6 +253,10 @@ SetupStep("gear", "Network gear", "What connects everything, from where the inte
   `types=("vendor",)` makes it a choice of those records.
 - `scope=True` marks the step whose record the steps after it are about
   (the site). Only Locations has one.
+- `tree=True` shows the step's records as a tree under the site instead of
+  rows, each inside the place it is in (by the kinds' `located_in`), added,
+  dragged to another level and deleted in place, each change saved at once
+  through the records API. Locations' Buildings and rooms is one.
 - A step that makes something other than records (Network's cables) has
   `save(values, scope, user)` instead of `kinds`, `existing(scope)` listing
   what is there, and `SetupField(..., choices=fn)` for its choices.
