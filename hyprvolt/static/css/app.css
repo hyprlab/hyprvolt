@@ -189,6 +189,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .check { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--muted); cursor: pointer; }
 .check input { accent-color: var(--accent); width: 15px; height: 15px; }
 .hint { font-size: 13px; color: var(--muted); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .form-error { font-size: 13.5px; color: var(--danger); font-weight: 550; }
 .stack { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
 .stack .field { width: 100%; }
@@ -1537,6 +1538,57 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 
 /* ————— A module's own page (Page in a manifest) ————— */
 .module-page { padding: clamp(18px, 3vw, 34px) clamp(16px, 3.5vw, 36px) 60px; }
+/* The site setup guide (partials/guide.html): its steps down the side, the
+   one being done marked as the settings rail marks its section, and the
+   step's rows, each a record to make. */
+.guide { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(20px, 3vw, 40px); max-width: 1180px; }
+.guide-rail { position: sticky; top: 16px; align-self: start; }
+.guide-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.guide-step {
+  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--radius-sm);
+  font-size: 13.5px; font-weight: 500; color: var(--muted); transition: background .15s, color .15s;
+}
+.guide-step:hover { color: var(--ink); background: var(--hover); }
+.guide-step.is-active { color: var(--ink); font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.guide-num {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px;
+  border-radius: 50%; border: 1px solid var(--line-strong); font-size: 11.5px; font-weight: 650; color: var(--muted);
+}
+.guide-num svg { width: 13px; height: 13px; stroke-width: 2.4; }
+.guide-step.is-past .guide-num { border-color: transparent; background: var(--selected); color: var(--ink); }
+.guide-step.is-active .guide-num { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.guide-main { min-width: 0; max-width: 900px; }
+.guide-count { font-size: 12px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); margin: 4px 0 6px; }
+.guide-title { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 8px; }
+.guide-intro { font-size: 14.5px; color: var(--muted); line-height: 1.55; max-width: 64ch; margin: 0 0 18px; }
+.guide-added { font-size: 13.5px; font-weight: 600; color: var(--ink); margin: 0 0 14px; }
+.guide-existing { margin: 0 0 18px; }
+.guide-chips { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.guide-chips li { padding: 3px 10px; border-radius: 99px; background: var(--panel); border: 1px solid var(--line); font-size: 13px; }
+.guide-pick { max-width: 360px; margin-bottom: 16px; }
+.guide-rows { display: flex; flex-direction: column; gap: 10px; }
+.guide-row {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 0; min-width: 0;
+  padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+}
+.guide-row > .field { flex: 1 1 150px; min-width: 0; }
+.guide-row > .guide-wide { flex: 2 1 200px; }
+.guide-check { flex: none; padding-bottom: 11px; }
+.guide-remove { flex: none; margin-bottom: 6px; }
+.guide-add { margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; }
+.guide-add svg { width: 15px; height: 15px; }
+.guide-form .form-error { margin: 14px 0 0; }
+.guide-form > .hint { margin-top: 12px; }
+.guide-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 22px; }
+.guide-nav-side { display: flex; flex-wrap: wrap; gap: 10px; }
+/* Save and continue comes first, so Enter does it, and shows last. */
+.guide-nav-go { flex-direction: row-reverse; }
+.guide .manage-list { max-width: 640px; }
+/* Narrow, the steps are the "Step 3 of 14" line above each one. */
+@media (max-width: 900px) {
+  .guide { grid-template-columns: minmax(0, 1fr); }
+  .guide-rail { display: none; }
+}
 /* A segmented control of links rather than radio buttons: each choice is a page. */
 .seg--links { flex-wrap: wrap; }
 .seg--links a {

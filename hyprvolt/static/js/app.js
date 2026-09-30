@@ -976,6 +976,10 @@
   //   [data-views="key"]         radios that show one [data-view] panel of
   //                              the tab (a list or a diagram), remembered
   //                              in this browser under the key
+  //   [data-repeat]              rows of a form ([data-repeat-row]): its
+  //                              [data-repeat-add] copies its <template
+  //                              data-repeat-template>, "__n__" in names
+  //                              numbered on; [data-repeat-remove] takes one out
   function afterAction(el, data) {
     var then = el.getAttribute("data-then");
     // An answer that says what happened ("12 made, 2 skipped") wins over
@@ -1025,6 +1029,37 @@
     if (!form) return;
     e.preventDefault();
     submitApiForm(form);
+  });
+  // Rows of a form, as many as are wanted (the site setup guide).
+  document.addEventListener("click", function (e) {
+    var add = e.target.closest("[data-repeat-add]");
+    var box = add ? add.form && add.form.querySelector("[data-repeat]") : null;
+    if (box) {
+      var tpl = box.querySelector("template[data-repeat-template]");
+      var n = box.querySelectorAll("[data-repeat-row]").length;
+      while (box.querySelector('[name^="r' + n + '|"]')) n++;
+      var holder = document.createElement("div");
+      holder.innerHTML = tpl.innerHTML.replace(/__n__/g, n);
+      var row = holder.firstElementChild;
+      box.insertBefore(row, tpl);
+      // Into the first thing to type (the name), past a choice of kind.
+      var first = row.querySelector("input[type=text]") || row.querySelector("input, select");
+      if (first) first.focus();
+      return;
+    }
+    var remove = e.target.closest("[data-repeat-remove]");
+    if (!remove) return;
+    var gone = remove.closest("[data-repeat-row]"), rows = gone.parentNode.querySelectorAll("[data-repeat-row]");
+    if (rows.length > 1) {
+      var next = gone.nextElementSibling && gone.nextElementSibling.matches("[data-repeat-row]") ? gone.nextElementSibling : rows[0] === gone ? rows[1] : rows[0];
+      gone.remove();
+      var target = next.querySelector("input, select");
+      if (target) target.focus();
+    } else {
+      // The last row is emptied rather than removed.
+      gone.querySelectorAll("input[type=text], input[type=number]").forEach(function (i) { i.value = ""; });
+      gone.querySelectorAll("input[type=checkbox]").forEach(function (i) { i.checked = false; });
+    }
   });
   document.addEventListener("change", function (e) {
     var input = e.target.closest("input[data-autosubmit]");

@@ -4,7 +4,7 @@ from one end to the other through any patch panels on the way.
 A device is cabled as a whole unless its ports are recorded one by one
 (``PortsRecorded``): each cable then ends at a port with no name, made with
 the cable and removed with it."""
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import contains_eager, joinedload
 
 from hyprvolt.core import records
 from hyprvolt.core.fields import Invalid
@@ -56,6 +56,25 @@ def record_ports(device: Entity, on: bool, user=None) -> list[dict]:
 def ports_of(device_id: int) -> list[Port]:
     return (Port.query.filter_by(device_id=device_id).options(joinedload(Port.vlan), joinedload(Port.pair))
             .order_by(Port.position, Port.id).all())
+
+
+def free_ends(exclude: int | None = None) -> dict:
+    """Where a cable can go: devices cabled as a whole, and the free ports
+    of those with their ports recorded, grouped by device."""
+    from hyprvolt.registry import current as registry
+    keys = [t.key for t in registry().enabled_types() if is_cabled(t)]
+    recorded = recorded_ids()
+    everyone = Entity.live().filter(Entity.type.in_(keys), Entity.id != (exclude or 0)).order_by(Entity.name)
+    wholes = [e for e in everyone if e.id not in recorded]
+    taken = {i for c in db.session.query(Cable.a_id, Cable.b_id) for i in c}
+    groups = {}
+    for p in (Port.query.join(Entity, Entity.id == Port.device_id).options(contains_eager(Port.device))
+              .filter(Entity.deleted_at.is_(None), Entity.type.in_(keys), Port.device_id != (exclude or 0),
+                      Port.device_id.in_(recorded), Port.name != "")
+              .order_by(Entity.name, Port.position)):
+        if p.id not in taken:
+            groups.setdefault(p.device.name, []).append(p)
+    return {"devices": wholes, "ports": [{"device": name, "ports": ps} for name, ps in groups.items()]}
 
 
 def cable_of(port: Port) -> Cable | None:

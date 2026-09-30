@@ -7,7 +7,8 @@ The hierarchy is the core's own ``location`` field: a room's location is its
 building. So every record anywhere gets breadcrumbs, and the Contents tab
 lists what is directly inside a place.
 """
-from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, Step, Tab, Widget
+from hyprvolt.manifest import (EntityType, Field, FormSection, ListFilter, Module, SetupField, SetupKind, SetupStep,
+                               Step, Tab, Widget)
 
 from . import demo, views
 from .models import LocationDetail, RackMount
@@ -101,5 +102,22 @@ module = Module(
     form_sections=(FormSection("rack", "Rack position", views.rack_form, views.rack_save,
                                when=views.is_rackmount),),
     before_retype=views.before_retype,
+    setup=(
+        SetupStep("site", "The site", "Where all of this is: a home, an office, a data center. The steps after "
+                  "this one put what you add in it. A name is enough to start.", 10, scope=True,
+                  kinds=(SetupKind("Site", "site"),),
+                  fields=(SetupField("name", placeholder="Home"), SetupField("f.address"), SetupField("f.city"),
+                          SetupField("f.country"))),
+        SetupStep("rooms", "Buildings and rooms", "The rooms that hold equipment: a closet, an office, a "
+                  "basement. For a room in a building of its own, add the building, choose Save and add more, "
+                  "then add its rooms in it.", 20,
+                  kinds=(SetupKind("Room", "room"), SetupKind("Building", "building")),
+                  fields=(SetupField("name", placeholder="Basement"), SetupField("location_id", "In"),
+                          SetupField("f.floor"))),
+        SetupStep("racks", "Racks", "Racks, and shelves in a room or a rack. Skip this if nothing is racked.", 30,
+                  kinds=(SetupKind("Rack", "rack"), SetupKind("Shelf", "shelf")),
+                  fields=(SetupField("name", placeholder="Rack 1"), SetupField("location_id", "In"),
+                          SetupField("f.height_u"))),
+    ),
     seed=demo.seed,
 )

@@ -78,6 +78,7 @@ def context(active_module=None, active_type=None, active_filter=None, active_tag
         "nav_special": special,
         "active_tag": active_tag,
         "new_menu": new_menu(),
+        "site_guide": current_user.can_edit and bool(reg.setup_steps()),
         "list_pages": [(m, p) for m in reg.enabled_modules() for p in m.pages if p.from_list],
         "module_panes": [(m, m.settings_pane) for m in reg.enabled_modules()
                          if m.settings_pane and (current_user.is_admin or not m.settings_pane.admin)],

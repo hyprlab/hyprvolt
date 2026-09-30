@@ -6,7 +6,8 @@ service) gets a Supplier section in its form: its vendor and the contract
 that covers it, kept as "supplied by" and "covered by" links, so a vendor's
 Supplies tab and a contract's Covers tab list them.
 """
-from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, RelationKind, Tab
+from hyprvolt.manifest import (EntityType, Field, FormSection, ListFilter, Module, RelationKind, SetupField, SetupKind,
+                               SetupStep, Tab)
 
 from . import demo, views
 from .models import ContactDetail
@@ -69,5 +70,10 @@ module = Module(
     filters=(ListFilter("ending", "Contracts ending soon", views.ending_soon),),
     form_sections=(FormSection("supplier", "Supplier", views.supplier_form, views.supplier_save,
                                when=views.is_supplied),),
+    setup=(SetupStep("vendors", "Vendors", "Who you buy from and call when something breaks: your internet "
+                     "provider first, then the makers and shops behind your equipment.", 35,
+                     kinds=(SetupKind("Vendor", "vendor"),),
+                     fields=(SetupField("name", placeholder="Springfield Cable"), SetupField("f.support_phone"),
+                             SetupField("f.website"), SetupField("f.account_number"))),),
     seed=demo.seed,
 )

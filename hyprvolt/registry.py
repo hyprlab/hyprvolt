@@ -30,8 +30,8 @@ from jinja2 import ChoiceLoader, FileSystemLoader
 from werkzeug.routing import BaseConverter
 
 from .core.relations import CORE_KINDS
-from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, FormSection, Job, ListFilter, Page,
-                       Module, Pane, RelationKind, Step, Tab, Widget)
+from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, FormSection, Job, ListFilter, Module, Page,
+                       Pane, RelationKind, SetupField, SetupKind, SetupStep, Step, Tab, Widget)
 
 log = logging.getLogger(__name__)
 
@@ -170,6 +170,10 @@ class Registry:
         if f.trait:
             keys += [k for k, t in self.types.items() if f.trait in t.traits and k not in keys]
         return keys
+
+    def setup_steps(self) -> list[SetupStep]:
+        """The site setup guide's steps from turned-on modules, in order."""
+        return sorted((s for m in self.enabled_modules() for s in m.setup), key=lambda s: s.order)
 
     def form_sections(self, etype: EntityType) -> list[FormSection]:
         """What turned-on modules add to the form of ``etype``."""
@@ -329,6 +333,22 @@ def validate(m: Module, reg: Registry) -> list[str]:
         elif section.key in others:
             p.append(f"the form section {section.key!r} already exists")
         others.add(getattr(section, "key", None))
+    own = {t.key for t in m.types if isinstance(t, EntityType)}
+    others = {s.key for o in reg.modules.values() for s in o.setup}
+    for step in m.setup:
+        if not isinstance(step, SetupStep):
+            p.append(f"{step!r} is not a SetupStep")
+            continue
+        if not ID_RE.match(step.key or "") or step.key in others:
+            p.append(f"the setup step {step.key!r} needs a lower-case key no other step has")
+        others.add(step.key)
+        if bool(step.kinds) == (step.save is not None):
+            p.append(f"the setup step {step.key!r} needs either kinds of record or a save function")
+        for k in step.kinds:
+            if not isinstance(k, SetupKind) or k.type not in own:
+                p.append(f"the setup step {step.key!r} makes {getattr(k, 'type', k)!r}, not one of the module's types")
+        if not all(isinstance(f, SetupField) for f in step.fields):
+            p.append(f"the setup step {step.key!r} has a field that is not a SetupField")
     for page in m.pages:
         if isinstance(page, Page) and (not ID_RE.match(page.key or "") or not callable(page.render)):
             p.append(f"the page {page.key!r} needs a lower-case key and a render function")

@@ -372,6 +372,23 @@ them all. Errors are
 | `GET /software/titles/<id>/installations`, `GET /software/hosts/<id>/installations` | Where a title is installed; what a host has |
 | `GET /vault/entities/<id>/secrets` | A record's secrets, without their values, for an account with access |
 
+## Setting up a site
+
+New > Set up a site, step by step (and the empty dashboard) opens a guide
+that documents a site a step at a time: the site, its buildings and rooms,
+racks, vendors, the internet connection, VLANs, subnets, network gear,
+servers and storage, hypervisors, virtual machines, services, endpoints,
+and the cables between them. Steps of turned-off modules are left out.
+
+Each step is a few fields to a row, and Add another adds a row, so every
+endpoint or every service can go in at once. Save and continue saves the
+step and goes on; Save and add more saves it and stays, so a room can go in
+the building just added. Rows left empty are skipped, Skip goes on without
+saving, and the steps down the side go straight to any of them. A step with
+a mistake saves nothing and says which row is wrong. What each step has
+already recorded in the site is listed above its rows, so the guide can be
+run again to add what was left out, or for another site.
+
 ## Records
 
 A record shows all of its sections, Overview first, one after another. The

@@ -8,7 +8,7 @@ a hypervisor's cluster and a container's stack are "part of" links. So the
 form, the Relationships tab and the dependency view all say the same thing,
 and "what breaks if this server goes down" reaches every container on it.
 """
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Tab, Widget
+from hyprvolt.manifest import EntityType, Field, ListFilter, Module, SetupField, SetupKind, SetupStep, Tab, Widget
 
 from . import demo, views
 from .models import VirtualDetail
@@ -107,5 +107,17 @@ module = Module(
     ),
     filters=(ListFilter("no_host", "Without a host", views.no_host),),
     widgets=(Widget("hypervisors", "Hypervisors", views.hypervisor_widget),),
+    setup=(
+        SetupStep("hypervisors", "Hypervisors", "What runs virtual machines: Proxmox, ESXi or Hyper-V, each on "
+                  "the server it is installed on. Skip this if nothing is virtualized.", 80,
+                  kinds=(SetupKind("Hypervisor", "hypervisor"),),
+                  fields=(SetupField("name", placeholder="pve1"), SetupField("f.platform"), SetupField("f.host"),
+                          SetupField("s.addresses.list", "IP address", placeholder="10.0.20.21"))),
+        SetupStep("guests", "Virtual machines and containers", "The virtual machines and LXC containers, each "
+                  "on its hypervisor.", 85,
+                  kinds=(SetupKind("Virtual machine", "vm"), SetupKind("LXC container", "lxc")),
+                  fields=(SetupField("name", placeholder="docker1"), SetupField("f.host"), SetupField("f.os"),
+                          SetupField("s.addresses.list", "IP address", placeholder="10.0.20.21"))),
+    ),
     seed=demo.seed,
 )

@@ -11,7 +11,8 @@ most specific subnet that holds it; which addresses of a subnet are free is
 worked out, not stored.
 """
 from hyprvolt.core.models import Entity
-from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, Step, Tab, Widget
+from hyprvolt.manifest import (EntityType, Field, FormSection, ListFilter, Module, SetupField, SetupKind, SetupStep,
+                               Step, Tab, Widget)
 from hyprvolt.models import db
 
 from . import addresses, demo, dns, ports, views
@@ -124,5 +125,30 @@ module = Module(
     form_sections=(FormSection("addresses", "IP addresses", addresses.section_form, addresses.section_save,
                                when=addresses.is_addressable),),
     before_retype=ports.before_retype,
+    setup=(
+        SetupStep("internet", "Internet connection", "How the site reaches the internet: each line from an "
+                  "ISP, with the provider chosen from the vendors. Most places have one.", 40,
+                  kinds=(SetupKind("Internet connection", "network", {"f.kind": "wan"}),),
+                  fields=(SetupField("name", placeholder="Fiber"), SetupField("location_id"),
+                          SetupField("s.supplier.vendor_id", "Provider", types=("vendor",)),
+                          SetupField("f.bandwidth", placeholder="1 Gb/s"), SetupField("f.public_ips"),
+                          SetupField("f.circuit_id"))),
+        SetupStep("vlans", "VLANs", "The VLANs the network is split into, each with its number. Skip this if "
+                  "the network is one flat LAN.", 45,
+                  kinds=(SetupKind("VLAN", "vlan"),),
+                  fields=(SetupField("name", placeholder="Servers"), SetupField("f.vid"))),
+        SetupStep("subnets", "Subnets", "The address ranges in use, such as 192.168.1.0/24, with their gateway. "
+                  "Addresses recorded in the later steps are found in these.", 50,
+                  kinds=(SetupKind("Subnet", "subnet"),),
+                  fields=(SetupField("name", placeholder="Servers"), SetupField("f.cidr", placeholder="10.0.20.0/24"),
+                          SetupField("f.gateway", placeholder="10.0.20.1"), SetupField("f.vlan"),
+                          SetupField("f.dhcp_range"))),
+        SetupStep("cables", "Cables", "What plugs into what, from each endpoint back to the switch. A device "
+                  "is cabled as a whole; one with its ports recorded offers its free ports.", 110,
+                  save=views.setup_cable, existing=views.setup_cables,
+                  fields=(SetupField("from", "From", choices=views.setup_ends),
+                          SetupField("to", "To", choices=views.setup_ends),
+                          SetupField("label", "Label", placeholder="C12"))),
+    ),
     seed=demo.seed,
 )

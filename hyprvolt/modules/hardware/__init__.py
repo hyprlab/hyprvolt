@@ -7,7 +7,7 @@ Where a device is comes from the core's location, and its rack position
 from Locations' form section: the types that go in a rack carry the
 ``rackmount`` trait. Hardware needs Locations for both.
 """
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module
+from hyprvolt.manifest import EntityType, Field, ListFilter, Module, SetupField, SetupKind, SetupStep
 
 from . import demo, views
 from .models import HardwareDetail
@@ -122,5 +122,28 @@ module = Module(
     ),
     filters=(ListFilter("warranty_soon", "Warranty ending soon", views.warranty_soon),
              ListFilter("warranty_over", "Out of warranty", views.warranty_over)),
+    setup=(
+        SetupStep("gear", "Network gear", "What connects everything, from where the internet comes in: the "
+                  "modem, the router or firewall, then switches, access points and patch panels.", 60,
+                  kinds=(SetupKind("Modem", "network_device", {"f.kind": "modem"}),
+                         SetupKind("Router", "network_device", {"f.kind": "router"}),
+                         SetupKind("Firewall", "firewall"),
+                         SetupKind("Switch", "network_device", {"f.kind": "switch"}),
+                         SetupKind("Access point", "access_point"),
+                         SetupKind("Patch panel", "network_device", {"f.kind": "patch_panel"})),
+                  fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"), SetupField("f.model"),
+                          SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
+        SetupStep("servers", "Servers and storage", "The machines that run things and keep data: servers, "
+                  "NAS boxes, and the UPS that keeps them up.", 70,
+                  kinds=(SetupKind("Server", "server"), SetupKind("NAS", "nas"), SetupKind("UPS", "ups")),
+                  fields=(SetupField("name", placeholder="srv1"), SetupField("location_id"), SetupField("f.model"),
+                          SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
+        SetupStep("endpoints", "Endpoints", "What people use at the edge of the network: computers, printers "
+                  "and other devices. Add them all here, one row each.", 100,
+                  kinds=(SetupKind("Workstation", "workstation"), SetupKind("Printer", "printer"),
+                         SetupKind("Peripheral", "peripheral")),
+                  fields=(SetupField("name", placeholder="desk-pc"), SetupField("location_id"),
+                          SetupField("f.assigned_to"), SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
+    ),
     seed=demo.seed,
 )

@@ -2,7 +2,7 @@
 
 from flask import Blueprint, abort, jsonify, render_template, request
 
-from sqlalchemy.orm import contains_eager
+from sqlalchemy.orm import joinedload
 
 from hyprvolt.core import present, records, reminders
 from hyprvolt.core.fields import Invalid
@@ -121,28 +121,9 @@ def ports_tab(device: Entity) -> str:
     detail = db.session.get(HardwareDetail, device.id)
     vlans = present.views(Entity.live().filter(Entity.type == "vlan").order_by(Entity.name).all())
     return render_template("network/ports.html", device=device, items=items, recorded=recorded,
-                           targets=_targets(device), own_free=own_free, kinds=PORT_KINDS, speeds=SPEEDS,
+                           targets=ports.free_ends(device.id), own_free=own_free, kinds=PORT_KINDS, speeds=SPEEDS,
                            vlans=vlans, is_panel=detail is not None and detail.kind == "patch_panel",
                            count=detail.ports if detail is not None and detail.ports else None)
-
-
-def _targets(device: Entity) -> dict:
-    """Where a cable from this device can go: other devices cabled as a
-    whole, and the free ports of those with their ports recorded."""
-    reg = registry()
-    keys = [t.key for t in reg.enabled_types() if ports.is_cabled(t)]
-    recorded = ports.recorded_ids()
-    wholes = [e for e in Entity.live().filter(Entity.type.in_(keys), Entity.id != device.id).order_by(Entity.name)
-              if e.id not in recorded]
-    taken = {i for c in db.session.query(Cable.a_id, Cable.b_id) for i in c}
-    groups = {}
-    for p in (Port.query.join(Entity, Entity.id == Port.device_id).options(contains_eager(Port.device))
-              .filter(Entity.deleted_at.is_(None), Entity.type.in_(keys), Port.device_id != device.id,
-                      Port.device_id.in_(recorded), Port.name != "")
-              .order_by(Entity.name, Port.position)):
-        if p.id not in taken:
-            groups.setdefault(p.device.name, []).append(p)
-    return {"devices": wholes, "ports": [{"device": name, "ports": ps} for name, ps in groups.items()]}
 
 
 def ports_count(device: Entity):
@@ -159,6 +140,40 @@ def records_tab(domain: Entity) -> str:
 
 def records_count(domain: Entity):
     return DnsRecord.query.filter_by(domain_id=domain.id).count() or None
+
+
+# ———— The site setup guide's cables step ————
+
+def setup_ends(scope) -> list[dict]:
+    ends = ports.free_ends()
+    out = [{"label": "Devices", "options": [(f"device:{d.id}", d.name) for d in ends["devices"]]}]
+    out += [{"label": g["device"], "options": [(f"port:{p.id}", p.label) for p in g["ports"]]}
+            for g in ends["ports"]]
+    return [g for g in out if g["options"]]
+
+
+def _setup_end(value):
+    kind, _, raw = str(value or "").partition(":")
+    end = db.session.get(Port, int(raw)) if kind == "port" and raw.isdigit() else \
+        records.live(int(raw)) if kind == "device" and raw.isdigit() else None
+    device = end.device_id if isinstance(end, Port) else end.id if end is not None else None
+    if end is None or records.live(device) is None:
+        raise Invalid("Choose both ends of the cable.")
+    return end
+
+
+def setup_cable(values, scope, user) -> None:
+    ports.connect(_setup_end(values.get("from")), _setup_end(values.get("to")),
+                  {"label": values.get("label", "")}, user)
+
+
+def setup_cables(scope) -> list[str]:
+    out = []
+    eager = (joinedload(Cable.a).joinedload(Port.device), joinedload(Cable.b).joinedload(Port.device))
+    for c in Cable.query.options(*eager):
+        if c.a.device.deleted_at is None and c.b.device.deleted_at is None:
+            out.append(f"{c.a.label} to {c.b.label}")
+    return sorted(out, key=str.lower)
 
 
 # ———— Sidebar filters and the dashboard ————

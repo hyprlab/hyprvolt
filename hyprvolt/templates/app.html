@@ -76,6 +76,11 @@
             <svg class="chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
           </button>
           <div class="menupop menupop--scroll" role="menu" hidden>
+            {% if site_guide %}
+            <a class="menuopt" role="menuitem" href="{{ url_for('guide.start') }}">
+              <svg viewBox="0 0 24 24"><path d="M5 19.5V5.5M5 5.5h11l-2 3.5 2 3.5H5"/></svg><span>Set up a site, step by step</span>
+            </a>
+            {% endif %}
             {% for group in new_menu %}
             {% if new_menu|length > 1 %}<p class="menupop-head">{{ group.module.name }}</p>{% endif %}
             {% for t in group.types %}

@@ -9,7 +9,7 @@ services that go down with it, and a domain's lists what breaks if it
 lapses, without Services needing either module. The ``tls`` trait lets
 Certificates say which certificate a service serves.
 """
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Widget
+from hyprvolt.manifest import EntityType, Field, ListFilter, Module, SetupField, SetupKind, SetupStep, Widget
 
 from . import demo, views
 from .models import ServiceDetail
@@ -50,5 +50,10 @@ module = Module(
     filters=(ListFilter("important", "High and critical", views.important),
              ListFilter("trouble", "Degraded or down", views.not_running)),
     widgets=(Widget("services", "Services", views.services_widget),),
+    setup=(SetupStep("services", "Services", "What people use: a website, file sharing, a media server, "
+                     "DNS. Say what each runs on, so a host going down shows what goes with it.", 90,
+                     kinds=(SetupKind("Service", "service"),),
+                     fields=(SetupField("name", placeholder="Jellyfin"), SetupField("f.kind"), SetupField("f.host"),
+                             SetupField("f.url"))),),
     seed=demo.seed,
 )

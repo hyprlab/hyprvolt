@@ -105,8 +105,9 @@ def create_app(config_class=Config) -> Flask:
     from .core import api as core_api
     app.register_blueprint(core_api.bp)
     app.register_blueprint(core_api.files_bp)
-    from .core import views as core_views
+    from .core import guide as core_guide, views as core_views
     app.register_blueprint(core_views.bp)
+    app.register_blueprint(core_guide.bp)
     from .core import transfer
     app.register_blueprint(transfer.bp)
     from . import tokens

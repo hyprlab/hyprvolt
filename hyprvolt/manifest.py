@@ -125,6 +125,50 @@ class ListFilter:
 
 
 @dataclass(frozen=True)
+class SetupKind:
+    """One thing a row of a setup step can be: a type of this module, and
+    form values it starts with ({"f.kind": "switch"} for a switch)."""
+    label: str
+    type: str
+    values: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class SetupField:
+    """A column of a setup step's rows. ``name`` is the record form's own:
+    "name", "location_id" (a place in the site being set up), "f.<field>"
+    (its label and control come from the type's Field), or "s.<section>.<name>",
+    which needs a ``label`` and is left out where the section doesn't apply.
+    ``types`` makes it a choice of the records of those types; ``choices(scope)``
+    gives the choices of a step with its own ``save``."""
+    name: str
+    label: str = ""
+    kind: str = "text"               # text, number or select, where not from a Field
+    placeholder: str = ""
+    types: tuple = ()
+    choices: Callable | None = None
+
+
+@dataclass(frozen=True)
+class SetupStep:
+    """A step of the site setup guide (core/guide.py), from the site out to
+    the endpoints. Each row makes a record of one of ``kinds``; or, with
+    ``save``, ``save(values, scope, user)`` does what the step is for (a
+    cable) and ``existing(scope)`` lists what is there. ``scope``: the step
+    chooses the site the steps after it are about. ``order`` places it among
+    every module's steps."""
+    key: str
+    title: str
+    intro: str
+    order: int
+    fields: tuple = ()
+    kinds: tuple = ()
+    scope: bool = False
+    save: Callable | None = None
+    existing: Callable | None = None
+
+
+@dataclass(frozen=True)
 class Widget:
     """A dashboard card. ``render()`` returns HTML."""
     key: str
@@ -216,5 +260,6 @@ class Module:
     sheet_tabs: tuple = ()           # tabs on any module's entities; use Tab.when
     form_sections: tuple = ()        # form sections on any module's types
     before_retype: Callable | None = None  # before_retype(entity, old, new) on any type change; raise Invalid to refuse
+    setup: tuple = ()                # SetupSteps of the site setup guide
     seed: Callable | None = None     # seed(demo) for flask seed-demo
     package: str = field(default="", compare=False)  # filled in by the registry

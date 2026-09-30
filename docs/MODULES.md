@@ -75,6 +75,7 @@ required.
 | `relation_kinds` | `RelationKind(key, label, reverse, impact)`s it adds to the core's: `label` reads from source to target ("runs on"), `reverse` the other way ("runs"), and `impact` is `source` (the source stops when the target goes down), `target`, or `none` (only a link); the dependency view follows only those with an impact |
 | `sheet_tabs` | `Tab(key, label, render, when=None, count=None)`s on records of any module, shown where `when(entity)` says; `count(entity)` puts a number beside the label |
 | `form_sections` | `FormSection`s in the record form of any module's types. See [Adding to other modules' forms](#adding-to-other-modules-forms) |
+| `setup` | `SetupStep`s of the site setup guide. See [Steps of the site setup guide](#steps-of-the-site-setup-guide) |
 | `before_retype` | `before_retype(entity, old, new)`, called when any record's type changes (`EntityType.becomes`), with both types. Raise `Invalid` to refuse while the record holds something of this module's that the new type couldn't: a rack mount (Locations), installed software (Software), ports (Network) |
 | `seed` | `seed(demo)`, its part of `flask seed-demo`. Seeds run in sidebar order, each after the modules it requires, built-in modules last, so a module later in the sidebar finds the records it links to |
 
@@ -217,6 +218,42 @@ Links are `relations.link(kind, source, target)` and `relations.unlink(rel)`.
 `records.audit(entity, action, changes)` adds a line to a record's history for
 anything else a module does to it (Locations logs rack mounts this way).
 
+## Steps of the site setup guide
+
+The site setup guide (New > Set up a site, step by step) walks a site from
+the site itself out to its endpoints, one short step at a time. Its steps
+are the turned-on modules' `setup`, sorted by `order`: Locations has the
+site (10), rooms (20) and racks (30), Contacts vendors (35), Network the
+internet connection (40), VLANs (45) and subnets (50), Hardware network
+gear (60), servers (70) and endpoints (100), Virtual hypervisors (80) and
+guests (85), Services services (90), and Network cables (110). A step of a
+new module takes a place between them.
+
+```python
+SetupStep("gear", "Network gear", "What connects everything, from where the internet comes in.", 60,
+          kinds=(SetupKind("Router", "network_device", {"f.kind": "router"}),
+                 SetupKind("Firewall", "firewall")),
+          fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"),
+                  SetupField("f.model"), SetupField("s.addresses.list", "IP address")))
+```
+
+- Each row of a step is a record, made through `records.create` with the
+  row's values under the record form's names. `kinds` are what a row can
+  be, each a type of the module's own and the values it starts with; with
+  more than one, each row chooses.
+- `fields` are the row's columns, by their form names. `f.<field>` takes its
+  label and control from the type's `Field`; `location_id` offers the site
+  being set up and everything in it, the site chosen; `s.<section>.<name>`
+  needs a `label` and is left out where the section doesn't apply, and
+  `types=("vendor",)` makes it a choice of those records.
+- `scope=True` marks the step whose record the steps after it are about
+  (the site). Only Locations has one.
+- A step that makes something other than records (Network's cables) has
+  `save(values, scope, user)` instead of `kinds`, `existing(scope)` listing
+  what is there, and `SetupField(..., choices=fn)` for its choices.
+- A step is saved whole or not at all: an `Invalid` from any row undoes the
+  step and is shown with the row's name. Rows with no name are skipped.
+
 ## Adding to other modules' forms
 
 A `FormSection` puts fields of one module into the form of another module's
@@ -278,6 +315,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `[data-gallery]`, `a[data-gallery-item]`, `data-large`, `data-caption` | A click on an item opens the gallery's pictures in the viewer, at that one: `data-large` is what it shows, the link's `href` the original |
 | `a[data-entity="id"]` | Opens that record's sheet in place (`entity_link` makes these) |
 | `input[data-autosubmit]` | Submits its form when it changes |
+| `[data-repeat]` | Rows of a form, as many as wanted: `[data-repeat-add]` copies its `<template data-repeat-template>`, numbering `__n__` in the names on; `[data-repeat-remove]` takes a row out |
 | `[data-print]` | Prints the page; print styles hide the shell |
 | `[data-reveal="/url"]`, `data-reveal-into="id"` | Posts to the URL and shows the answer's `value` in that element, until a second click or 30 seconds (the vault's Show); the element's `data-mask` is what it shows otherwise |
 | `[data-copy="text"]`, `[data-copy-url="/url"]` | Copies the text, or posts to the URL and copies the answer's `value` |

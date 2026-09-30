@@ -1,0 +1,117 @@
+"""The site setup guide: its steps from the modules, in order; a site walked
+from the site itself out to its endpoints and cables, several records a
+step; a step saved whole or not at all; and who may use it."""
+from hyprvolt.manifest import Module, SetupKind, SetupStep
+from hyprvolt.registry import Registry, validate
+
+
+def entities(client, type_):
+    """Every record of a type, each in full (with its fields)."""
+    rows = client.get(f"/api/entities?type={type_}&per_page=200").get_json()["entities"]
+    return [client.get(f"/api/entities/{e['id']}").get_json()["entity"] for e in rows]
+
+
+def step(client, h, key, site=None, then="next", **rows):
+    """Post rows given as r0={"name": ...}, r1={...}; returns the redirect."""
+    data = {"then": then}
+    for r, values in rows.items():
+        for name, value in values.items():
+            data[f"{r}|{name}"] = value
+    url = f"/site-setup/{key}" + (f"?site={site}" if site else "")
+    return client.post(url, data=data, headers=h)
+
+
+def test_the_steps_run_from_the_site_to_the_cables(client, h, admin):
+    page = client.get("/site-setup", follow_redirects=True).data.decode()
+    assert "Step 1 of" in page and "The site" in page
+    assert page.index("Buildings and rooms") < page.index("Internet connection") < page.index("Network gear") \
+        < page.index("Endpoints") < page.index("<span>Cables</span>")
+
+
+def test_a_site_is_set_up_step_by_step(client, h, admin):
+    resp = step(client, h, "site", r0={"name": "Home", "f.city": "Springfield"})
+    site = entities(client, "site")[0]
+    assert resp.status_code == 302 and resp.headers["Location"].endswith(f"/site-setup/rooms?site={site['id']}")
+    # Several rows at once; an empty row is skipped; Save and add more stays.
+    resp = step(client, h, "rooms", site["id"], then="more", r0={"name": "Basement", "location_id": site["id"]},
+                r1={"name": "", "location_id": site["id"]}, r2={"name": "Office", "location_id": site["id"]})
+    assert resp.headers["Location"].endswith(f"/site-setup/rooms?added=2&site={site['id']}")
+    page = client.get(resp.headers["Location"]).data.decode()
+    assert "2 added" in page and "Basement" in page.split("Already recorded")[1]
+    basement = next(r for r in entities(client, "room") if r["name"] == "Basement")
+    assert basement["location"]["id"] == site["id"]
+    # Where a record goes is chosen among the site's places, the site first.
+    page = client.get(f"/site-setup/racks?site={site['id']}").data.decode()
+    assert f'<option value="{basement["id"]}" >Basement</option>' in page.replace("selected", "")
+    step(client, h, "racks", site["id"], r0={"name": "Rack 1", "location_id": basement["id"], "f.height_u": "24"})
+    rack = entities(client, "rack")[0]
+    assert rack["fields"]["height_u"] == 24 and rack["fields"]["numbering"] == "bottom"
+    step(client, h, "vendors", site["id"], r0={"name": "Springfield Cable"})
+    isp = entities(client, "vendor")[0]
+    step(client, h, "internet", site["id"],
+         r0={"name": "Fiber", "location_id": site["id"], "s.supplier.vendor_id": isp["id"], "f.bandwidth": "1 Gb/s"})
+    wan = entities(client, "network")[0]
+    assert wan["fields"]["kind"] == "wan"
+    assert isp["id"] in [r["other"]["id"] for r in
+                         client.get(f"/api/entities/{wan['id']}/relationships").get_json()["relationships"]]
+    step(client, h, "subnets", site["id"], r0={"name": "LAN", "f.cidr": "10.0.20.0/24", "f.gateway": "10.0.20.1"})
+    # The kind of each row: a switch is network gear of the kind switch.
+    step(client, h, "gear", site["id"],
+         r0={"_kind": "3", "name": "sw1", "location_id": rack["id"], "s.addresses.list": "10.0.20.2"},
+         r1={"_kind": "2", "name": "fw1", "location_id": rack["id"]})
+    sw = next(e for e in entities(client, "network_device") if e["name"] == "sw1")
+    assert sw["fields"]["kind"] == "switch" and entities(client, "firewall")[0]["name"] == "fw1"
+    assert any(e["name"] == "10.0.20.2" for e in entities(client, "ip_address"))
+    step(client, h, "endpoints", site["id"], r0={"_kind": "0", "name": "desk-pc", "f.assigned_to": "Ada", "location_id": basement["id"]},
+         r1={"_kind": "1", "name": "lp"})
+    pc = entities(client, "workstation")[0]
+    assert pc["fields"]["assigned_to"] == "Ada" and pc["location"]["id"] == basement["id"]
+    # Cables: from a device to a device, each cabled as a whole.
+    page = client.get(f"/site-setup/cables?site={site['id']}").data.decode()
+    assert f'value="device:{pc["id"]}"' in page
+    resp = step(client, h, "cables", site["id"], r0={"from": f"device:{pc['id']}", "to": f"device:{sw['id']}",
+                                                      "label": "C1"}, r1={"from": "", "to": "", "label": ""})
+    assert resp.headers["Location"].endswith(f"/site-setup/done?site={site['id']}")
+    ends = client.get(f"/network/devices/{pc['id']}/ports").get_json()["ports"]
+    assert ends[0]["cable"]["to"] == "sw1" and ends[0]["cable"]["label"] == "C1"
+    done = client.get(resp.headers["Location"]).data.decode()
+    assert "Home is written down" in done and "2 recorded" in done
+
+
+def test_a_step_is_saved_whole_or_not_at_all(client, h, admin):
+    step(client, h, "site", r0={"name": "Home"})
+    resp = step(client, h, "subnets", r0={"name": "Good", "f.cidr": "10.0.20.0/24"},
+                r1={"name": "Bad", "f.cidr": "10.0.20"})
+    page = resp.data.decode()
+    assert resp.status_code == 200 and "Bad: " in page and "subnet with its prefix" in page
+    assert entities(client, "subnet") == []
+    assert 'value="Good"' in page and 'value="10.0.20"' in page
+
+
+def test_skipping_and_an_existing_site(client, h, admin):
+    home = step(client, h, "site", r0={"name": "Home"}) and entities(client, "site")[0]
+    step(client, h, "site", r0={"name": "Office"})
+    # A step with nothing filled in goes on; the one site chosen carries on.
+    resp = step(client, h, "rooms", home["id"], r0={"name": ""})
+    assert resp.headers["Location"].endswith(f"/site-setup/racks?site={home['id']}")
+    resp = client.post("/site-setup/site", data={"then": "next", "existing": home["id"], "r0|name": ""}, headers=h)
+    assert resp.headers["Location"].endswith(f"site={home['id']}")
+    assert len(entities(client, "site")) == 2
+
+
+def test_viewers_cannot_use_it_and_editors_find_it(client, h, admin, viewer):
+    other, oh = viewer
+    assert other.get("/site-setup/site").status_code == 403
+    assert other.post("/site-setup/site", data={"r0|name": "X"}, headers=oh).status_code == 403
+    assert "Set up a site, step by step" in client.get("/").data.decode()
+    assert "Set up a site, step by step" not in other.get("/").data.decode()
+    assert client.get("/site-setup/nothing").status_code == 404
+
+
+def test_a_module_steps_are_checked():
+    bad = Module(id="gadgets", name="Gadgets", setup=(
+        SetupStep("things", "Things", "", 10, kinds=(SetupKind("Server", "server"),)),
+        SetupStep("nothing", "Nothing", "", 20)))
+    problems = " ".join(validate(bad, Registry()))
+    assert "makes 'server', not one of the module's types" in problems
+    assert "needs either kinds of record or a save function" in problems

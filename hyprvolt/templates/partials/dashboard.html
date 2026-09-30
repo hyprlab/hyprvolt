@@ -11,8 +11,9 @@
       so each record you add makes the others more useful.</p>
     {% if current_user.can_edit %}
     <div class="empty-actions">
+      {% if site_guide %}<a class="btn btn--primary" href="{{ url_for('guide.start') }}">Set up a site, step by step</a>{% endif %}
       {% for t in tiles %}{% if loop.first %}
-      <button class="btn btn--primary" data-new-type="{{ t.types[0][0].key }}">New {{ t.types[0][0].text() }}</button>
+      <button class="btn {{ 'btn--ghost' if site_guide else 'btn--primary' }}" data-new-type="{{ t.types[0][0].key }}">New {{ t.types[0][0].text() }}</button>
       {% endif %}{% endfor %}
       {% if current_user.is_admin and can_seed %}
       <button class="btn btn--ghost" data-api-post="/admin/seed-demo" data-then="reload" data-done="The demo homelab is loaded">Load a demo homelab</button>
