@@ -1545,17 +1545,20 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
    one being done marked as the settings rail marks its section, and the
    step's rows, each a record to make. */
 .guide-body { min-height: 100dvh; }
-.guide-top {
+/* The guide's header stays at the top of the window, the brand always in
+   sight, with the page scrolling under it. */
+.guide-top { position: sticky; top: 0; z-index: 20; background: var(--bg); box-shadow: 0 1px 0 var(--line); }
+.guide-top-bar {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  max-width: 1180px; margin: 0 auto; padding: 22px clamp(16px, 3.5vw, 36px) 0;
+  max-width: 1180px; margin: 0 auto; padding: 16px clamp(16px, 3.5vw, 36px);
 }
 .guide-top-side { display: flex; align-items: center; gap: 14px; }
 .theme-corner { position: fixed; top: 16px; right: 16px; z-index: 5; }
 .guide-exit { font-size: 13.5px; font-weight: 550; color: var(--muted); }
 .guide-exit:hover { color: var(--ink); }
-.guide-wrap { max-width: 1180px; margin: 0 auto; padding: clamp(22px, 4vw, 44px) clamp(16px, 3.5vw, 36px) 60px; }
+.guide-wrap { max-width: 1180px; margin: 0 auto; padding: clamp(12px, 3vw, 34px) clamp(16px, 3.5vw, 36px) 60px; }
 .guide { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(20px, 3vw, 40px); max-width: 1180px; }
-.guide-rail { position: sticky; top: 16px; align-self: start; }
+.guide-rail { position: sticky; top: 84px; align-self: start; }
 .guide-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .guide-group {
   margin: 14px 0 4px; padding: 0 10px;

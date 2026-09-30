@@ -7,11 +7,13 @@
 {% block bodyclass %}guide-body{% endblock %}
 {% block body %}
 <header class="guide-top">
-  <span class="brand">{% include "partials/mark.html" %}<span class="wordmark">{{ app_name }}</span></span>
-  <span class="guide-top-side">
-    {% include "partials/theme_button.html" %}
-    <a class="guide-exit" href="{{ url_for('main.index') }}">Exit setup</a>
-  </span>
+  <div class="guide-top-bar">
+    <span class="brand">{% include "partials/mark.html" %}<span class="wordmark">{{ app_name }}</span></span>
+    <span class="guide-top-side">
+      {% include "partials/theme_button.html" %}
+      <a class="guide-exit" href="{{ url_for('main.index') }}">Exit setup</a>
+    </span>
+  </div>
 </header>
 <main class="guide-wrap">{{ page_html }}</main>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
