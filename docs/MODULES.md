@@ -154,7 +154,7 @@ and a `kind`:
 | Kind | Stored as | Shown as |
 | --- | --- | --- |
 | `text`, `email`, `url` | a string, 500 characters at most | text; a `url` starting with http links out, an `email` is a mailto: link |
-| `phone` | a phone number as written, with an extension if any | a tel: link |
+| `phone` | a phone number as written, not checked: an extension, a vanity number (1-833-VERIZON) or a note | a tel: link when it can be dialed, letters on their keypad digits |
 | `longtext` | text | text, line breaks kept |
 | `markdown` | text | rendered Markdown with `[[slug]]` links, under the fields |
 | `integer`, `number` | int, float, with `min` and `max` | the value and its `unit` |

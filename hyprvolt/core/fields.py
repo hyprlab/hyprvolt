@@ -13,7 +13,11 @@ from ..manifest import Field
 
 URL_SCHEMES = ("http", "https", "ftp", "sftp", "ssh", "smb", "rdp", "vnc", "nfs", "git")
 URL_RE = re.compile(r"^([a-z][a-z0-9+.-]*)://\S+$", re.I)
-PHONE_RE = re.compile(r"^\+?[0-9 ().\-/]{3,30}((ext\.?|x) ?[0-9]{1,6})?$", re.I)
+#: What a phone number can be dialed from: digits, or the letters of a
+#: vanity number (1-833-VERIZON), with the usual separators.
+DIALABLE_RE = re.compile(r"^\+?[0-9A-Za-z ().\-/]{3,40}$")
+KEYPAD = {c: str(n) for n, letters in ((2, "abc"), (3, "def"), (4, "ghi"), (5, "jkl"), (6, "mno"),
+                                       (7, "pqrs"), (8, "tuv"), (9, "wxyz")) for c in letters}
 TRUE = ("1", "true", "on", "yes")
 FALSE = ("", "0", "false", "off", "no")
 MAX_TEXT = 500
@@ -51,9 +55,10 @@ def parse(f: Field, raw, lookup=None):
 
     kind = f.kind
     if kind == "phone":
+        # Kept as written, whatever it is: a vanity number, or "ask for Sam".
         raw = " ".join(str(raw).split())
-        if not PHONE_RE.match(raw) or sum(c.isdigit() for c in raw) < 3:
-            raise Invalid(f"{f.label} must be a phone number, such as +1 555 010 0199.")
+        if len(raw) > MAX_TEXT:
+            raise Invalid(f"{f.label} is limited to {MAX_TEXT} characters.")
         return raw
 
     if kind in ("text", "longtext", "markdown", "email", "url"):
@@ -246,8 +251,11 @@ def href(f: Field, value) -> str | None:
     if f.kind == "email":
         return "mailto:" + value
     if f.kind == "phone":
-        number = re.split(r"(?i)\s*(?:ext\.?|x)\s*", value)[0]
-        return "tel:" + "".join(c for c in number if c.isdigit() or c == "+")
+        # A tel: link only for what can be dialed; letters on the keypad's keys.
+        number = re.split(r"(?i)\s*(?:ext\.?|\bx)\s*(?=\d)", value)[0]
+        if not DIALABLE_RE.match(number) or sum(c.isdigit() for c in number) < 3:
+            return None
+        return "tel:" + "".join(c if c.isdigit() or c == "+" else KEYPAD.get(c.lower(), "") for c in number)
     return None
 
 

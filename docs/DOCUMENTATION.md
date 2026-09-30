@@ -234,7 +234,9 @@ have a Supplier section in their form: the vendor and the contract that
 covers them. A vendor's Supplies tab and a contract's Covers tab list what
 is linked; the sidebar lists contracts ending within the reminder window, or
 ended by no more than it. Phone numbers
-and email addresses are links.
+are kept as typed, not checked; one that can be dialed is a link, a vanity
+number such as 1-833-VERIZON dialing its keypad digits. Email addresses are
+links too.
 
 Settings > Custom fields adds fields of your own to any kind of record: text,
 a number, a date, a choice list, a web address, or yes or no. They appear in

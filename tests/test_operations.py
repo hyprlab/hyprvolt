@@ -126,8 +126,13 @@ def test_services_that_matter_show_on_the_dashboard(client, h, admin):
 def test_vendors_people_and_their_numbers(client, h, admin):
     vendor = make(client, h, "vendor", name="Dell", **{"f.support_phone": "+1 555 010 0142 ext 7",
                                                        "f.support_email": "help@dell.example"})
-    assert "phone number" in client.post("/api/entities", json={"type": "vendor", "name": "x",
-                                                                "f.support_phone": "call me"}, headers=h).get_json()["error"]
+    # A phone number is kept as written; what can be dialed is a tel: link,
+    # a vanity number's letters on their keys.
+    verizon = make(client, h, "vendor", name="Verizon", **{"f.support_phone": "1-833-VERIZON"})
+    loose = make(client, h, "vendor", name="Loose", **{"f.support_phone": "call Sam at the desk"})
+    assert verizon["fields"]["support_phone"] == "1-833-VERIZON"
+    assert 'href="tel:18338374966"' in client.get(f"/e/{verizon['id']}/sheet").data.decode()
+    assert "tel:" not in client.get(f"/e/{loose['id']}/sheet").data.decode()
     sheet = client.get(f"/e/{vendor['id']}/sheet").data.decode()
     assert 'href="tel:+15550100142"' in sheet and 'href="mailto:help@dell.example"' in sheet
     assert 'href="tel:+15550100142" target' not in sheet
