@@ -196,9 +196,9 @@ Overview) do what they say. `help` says what the field is for, in a sentence
 or two: the form shows it in a popover from an info button beside the label.
 Give every field one; a person new to the app should not have to guess. `list=True` puts the value in the list row,
 `card=True` on the card. `search=False` keeps it out of the search text.
-A `boolean` with `switch=("Dynamic", "Static")` is a switch between the two,
-the first on the left and the second on the right, in the form, the
-Overview and the site setup guide.
+A `boolean` with `switch=("Dynamic", "Static")` is a segmented control of
+the two, the first on the left and the second on the right, in the form,
+the Overview and the site setup guide.
 `shown_when=("static_ip", True)` shows a field only while an earlier field
 of the type has that value, and hides it again when it hasn't (a field
 following a hidden one is hidden too); what it holds is kept. Network's

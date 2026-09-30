@@ -682,18 +682,11 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .switch input:checked + .switch-track::after { transform: translateX(15px); }
 .switch input:focus-visible + .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
 .switch input:disabled + .switch-track { opacity: .55; cursor: default; }
-/* A choice between two states (Field.switch): Dynamic on the left, Static on
-   the right, the knob on the side chosen and that side's word in ink. */
-.switch--choice { align-items: center; gap: 10px; }
-.switch--choice .switch-track { background: var(--line-strong); }
-.switch--choice input:checked ~ .switch-track::after { transform: translateX(15px); }
-.switch--choice input:focus-visible ~ .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
-.switch--choice input:disabled ~ .switch-track { opacity: .55; cursor: default; }
-.switch-side { font-size: 14px; font-weight: 550; color: var(--faint); transition: color .15s; user-select: none; }
-.switch--choice input:not(:checked) ~ .switch-off,
-.switch--choice input:checked ~ .switch-on { color: var(--ink); font-weight: 700; }
-.field .switch--choice { min-height: 44px; }
-.kv-edit .switch--choice { min-height: 36px; }
+/* A choice between two states (Field.switch), a segmented control: the
+   chosen one raised. Beside a field, it is as tall as the field. */
+.seg--choice span { padding: 8px 18px; font-size: 14px; }
+.field .seg--choice { align-self: flex-start; }
+.kv-edit .seg--choice span { padding: 5px 14px; }
 .guide-switch { flex: 0 0 auto; }
 /* A new line in a row: what follows starts under it. */
 .guide-break { flex-basis: 100%; height: 0; }

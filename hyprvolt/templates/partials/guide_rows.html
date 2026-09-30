@@ -37,7 +37,7 @@
   <div class="field guide-locked"><span class="field-label">{{ c.label }}</span><span class="guide-locked-text">{{ r.text[c.name] }}</span></div>
   {% elif c.kind == 'check' and c.switch %}
   <div class="field guide-switch"{{ follows }}><span class="field-label">{{ c.label }}</span>
-    {{ switch(c.name, v, c.switch, disabled=r and c.name in r.absent) }}</div>
+    {{ switch(c.name, v, c.switch, disabled=r and c.name in r.absent, label=c.label) }}</div>
   {% elif c.kind == 'check' %}
   <label class="check guide-check"{{ follows }}><input type="checkbox" name="{{ c.name }}" value="1" {{ 'checked' if v }} {{ 'disabled' if r and c.name in r.absent }}><span>{{ c.label }}</span></label>
   {% else %}

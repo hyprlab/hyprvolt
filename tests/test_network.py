@@ -393,8 +393,8 @@ def test_a_static_line_has_its_address_mask_gateway_and_dns(client, h, admin, vi
                                                     headers=h).get_json()["error"]
     # The editor's switch, and the static fields that follow it.
     sheet = client.get(f"/e/{wan['id']}/sheet").data.decode()
-    assert '<span class="switch-side switch-off">Dynamic</span>' in sheet
-    assert '<span class="switch-side switch-on">Static</span>' in sheet
+    assert '<span class="seg seg--choice" role="radiogroup" aria-label="IP address">' in sheet
+    assert 'name="f.static_ip" value="1" checked' in sheet and "<span>Dynamic</span>" in sheet
     assert 'data-when="f.static_ip" data-when-is="1">' in sheet          # shown: the line is static
     # Dynamic: a viewer sees Dynamic and none of the static fields.
     client.post(f"/api/entities/{wan['id']}", json={"f.static_ip": False}, headers=h)

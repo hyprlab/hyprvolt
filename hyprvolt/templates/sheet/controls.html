@@ -28,16 +28,14 @@
 {%- if f.shown_when %} data-when="{{ prefix }}{{ f.shown_when[0] }}" data-when-is="{{ when_value(f.shown_when[1]) }}"{% if item.hidden %} hidden{% endif %}{% endif -%}
 {%- endmacro %}
 
-{# A choice between two states (Field.switch): the first on the left, the
-   second on the right, the knob sliding to the one chosen. A word chooses
-   its own side (app.js, .switch--choice). #}
-{% macro switch(name, on, labels, attrs='', disabled=false) %}
-<label class="switch switch--choice">
-  <input type="checkbox" name="{{ name }}" value="1" {{ 'checked' if on }} {{ attrs }}{{ ' disabled' if disabled }}>
-  <span class="switch-side switch-off">{{ labels[0] }}</span>
-  <span class="switch-track"></span>
-  <span class="switch-side switch-on">{{ labels[1] }}</span>
-</label>
+{# A choice between two states (Field.switch), as a segmented control: the
+   first on the left (the value 0), the second on the right (1), the one
+   chosen raised. ``first`` goes on the first option only (its id). #}
+{% macro switch(name, on, labels, first='', attrs='', disabled=false, label='') %}
+<span class="seg seg--choice" role="radiogroup"{% if label %} aria-label="{{ label }}"{% endif %}>
+  <label><input type="radio" name="{{ name }}" value="0" {{ 'checked' if not on }} {{ first }}{{ attrs }}{{ ' disabled' if disabled }}><span>{{ labels[0] }}</span></label>
+  <label><input type="radio" name="{{ name }}" value="1" {{ 'checked' if on }} {{ attrs }}{{ ' disabled' if disabled }}><span>{{ labels[1] }}</span></label>
+</span>
 {% endmacro %}
 
 {# A speed (Field kind "speed"): a number and Mb/s or Gb/s, with the value
@@ -61,8 +59,8 @@
 {% set extra %}{% if save %} data-save{% endif %}{% if cls %} class="{{ cls }}"{% endif %}{% endset %}
 {% set empty %}{% if save %} placeholder="Not set"{% endif %}{% endset %}
 {% if f.kind == 'boolean' and f.switch %}
-  {% set attrs %}{{ described(id, f.help) }}{{ extra }}{% endset %}
-  {{ switch(item.name, v, f.switch, attrs) }}
+  {% set first %}{{ described(id, f.help) }} {% endset %}
+  {{ switch(item.name, v, f.switch, first, extra, label=f.label) }}
 {% elif f.kind == 'boolean' %}
   <input type="checkbox" name="{{ item.name }}" value="1" {{ 'checked' if v }} {{ described(id, f.help) }}{{ extra }}>
 {% elif f.kind == 'longtext' %}

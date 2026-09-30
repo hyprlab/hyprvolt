@@ -854,6 +854,7 @@
     Array.prototype.forEach.call(form.elements, function (el) {
       if (!el.name || el.disabled || el.type === "file" || el.type === "submit") return;
       if (el.closest("[data-section][hidden]")) return;   // hidden by a choice: left as it is
+      if (el.type === "radio" && !el.checked) return;       // a choice: the one chosen
       out[el.name] = el.type === "checkbox" ? el.checked : el.value;
     });
     return out;
@@ -1218,25 +1219,14 @@
     box.querySelector("input[name]").dispatchEvent(new Event("change", { bubbles: true }));
   });
 
-  // A choice between two states (.switch--choice): a word picks its own
-  // side, rather than flipping the switch whichever side it is on.
-  document.addEventListener("click", function (e) {
-    var side = e.target.closest && e.target.closest(".switch--choice .switch-side");
-    if (!side) return;
-    e.preventDefault();
-    var input = side.parentNode.querySelector("input"), want = side.classList.contains("switch-on");
-    if (input.disabled || input.checked === want) return;
-    input.checked = want;
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-
   // A field shown only while another has a value ([data-when] names that
   // one, [data-when-is] the value: "1" for a switch that is on), in a form,
   // a guide row or an editor's Overview. One that follows a field hidden
   // itself is hidden too; the server drew them as they start.
   function applyWhen(scope) {
     scope.querySelectorAll("[data-when]").forEach(function (el) {
-      var ctl = scope.querySelector('[name="' + CSS.escape(el.getAttribute("data-when")) + '"]');
+      var name = CSS.escape(el.getAttribute("data-when"));
+      var ctl = scope.querySelector('[name="' + name + '"]:checked, [name="' + name + '"]:not([type="radio"])');
       if (!ctl) return;
       var holder = ctl.closest("[data-when]");
       var value = ctl.type === "checkbox" ? (ctl.checked ? "1" : "0") : ctl.value;
@@ -1297,7 +1287,9 @@
     if (rowAdding) return rowAdding;
     if (!row.isConnected || row.hasAttribute("data-adding") || !newRowFilled(row)) return Promise.resolve(true);
     var box = rowsOf(row), values = {};
-    row.querySelectorAll("[name]").forEach(function (el) { values[el.name] = rowValue(el); });
+    row.querySelectorAll("[name]").forEach(function (el) {
+      if (el.type !== "radio" || el.checked) values[el.name] = rowValue(el);
+    });
     row.setAttribute("data-adding", "");
     rowError(row, null);
     row.classList.add("is-saving");
@@ -2085,7 +2077,12 @@
     return el.value !== el.defaultValue;
   }
   function markSaved(el) {
-    if (el.type === "checkbox" || el.type === "radio") el.defaultChecked = el.checked;
+    // A choice of radios is saved as one: each of them now as it is, or an
+    // earlier one would read as a change still to save.
+    if (el.type === "radio") {
+      (el.closest("[data-autosave]") || document).querySelectorAll('input[type="radio"][name="' + CSS.escape(el.name) + '"]')
+        .forEach(function (r) { r.defaultChecked = r.checked; });
+    } else if (el.type === "checkbox" || el.type === "radio") el.defaultChecked = el.checked;
     else if (el.tagName === "SELECT") Array.prototype.forEach.call(el.options, function (o) { o.defaultSelected = o.selected; });
     else el.defaultValue = el.value;
   }
