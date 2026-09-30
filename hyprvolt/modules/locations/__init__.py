@@ -109,8 +109,7 @@ module = Module(
                   kinds=(SetupKind("Site", "site"),),
                   fields=(SetupField("name", placeholder="Home"), SetupField("f.address"), SetupField("f.city"),
                           SetupField("f.country"))),
-        SetupStep("rooms", "Buildings and rooms", "Places on-site that hold equipment. For a room in a building of "
-                  "its own, add the building, then add its rooms in it.", 20,
+        SetupStep("rooms", "Buildings and rooms", "Places on-site that hold equipment.", 20,
                   group="Place", plan="buildings, rooms", tree=True,
                   kinds=(SetupKind("Building", "building"), SetupKind("Room", "room")),
                   fields=(SetupField("name"),)),
