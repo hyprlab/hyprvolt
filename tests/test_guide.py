@@ -100,7 +100,8 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     assert 'aria-expanded="false"' in page and '<span class="guide-row-title" data-row-title>Ubiquiti</span>' in page
     # Where a record goes is chosen among the site's places, the site first.
     page = client.get(f"/site-setup/racks?site={site['id']}").data.decode()
-    assert f'<option value="{basement["id"]}" >Basement</option>' in page.replace("selected", "")
+    assert f'<option value="{basement["id"]}" >Basement (room)</option>' in page.replace("selected", "")
+    assert f'<option value="{site["id"]}" >Home (site)</option>' in page.replace("selected", "")
     add(client, h, "racks", site["id"], name="Rack 1", location_id=basement["id"], **{"f.height_u": "24"})
     rack = entities(client, "rack")[0]
     assert rack["fields"]["height_u"] == 24 and rack["fields"]["numbering"] == "bottom"

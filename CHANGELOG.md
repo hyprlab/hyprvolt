@@ -23,6 +23,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- In the site setup guide, each place in a Where choice says what it is: Hyprlab (site), Garage (building), Main House › Basement (room)
 - In the dark theme, messages such as Deleted with Undo are a dark pill with light text, and errors a dark red one, instead of a light pill the yellow Undo was hard to read on
 - Once a subnet's range is typed, its gateway is filled in with the first address and its DHCP range with the upper half of the subnet, unless they were typed by hand
 - A subnet's range is typed as its network address with the subnet mask chosen beside it (/24 · 255.255.255.0 · 254 hosts), and its DHCP range as a first and a last address in two boxes, in its record and in the setup guide

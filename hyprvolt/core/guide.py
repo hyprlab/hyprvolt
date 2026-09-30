@@ -59,10 +59,16 @@ def _scope():
 
 def _places(scope) -> list[tuple[int, str]]:
     """The site and every location inside it, labeled with the path below
-    the site: "Basement › Rack 1"."""
+    the site and what it is: "Main House › Basement (room)", "Garage
+    (building)", "Hyprlab (site)"."""
     if scope is None:
         return []
-    location_types = [t.key for t in registry().location_types()]
+    reg = registry()
+    location_types = [t.key for t in reg.location_types()]
+
+    def kind(e):
+        etype = reg.type(e.type)
+        return f" ({etype.text()})" if etype else ""
     everything = {e.id: e for e in Entity.live().filter(Entity.type.in_(location_types))}
 
     def path(e):
@@ -74,12 +80,13 @@ def _places(scope) -> list[tuple[int, str]]:
                 return list(reversed(names))
             e = everything.get(e.location_id)
         return None
-    out = [(scope.id, scope.name)]
+    out = []
     for e in everything.values():
         p = path(e) if e.id != scope.id else None
         if p:
-            out.append((e.id, " › ".join(p[1:])))
-    return [out[0]] + sorted(out[1:], key=lambda o: o[1].lower())
+            out.append((e.id, " › ".join(p[1:]), kind(e)))
+    out.sort(key=lambda o: o[1].lower())
+    return [(scope.id, scope.name + kind(scope))] + [(i, text + k) for i, text, k in out]
 
 
 def _inside(entity, scope, place_ids) -> bool:
