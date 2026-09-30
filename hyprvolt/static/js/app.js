@@ -1353,9 +1353,23 @@
   // Once only: a row being added (or gone from the page, drawn again) is
   // left alone, and the add is done only when the rows are drawn again, so
   // the focus leaving the old row doesn't add it a second time.
-  function addRow(row) {
+  // Added on the step itself (Enter, Add): a new site's step comes back
+  // about the new site.
+  function addRowHere(row) {
+    return addRow(row).then(function (done) { if (done && done.go) location.href = done.go; });
+  }
+  // Anything typed into the blank row: a box that differs from how it was
+  // drawn (a number it starts with, such as a rack's 42 units, doesn't count).
+  function newRowTouched(row) {
+    return Array.prototype.some.call(row.querySelectorAll('input[type="text"], input[type="number"]'), function (el) {
+      return el.value.trim() !== el.defaultValue.trim();
+    });
+  }
+  // ``force``: added whatever it holds, for the server to say what is
+  // missing (a name) rather than lose what was typed.
+  function addRow(row, force) {
     if (rowAdding) return rowAdding;
-    if (!row.isConnected || row.hasAttribute("data-adding") || !newRowFilled(row)) return Promise.resolve(true);
+    if (!row.isConnected || row.hasAttribute("data-adding") || !(force || newRowFilled(row))) return Promise.resolve(true);
     var box = rowsOf(row), values = {};
     row.querySelectorAll("[name]").forEach(function (el) {
       if (el.type !== "radio" || el.checked) values[el.name] = rowValue(el);
@@ -1364,7 +1378,8 @@
     rowError(row, null);
     row.classList.add("is-saving");
     rowAdding = api(box.getAttribute("data-create"), { values: values }).then(function (data) {
-      if (data && data.go) { location.href = data.go; return false; }
+      // The site's own step: where to go next, about the new site.
+      if (data && data.go) { rowAdding = null; return { go: data.go }; }
       return redrawRows(box, focusNewRow).then(function () { rowAdding = null; return true; },
                                                function () { rowAdding = null; return true; });
     }, function (err) {
@@ -1407,7 +1422,7 @@
     var el = e.target;
     if (e.key !== "Enter" || !el.closest || el.tagName !== "INPUT" || el.type === "checkbox") return;
     var fresh = el.closest("[data-row-new]"), saved = el.closest("[data-row]");
-    if (fresh && rowsOf(fresh)) { e.preventDefault(); addRow(fresh); }
+    if (fresh && rowsOf(fresh)) { e.preventDefault(); addRowHere(fresh); }
     else if (saved && rowsOf(saved)) { e.preventDefault(); el.blur(); }
   });
   // A row's form is never sent: Enter adds the blank row, and a field saves itself.
@@ -1416,17 +1431,29 @@
     if (!form) return;
     e.preventDefault();
     var fresh = form.querySelector("[data-row-new]");
-    if (fresh) addRow(fresh);
+    if (fresh) addRowHere(fresh);
   });
   document.addEventListener("click", function (e) {
     var add = e.target.closest("[data-row-add]");
-    if (add && rowsOf(add)) { addRow(add.closest("[data-row-new]")); return; }
-    var go = e.target.closest("[data-rows-continue]");
-    if (go) {
+    if (add && rowsOf(add)) { addRowHere(add.closest("[data-row-new]")); return; }
+    // Leaving the step (Continue, Back, another step, Exit setup) with
+    // something typed in the blank row adds it first; if it can't be added,
+    // the row says why and the page stays.
+    var go = e.target.closest("a[href]");
+    if (go && !go.closest("[data-rows]") && !go.target && !(e.ctrlKey || e.metaKey || e.shiftKey || e.altKey)) {
       var pending = document.querySelector("[data-rows] [data-row-new]");
-      if (!pending || !newRowFilled(pending)) return;
+      if (!pending || !newRowTouched(pending)) return;
       e.preventDefault();
-      addRow(pending).then(function (ok) { if (ok) location.href = go.href; });
+      addRow(pending, true).then(function (done) {
+        if (!done) {
+          pending.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+          return;
+        }
+        // A new site: the next step, about it.
+        var next = new URL(go.href, location.href), site = done.go && new URL(done.go, location.href).searchParams.get("site");
+        if (site) next.searchParams.set("site", site);
+        location.href = next.toString();
+      });
       return;
     }
     var del = e.target.closest("[data-row-delete]");
