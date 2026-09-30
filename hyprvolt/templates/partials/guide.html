@@ -62,7 +62,7 @@
   <div class="guide-main">
   {% if intro %}
     <p class="guide-count">{{ 'Welcome' if fresh else 'Overview' }}</p>
-    <h2 class="guide-title">{{ 'Now, document your first site' if fresh else 'Set up a site, step by step' }}</h2>
+    <h2 class="guide-title">{% if fresh %}Let's document your first site{% else %}Set up a site, step by step{% endif %}</h2>
     <p class="guide-intro">{{ steps|length }} short steps take you from the site itself out to the devices people use and
       the cables between them. Each asks for a few things only: a name, where it is, perhaps an address. The rest can
       be filled in later, on each record.</p>

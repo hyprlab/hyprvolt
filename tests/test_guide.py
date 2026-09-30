@@ -23,7 +23,7 @@ def step(client, h, key, site=None, then="next", **rows):
 
 def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
     page = client.get("/site-setup").data.decode()
-    assert "Now, document your first site" in page and "Start with the site" in page
+    assert "Let's document your first site" in page and "Start with the site" in page
     assert "Load a demo homelab instead" in page
     for group in ("Place", "Network", "Equipment", "What runs", "Endpoints"):
         assert f'<p class="guide-group">{group}</p>' in page
