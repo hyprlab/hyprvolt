@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- An internet connection has a Dynamic or Static switch for its IP address. Static shows the line's static IP, subnet mask, gateway and DNS servers, in its record and in the setup guide; Dynamic hides them. A connection that already had public addresses is marked Static
 - In the site setup guide, Buildings and rooms is a tree of the site: add a building or room right where it goes, saved as you type each name, and drag one onto another (or use the arrow keys on its handle) to move it a level. Deleting a building there takes the rooms in it too, after asking, and Undo brings them all back
 - The setup wizard and the site setup guide have a light and dark button, and new installs and new accounts start in the dark theme
 - Each step of the site setup guide has a What goes here button that explains what belongs in it, what belongs in another step, and why, such as a Usenet provider being a vendor with a contract while SABnzbd is a service

@@ -214,6 +214,8 @@ def display(f: Field, value, lookup=None) -> str:
     if value is None or value == "":
         return ""
     if f.kind == "boolean":
+        if f.switch:
+            return f.switch[1] if value else f.switch[0]
         return "Yes" if value else "No"
     if f.kind == "select":
         return dict(f.options).get(value, str(value))
@@ -235,6 +237,27 @@ def display(f: Field, value, lookup=None) -> str:
     else:
         text = str(value)
     return f"{text} {f.unit}" if f.unit else text
+
+
+def when_value(value) -> str:
+    """A ``shown_when`` value as the page compares it: "1" or "0" for yes
+    or no, the text of anything else."""
+    return ("1" if value else "0") if isinstance(value, bool) else str(value)
+
+
+def hidden_keys(fields, values: dict) -> set:
+    """The keys of the fields not shown for these values (``shown_when``): a
+    field is shown while the field it follows is shown and has the value.
+    Fields come in their order, so the one followed is decided first."""
+    hidden = set()
+    for f in fields:
+        if f.shown_when:
+            key, want = f.shown_when
+            have = values.get(key)
+            same = bool(have) == want if isinstance(want, bool) else have == want
+            if key in hidden or not same:
+                hidden.add(f.key)
+    return hidden
 
 
 def to_text(f: Field, value) -> str:

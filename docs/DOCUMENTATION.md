@@ -135,9 +135,12 @@ a port's VLANs, and cable each port; a patch panel needs its ports recorded
 for a path to go through it. Turning it off again keeps the ports, out of
 sight. A cabled port's path can be traced to the far end through patch
 panels. An internet connection
-is a network of the kind Internet connection, with its public addresses,
-download and upload speeds (each a number with Mb/s or Gb/s chosen beside
-it) and circuit ID; the ISP is a vendor, chosen in its Supplier
+is a network of the kind Internet connection, with its download and upload
+speeds (each a number with Mb/s or Gb/s chosen beside it), a Dynamic or
+Static switch for its IP address, and circuit ID. Static shows the line's
+fixed address, subnet mask (255.255.255.248 or /29), gateway and DNS
+servers; a gateway outside the address's network is refused. Dynamic hides
+them and keeps what was there; the ISP is a vendor, chosen in its Supplier
 section, with the contract for the line. The sidebar lists internet
 connections. A domain's DNS records
 are written down by hand in its DNS records tab, and an A record or a CNAME

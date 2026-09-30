@@ -19,6 +19,7 @@ from markupsafe import Markup
 from ..models import db
 from ..permissions import role
 from ..registry import current as registry
+from . import fields as F
 from . import records
 from .fields import Invalid
 from .models import Entity
@@ -138,6 +139,9 @@ def columns(step, scope) -> list[dict]:
                 continue
             f = fields[0]
             col["label"] = sf.label or (f"{f.label} ({f.unit})" if f.unit else f.label)
+            col["switch"] = f.switch
+            if f.shown_when:
+                col["when"] = ("f." + f.shown_when[0], F.when_value(f.shown_when[1]))
             col["required"] = f.required and all(any(x.key == f.key for x in t.fields) for t in types)
             if f.kind == "select":
                 col.update(kind="select", choices=list(f.options))
@@ -291,7 +295,9 @@ def _row(step, cols, entity) -> dict:
             elif section.values is not None:
                 held.setdefault(key, section.values(entity) or {})
                 values[n] = held[key].get(name, "")
-    return {"id": entity.id, "label": entity.name, "values": values, "absent": absent, "text": {}, "locked": ()}
+    gone = {"f." + k for k in F.hidden_keys(etype.fields, own)}
+    return {"id": entity.id, "label": entity.name, "values": values, "absent": absent, "text": {}, "locked": (),
+            "hidden": {c["name"] for c in cols if c["name"] in gone}}
 
 
 def rows_of(step, cols, scope) -> list[dict]:
@@ -372,10 +378,23 @@ def delete_row(step, row_id) -> dict:
     return {"url": url_for("api.entity_restore", entity_id=entity.id), "body": {}}
 
 
+def _new_hidden(step, cols) -> set:
+    """The columns the blank row starts without: those that follow a value
+    the first kind doesn't start with (a static address, while Dynamic)."""
+    kinds = _kinds(step)
+    if not kinds:
+        return set()
+    etype = registry().type(kinds[0].type)
+    values = {f.key: f.default for f in etype.fields}
+    values.update({n[2:]: v for n, v in kinds[0].values.items() if n.startswith("f.")})
+    gone = {"f." + k for k in F.hidden_keys(etype.fields, values)}
+    return {c["name"] for c in cols if c["name"] in gone}
+
+
 def _rows_html(step, scope) -> str:
     cols = columns(step, scope)
     return render_template("partials/guide_rows.html", step=step, cols=cols, rows=rows_of(step, cols, scope),
-                           scope=scope, new=not (step.scope and scope is not None),
+                           scope=scope, new=not (step.scope and scope is not None), new_hidden=_new_hidden(step, cols),
                            site={"site": scope.id} if scope is not None else {})
 
 
@@ -543,15 +562,21 @@ def row_create(key):
 @bp.route("/site-setup/<key>/rows/<int:row_id>", methods=["POST"])
 @role("editor")
 def row_update(key, row_id):
-    """``name`` and ``value``: one field of a row, saved."""
+    """``name`` and ``value``: one field of a row, saved. The answer has the
+    value as kept (a subnet mask of /29 is kept as 255.255.255.248), for the
+    row to show."""
     step, scope = _row_step(key), _scope()
-    data = _body()
+    data, cols = _body(), columns(step, scope)
+    name = str(data.get("name") or "")
     try:
-        update_row(step, columns(step, scope), row_id, str(data.get("name") or ""), data.get("value"))
+        update_row(step, cols, row_id, name, data.get("value"))
     except Invalid as err:
         db.session.rollback()
         return jsonify(error=str(err)), 400
     db.session.commit()
+    if step.save is None and name.startswith(("f.", "name")):
+        kept = _row(step, cols, _record_of(step, row_id))["values"].get(name)
+        return jsonify(ok=True, value=kept)
     return jsonify(ok=True)
 
 

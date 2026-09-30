@@ -4,7 +4,7 @@
    row once it has a name (Enter, the Add button, or leaving the row), and
    deletes a row after asking, each change at once; then this is drawn again
    from data-rows-url. #}
-{% from "sheet/controls.html" import speed %}
+{% from "sheet/controls.html" import speed, switch %}
 {% macro choice_options(choices, v) %}
   {%- for c in choices %}
     {%- if c is mapping %}<optgroup label="{{ c.label }}">{{ choice_options(c.options, v) }}</optgroup>
@@ -29,12 +29,17 @@
 {% macro row_fields(r) %}
   {% for c in cols %}
   {% set v = r['values'].get(c.name, c.default if c.default is not none else '') if r else (c.default if c.default is not none else '') %}
+  {# Shown only while the field it follows has a value (app.js, [data-when]). #}
+  {% set follows %}{% if c.when %} data-when="{{ c.when[0] }}" data-when-is="{{ c.when[1] }}"{% if c.name in (r.hidden if r else new_hidden) %} hidden{% endif %}{% endif %}{% endset %}
   {% if r and c.name in r.locked %}
   <div class="field guide-locked"><span class="field-label">{{ c.label }}</span><span class="guide-locked-text">{{ r.text[c.name] }}</span></div>
+  {% elif c.kind == 'check' and c.switch %}
+  <div class="field guide-switch"{{ follows }}><span class="field-label">{{ c.label }}</span>
+    {{ switch(c.name, v, c.switch, disabled=r and c.name in r.absent) }}</div>
   {% elif c.kind == 'check' %}
-  <label class="check guide-check"><input type="checkbox" name="{{ c.name }}" value="1" {{ 'checked' if v }} {{ 'disabled' if r and c.name in r.absent }}><span>{{ c.label }}</span></label>
+  <label class="check guide-check"{{ follows }}><input type="checkbox" name="{{ c.name }}" value="1" {{ 'checked' if v }} {{ 'disabled' if r and c.name in r.absent }}><span>{{ c.label }}</span></label>
   {% else %}
-  <label class="field {{ 'guide-wide' if c.name == 'name' }}"><span class="field-label">{{ c.label }}</span>
+  <label class="field {{ 'guide-wide' if c.name == 'name' }}"{{ follows }}><span class="field-label">{{ c.label }}</span>
     {{ control(c, v, r and c.name in r.absent, not r) }}</label>
   {% endif %}
   {% endfor %}

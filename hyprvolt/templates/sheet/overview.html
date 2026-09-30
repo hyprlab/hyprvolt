@@ -1,5 +1,5 @@
 {% from "partials/macros.html" import crumbs as crumb_nav, entity_link, tag_chips %}
-{% from "sheet/controls.html" import control, tip with context %}
+{% from "sheet/controls.html" import control, tip, when with context %}
 {# Read as a page, or, for an editor, edited in place: each field is its
    control, saved when it changes (app.js, "Editing in place"). The parts
    marked data-live are redrawn after a save. #}
@@ -15,7 +15,7 @@
 {%- endmacro %}
 {% macro edit_row(item) -%}
 {% set f = item.control.field %}{% set id = 'ov-' ~ item.control.name|replace('.', '-') %}
-<div data-field>
+<div data-field{{ when(item.control) }}>
   <dt><span class="field-head"><label for="{{ id }}">{{ f.label }}{% if f.unit %} ({{ f.unit }}){% endif %}</label>{% if f.help %}{{ tip(id, f.label, f.help) }}{% endif %}</span></dt>
   <dd class="kv-edit">{{ control(item.control, save=true, cls='kv-input', prefix='ov-') }}
     <span class="kv-open" data-live="open-{{ item.control.name }}">

@@ -105,6 +105,20 @@ def _bandwidth_speeds(m):
     m.once("bandwidth-speeds", move)
 
 
+#: The fields only an internet connection has, and those of a static line.
+WAN = ("kind", "wan")
+STATIC = ("static_ip", True)
+
+
+def _static_ip(m):
+    """A line with public addresses written down was a static one: it is
+    marked Static, so its addresses stay in view."""
+    m.add_column("network_details", "static_ip", "BOOLEAN")
+    m.add_column("network_details", "netmask", "VARCHAR(45)")
+    m.once("static-ip", lambda: db.session.execute(db.text(
+        "UPDATE network_details SET static_ip = 1 WHERE public_ips IS NOT NULL AND public_ips != ''")))
+
+
 NETWORK_REF = Field("network", "Network", "ref", types=("network",), list=True)
 
 ICON = ('<circle cx="12" cy="5.5" r="2"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/>'
@@ -156,17 +170,28 @@ module = Module(
     requires=("hardware",),
     models=(NetworkDetail, Port, Cable, DnsRecord, PortsRecorded),
     migrations=(Step("provider-to-notes", _provider_to_notes), Step("ports-recorded", _ports_recorded),
-                Step("bandwidth-speeds", _bandwidth_speeds)),
+                Step("bandwidth-speeds", _bandwidth_speeds), Step("static-ip", _static_ip)),
     blueprint=views.bp,
     types=(
         EntityType("network", "Network", "Networks", detail=NetworkDetail, located_in=None, icon=NETWORK,
-                   traits=("supplied",),
+                   traits=("supplied",), check=addresses.check_network,
                    fields=(Field("kind", "Kind", "select", options=NETWORK_KINDS, card=True, list=True),
-                           Field("public_ips", "Public addresses", help="203.0.113.24, or a range."),
-                           Field("download", "Download", "speed",
+                           Field("download", "Download", "speed", shown_when=WAN,
                                  help="The speed the ISP sells, toward you: 1 Gb/s, or 940 Mb/s."),
-                           Field("upload", "Upload", "speed", help="The speed away from you: 40 Mb/s."),
-                           Field("circuit_id", "Circuit ID",
+                           Field("upload", "Upload", "speed", shown_when=WAN, help="The speed away from you: 40 Mb/s."),
+                           Field("static_ip", "IP address", "boolean", switch=("Dynamic", "Static"), shown_when=WAN,
+                                 help="Static: the ISP gave the line a fixed address, with its subnet mask, gateway "
+                                      "and DNS servers, to set on your router. Dynamic: the router is given an "
+                                      "address by the ISP, and it can change; there is nothing more to record."),
+                           Field("public_ips", "Static IP", shown_when=STATIC,
+                                 help="The address the ISP gave the line: 203.0.113.26, or a range for a block."),
+                           Field("netmask", "Subnet mask", shown_when=STATIC,
+                                 help="From the ISP: 255.255.255.248, or /29."),
+                           Field("gateway", "Gateway", "ip", shown_when=STATIC,
+                                 help="The ISP's side of the line, which your router sends everything to."),
+                           Field("dns_servers", "DNS servers", shown_when=STATIC,
+                                 help="The ISP's, if it gave any. Separated by commas."),
+                           Field("circuit_id", "Circuit ID", shown_when=WAN,
                                  help="For an internet connection: what the ISP calls this line when you report "
                                       "a fault. The ISP itself goes in Supplier, as a vendor.")),
                    tabs=(Tab("contents", "VLANs and subnets", views.network_tab, count=views.network_count),)),
@@ -219,7 +244,9 @@ module = Module(
                   kinds=(SetupKind("Internet connection", "network", {"f.kind": "wan"}),),
                   fields=(SetupField("name", placeholder="Fiber"), SetupField("location_id"),
                           SetupField("s.supplier.vendor_id", "Provider", types=("vendor",)),
-                          SetupField("f.download"), SetupField("f.upload"), SetupField("f.public_ips"),
+                          SetupField("f.download"), SetupField("f.upload"), SetupField("f.static_ip"),
+                          SetupField("f.public_ips"), SetupField("f.netmask"), SetupField("f.gateway"),
+                          SetupField("f.dns_servers"),
                           SetupField("f.circuit_id"))),
         SetupStep("vlans", "VLANs", "The VLANs the network is split into, each with its number. Skip this if "
                   "the network is one flat LAN.", 45, group="Network",

@@ -196,6 +196,14 @@ Overview) do what they say. `help` says what the field is for, in a sentence
 or two: the form shows it in a popover from an info button beside the label.
 Give every field one; a person new to the app should not have to guess. `list=True` puts the value in the list row,
 `card=True` on the card. `search=False` keeps it out of the search text.
+A `boolean` with `switch=("Dynamic", "Static")` is a switch that reads as
+its state, in the form, the Overview and the site setup guide.
+`shown_when=("static_ip", True)` shows a field only while an earlier field
+of the type has that value, and hides it again when it hasn't (a field
+following a hidden one is hidden too); what it holds is kept. Network's
+internet connection uses both: its static address, subnet mask, gateway and
+DNS servers follow the Dynamic or Static switch, which follows its kind.
+
 A `select` can hide another module's form sections while it has certain
 values: Hardware's form factor has `hides=("rack",)` and
 `hides_when=("tower",)`, so a tower server's form and Overview have no Rack

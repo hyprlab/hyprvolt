@@ -422,6 +422,10 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
             p.append(f"{where} is a ref that names no types and no trait")
         if f.remind is not None and (not callable(f.remind) or not f.expires):
             p.append(f"{where} has a remind that isn't a function of an expiring date")
+        if f.switch and (f.kind != "boolean" or len(f.switch) != 2):
+            p.append(f"{where} is a switch, so it must be a boolean with an off and an on label")
+        if f.shown_when and (len(f.shown_when) != 2 or f.shown_when[0] not in keys):
+            p.append(f"{where} is shown when another field has a value; name one of the type's fields before it")
         if f.hides and (f.kind != "select" or not set(f.hides_when) <= {v for v, _ in f.options}):
             p.append(f"{where} hides form sections, so it must be a select and hides_when some of its options")
         if f.relation and f.kind != "ref":

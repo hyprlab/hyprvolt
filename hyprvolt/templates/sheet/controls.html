@@ -20,6 +20,23 @@
 {%- endmacro %}
 {% macro described(id, help) %}id="{{ id }}"{% if help %} aria-describedby="{{ id }}-help"{% endif %}{% endmacro %}
 
+{# A field shown only while another has a value (Field.shown_when): the name
+   of the one it follows and the value, for app.js ([data-when]), and hidden
+   now if it doesn't have it (item.hidden). #}
+{% macro when(item, prefix='f.') -%}
+{%- set f = item.field -%}
+{%- if f.shown_when %} data-when="{{ prefix }}{{ f.shown_when[0] }}" data-when-is="{{ when_value(f.shown_when[1]) }}"{% if item.hidden %} hidden{% endif %}{% endif -%}
+{%- endmacro %}
+
+{# A yes or no that reads as its two states (Field.switch): Dynamic, Static. #}
+{% macro switch(name, on, labels, attrs='', disabled=false) %}
+<label class="switch switch--text">
+  <input type="checkbox" name="{{ name }}" value="1" {{ 'checked' if on }} {{ attrs }}{{ ' disabled' if disabled }}>
+  <span class="switch-track"></span>
+  <span class="switch-off">{{ labels[0] }}</span><span class="switch-on">{{ labels[1] }}</span>
+</label>
+{% endmacro %}
+
 {# A speed (Field kind "speed"): a number and Mb/s or Gb/s, with the value
    in megabits kept in the named, hidden input that is saved (app.js,
    [data-speed]). #}
@@ -40,7 +57,10 @@
 {% set f = item.field %}{% set v = item.value %}{% set id = prefix ~ item.name|replace('.', '-') %}
 {% set extra %}{% if save %} data-save{% endif %}{% if cls %} class="{{ cls }}"{% endif %}{% endset %}
 {% set empty %}{% if save %} placeholder="Not set"{% endif %}{% endset %}
-{% if f.kind == 'boolean' %}
+{% if f.kind == 'boolean' and f.switch %}
+  {% set attrs %}{{ described(id, f.help) }}{{ extra }}{% endset %}
+  {{ switch(item.name, v, f.switch, attrs) }}
+{% elif f.kind == 'boolean' %}
   <input type="checkbox" name="{{ item.name }}" value="1" {{ 'checked' if v }} {{ described(id, f.help) }}{{ extra }}>
 {% elif f.kind == 'longtext' %}
   <textarea name="{{ item.name }}" rows="{{ 2 if save else 4 }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}{{ empty }}>{{ v or '' }}</textarea>
@@ -76,13 +96,13 @@
 
 {% macro input(item) %}
 {% set f = item.field %}{% set id = 'ef-' ~ item.name|replace('.', '-') %}
-{% if f.kind == 'boolean' %}
-  <div class="form-check">
+{% if f.kind == 'boolean' and not f.switch %}
+  <div class="form-check"{{ when(item) }}>
     <label class="check">{{ control(item) }}<span>{{ f.label }}</span></label>
     {%- if f.help %}{{ tip(id, f.label, f.help) }}{% endif %}
   </div>
 {% else %}
-<div class="field {{ 'form-wide' if f.kind in ('longtext', 'markdown') }}">
+<div class="field {{ 'form-wide' if f.kind in ('longtext', 'markdown') }}"{{ when(item) }}>
   {{ head(id, f.label ~ (' (' ~ f.unit ~ ')' if f.unit else ''), f.help, f.required) }}
   {{ control(item) }}
 </div>

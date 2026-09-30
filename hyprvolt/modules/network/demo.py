@@ -10,7 +10,8 @@ from . import dns, ports
 def seed(demo):
     home = demo.add("network", "Home LAN", key="home-lan", location="home", kind="lan")
     demo.add("network", "Internet", key="wan", location="home", kind="wan", circuit_id="SC-88213-HFC",
-             public_ips="203.0.113.24", download=1000, upload=40,
+             download=1000, upload=40, static_ip=True, public_ips="203.0.113.26",
+             netmask="255.255.255.248", gateway="203.0.113.25", dns_servers="203.0.113.53, 203.0.113.54",
              notes="The modem is in bridge mode; edge-fw holds the public address.")
     vlans = {}
     for vid, name, cidr, extra in (
@@ -97,8 +98,8 @@ def seed(demo):
                    dns_provider="Cloudflare", expires=today + timedelta(days=50), auto_renew=False,
                    nameservers="ada.ns.cloudflare.com\nbob.ns.cloudflare.com",
                    notes="Auto-renew is off since the card on file expired. Renew by hand.")
-    for name, rtype, value, extra in (("@", "A", "203.0.113.24", {}), ("www", "CNAME", "example.net", {}),
-                                      ("vpn", "A", "203.0.113.24", {}),
+    for name, rtype, value, extra in (("@", "A", "203.0.113.26", {}), ("www", "CNAME", "example.net", {}),
+                                      ("vpn", "A", "203.0.113.26", {}),
                                       ("@", "MX", "mx.mailhost.example", {"priority": 10}),
                                       ("@", "TXT", "v=spf1 mx -all", {})):
         dns.add_record(net, {"name": name, "type": rtype, "value": value, **extra})

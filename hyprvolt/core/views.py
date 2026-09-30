@@ -94,7 +94,9 @@ def overview_tab(entity: Entity) -> str:
     edit = edit_items(entity, etype) if editable else {}
     controls = edit.get("fields", []) + edit.get("custom", [])
     groups, prose, custom = [], [], []
-    for n, (f, value) in enumerate(records.field_values(entity)):
+    values = records.field_values(entity)
+    unshown = F.hidden_keys(etype.fields, {f.key: v for f, v in values[:n_own]}) if etype else set()
+    for n, (f, value) in enumerate(values):
         is_custom = n >= n_own
         control = controls[n] if n < len(controls) else None
         if f.kind == "markdown":
@@ -106,6 +108,8 @@ def overview_tab(entity: Entity) -> str:
         if is_custom:
             custom.append(item)
             continue
+        if not editable and f.key in unshown:
+            continue          # shown only while another field has a value it hasn't
         if not groups or groups[-1]["label"] != f.group:
             groups.append({"label": f.group, "items": []})
         groups[-1]["items"].append(item)
@@ -326,6 +330,10 @@ def edit_items(entity, etype, retyping: bool = False) -> dict:
         f = F.custom_field(cf)
         custom.append({"field": f, "name": "c." + cf.key, "value": F.from_text(f, values.get(cf.id, "")),
                        "choices": None})
+    # A field that follows another's value (shown_when) starts hidden unless it has it.
+    gone = F.hidden_keys(etype.fields, {item["field"].key: item["value"] for item in fields})
+    for item in fields:
+        item["hidden"] = item["field"].key in gone
     # A choice can hide another module's section: a tower has no rack position.
     hidden = {k for item in fields if item["value"] in item["field"].hides_when for k in item["field"].hides}
     sections = [{"section": s, "html": Markup(s.render(etype, entity)), "hidden": s.key in hidden}

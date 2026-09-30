@@ -1218,6 +1218,26 @@
     box.querySelector("input[name]").dispatchEvent(new Event("change", { bubbles: true }));
   });
 
+  // A field shown only while another has a value ([data-when] names that
+  // one, [data-when-is] the value: "1" for a switch that is on), in a form,
+  // a guide row or an editor's Overview. One that follows a field hidden
+  // itself is hidden too; the server drew them as they start.
+  function applyWhen(scope) {
+    scope.querySelectorAll("[data-when]").forEach(function (el) {
+      var ctl = scope.querySelector('[name="' + CSS.escape(el.getAttribute("data-when")) + '"]');
+      if (!ctl) return;
+      var holder = ctl.closest("[data-when]");
+      var value = ctl.type === "checkbox" ? (ctl.checked ? "1" : "0") : ctl.value;
+      el.hidden = !!(holder && holder.hidden) || value !== el.getAttribute("data-when-is");
+    });
+  }
+  document.addEventListener("change", function (e) {
+    var el = e.target;
+    if (!el.name || !el.closest) return;
+    var scope = el.closest("[data-row], [data-row-new], form, [data-autosave]");
+    if (scope && scope.querySelector("[data-when]")) applyWhen(scope);
+  });
+
   // A choice that is a page: the site setup guide's choice of site.
   document.addEventListener("change", function (e) {
     var select = e.target.closest && e.target.closest("select[data-go]");
@@ -1282,14 +1302,24 @@
     });
     return rowAdding;
   }
+  // One save after another, so a check across fields (a gateway inside the
+  // address's network) sees the ones saved just before it.
+  var rowSaves = Promise.resolve();
   document.addEventListener("change", function (e) {
     var el = e.target, row = el.closest && el.closest("[data-row]");
     if (!row || !rowsOf(row) || !el.name) return;
     rowError(row, null);
     el.removeAttribute("aria-invalid");
     row.classList.add("is-saving");
-    api(row.getAttribute("data-update"), { name: el.name, value: rowValue(el) }).then(function () {
+    var body = { name: el.name, value: rowValue(el) };
+    var saving = rowSaves.then(function () { return api(row.getAttribute("data-update"), body); });
+    rowSaves = saving.catch(function () {});
+    saving.then(function (data) {
       row.classList.remove("is-saving");
+      // What was kept, as the server wrote it, unless the field is being typed in.
+      if (data && data.value !== undefined && data.value !== null && el.type === "text" && document.activeElement !== el) {
+        el.value = data.value;
+      }
       if (el.name === "name") row.setAttribute("data-name", el.value.trim());
       // Another kind can have other fields (a printer has no Used by).
       if (el.name === "_kind") redrawRows(rowsOf(row));

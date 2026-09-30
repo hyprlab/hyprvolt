@@ -3,7 +3,7 @@ the addresses section and tab on other records, the subnet view, ports and
 cables with tracing, DNS records, search, filters and roles."""
 from datetime import date, timedelta
 
-from .conftest import make
+from .conftest import make, section
 
 
 def post(client, h, url, status=200, **body):
@@ -380,6 +380,46 @@ def test_an_internet_connection_has_a_download_and_upload_speed(client, h, admin
         assert client.get(f"/api/entities/{wan['id']}").get_json()["entity"]["fields"]["download"] == mbps, raw
     bad = client.post(f"/api/entities/{wan['id']}", json={"f.upload": "fast"}, headers=h)
     assert bad.status_code == 400 and "940 Mb/s or 1 Gb/s" in bad.get_json()["error"]
+
+
+def test_a_static_line_has_its_address_mask_gateway_and_dns(client, h, admin, viewer):
+    wan = make(client, h, "network", name="Fiber", **{"f.kind": "wan", "f.static_ip": True,
+                                                        "f.public_ips": "203.0.113.26", "f.netmask": "/29",
+                                                        "f.gateway": "203.0.113.25", "f.dns_servers": "203.0.113.53"})
+    assert wan["fields"]["netmask"] == "255.255.255.248"
+    bad = client.post(f"/api/entities/{wan['id']}", json={"f.gateway": "203.0.113.1"}, headers=h)
+    assert bad.status_code == 400 and "outside 203.0.113.24/29" in bad.get_json()["error"]
+    assert "255.255.255.248, or /29" in client.post(f"/api/entities/{wan['id']}", json={"f.netmask": "255.0.255.0"},
+                                                    headers=h).get_json()["error"]
+    # The editor's switch, and the static fields that follow it.
+    sheet = client.get(f"/e/{wan['id']}/sheet").data.decode()
+    assert '<span class="switch-off">Dynamic</span><span class="switch-on">Static</span>' in sheet
+    assert 'data-when="f.static_ip" data-when-is="1">' in sheet          # shown: the line is static
+    # Dynamic: a viewer sees Dynamic and none of the static fields.
+    client.post(f"/api/entities/{wan['id']}", json={"f.static_ip": False}, headers=h)
+    other, _ = viewer
+    seen = section(other.get(f"/e/{wan['id']}/sheet").data.decode(), "overview")
+    assert "Dynamic" in seen and "Subnet mask" not in seen and "203.0.113.26" not in seen
+    assert 'data-when="f.static_ip" data-when-is="1" hidden' in client.get(f"/e/{wan['id']}/sheet").data.decode()
+    # A local network has none of an internet connection's fields.
+    lan = make(client, h, "network", name="Home LAN", **{"f.kind": "lan"})
+    seen = section(other.get(f"/e/{lan['id']}/sheet").data.decode(), "overview")
+    assert "Download" not in seen and "Circuit ID" not in seen and "IP address" not in seen
+
+
+def test_a_line_with_addresses_becomes_static(app, client, h, admin):
+    from hyprvolt.migrate import Migrator
+    from hyprvolt.models import db
+    from hyprvolt.modules.network import _static_ip
+    old = make(client, h, "network", name="Old line", **{"f.kind": "wan", "f.public_ips": "198.51.100.7"})
+    bare = make(client, h, "network", name="Bare", **{"f.kind": "wan"})
+    with app.app_context():
+        db.session.execute(db.text("UPDATE network_details SET static_ip = NULL"))
+        db.session.execute(db.text("DELETE FROM settings WHERE key = 'migration:network:static-ip'"))
+        db.session.commit()
+        _static_ip(Migrator("network"))
+    get = lambda e: client.get(f"/api/entities/{e['id']}").get_json()["entity"]["fields"]["static_ip"]
+    assert get(old) is True and not get(bare)
 
 
 def test_bandwidth_text_becomes_speeds_or_notes(app, client, h, admin):
