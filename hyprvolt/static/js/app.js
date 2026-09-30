@@ -1340,6 +1340,14 @@
     if (fresh && rowsOf(fresh)) { e.preventDefault(); addRow(fresh); }
     else if (saved && rowsOf(saved)) { e.preventDefault(); el.blur(); }
   });
+  // A row's form is never sent: Enter adds the blank row, and a field saves itself.
+  document.addEventListener("submit", function (e) {
+    var form = e.target.closest && e.target.closest("form[data-row-form]");
+    if (!form) return;
+    e.preventDefault();
+    var fresh = form.querySelector("[data-row-new]");
+    if (fresh) addRow(fresh);
+  });
   document.addEventListener("focusout", function (e) {
     var row = e.target.closest && e.target.closest("[data-row-new]");
     if (!row || !rowsOf(row) || !row.querySelector('[name="name"]')) return;

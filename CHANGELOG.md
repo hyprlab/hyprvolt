@@ -21,6 +21,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- The chosen option of a segmented control (Dynamic or Static, a theme, a user's role, List or Diagram) is shown in the yellow accent
 - An internet connection's Bandwidth is now a Download and an Upload speed, each a number with Mb/s or Gb/s chosen beside it. Bandwidth already typed is read into them, and text that can't be read is kept at the end of the connection's notes
 - Phone numbers are kept as typed and no longer checked, so a vanity number such as 1-833-VERIZON or a note saves. One that can be dialed is still a link, its letters dialed as their keypad digits
 - A new app icon: the server unit now shades from light to dark, and the bolt from yellow to orange. It is the mark on every page, the browser tab's icon and the icon a phone's home screen shows

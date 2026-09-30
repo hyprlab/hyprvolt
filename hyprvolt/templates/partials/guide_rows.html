@@ -48,7 +48,10 @@
 {% endmacro %}
 <div class="guide-rows" data-rows data-rows-url="{{ url_for('guide.rows_part', key=step.key, **site) }}"
      data-create="{{ url_for('guide.row_create', key=step.key, **site) }}">
+  {# Each row its own form, so a choice of radios (Dynamic or Static) is its
+     own in every row, not one across the page. #}
   {% for r in rows %}
+  <form class="guide-row-form" data-row-form novalidate>
   <fieldset class="guide-row" data-row data-name="{{ r.label }}"
             data-update="{{ url_for('guide.row_update', key=step.key, row_id=r.id, **site) }}"
             data-delete="{{ url_for('guide.row_delete', key=step.key, row_id=r.id, **site) }}">
@@ -60,13 +63,16 @@
     </button>
     <p class="form-error guide-row-error" role="alert" hidden></p>
   </fieldset>
+  </form>
   {% endfor %}
   {% if new %}
+  <form class="guide-row-form" data-row-form novalidate>
   <fieldset class="guide-row guide-row--new" data-row-new>
     <legend class="visually-hidden">A new one</legend>
     {{ row_fields(none) }}
     <button type="button" class="btn btn--ghost guide-add-row" data-row-add>Add</button>
     <p class="form-error guide-row-error" role="alert" hidden></p>
   </fieldset>
+  </form>
   {% endif %}
 </div>

@@ -119,7 +119,10 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     change(client, h, "internet", wan["id"], "f.static_ip", True, site["id"])
     change(client, h, "internet", wan["id"], "f.public_ips", "203.0.113.26", site["id"])
     assert change(client, h, "internet", wan["id"], "f.netmask", "/29", site["id"])["value"] == "255.255.255.248"
-    saved = client.get(f"/site-setup/internet?site={site['id']}").data.decode().split("data-row-new")[0]
+    page = client.get(f"/site-setup/internet?site={site['id']}").data.decode()
+    # Every row its own form, so each row's Dynamic or Static is its own.
+    assert page.count("data-row-form") == page.count("data-row ") + page.count("data-row-new")
+    saved = page.split("data-row-new")[0]
     assert 'data-when="f.static_ip" data-when-is="1"><span class="field-label">Static IP' in saved
     add(client, h, "subnets", site["id"], **{"name": "LAN", "f.cidr": "10.0.20.0/24", "f.gateway": "10.0.20.1"})
     # The kind of each row: a switch is network gear of the kind switch.

@@ -650,7 +650,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
   font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
   transition: background .15s, color .15s;
 }
-.seg input:checked + span { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+.seg input:checked + span { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-1); }
 .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
 .seg--xs { padding: 2px; }
 .seg--xs span { padding: 3px 8px; font-size: 11.5px; border-radius: 6px; }
@@ -684,7 +684,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .switch input:disabled + .switch-track { opacity: .55; cursor: default; }
 /* A choice between two states (Field.switch), a segmented control: the
    chosen one raised. Beside a field, it is as tall as the field. */
-.seg--choice span { padding: 8px 18px; font-size: 14px; }
+.seg--choice span { padding: 3px 18px; font-size: 14px; }
 .field .seg--choice { align-self: flex-start; }
 .kv-edit .seg--choice span { padding: 5px 14px; }
 .guide-switch { flex: 0 0 auto; }
@@ -1621,6 +1621,7 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 .guide-row > .guide-wide { flex: 2 1 200px; }
 .guide-check { flex: none; padding-bottom: 11px; }
 .guide-remove { flex: none; margin-bottom: 6px; }
+.guide-row-form { display: contents; }
 .guide-row { transition: opacity .15s; }
 .guide-row.is-saving { opacity: .7; }
 .guide-row--new { border-style: dashed; background: transparent; }
@@ -1694,7 +1695,7 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
   font-size: 13px; font-weight: 600; color: var(--muted); transition: background .15s, color .15s;
 }
 .seg--links a:hover { color: var(--ink); }
-.seg--links a.is-active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+.seg--links a.is-active { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-1); }
 
 /* ————— Diagrams: SVG drawn on the server, colored here so both themes work ————— */
 .diagram-scroll { overflow: auto; max-width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
