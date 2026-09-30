@@ -19,6 +19,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - The New button offers every kind of record from every enabled module, on every page, in the sidebar's order. It used to offer only the kinds of the module being viewed
 - An internet connection's ISP is a vendor, chosen in the Supplier section of the network's form with the contract for the line, so the ISP's support number and account number are a click away and the vendor's Supplies tab lists the connection. The Provider text field is gone: what was typed in it is kept at the end of the network's notes. Internet connections have a Circuit ID field instead, and the Network sidebar lists them
 - A tower server has no Rack position section in its form or Overview
+- Deleting a record asks first, in a dialog, and then offers Undo as before
 - Removing a link between two records asks first, in a dialog, and so do detaching a document and taking a record off a maintenance window or change. Undo still follows
 
 ## [1.3.0] — 2026-09-28

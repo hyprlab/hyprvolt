@@ -1644,21 +1644,29 @@
     if (deleteBtn) deleteBtn.addEventListener("click", function () {
       if (!current) return;
       var id = current.id;
-      api("/api/entities/" + id + "/delete").then(function (data) {
-        removeCard(id);
-        if (pos > 0) {
-          // Reached from another record: back to it, and Forward no longer
-          // leads to the one just deleted.
-          forgetForward = true;
-          history.back();
-        } else {
-          closeDialog(sheet, null, true);
-        }
-        // Undo instead of a confirm dialog: the delete only marks the
-        // record, and restoring it brings back the same id and its links.
-        offerUndo("Deleted", data.undo);
-      }).catch(toastError);
+      // Always asked first, in the confirm dialog; Undo still follows.
+      deleteBtn.setAttribute("data-confirm", "Delete " + current.name + "?");
+      deleteBtn.setAttribute("data-confirm-text", "It goes to Recently deleted, where it can be restored until it is purged. Its links come back with it.");
+      deleteBtn.setAttribute("data-confirm-go", "Delete");
+      confirmFirst(deleteBtn, function () { deleteCurrent(id); });
     });
+  }
+
+  function deleteCurrent(id) {
+    api("/api/entities/" + id + "/delete").then(function (data) {
+      removeCard(id);
+      if (pos > 0) {
+        // Reached from another record: back to it, and Forward no longer
+        // leads to the one just deleted.
+        forgetForward = true;
+        history.back();
+      } else {
+        closeDialog(sheet, null, true);
+      }
+      // Undo as well: the delete only marks the record, and restoring
+      // it brings back the same id and its links.
+      offerUndo("Deleted", data.undo);
+    }).catch(toastError);
   }
 
   function copyLink() {

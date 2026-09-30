@@ -130,8 +130,8 @@ Long-form text uses `.prose` at 16.5px and 1.72.
   preference, a deleted record with Undo), not for every click.
 - **Undo instead of "Are you sure?"** for anything recoverable. A confirmation
   dialog is kept for what can't be undone, deleting an account, and for
-  removing a link between records, which always asks first (`data-confirm`)
-  and still offers Undo after.
+  deleting a record or removing a link between records, which always ask
+  first (`data-confirm`) and still offer Undo after.
 - **Edited where it is shown.** An editor changes a record in its Overview,
   one field at a time, saved on leaving the field; there is no Save button.
   A save that fails keeps the value, says why under the field, and holds
