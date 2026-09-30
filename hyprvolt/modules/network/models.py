@@ -1,4 +1,4 @@
-"""Network's tables: one detail table for its five types (a column each type
+"""Network's tables: one detail table for its six types (a column each type
 uses or leaves empty), and three of its own for what is too many to be
 records: the ports on devices, the cables between them, and DNS records;
 and which devices have their ports recorded one by one."""
@@ -32,6 +32,10 @@ class NetworkDetail(EntityDetail, db.Model):
     expires = db.Column(db.Date, index=True)
     auto_renew = db.Column(db.Boolean)
     nameservers = db.Column(db.Text)
+    security = db.Column(db.String(12))        # wireless networks: wpa3, wpa2_wpa3, wpa2, enterprise, open
+    bands = db.Column(db.String(10))           # 2.4, 5, 6, or two or three of them: 2.4_5
+    hidden_ssid = db.Column(db.Boolean)
+    subnet = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)
 
 
 PORT_KINDS = (("rj45", "RJ45"), ("sfp", "SFP"), ("sfp_plus", "SFP+"), ("sfp28", "SFP28"), ("qsfp", "QSFP+"),

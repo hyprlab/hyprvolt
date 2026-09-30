@@ -46,9 +46,15 @@ PORTS = Field("ports", "Ports", "integer", min=0, max=1000, card=True, group="Sp
 FORM_FACTORS = (("rack", "Rack mount"), ("tower", "Tower"), ("mini", "Mini PC"), ("blade", "Blade"),
                 ("sbc", "Single-board computer"), ("other", "Other"))
 NETWORK_KINDS = (("switch", "Switch"), ("router", "Router"), ("modem", "Modem"),
-                 ("patch_panel", "Patch panel"), ("bridge", "Wireless bridge"), ("other", "Other"))
+                 ("patch_panel", "Patch panel"), ("extender", "Wireless extender"), ("bridge", "Wireless bridge"),
+                 ("other", "Other"))
 #: Kinds of network gear with no wireless link to another: all but a bridge.
 NOT_BRIDGES = tuple(v for v, _ in NETWORK_KINDS if v != "bridge") + ("",)
+#: Kinds of network gear that can broadcast wireless networks (Network's
+#: Wireless networks section), as an access point does: a router or an
+#: ISP's gateway with Wi-Fi built in, an extender, a bridge.
+WIRELESS_KINDS = ("modem", "router", "extender", "bridge")
+NOT_WIRELESS = tuple(v for v, _ in NETWORK_KINDS if v not in WIRELESS_KINDS) + ("",)
 
 # ———— Icons, 24×24 stroked paths ————
 
@@ -99,6 +105,9 @@ SETUP_HELP = {
         "A wireless bridge links two places over the air, such as the house and a garage. Add each end as "
         "its own Wireless bridge, with its own location and IP address, and choose the bridge at the other "
         "end as its Other end: the link reads the same from both.",
+        "A wireless extender repeats an access point's signal further out. An access point, an extender, a "
+        "bridge, and a router or modem with Wi-Fi built in each tick the wireless networks it broadcasts, "
+        "from those recorded in the Wireless networks step.",
         "Public addresses belong to the internet connection, not to the device. Computers and storage come "
         "next, and cabling everything together is the last step.",
     ),
@@ -133,7 +142,7 @@ module = Module(
             CPU, CORES, RAM, STORAGE, NICS, POWER, OS)),
         hardware("network_device", "Network device", "Network gear", NETWORK, traits=RACK + HOST, specs=(
             Field("kind", "Kind", "select", options=NETWORK_KINDS, list=True, group="Specs",
-                  hides=("bridge",), hides_when=NOT_BRIDGES),
+                  hides=(("bridge", NOT_BRIDGES), ("wifi", NOT_WIRELESS))),
             PORTS, Field("managed", "Managed", "boolean", group="Specs"), FIRMWARE, POWER)),
         hardware("firewall", "Firewall", "Firewalls", FIREWALL, traits=RACK + HOST, specs=(
             PORTS, FIRMWARE, CPU, RAM, POWER)),
@@ -167,7 +176,7 @@ module = Module(
     setup=(
         SetupStep("gear", "Network gear", "The equipment that ties your network together. Start where the "
                   "internet comes in, with the modem and the router or firewall, then add your switches, access "
-                  "points and patch panels.", 60,
+                  "points, extenders and patch panels.", 60,
                   group="Equipment",
                   help=SETUP_HELP["gear"], plan="network gear",
                   kinds=(SetupKind("Modem", "network_device", {"f.kind": "modem"}),
@@ -175,13 +184,17 @@ module = Module(
                          SetupKind("Firewall", "firewall"),
                          SetupKind("Switch", "network_device", {"f.kind": "switch"}),
                          SetupKind("Access point", "access_point"),
+                         SetupKind("Wireless extender", "network_device", {"f.kind": "extender"}),
                          SetupKind("Wireless bridge", "network_device", {"f.kind": "bridge"}),
                          SetupKind("Patch panel", "network_device", {"f.kind": "patch_panel"})),
                   fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"),
                           SetupField("s.internet.line", "Internet connection",
                                      kinds=("Modem", "Router", "Firewall")),
-                          SetupField("s.bridge.other", "Other end", kinds=("Wireless bridge",)))),
+                          SetupField("s.bridge.other", "Other end", kinds=("Wireless bridge",)),
+                          SetupField("s.wifi.list", "Wireless networks", kind="multi", newline=True,
+                                     kinds=("Modem", "Router", "Access point", "Wireless extender",
+                                            "Wireless bridge")))),
         SetupStep("servers", "Servers and storage", "The machines that run things and keep data: servers, "
                   "NAS boxes, and the UPS that keeps them up.", 70, group="Equipment",
                   help=SETUP_HELP["servers"], plan="servers, storage",

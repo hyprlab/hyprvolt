@@ -55,7 +55,12 @@ class Field:
     shown_when: tuple = ()           # (field key, value): shown only while that field has it:
                                      # ("static_ip", True), the static address of a static line
     hides: tuple = ()                # select: form sections (their keys) hidden while
-    hides_when: tuple = ()           # its value is one of these: a tower has no rack position
+    hides_when: tuple = ()           # its value is one of these: a tower has no rack position;
+                                     # or (key, values) pairs, a section hidden for values of its own
+
+    def hide_rules(self) -> tuple:
+        """Each section it hides, with the values it is hidden for."""
+        return tuple(h if isinstance(h, tuple) else (h, self.hides_when) for h in self.hides)
 
 
 @dataclass(frozen=True)
@@ -152,7 +157,8 @@ class SetupField:
     gives the choices of a step with its own ``save``."""
     name: str
     label: str = ""
-    kind: str = "text"               # text, number or select, where not from a Field
+    kind: str = "text"               # text, number or select, where not from a Field; multi: a
+                                     # section's choice of several, ticked (wireless networks)
     placeholder: str = ""
     types: tuple = ()
     choices: Callable | None = None

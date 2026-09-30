@@ -5,7 +5,7 @@
    deletes a row after asking, each change at once; then this is drawn again
    from data-rows-url. A saved row is folded to one line, its name and what
    it holds (app.js writes that summary), and opens to change it. #}
-{% from "sheet/controls.html" import cidr, iprange, speed, switch %}
+{% from "sheet/controls.html" import cidr, iprange, multi, speed, switch %}
 {% macro choice_options(choices, v) %}
   {%- for c in choices %}
     {%- if c is mapping %}<optgroup label="{{ c.label }}">{{ choice_options(c.options, v) }}</optgroup>
@@ -43,6 +43,10 @@
   {% elif c.kind == 'check' and c.switch %}
   <div class="field guide-switch"{{ follows }}><span class="field-label">{{ c.label }}</span>
     {{ switch(c.name, v, c.switch, disabled=r and c.name in r.absent, label=c.label) }}</div>
+  {% elif c.kind == 'multi' %}
+  <div class="field guide-multi"{{ follows }}><span class="field-label">{{ c.label }}</span>
+    {{ multi(c.name, v, c.choices, label=c.label, disabled=r and c.name in r.absent,
+             empty='None recorded yet: add them in the ' ~ c.label ~ ' step.') }}</div>
   {% elif c.kind == 'check' %}
   <label class="check guide-check"{{ follows }}><input type="checkbox" name="{{ c.name }}" value="1" {{ 'checked' if v }} {{ 'disabled' if r and c.name in r.absent }}><span>{{ c.label }}</span></label>
   {% else %}

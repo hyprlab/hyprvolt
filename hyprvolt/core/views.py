@@ -335,7 +335,7 @@ def edit_items(entity, etype, retyping: bool = False) -> dict:
     for item in fields:
         item["hidden"] = item["field"].key in gone
     # A choice can hide another module's section: a tower has no rack position.
-    hidden = {k for item in fields if (item["value"] or "") in item["field"].hides_when for k in item["field"].hides}
+    hidden = {k for item in fields for k, when in item["field"].hide_rules() if (item["value"] or "") in when}
     sections = [{"section": s, "html": Markup(s.render(etype, entity)), "hidden": s.key in hidden}
                 for s in reg.form_sections(etype)]
     return {"fields": fields, "custom": custom, "sections": sections,

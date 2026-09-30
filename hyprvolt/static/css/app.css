@@ -206,6 +206,9 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 }
 .check { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--muted); cursor: pointer; }
 .check input { accent-color: var(--accent); width: 15px; height: 15px; }
+/* A choice of several, a box each (controls.html, multi). */
+.multi { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; min-height: 40px; }
+.multi .check { color: var(--ink); }
 .hint { font-size: 13px; color: var(--muted); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .form-error { font-size: 13.5px; color: var(--danger); font-weight: 550; }
@@ -1655,6 +1658,7 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 .guide-row.is-collapsed .guide-row-body { display: none; }
 .guide-row:not(.is-collapsed) .guide-row-summary { visibility: hidden; }
 .guide-check { flex: none; padding-bottom: 11px; }
+.guide-row-body > .guide-multi { flex: 1 1 100%; }
 .guide-remove { flex: none; }
 .guide-row-form { display: contents; }
 .guide-row { transition: opacity .15s; }

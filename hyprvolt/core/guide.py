@@ -120,7 +120,7 @@ def _field_choices(fields) -> list[tuple]:
 
 def columns(step, scope) -> list[dict]:
     """What each row asks for: {"name", "label", "kind" (text, number,
-    select, check), "choices", "placeholder", "required", "default"}. A
+    select, multi, check), "choices", "placeholder", "required", "default"}. A
     field none of the step's types has, or a section that doesn't apply to
     them, is left out."""
     reg = registry()
@@ -168,7 +168,7 @@ def columns(step, scope) -> list[dict]:
             if section is None:
                 continue
             if section.choices is not None:
-                col.update(kind="select", choices=section.choices(name))
+                col.update(kind="multi" if sf.kind == "multi" else "select", choices=section.choices(name))
             elif sf.types:
                 col.update(kind="select", choices=_records_of(sf.types))
         elif sf.choices is not None:

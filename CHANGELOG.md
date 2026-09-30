@@ -7,6 +7,8 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- Wireless networks: record each Wi-Fi network with its security, bands, hidden or not, VLAN and subnet, and tick the access points, extenders, bridges and Wi-Fi routers that broadcast it, from either record or from the setup guide, which has a Wireless networks step before Network gear
+- Network gear can be a Wireless extender, also offered in the setup guide's Network gear step
 - Wireless bridges: network gear of the kind Wireless bridge, each end its own record with its own location and IP address, linked to the bridge at the other end from either one (and in the setup guide's Network gear step). The network diagram draws the link as a dotted line, and an internet connection as a thick one
 - An internet connection records the modem, router or firewall it comes in at, from either record or from the setup guide's Network gear step. The device lists the line it brings in, the line depends on the device, and the network diagram draws the line above it. The Network gear step's help explains that a modem in bridge mode has no address on your network
 - An internet connection has a Dynamic or Static choice for its IP address, side by side with the chosen one raised. Static shows the line's static IP, subnet mask, gateway and DNS servers, in its record and in the setup guide; Dynamic hides them. A connection that already had public addresses is marked Static

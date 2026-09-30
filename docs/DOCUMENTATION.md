@@ -152,13 +152,20 @@ firewall the line plugs into (also set from that device's Internet
 connection section, and in the guide's Network gear step): the device then
 brings in the line, the network diagram draws the line above it, and the
 line depends on it. A modem in bridge mode has no address on your network
-and can be left without one; A network device of the kind Wireless
-bridge links two places over the air: each end is its own record, with its
-own location and IP address, and its Wireless link section names the bridge
-at the other end, a link that reads the same from both; the diagram draws it
-as a dotted line. the ISP is a vendor, chosen in its Supplier
+and can be left without one. The ISP is a vendor, chosen in its Supplier
 section, with the contract for the line. The sidebar lists internet
-connections. A domain's DNS records
+connections. A network device of the kind Wireless bridge links two places
+over the air: each end is its own record, with its own location and IP
+address, and its Wireless link section names the bridge at the other end, a
+link that reads the same from both; the diagram draws it as a dotted line.
+A Wireless extender is network gear that repeats an access point's signal.
+A wireless network is one Wi-Fi network name (SSID), with its security,
+bands, whether it is hidden, and the VLAN and subnet it puts devices on;
+its password belongs on its Secrets tab. The gear that broadcasts it (an
+access point, or network gear of the kind Modem, Router, Wireless extender
+or Wireless bridge) is ticked in its Broadcast by section, or the other way
+round in that gear's Wireless networks section; the network depends on the
+gear that broadcasts it. A domain's DNS records
 are written down by hand in its DNS records tab, and an A record or a CNAME
 that leads to a recorded address links to the device holding it. The
 palette finds DNS names and MAC addresses. The sidebar lists addresses with

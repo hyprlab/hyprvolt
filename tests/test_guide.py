@@ -42,7 +42,7 @@ def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
     for group in ("Place", "Network", "Equipment", "What runs", "Endpoints"):
         assert f'<p class="guide-group">{group}</p>' in page
     assert "This guide covers the 5 main categories of a site" in page
-    for plan in ("Site, buildings, rooms, and racks", "Vendors, internet connections, VLANs, and subnets",
+    for plan in ("Site, buildings, rooms, and racks", "Vendors, internet connections, VLANs, subnets, and wireless networks",
                  "Network gear, servers, and storage", "Endpoints and cables"):
         assert f'<span class="guide-plan-steps">{plan}</span>' in page
     # Once something is recorded it is the guide's overview, run again.
@@ -140,7 +140,18 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     switch_row = page.split('data-name="sw1"')[1].split("</fieldset>")[0]
     assert 'data-when="_kind" data-when-is="0 1 2" hidden>' in switch_row
     # A wireless bridge's other end: only in a bridge's row.
-    assert 'data-when="_kind" data-when-is="5" hidden><span class="field-label">Other end' in page.split("data-row-new")[1]
+    assert 'data-when="_kind" data-when-is="6" hidden><span class="field-label">Other end' in page.split("data-row-new")[1]
+    # Wireless networks, then the gear that broadcasts them, ticked in its row.
+    add(client, h, "wifi", site["id"], **{"name": "home", "f.security": "wpa3", "f.bands": "5"})
+    home = entities(client, "wifi")[0]
+    add(client, h, "gear", site["id"], **{"_kind": "4", "name": "ap1", "s.wifi.list": str(home["id"])})
+    ap = entities(client, "access_point")[0]
+    page = client.get(f"/site-setup/gear?site={site['id']}").data.decode()
+    ap_row = page.split('data-name="ap1"')[1].split("</fieldset>")[0]
+    assert f'value="{home["id"]}" data-multi-item checked' in ap_row
+    assert page.split('data-name="sw1"')[1].split("</fieldset>")[0].count("data-multi-item") == 1   # hidden
+    change(client, h, "gear", ap["id"], "s.wifi.list", "", site["id"])
+    assert not client.get(f"/api/entities/{home['id']}/relationships").get_json()["relationships"]
     sw = next(e for e in entities(client, "network_device") if e["name"] == "sw1")
     assert sw["fields"]["kind"] == "switch" and any(e["name"] == "10.0.20.2" for e in entities(client, "ip_address"))
     # A row's kind changed: a router into a firewall, another type.

@@ -1,0 +1,11 @@
+{# A wireless network's Broadcast by section, or the Wireless networks
+   section of the gear that broadcasts them: the other ends ticked, each a
+   link that reads the same from both. #}
+{% from "sheet/controls.html" import multi %}
+<div class="form-grid">
+  <div class="field form-wide">
+    <span class="field-label">{{ label }}</span>
+    {{ multi(name, value, choices, label=label, empty=empty) }}
+    {% if choices %}<span class="hint">{{ hint }}</span>{% endif %}
+  </div>
+</div>

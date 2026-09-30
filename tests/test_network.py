@@ -512,3 +512,37 @@ def test_the_demo_network(client, h, admin):
     servers = client.get("/api/entities?type=subnet&q=10.0.20.0").get_json()["entities"][0]
     got = client.get(f"/network/subnets/{servers['id']}/addresses").get_json()
     assert {"10.0.20.5", "10.0.20.11", "10.0.20.250"} <= {a["address"] for a in got["addresses"]}
+
+
+# ———— Wireless networks ————
+
+def test_wireless_networks_are_broadcast_by_wireless_gear(client, h, admin):
+    vlan = make(client, h, "vlan", name="IoT", **{"f.vid": 30})
+    home = make(client, h, "wifi", name="home", **{"f.security": "wpa2_wpa3", "f.bands": "2.4_5"})
+    iot = make(client, h, "wifi", name="iot", **{"f.security": "wpa2", "f.hidden_ssid": True, "f.vlan": vlan["id"]})
+    assert iot["fields"]["vlan"] == vlan["id"] and iot["fields"]["hidden_ssid"] is True
+    ap = make(client, h, "access_point", name="ap-hall")
+    ext = make(client, h, "network_device", name="ext-garage", **{"f.kind": "extender"})
+    switch = make(client, h, "network_device", name="sw1", **{"f.kind": "switch"})
+    # Ticked on the access point, read the same from the network.
+    client.post(f"/api/entities/{ap['id']}", json={"s.wifi.list": f"{home['id']},{iot['id']}"}, headers=h)
+    rels = client.get(f"/api/entities/{home['id']}/relationships").get_json()["relationships"]
+    assert [r["other"]["name"] for r in rels if r["label"] == "is broadcast by"] == ["ap-hall"]
+    assert any(c["label"] == "Wireless networks" and c["new"] == "home, iot"
+               for e in history(client, ap["id"]) for c in e["changes"])
+    # Ticked on the network: the extender added, the access point kept.
+    client.post(f"/api/entities/{home['id']}", json={"s.broadcast.list": f"{ap['id']},{ext['id']}"}, headers=h)
+    form = client.get(f"/e/{home['id']}/form").data.decode()
+    assert f'value="{ap["id"]},{ext["id"]}"' in form and ">sw1<" not in form
+    # Unticked on the access point: iot is no longer broadcast by it.
+    client.post(f"/api/entities/{ap['id']}", json={"s.wifi.list": str(home["id"])}, headers=h)
+    assert not [r for r in client.get(f"/api/entities/{iot['id']}/relationships").get_json()["relationships"]
+                if r["label"] == "is broadcast by"]
+    # Only wireless gear broadcasts: a switch is refused, and its form hides the section.
+    bad = client.post(f"/api/entities/{home['id']}", json={"s.broadcast.list": str(switch["id"])}, headers=h)
+    assert bad.status_code == 400 and "wireless gear that exists" in bad.get_json()["error"]
+    switch_form = client.get(f"/e/{switch['id']}/form").data.decode()
+    assert '<div data-section="wifi" hidden>' in switch_form and '<div data-section="bridge" hidden>' in switch_form
+    ext_form = client.get(f"/e/{ext['id']}/form").data.decode()
+    assert '<div data-section="wifi">' in ext_form and '<div data-section="bridge" hidden>' in ext_form
+    assert "wifi=switch,patch_panel,other," in ext_form

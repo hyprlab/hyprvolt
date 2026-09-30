@@ -4,7 +4,7 @@ from flask import Blueprint, abort, jsonify, render_template, request
 
 from sqlalchemy.orm import joinedload
 
-from hyprvolt.core import present, records, reminders
+from hyprvolt.core import present, records, relations, reminders
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity, Relationship
 from hyprvolt.models import db
@@ -201,6 +201,141 @@ def internet_save(device, values, user) -> list[dict]:
         records.update(wanted, {"f.comes_in_at": device.id}, user)
     return [{"field": "internet", "label": "Internet connection", "old": current.name if current else "",
              "new": wanted.name if wanted else ""}]
+
+
+# ———— Wireless networks and the gear that broadcasts them ————
+
+#: What can broadcast a wireless network: an access point, and network gear
+#: of a wireless kind (Hardware's WIRELESS_KINDS: an extender, a bridge, a
+#: router with Wi-Fi). The kind's choice hides the section for the others.
+WIRELESS_TYPES = ("access_point", "network_device")
+
+
+def is_wireless_gear(etype) -> bool:
+    return etype.key in WIRELESS_TYPES
+
+
+def is_wifi(etype) -> bool:
+    return etype.key == "wifi"
+
+
+def _wifi_networks() -> list[Entity]:
+    return Entity.live().filter(Entity.type == "wifi").order_by(Entity.name).all()
+
+
+def _wireless_gear() -> list[Entity]:
+    from hyprvolt.modules.hardware import WIRELESS_KINDS
+    wireless = db.session.query(HardwareDetail.entity_id).filter(HardwareDetail.kind.in_(WIRELESS_KINDS))
+    return (Entity.live().filter((Entity.type == "access_point")
+                                 | ((Entity.type == "network_device") & Entity.id.in_(wireless)))
+            .order_by(Entity.name).all())
+
+
+def _other(rel, side) -> int:
+    return rel.target_id if side == "source" else rel.source_id
+
+
+def _broadcasts(entity, side) -> list[Relationship]:
+    """The broadcast_by links of a wireless network (``side`` "source") or
+    of a device that broadcasts networks ("target")."""
+    end = Relationship.source_id if side == "source" else Relationship.target_id
+    return Relationship.query.filter(Relationship.kind == "broadcast_by", end == entity.id).order_by(Relationship.id).all()
+
+
+def _linked(entity, side) -> list[Entity]:
+    found = {}
+    for rel in _broadcasts(entity, side):
+        other = records.live(_other(rel, side))
+        if other is not None:
+            found[other.id] = other
+    return sorted(found.values(), key=lambda e: e.name.lower())
+
+
+def _ids(raw) -> list[int]:
+    items = raw if isinstance(raw, (list, tuple)) else str(raw or "").split(",")
+    out = []
+    for item in (str(i).strip() for i in items):
+        if item and not item.isdigit():
+            raise Invalid("Choose from the list.")
+        if item and int(item) not in out:
+            out.append(int(item))
+    return out
+
+
+def _set_broadcast(entity, raw, side, offered, what, user) -> list[dict] | None:
+    """Make ``entity``'s broadcast links the ones chosen from ``offered``:
+    one no longer chosen is removed, one newly chosen made. The link reads
+    the same from both ends, a network broadcast by a device. None when
+    nothing changed, else the names before and after."""
+    offered = {e.id: e for e in offered}
+    wanted = []
+    for i in _ids(raw):
+        if i not in offered:
+            raise Invalid(f"Choose {what} that exists.")
+        wanted.append(offered[i])
+    current = _linked(entity, side)
+    have, want = {e.id for e in current}, {e.id for e in wanted}
+    if have == want:
+        return None
+    for rel in _broadcasts(entity, side):
+        if _other(rel, side) in have - want:
+            relations.unlink(rel, user)
+    for e in wanted:
+        if e.id not in have:
+            relations.link("broadcast_by", entity if side == "source" else e, e if side == "source" else entity,
+                           user=user)
+    names = lambda es: ", ".join(e.name for e in sorted(es, key=lambda e: e.name.lower()))    # noqa: E731
+    return {"old": names(current), "new": names(wanted)}
+
+
+def _chosen(entity, side) -> str:
+    return ",".join(str(e.id) for e in _linked(entity, side)) if entity is not None else ""
+
+
+def wifi_choices(name) -> list[tuple[int, str]]:
+    return [(e.id, e.name) for e in _wifi_networks()]
+
+
+def wifi_values(device) -> dict:
+    return {"list": _chosen(device, "target")}
+
+
+def wifi_form(etype, device) -> str:
+    return render_template("network/broadcast_form.html", name="s.wifi.list", label="Wireless networks",
+                           choices=wifi_choices("list"), value=_chosen(device, "target"),
+                           hint="The Wi-Fi networks it broadcasts.",
+                           empty="No wireless networks recorded yet: add them under Network, then tick them here.")
+
+
+def wifi_save(device, values, user) -> list[dict]:
+    """The wireless networks a device broadcasts, ticked."""
+    if "list" not in values:
+        return []
+    changed = _set_broadcast(device, values["list"], "target", _wifi_networks(), "a wireless network", user)
+    return [{"field": "wifi", "label": "Wireless networks", **changed}] if changed else []
+
+
+def broadcast_choices(name) -> list[tuple[int, str]]:
+    return [(e.id, e.name) for e in _wireless_gear()]
+
+
+def broadcast_values(wifi) -> dict:
+    return {"list": _chosen(wifi, "source")}
+
+
+def broadcast_form(etype, wifi) -> str:
+    return render_template("network/broadcast_form.html", name="s.broadcast.list", label="Broadcast by",
+                           choices=broadcast_choices("list"), value=_chosen(wifi, "source"),
+                           hint="The access points, extenders, bridges and Wi-Fi routers that broadcast it.",
+                           empty="No access points or other wireless gear recorded yet.")
+
+
+def broadcast_save(wifi, values, user) -> list[dict]:
+    """The gear that broadcasts a wireless network, ticked."""
+    if "list" not in values:
+        return []
+    changed = _set_broadcast(wifi, values["list"], "source", _wireless_gear(), "wireless gear", user)
+    return [{"field": "broadcast", "label": "Broadcast by", **changed}] if changed else []
 
 
 # ———— The site setup guide's cables step ————

@@ -213,7 +213,11 @@ an `ip` with the first host, an `iprange` with the upper half of the subnet.
 A `select` can hide another module's form sections while it has certain
 values: Hardware's form factor has `hides=("rack",)` and
 `hides_when=("tower",)`, so a tower server's form and Overview have no Rack
-position section. What a hidden section holds is left as it is.
+position section. To hide sections for different values, give `hides`
+pairs instead: network gear's kind has `hides=(("bridge", NOT_BRIDGES),
+("wifi", NOT_WIRELESS))`, so only a wireless bridge has the Wireless link
+section and only gear that can broadcast Wi-Fi has Wireless networks.
+What a hidden section holds is left as it is.
 Admins can add fields without code (Settings > Custom fields), of the kinds
 `text`, `number`, `date`, `select`, `url` and `boolean`.
 
@@ -275,6 +279,9 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
 - `SetupField(..., kinds=("Modem", "Router", "Firewall"))` puts a column in
   rows of those kinds only, shown as a row's kind is chosen: the Network
   gear step's Internet connection.
+- `SetupField("s.wifi.list", "Wireless networks", kind="multi")` makes a
+  section's choices (`FormSection.choices(name)`) a box each, several ticked
+  at once, the ids saved joined by commas.
 - `SetupField(..., newline=True)` starts a new line of the row, so what
   belongs together reads together: the internet connection's speeds, then
   its IP address switch, then the static fields.

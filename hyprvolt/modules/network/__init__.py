@@ -1,4 +1,5 @@
-"""Network: networks, VLANs, subnets and IP addresses; the ports on devices
+"""Network: networks, VLANs, subnets and IP addresses, and the wireless
+networks access points and other gear broadcast; the ports on devices
 and the cables between them; domains with the DNS records written down by
 hand.
 
@@ -120,6 +121,21 @@ def _static_ip(m):
         "UPDATE network_details SET static_ip = 1 WHERE public_ips IS NOT NULL AND public_ips != ''")))
 
 
+def _wifi(m):
+    """Wireless networks: their security, bands, and the subnet they hand
+    out addresses in."""
+    m.add_column("network_details", "security", "VARCHAR(12)")
+    m.add_column("network_details", "bands", "VARCHAR(10)")
+    m.add_column("network_details", "hidden_ssid", "BOOLEAN")
+    m.add_column("network_details", "subnet", "INTEGER REFERENCES entities(id) ON DELETE SET NULL")
+    m.add_index("ix_network_details_subnet", "network_details", ["subnet"])
+
+
+WIFI_SECURITY = (("wpa3", "WPA3 Personal"), ("wpa2_wpa3", "WPA2/WPA3 Personal"), ("wpa2", "WPA2 Personal"),
+                 ("enterprise", "Enterprise (802.1X)"), ("open", "Open"))
+WIFI_BANDS = (("2.4", "2.4 GHz"), ("5", "5 GHz"), ("6", "6 GHz"), ("2.4_5", "2.4 and 5 GHz"),
+              ("5_6", "5 and 6 GHz"), ("2.4_5_6", "2.4, 5 and 6 GHz"))
+
 NETWORK_REF = Field("network", "Network", "ref", types=("network",), list=True)
 
 ICON = ('<circle cx="12" cy="5.5" r="2"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/>'
@@ -128,6 +144,8 @@ NETWORK = ICON
 VLAN = '<path d="M4 7h16M4 12h16M4 17h16"/><path d="M8 4.5v5M16 9.5v5M11 14.5v5"/>'
 SUBNET = '<rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M3.5 12h17M12 3.5v17"/>'
 IP = '<path d="M5 6.5h14M5 17.5h14"/><path d="M8.5 9.5v5M11.5 9.5v5h1.8a1.8 1.8 0 0 0 0-3.6h-1.8"/>'
+WIFI = ('<path d="M2.5 9.2a13.5 13.5 0 0 1 19 0M5.6 12.6a9 9 0 0 1 12.8 0M8.7 16a4.6 4.6 0 0 1 6.6 0"/>'
+        '<path d="M12 19.3h.1"/>')
 DOMAIN = ('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.5 5.2 3.5 8.5s-1.1 6.2-3.5 8.5'
           'c-2.4-2.3-3.5-5.2-3.5-8.5s1.1-6.2 3.5-8.5Z"/>')
 
@@ -151,6 +169,13 @@ SETUP_HELP = {
         "addresses are used and which are free.",
         "Public addresses from the ISP belong on the internet connection, not here.",
     ),
+    "wifi": (
+        "A wireless network is one Wi-Fi network name (SSID) your devices join, such as home, iot or guest, "
+        "with its security and bands. Record each one once, even when several access points broadcast it.",
+        "The access points, extenders, bridges and Wi-Fi routers that broadcast it are ticked on each of "
+        "them in the network gear step, next. Choose the VLAN or subnet it puts devices on.",
+        "Its password goes on the record's Secrets tab, where it is encrypted, not here.",
+    ),
     "cables": (
         "A cable connects two devices. A device is cabled as a whole unless its ports are recorded one by one "
         "(Record each port, on its Cabling tab), as a switch or patch panel usually is; then its free ports "
@@ -171,7 +196,7 @@ module = Module(
     requires=("hardware",),
     models=(NetworkDetail, Port, Cable, DnsRecord, PortsRecorded),
     migrations=(Step("provider-to-notes", _provider_to_notes), Step("ports-recorded", _ports_recorded),
-                Step("bandwidth-speeds", _bandwidth_speeds), Step("static-ip", _static_ip)),
+                Step("bandwidth-speeds", _bandwidth_speeds), Step("static-ip", _static_ip), Step("wifi", _wifi)),
     blueprint=views.bp,
     types=(
         EntityType("network", "Network", "Networks", detail=NetworkDetail, located_in=None, icon=NETWORK,
@@ -222,6 +247,14 @@ module = Module(
                            Field("assigned", "Assigned to", "ref", trait="addressable", card=True, list=True),
                            Field("mac", "MAC address", help="aa:bb:cc:dd:ee:ff")),
                    tabs=(Tab("network", "Subnet", views.ip_tab),)),
+        EntityType("wifi", "Wireless network", "Wireless networks", detail=NetworkDetail, located_in=(), icon=WIFI,
+                   fields=(Field("security", "Security", "select", options=WIFI_SECURITY, card=True, list=True),
+                           Field("bands", "Bands", "select", options=WIFI_BANDS, card=True, list=True),
+                           Field("hidden_ssid", "Hidden", "boolean",
+                                 help="Not broadcast by name: a device joins by typing the name in."),
+                           Field("vlan", "VLAN", "ref", types=("vlan",), list=True),
+                           Field("subnet", "Subnet", "ref", types=("subnet",),
+                                 help="Where the devices that join it get their addresses."))),
         EntityType("domain", "Domain", "Domains", detail=NetworkDetail, located_in=(), icon=DOMAIN,
                    traits=("domain", "supplied"),
                    statuses=DOMAIN_STATUSES, check=dns.check_domain,
@@ -244,8 +277,13 @@ module = Module(
                                when=addresses.is_addressable, values=addresses.section_values),
                    FormSection("internet", "Internet connection", views.internet_form, views.internet_save,
                                when=views.is_gateway_gear, values=views.internet_values,
-                               choices=views.internet_choices)),
-    relation_kinds=(RelationKind("comes_in_at", "comes in at", "brings in", impact="source"),),
+                               choices=views.internet_choices),
+                   FormSection("wifi", "Wireless networks", views.wifi_form, views.wifi_save,
+                               when=views.is_wireless_gear, values=views.wifi_values, choices=views.wifi_choices),
+                   FormSection("broadcast", "Broadcast by", views.broadcast_form, views.broadcast_save,
+                               when=views.is_wifi, values=views.broadcast_values, choices=views.broadcast_choices)),
+    relation_kinds=(RelationKind("comes_in_at", "comes in at", "brings in", impact="source"),
+                    RelationKind("broadcast_by", "is broadcast by", "broadcasts", impact="source")),
     before_retype=ports.before_retype,
     setup=(
         SetupStep("internet", "Internet connection", "How the site reaches the internet: each line from an "
@@ -272,6 +310,12 @@ module = Module(
                   fields=(SetupField("name", placeholder="Servers"), SetupField("f.cidr", placeholder="10.0.20.0/24"),
                           SetupField("f.gateway", placeholder="10.0.20.1"),
                           SetupField("f.vlan", newline=True), SetupField("f.dhcp_range"))),
+        SetupStep("wifi", "Wireless networks", "The Wi-Fi networks devices join, one row each, with the "
+                  "VLAN or subnet each puts them on. Which gear broadcasts them comes next.", 55, group="Network",
+                  help=SETUP_HELP["wifi"], plan="wireless networks",
+                  kinds=(SetupKind("Wireless network", "wifi"),),
+                  fields=(SetupField("name", "Network name (SSID)", placeholder="home"), SetupField("f.security"),
+                          SetupField("f.bands"), SetupField("f.vlan", newline=True), SetupField("f.subnet"))),
         SetupStep("cables", "Cables", "What plugs into what, from each endpoint back to the switch. A device "
                   "is cabled as a whole; one with its ports recorded offers its free ports.", 110,
                   group="Endpoints",

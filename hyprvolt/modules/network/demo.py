@@ -1,4 +1,5 @@
 """The demo homelab's network: four VLANs and their subnets behind edge-fw,
+two Wi-Fi networks from the office access point,
 the switch's ports, a patch panel between the office and the rack, a desk
 PC and a printer cabled as a whole, and two domains. The devices' addresses come from Hardware's and Virtual's demos,
 through the IP addresses form section."""
@@ -26,6 +27,11 @@ def seed(demo):
         vlans[vid] = vlan
         demo.add("subnet", f"{name} {cidr}", key=f"net-{vid}", cidr=cidr, vlan=vlan, network=home,
                  gateway=cidr.replace("0/24", "1"), **extra)
+    # Two Wi-Fi networks from the office access point: clients, and IoT hidden on its own VLAN.
+    for name, vid, extra in (("hyprlab", 30, {"security": "wpa2_wpa3", "bands": "2.4_5"}),
+                             ("hyprlab-iot", 40, {"security": "wpa2", "bands": "2.4", "hidden_ssid": True})):
+        demo.add("wifi", name, key=f"wifi-{vid}", vlan=vlans[vid], subnet=demo.get(f"net-{vid}"), **extra)
+        demo.link("broadcast_by", f"wifi-{vid}", "ap-office")
     demo.add("ip_address", "10.0.20.250", status="reserved", address="10.0.20.250",
              notes="Held for a floating address when the cluster gets a third node.")
 

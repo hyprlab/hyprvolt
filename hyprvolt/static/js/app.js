@@ -881,10 +881,12 @@
 
   // A choice that hides form sections, in the form and in an editor's
   // Overview: a server made a tower loses its rack position section.
+  // data-hides: "section=value,value" rules, each section hidden while the
+  // choice is one of its values (an empty one: none chosen).
   function showSections(select) {
     var root = select.closest("form, [data-autosave]") || document;
-    var hide = select.getAttribute("data-hides-when").split(" ").indexOf(select.value) !== -1;
-    select.getAttribute("data-hides").split(" ").forEach(function (key) {
+    select.getAttribute("data-hides").split(" ").forEach(function (rule) {
+      var key = rule.split("=")[0], hide = rule.slice(key.length + 1).split(",").indexOf(select.value) !== -1;
       root.querySelectorAll('[data-section="' + key + '"]').forEach(function (s) { s.hidden = hide; });
     });
   }
@@ -1262,6 +1264,19 @@
     box.querySelector("input[name]").dispatchEvent(new Event("change", { bubbles: true }));
   });
 
+  // A choice of several ([data-multi]): the values of the boxes ticked,
+  // joined by commas, go in the named, hidden input, and a change reaches
+  // whoever saves it as a change of that input.
+  document.addEventListener("change", function (e) {
+    var box = e.target.closest && e.target.closest("[data-multi]");
+    if (!box || !e.target.hasAttribute("data-multi-item")) return;
+    var input = box.querySelector("input[name]");
+    input.value = Array.prototype.filter.call(box.querySelectorAll("[data-multi-item]"), function (c) {
+      return c.checked;
+    }).map(function (c) { return c.value; }).join(",");
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
   // A subnet that fills in others ([data-prefills]: a gateway, a DHCP
   // range): once it is typed, the first host becomes the gateway and the
   // upper half of it the DHCP range, leaving the lower half for fixed
@@ -1344,6 +1359,12 @@
     if (joined) {
       var v = joined.querySelector("input[name]").value;
       return joined.getAttribute("data-join") === "-" ? v.replace("-", " to ") : v;
+    }
+    var multi = item.querySelector("[data-multi]");
+    if (multi) {
+      return Array.prototype.filter.call(multi.querySelectorAll("[data-multi-item]"), function (c) {
+        return c.checked;
+      }).map(function (c) { return c.parentNode.textContent.trim(); }).join(", ");
     }
     var chosen = item.querySelector('input[type="radio"]:checked');
     if (chosen) return chosen.parentNode.textContent.trim();
