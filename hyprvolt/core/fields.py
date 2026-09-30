@@ -18,6 +18,9 @@ URL_RE = re.compile(r"^([a-z][a-z0-9+.-]*)://\S+$", re.I)
 DIALABLE_RE = re.compile(r"^\+?[0-9A-Za-z ().\-/]{3,40}$")
 KEYPAD = {c: str(n) for n, letters in ((2, "abc"), (3, "def"), (4, "ghi"), (5, "jkl"), (6, "mno"),
                                        (7, "pqrs"), (8, "tuv"), (9, "wxyz")) for c in letters}
+#: A speed as written: "1 Gb/s", "940 Mbps", "2.5 gbit", or a bare number of
+#: megabits. Stored as whole megabits per second.
+SPEED_RE = re.compile(r"^(\d+(?:[.,]\d+)?)\s*(?:(g|m|k)(?:b(?:it)?(?:ps|/s|s)?|bps|bit/s)?)?$", re.I)
 TRUE = ("1", "true", "on", "yes")
 FALSE = ("", "0", "false", "off", "no")
 MAX_TEXT = 500
@@ -95,6 +98,9 @@ def parse(f: Field, raw, lookup=None):
                           else f"{f.label} must be at most {_num(high)}.")
         return value
 
+    if kind == "speed":
+        return _parse_speed(f, raw)
+
     if kind == "datetime":
         return _parse_datetime(f, raw)
 
@@ -169,6 +175,36 @@ def ref_allows(f: Field, type_key: str) -> bool:
     return False
 
 
+def _parse_speed(f: Field, raw) -> int:
+    if isinstance(raw, bool):
+        raise Invalid(f"{f.label} must be a speed, such as 940 Mb/s or 1 Gb/s.")
+    if isinstance(raw, (int, float)):
+        value, unit = float(raw), "m"
+    else:
+        m = SPEED_RE.match(str(raw).strip())
+        if not m:
+            raise Invalid(f"{f.label} must be a speed, such as 940 Mb/s or 1 Gb/s.")
+        number = m.group(1)
+        # 1,500 is fifteen hundred; 1,5 is one and a half.
+        number = number.replace(",", "") if re.fullmatch(r"\d{1,3},\d{3}", number) else number.replace(",", ".")
+        value, unit = float(number), (m.group(2) or "m").lower()
+    mbps = value * {"g": 1000, "m": 1, "k": 0.001}[unit]
+    if mbps < 0 or mbps > 10_000_000:
+        raise Invalid(f"{f.label} must be between 0 and 10,000 Gb/s.")
+    return max(round(mbps), 1) if mbps > 0 else 0
+
+
+def speed_parts(value) -> tuple[str, str]:
+    """(number, unit) as the speed control shows it: Gb/s for whole tenths
+    of a gigabit, Mb/s for anything else."""
+    if value in (None, ""):
+        return "", "m"
+    value = int(value)
+    if value >= 1000 and value % 100 == 0:
+        return _num(value / 1000), "g"
+    return str(value), "m"
+
+
 def _num(value) -> str:
     return str(int(value)) if float(value).is_integer() else str(value)
 
@@ -189,6 +225,9 @@ def display(f: Field, value, lookup=None) -> str:
         return clock.shown(value)
     if f.kind == "date":
         return value.isoformat() if isinstance(value, date) else str(value)
+    if f.kind == "speed":
+        number, unit = speed_parts(value)
+        return f"{number} {'Gb/s' if unit == 'g' else 'Mb/s'}"
     if f.kind == "number":
         text = f"{value:,.2f}".rstrip("0").rstrip(".") if isinstance(value, float) else str(value)
     elif f.kind == "integer":
@@ -222,7 +261,7 @@ def from_text(f: Field, text: str):
             return text == "1"
         if f.kind == "number":
             return float(text)
-        if f.kind == "integer":
+        if f.kind in ("integer", "speed"):
             return int(text)
         if f.kind == "date":
             return date.fromisoformat(text)

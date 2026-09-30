@@ -179,6 +179,11 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .infotip-pop--wide p + p { margin-top: 8px; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-3px); } }
 .form-check { display: flex; align-items: center; gap: 5px; }
+/* A speed: its number and, beside it, Mb/s or Gb/s. */
+.speed { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.speed input[type="number"] { flex: 1 1 auto; min-width: 0; }
+.field .speed select, .speed select { flex: none; width: auto; }
+.kv-edit .speed input[type="number"] { flex: 0 1 96px; }
 .field input, .field textarea, .field select {
   width: 100%; padding: 10px 12px;
   font: inherit; color: var(--ink);

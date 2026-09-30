@@ -102,7 +102,8 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     rack = entities(client, "rack")[0]
     assert rack["fields"]["height_u"] == 24 and rack["fields"]["numbering"] == "bottom"
     add(client, h, "internet", site["id"],
-        **{"name": "Fiber", "location_id": site["id"], "s.supplier.vendor_id": isp["id"], "f.bandwidth": "1 Gb/s"})
+        **{"name": "Fiber", "location_id": site["id"], "s.supplier.vendor_id": isp["id"], "f.download": "1000",
+           "f.upload": "40"})
     wan = entities(client, "network")[0]
     assert wan["fields"]["kind"] == "wan"
     page = client.get(f"/site-setup/internet?site={site['id']}").data.decode()

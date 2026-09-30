@@ -368,6 +368,46 @@ def test_a_typed_provider_moves_to_the_notes(app, client, h, admin):
     assert notes == {"Internet": "Bridge mode.\n\nProvider: Springfield Cable", "Backup line": "Provider: LTE Co"}
 
 
+def test_an_internet_connection_has_a_download_and_upload_speed(client, h, admin):
+    wan = make(client, h, "network", name="Fiber", **{"f.kind": "wan", "f.download": "1 Gb/s", "f.upload": "40 Mbps"})
+    assert (wan["fields"]["download"], wan["fields"]["upload"]) == (1000, 40)
+    sheet = client.get(f"/e/{wan['id']}/sheet").data.decode()
+    assert "1 Gb/s" in sheet and "40 Mb/s" in sheet
+    # The control: the number and its unit, the megabits in the saved input.
+    assert 'name="f.download" value="1000"' in sheet and '<option value="g" selected>Gb/s</option>' in sheet
+    for raw, mbps in (("2.5 Gb/s", 2500), ("1,500 Mb/s", 1500), ("940", 940), (300, 300)):
+        client.post(f"/api/entities/{wan['id']}", json={"f.download": raw}, headers=h)
+        assert client.get(f"/api/entities/{wan['id']}").get_json()["entity"]["fields"]["download"] == mbps, raw
+    bad = client.post(f"/api/entities/{wan['id']}", json={"f.upload": "fast"}, headers=h)
+    assert bad.status_code == 400 and "940 Mb/s or 1 Gb/s" in bad.get_json()["error"]
+
+
+def test_bandwidth_text_becomes_speeds_or_notes(app, client, h, admin):
+    from hyprvolt.migrate import Migrator
+    from hyprvolt.models import db
+    from hyprvolt.modules.network import _bandwidth_speeds
+    lines = {"Fiber": "1 Gb/s down, 40 Mb/s up", "Cable": "940/40 Mbps", "LTE": "fast when it works",
+             "Office": "500 Mb/s fiber, static IP"}
+    made = {n: make(client, h, "network", name=n, **{"f.kind": "wan"}) for n in lines}
+    with app.app_context():
+        for n, text in lines.items():
+            db.session.execute(db.text("UPDATE network_details SET bandwidth = :t WHERE entity_id = :i"),
+                               {"t": text, "i": made[n]["id"]})
+        # As on an install from before: the step not yet run.
+        db.session.execute(db.text("DELETE FROM settings WHERE key = 'migration:network:bandwidth-speeds'"))
+        db.session.commit()
+        for _ in range(2):
+            _bandwidth_speeds(Migrator("network"))
+    got = {n: client.get(f"/api/entities/{made[n]['id']}").get_json()["entity"] for n in lines}
+    speeds = {n: (e["fields"]["download"], e["fields"]["upload"]) for n, e in got.items()}
+    assert speeds == {"Fiber": (1000, 40), "Cable": (940, 40), "LTE": (None, None), "Office": (500, None)}
+    with app.app_context():
+        from hyprvolt.core.models import Entity
+        notes = {e.name: e.notes for e in Entity.query.filter_by(type="network")}
+    assert notes == {"Fiber": "", "Cable": "", "LTE": "Bandwidth: fast when it works",
+                     "Office": "Bandwidth: 500 Mb/s fiber, static IP"}
+
+
 def test_network_off_hides_its_parts_on_other_records(client, h, admin):
     server = make(client, h, "server", name="srv1")
     client.post("/admin/modules/network", json={"enabled": False}, headers=h)

@@ -136,7 +136,8 @@ for a path to go through it. Turning it off again keeps the ports, out of
 sight. A cabled port's path can be traced to the far end through patch
 panels. An internet connection
 is a network of the kind Internet connection, with its public addresses,
-bandwidth and circuit ID; the ISP is a vendor, chosen in its Supplier
+download and upload speeds (each a number with Mb/s or Gb/s chosen beside
+it) and circuit ID; the ISP is a vendor, chosen in its Supplier
 section, with the contract for the line. The sidebar lists internet
 connections. A domain's DNS records
 are written down by hand in its DNS records tab, and an A record or a CNAME

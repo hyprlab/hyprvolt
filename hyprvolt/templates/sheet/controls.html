@@ -20,6 +20,22 @@
 {%- endmacro %}
 {% macro described(id, help) %}id="{{ id }}"{% if help %} aria-describedby="{{ id }}-help"{% endif %}{% endmacro %}
 
+{# A speed (Field kind "speed"): a number and Mb/s or Gb/s, with the value
+   in megabits kept in the named, hidden input that is saved (app.js,
+   [data-speed]). #}
+{% macro speed(name, value, id='', help='', label='', save=false, cls='', disabled=false) %}
+{% set parts = speed_parts(value) %}
+<span class="speed" data-speed>
+  <input type="number" min="0" step="any" value="{{ parts[0] }}" {% if id %}{{ described(id, help) }}{% else %}aria-label="{{ label }}"{% endif %}
+         {%- if cls %} class="{{ cls }}"{% endif %}{{ ' disabled placeholder=—' if disabled }}>
+  <select aria-label="{{ label }}: unit"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
+    <option value="m" {{ 'selected' if parts[1] == 'm' }}>Mb/s</option>
+    <option value="g" {{ 'selected' if parts[1] == 'g' }}>Gb/s</option>
+  </select>
+  <input type="text" hidden name="{{ name }}" value="{{ value if value is not none else '' }}"{{ ' data-save' if save }}{{ ' disabled' if disabled }}>
+</span>
+{% endmacro %}
+
 {% macro control(item, save=false, cls='', prefix='ef-') %}
 {% set f = item.field %}{% set v = item.value %}{% set id = prefix ~ item.name|replace('.', '-') %}
 {% set extra %}{% if save %} data-save{% endif %}{% if cls %} class="{{ cls }}"{% endif %}{% endset %}
@@ -41,6 +57,8 @@
     <option value="" data-none>Not set</option>
     {% for rid, label in item.choices %}<option value="{{ rid }}" {{ 'selected' if v == rid }}>{{ label }}</option>{% endfor %}
   </select>
+{% elif f.kind == 'speed' %}
+  {{ speed(item.name, v, id, f.help, f.label, save, cls) }}
 {% elif f.kind in ('integer', 'number') %}
   <input type="number" name="{{ item.name }}" value="{{ v if v is not none else '' }}" step="{{ '1' if f.kind == 'integer' else 'any' }}" {{ described(id, f.help) }}
          {% if f.min is not none %}min="{{ f.min }}"{% endif %} {% if f.max is not none %}max="{{ f.max }}"{% endif %} {{ 'required' if f.required }}{{ extra }}{{ empty }}>

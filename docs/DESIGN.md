@@ -65,6 +65,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.link`, `.mono`, `.avatar` | A link in running text, underlined in the accent on hover; monospaced text (keys, compose files); a user's initial in a circle |
 | `.seg`, `.seg--xs` | Segmented control over radio inputs; `--xs` inside a list row (a user's role) |
 | `.guide-body`, `.guide-top` (sticky, the brand always in sight), `.guide`, `.guide-next`, `.guide-tree`, `.tree`, `.tree-row`, `.tree-handle`, `.guide-rail`, `.guide-step`, `.guide-row`, `.guide-nav` | The site setup guide, on a page of its own (`guide.html`: the brand and Exit setup, no shell): its steps down the side (the one being done marked as the settings rail marks its section), a step's rows as panels of fields, and Back and Skip on the left, the step's saves on the right |
+| `.speed` | A speed: its number and, beside it, Mb/s or Gb/s (`[data-speed]` keeps the megabits in the input that is saved) |
 | `.switch`, `.switch-track` | An on/off switch over a checkbox, for something that takes effect at once (a module) |
 | `.theme-picker`, `.theme-chip` | Chip-style radio group |
 | `.chip`, `.chip--muted`, `.count`, `.count--alert`, `.title-chip` | Small labels and counters. `--alert` is a count that needs attention (conflicts); a `.title-chip` link clears a filter |

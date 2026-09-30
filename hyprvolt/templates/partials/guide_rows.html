@@ -4,6 +4,7 @@
    row once it has a name (Enter, the Add button, or leaving the row), and
    deletes a row after asking, each change at once; then this is drawn again
    from data-rows-url. #}
+{% from "sheet/controls.html" import speed %}
 {% macro choice_options(choices, v) %}
   {%- for c in choices %}
     {%- if c is mapping %}<optgroup label="{{ c.label }}">{{ choice_options(c.options, v) }}</optgroup>
@@ -11,7 +12,9 @@
   {%- endfor %}
 {%- endmacro %}
 {% macro control(c, v, off=false, fresh=false) %}
-  {% if c.kind == 'select' %}
+  {% if c.kind == 'speed' %}
+  {{ speed(c.name, v if v != '' else none, label=c.label, disabled=off) }}
+  {% elif c.kind == 'select' %}
   <select name="{{ c.name }}" {{ 'disabled' if off }}>
     {% if not c.required %}<option value="">{{ '—' if off else 'Not set' }}</option>{% endif %}
     {% if not off %}{{ choice_options(c.choices, v) }}{% endif %}

@@ -10,7 +10,7 @@ from . import dns, ports
 def seed(demo):
     home = demo.add("network", "Home LAN", key="home-lan", location="home", kind="lan")
     demo.add("network", "Internet", key="wan", location="home", kind="wan", circuit_id="SC-88213-HFC",
-             public_ips="203.0.113.24", bandwidth="1 Gb/s down, 40 Mb/s up",
+             public_ips="203.0.113.24", download=1000, upload=40,
              notes="The modem is in bridge mode; edge-fw holds the public address.")
     vlans = {}
     for vid, name, cidr, extra in (

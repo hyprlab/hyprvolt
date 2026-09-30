@@ -52,6 +52,59 @@ def _ports_recorded(m):
         "INSERT OR IGNORE INTO network_ports_recorded (device_id) SELECT DISTINCT device_id FROM network_ports")))
 
 
+SPEED_IN_TEXT = r"(\d+(?:[.,]\d+)?)\s*(g|m)?(?:b(?:it)?(?:ps|/s|s)?)?\s*(down|up|download|upload)?"
+
+
+def _speeds_of(text):
+    """(download, upload, whole) in megabits from text such as "1 Gb/s down,
+    40 Mb/s up" or "940/40 Mbps"; a speed that can't be read for sure is
+    None. ``whole`` is False when the text says more than the speeds."""
+    import re
+    found = [(float(n.replace(",", ".")), (u or "").lower(), (w or "").lower())
+             for n, u, w in re.findall(SPEED_IN_TEXT, text, re.I)]
+    rest = re.sub(SPEED_IN_TEXT, " ", text, flags=re.I)
+    symmetric = bool(re.search(r"symmetric", rest, re.I))
+    rest = re.sub(r"symmetric(al)?|\band\b|[\s,/;&+-]", "", rest, flags=re.I)
+    tagged = [w for _, _, w in found if w]
+    # Directions written but not after the speeds ("up 50, down 500"): unsure.
+    if not found or len(found) > 2 or (re.search(r"\b(down|up)", rest, re.I) and not tagged):
+        return None, None, False
+    whole = not re.search(r"[a-z]", rest, re.I)
+    unit = next((u for _, u, _ in reversed(found) if u), "m")      # 940/40 Mbps: the unit written last
+    mbps = [round(n * (1000 if (u or unit) == "g" else 1)) for n, u, _ in found]
+    if len(found) == 1:
+        if symmetric:
+            return mbps[0], mbps[0], whole
+        return ((None, mbps[0]) if found[0][2].startswith("up") else (mbps[0], None)) + (whole,)
+    if found[0][2].startswith("up") and not found[1][2].startswith("up"):
+        return mbps[1], mbps[0], whole
+    return mbps[0], mbps[1], whole
+
+
+def _bandwidth_speeds(m):
+    """Bandwidth was one line of text. It is a download and an upload speed
+    now, each chosen in Mb/s or Gb/s: what can be read goes to them, and text
+    that can't is kept at the end of the notes."""
+    m.add_column("network_details", "download", "INTEGER")
+    m.add_column("network_details", "upload", "INTEGER")
+    if not m.has_column("network_details", "bandwidth"):
+        return
+
+    def move():
+        rows = db.session.execute(db.text(
+            "SELECT entity_id, bandwidth FROM network_details WHERE bandwidth IS NOT NULL AND bandwidth != ''")).all()
+        for entity_id, text in rows:
+            down, up, whole = _speeds_of(text)
+            if not whole:
+                entity = db.session.get(Entity, entity_id)
+                if entity is not None:
+                    line = f"Bandwidth: {text}"
+                    entity.notes = f"{entity.notes.rstrip()}\n\n{line}" if entity.notes.strip() else line
+            db.session.execute(db.text("UPDATE network_details SET download = :d, upload = :u, bandwidth = NULL "
+                                       "WHERE entity_id = :id"), {"d": down, "u": up, "id": entity_id})
+    m.once("bandwidth-speeds", move)
+
+
 NETWORK_REF = Field("network", "Network", "ref", types=("network",), list=True)
 
 ICON = ('<circle cx="12" cy="5.5" r="2"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/>'
@@ -68,7 +121,7 @@ DOMAIN = ('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3
 SETUP_HELP = {
     "internet": (
         "An internet connection is one line from an ISP: fiber, cable, a mobile backup. It holds the public "
-        "addresses, the bandwidth, and the circuit ID the ISP asks for when you report a fault.",
+        "addresses, the download and upload speeds, and the circuit ID the ISP asks for when you report a fault.",
         "The ISP itself is a vendor, chosen here as Provider, so its support number is a click away. The "
         "modem or ONT is network gear, a later step.",
     ),
@@ -102,14 +155,17 @@ module = Module(
     order=40,
     requires=("hardware",),
     models=(NetworkDetail, Port, Cable, DnsRecord, PortsRecorded),
-    migrations=(Step("provider-to-notes", _provider_to_notes), Step("ports-recorded", _ports_recorded)),
+    migrations=(Step("provider-to-notes", _provider_to_notes), Step("ports-recorded", _ports_recorded),
+                Step("bandwidth-speeds", _bandwidth_speeds)),
     blueprint=views.bp,
     types=(
         EntityType("network", "Network", "Networks", detail=NetworkDetail, located_in=None, icon=NETWORK,
                    traits=("supplied",),
                    fields=(Field("kind", "Kind", "select", options=NETWORK_KINDS, card=True, list=True),
                            Field("public_ips", "Public addresses", help="203.0.113.24, or a range."),
-                           Field("bandwidth", "Bandwidth", help="1 Gb/s down, 40 Mb/s up."),
+                           Field("download", "Download", "speed",
+                                 help="The speed the ISP sells, toward you: 1 Gb/s, or 940 Mb/s."),
+                           Field("upload", "Upload", "speed", help="The speed away from you: 40 Mb/s."),
                            Field("circuit_id", "Circuit ID",
                                  help="For an internet connection: what the ISP calls this line when you report "
                                       "a fault. The ISP itself goes in Supplier, as a vendor.")),
@@ -163,7 +219,7 @@ module = Module(
                   kinds=(SetupKind("Internet connection", "network", {"f.kind": "wan"}),),
                   fields=(SetupField("name", placeholder="Fiber"), SetupField("location_id"),
                           SetupField("s.supplier.vendor_id", "Provider", types=("vendor",)),
-                          SetupField("f.bandwidth", placeholder="1 Gb/s"), SetupField("f.public_ips"),
+                          SetupField("f.download"), SetupField("f.upload"), SetupField("f.public_ips"),
                           SetupField("f.circuit_id"))),
         SetupStep("vlans", "VLANs", "The VLANs the network is split into, each with its number. Skip this if "
                   "the network is one flat LAN.", 45, group="Network",

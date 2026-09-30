@@ -12,7 +12,9 @@ class NetworkDetail(EntityDetail, db.Model):
     kind = db.Column(db.String(10))            # networks: lan, wan, vpn, other
     circuit_id = db.Column(db.String(120))     # internet connections: the ISP's name for the line
     public_ips = db.Column(db.String(300))
-    bandwidth = db.Column(db.String(120))
+    bandwidth = db.Column(db.String(120))      # before download and upload: moved to them, or the notes
+    download = db.Column(db.Integer)           # internet connections: megabits per second
+    upload = db.Column(db.Integer)
     network = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)
     vid = db.Column(db.Integer)                # VLANs: 1 to 4094
     vlan = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)

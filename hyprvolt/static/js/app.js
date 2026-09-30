@@ -1195,6 +1195,29 @@
     else toast(e.key === "ArrowRight" ? "There is no place above it that can hold it." : "It can't go up another level.");
   });
 
+  // A speed ([data-speed]): a number and Mb/s or Gb/s. The named, hidden
+  // input holds megabits, and a change to either reaches whoever saves it
+  // (the form, the Overview, a guide row) as a change of that input.
+  function speedSync(box) {
+    var number = box.querySelector('input[type="number"]'), unit = box.querySelector("select");
+    var out = box.querySelector("input[name]"), raw = number.value.trim();
+    var value = raw === "" ? "" : String(Math.round(parseFloat(raw) * (unit.value === "g" ? 1000 : 1)));
+    if (raw !== "" && isNaN(parseFloat(raw))) value = raw;       // the server says what's wrong
+    out.value = value;
+  }
+  document.addEventListener("input", function (e) {
+    var box = e.target.closest && e.target.closest("[data-speed]");
+    if (box && e.target !== box.querySelector("input[name]")) speedSync(box);
+  });
+  document.addEventListener("change", function (e) {
+    var box = e.target.closest && e.target.closest("[data-speed]");
+    if (!box || e.target === box.querySelector("input[name]")) return;
+    // The input the saving listens to, told of the change once it is made:
+    // the Overview compares it with what it was drawn with.
+    speedSync(box);
+    box.querySelector("input[name]").dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
   // A choice that is a page: the site setup guide's choice of site.
   document.addEventListener("change", function (e) {
     var select = e.target.closest && e.target.closest("select[data-go]");

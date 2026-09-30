@@ -223,6 +223,8 @@ def create_app(config_class=Config) -> Flask:
 
     from . import about_docs
     app.jinja_env.globals["app_changelog"] = about_docs.changelog
+    from .core.fields import speed_parts
+    app.jinja_env.globals["speed_parts"] = speed_parts     # the speed control's number and unit
 
     from .core import clock
     app.jinja_env.filters["local"] = clock.shown
