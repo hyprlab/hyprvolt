@@ -147,8 +147,8 @@ def columns(step, scope) -> list[dict]:
                 col.update(kind="select", choices=list(f.options))
             elif f.kind == "ref":
                 col.update(kind="select", choices=_field_choices(fields))
-            elif f.kind == "speed":
-                col.update(kind="speed")
+            elif f.kind in ("speed", "cidr", "iprange"):
+                col.update(kind=f.kind)
             elif f.kind in ("integer", "number"):
                 col.update(kind="number", default=f.default if f.default is not None else "")
             elif f.kind == "boolean":

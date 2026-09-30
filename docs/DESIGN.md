@@ -65,6 +65,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.link`, `.mono`, `.avatar` | A link in running text, underlined in the accent on hover; monospaced text (keys, compose files); a user's initial in a circle |
 | `.seg`, `.seg--xs` | Segmented control over radio inputs, the chosen one in the accent; `--xs` inside a list row (a user's role) |
 | `.guide-body`, `.guide-top` (sticky, the brand always in sight), `.guide`, `.guide-next`, `.guide-tree`, `.tree`, `.tree-row`, `.tree-handle`, `.guide-rail`, `.guide-step`, `.guide-row`, `.guide-nav` | The site setup guide, on a page of its own (`guide.html`: the brand and Exit setup, no shell): its steps down the side (the one being done marked as the settings rail marks its section), a step's rows as panels of fields, and Back and Skip on the left, the step's saves on the right |
+| `.joined`, `.joined-to` | A value typed in parts (`[data-join]` joins them into the input that is saved): a subnet's address and its mask chosen beside it, a range's first and last address with "to" between |
 | `.speed` | A speed: its number and, beside it, Mb/s or Gb/s (`[data-speed]` keeps the megabits in the input that is saved) |
 | `.seg--choice` | A segmented control for a Field with `switch`: its two states side by side, the chosen one raised, as radios valued 0 and 1. `[data-when]` shows the fields that follow it |
 | `.guide-break` | A new line in a guide row (`SetupField.newline`), hidden with the field it comes before |

@@ -54,6 +54,34 @@
 </span>
 {% endmacro %}
 
+{# A value typed in parts (app.js, [data-join]): each part a control, the
+   value that is saved the parts joined in the named, hidden input. A subnet
+   is its network address and, chosen beside it, its mask; a range of
+   addresses is its first and its last. #}
+{% macro cidr(name, value, id='', help='', label='', save=false, cls='', disabled=false, placeholder='') %}
+{% set parts = cidr_parts(value) %}
+<span class="joined" data-join="/">
+  <input type="text" data-part value="{{ parts[0] }}" placeholder="{{ placeholder or '10.0.20.0' }}" spellcheck="false" autocomplete="off"
+         {% if id %}{{ described(id, help) }}{% endif %} aria-label="{{ label }}: network address"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
+  <select data-part aria-label="{{ label }}: subnet mask" title="Subnet mask"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
+    {% for g in mask_choices(parts[0], parts[1]) %}<optgroup label="{{ g.label }}">
+      {%- for n, text in g.options %}<option value="{{ n }}" {{ 'selected' if n == parts[1] }}>{{ text }}</option>{% endfor %}</optgroup>{% endfor %}
+  </select>
+  <input type="text" hidden name="{{ name }}" value="{{ value or '' }}"{{ ' data-save' if save }}{{ ' disabled' if disabled }}>
+</span>
+{% endmacro %}
+{% macro iprange(name, value, id='', help='', label='', save=false, cls='', disabled=false) %}
+{% set parts = iprange_parts(value) %}
+<span class="joined" data-join="-">
+  <input type="text" data-part value="{{ parts[0] }}" placeholder="First: 10.0.30.100" spellcheck="false" autocomplete="off"
+         {% if id %}{{ described(id, help) }}{% endif %} aria-label="{{ label }}: first address"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
+  <span class="joined-to" aria-hidden="true">to</span>
+  <input type="text" data-part value="{{ parts[1] }}" placeholder="Last: 10.0.30.199" spellcheck="false" autocomplete="off"
+         aria-label="{{ label }}: last address"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
+  <input type="text" hidden name="{{ name }}" value="{{ value or '' }}"{{ ' data-save' if save }}{{ ' disabled' if disabled }}>
+</span>
+{% endmacro %}
+
 {% macro control(item, save=false, cls='', prefix='ef-') %}
 {% set f = item.field %}{% set v = item.value %}{% set id = prefix ~ item.name|replace('.', '-') %}
 {% set extra %}{% if save %} data-save{% endif %}{% if cls %} class="{{ cls }}"{% endif %}{% endset %}
@@ -80,6 +108,10 @@
   </select>
 {% elif f.kind == 'speed' %}
   {{ speed(item.name, v, id, f.help, f.label, save, cls) }}
+{% elif f.kind == 'cidr' %}
+  {{ cidr(item.name, v, id, f.help, f.label, save, cls) }}
+{% elif f.kind == 'iprange' %}
+  {{ iprange(item.name, v, id, f.help, f.label, save, cls) }}
 {% elif f.kind in ('integer', 'number') %}
   <input type="number" name="{{ item.name }}" value="{{ v if v is not none else '' }}" step="{{ '1' if f.kind == 'integer' else 'any' }}" {{ described(id, f.help) }}
          {% if f.min is not none %}min="{{ f.min }}"{% endif %} {% if f.max is not none %}max="{{ f.max }}"{% endif %} {{ 'required' if f.required }}{{ extra }}{{ empty }}>

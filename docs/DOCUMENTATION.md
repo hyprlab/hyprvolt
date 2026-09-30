@@ -124,7 +124,10 @@ In Network, a device's or a VM's IP addresses are typed into its own form,
 separated by commas; each becomes an IP address record in the subnet that
 holds it, and one taken off the list is deleted (it can be restored from
 Recently deleted), or only unassigned if it has notes or tags. An address can
-belong to one record at a time. A subnet's Addresses tab draws an IPv4 subnet
+belong to one record at a time. A subnet's range is typed as its network
+address with the subnet mask chosen beside it, and its DHCP range as its
+first and last address; a range the DHCP addresses don't fit in is refused.
+A subnet's Addresses tab draws an IPv4 subnet
 up to a /22 as a grid: used, reserved, held for DHCP or free. Choosing a free
 address records it. Anything with network ports has a Cabling tab. A cable
 goes to the device as a whole, to another device or to one of its ports,

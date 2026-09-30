@@ -179,6 +179,16 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .infotip-pop--wide p + p { margin-top: 8px; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-3px); } }
 .form-check { display: flex; align-items: center; gap: 5px; }
+/* A value typed in parts: a subnet's address and mask, a range's first and
+   last address. */
+.joined { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.joined input[type="text"] { flex: 1 1 0; min-width: 96px; }
+.field .joined select, .joined select { flex: none; width: auto; }
+@media (max-width: 560px) {
+  .joined[data-join="/"] { flex-wrap: wrap; }
+  .field .joined[data-join="/"] select { flex: 1 1 100%; width: 100%; }
+}
+.joined-to { flex: none; font-size: 13px; color: var(--muted); }
 /* A speed: its number and, beside it, Mb/s or Gb/s. */
 .speed { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .speed input[type="number"] { flex: 1 1 auto; min-width: 0; }
@@ -1619,6 +1629,7 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 }
 .guide-row > .field { flex: 1 1 150px; min-width: 0; }
 .guide-row > .guide-wide { flex: 2 1 200px; }
+.guide-row > .guide-joined { flex: 3 1 360px; }
 .guide-check { flex: none; padding-bottom: 11px; }
 .guide-remove { flex: none; margin-bottom: 6px; }
 .guide-row-form { display: contents; }

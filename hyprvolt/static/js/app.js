@@ -1240,6 +1240,28 @@
     if (scope && scope.querySelector("[data-when]")) applyWhen(scope);
   });
 
+  // A value typed in parts ([data-join]): a subnet's address and mask
+  // ("/"), a range's first and last address ("-"). The parts, joined, go in
+  // the named, hidden input, and a change reaches whoever saves it as a
+  // change of that input; with nothing typed, the value is empty.
+  function joinParts(box) {
+    var parts = Array.prototype.slice.call(box.querySelectorAll("[data-part]"));
+    var typed = parts.filter(function (p) { return p.tagName !== "SELECT"; });
+    var empty = typed.every(function (p) { return !p.value.trim(); });
+    box.querySelector("input[name]").value = empty ? "" :
+      parts.map(function (p) { return p.value.trim(); }).join(box.getAttribute("data-join"));
+  }
+  document.addEventListener("input", function (e) {
+    var box = e.target.closest && e.target.closest("[data-join]");
+    if (box && e.target.hasAttribute("data-part")) joinParts(box);
+  });
+  document.addEventListener("change", function (e) {
+    var box = e.target.closest && e.target.closest("[data-join]");
+    if (!box || !e.target.hasAttribute("data-part")) return;
+    joinParts(box);
+    box.querySelector("input[name]").dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
   // A choice that is a page: the site setup guide's choice of site.
   document.addEventListener("change", function (e) {
     var select = e.target.closest && e.target.closest("select[data-go]");

@@ -36,7 +36,7 @@ def test_subnets_are_checked_and_normalized(client, h, admin):
                                            **{"f.cidr": "10.0.21.0/24", "f.gateway": "10.0.20.1"})
     assert "DHCP range must be inside" in error(client, h, "subnet", name="x",
                                                 **{"f.cidr": "10.0.21.0/24", "f.dhcp_range": "10.0.20.1-10.0.20.9"})
-    assert "two addresses with a dash" in error(client, h, "subnet", name="x",
+    assert "needs its first and its last address" in error(client, h, "subnet", name="x",
                                                 **{"f.cidr": "10.0.21.0/24", "f.dhcp_range": "10.0.21.9"})
     assert "already recorded as Servers" in error(client, h, "subnet", name="x",
                                                   **{"f.cidr": "10.0.20.0/24", "f.network": home["id"]})
@@ -366,6 +366,25 @@ def test_a_typed_provider_moves_to_the_notes(app, client, h, admin):
         from hyprvolt.core.models import Entity
         notes = {e.name: e.notes for e in Entity.query.filter_by(type="network")}
     assert notes == {"Internet": "Bridge mode.\n\nProvider: Springfield Cable", "Backup line": "Provider: LTE Co"}
+
+
+def test_a_subnet_is_typed_as_address_and_mask_and_its_dhcp_as_first_and_last(client, h, admin):
+    subnet = make(client, h, "subnet", name="Clients", **{"f.cidr": "10.0.30.0/24",
+                                                         "f.dhcp_range": "10.0.30.100 to 10.0.30.199"})
+    assert subnet["fields"]["dhcp_range"] == "10.0.30.100-10.0.30.199"
+    sheet = client.get(f"/e/{subnet['id']}/sheet").data.decode()
+    # The range: its address, and the mask chosen from the sizes beside it.
+    assert 'data-join="/"' in sheet and 'value="10.0.30.0"' in sheet
+    assert '<option value="24" selected>/24 · 255.255.255.0 · 254 hosts</option>' in sheet
+    # The DHCP range: its first and last address in two boxes.
+    assert 'data-join="-"' in sheet and 'value="10.0.30.100"' in sheet and 'value="10.0.30.199"' in sheet
+    wrong = client.post(f"/api/entities/{subnet['id']}", json={"f.dhcp_range": "10.0.30.199-10.0.30.100"}, headers=h)
+    assert wrong.status_code == 400 and "first address must come before its last" in wrong.get_json()["error"]
+    # A smaller mask would leave the DHCP range outside: refused. A larger one fits.
+    small = client.post(f"/api/entities/{subnet['id']}", json={"f.cidr": "10.0.30.0/25"}, headers=h)
+    assert small.status_code == 400 and "DHCP range must be inside 10.0.30.0/25" in small.get_json()["error"]
+    client.post(f"/api/entities/{subnet['id']}", json={"f.cidr": "10.0.30.0/23"}, headers=h)
+    assert client.get(f"/api/entities/{subnet['id']}").get_json()["entity"]["fields"]["cidr"] == "10.0.30.0/23"
 
 
 def test_an_internet_connection_has_a_download_and_upload_speed(client, h, admin):

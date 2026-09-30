@@ -165,7 +165,8 @@ and a `kind`:
 | `boolean` | true or false | Yes or No |
 | `ref` | the id of a record of one of `types` or of any type with `trait`, or a relationship (below) | a link to it |
 | `ip` | an IPv4 or IPv6 address, in its short form | the address |
-| `cidr` | a subnet, host bits dropped: `10.0.20.7/24` is `10.0.20.0/24` | the subnet |
+| `cidr` | a subnet, host bits dropped: `10.0.20.7/24` is `10.0.20.0/24`; typed as its network address with the mask chosen beside it (/24 · 255.255.255.0 · 254 hosts) | the subnet |
+| `iprange` | a range of addresses, typed as its first and its last in two boxes, kept as `10.0.30.100-10.0.30.199`; both of one family, the first before the last | the range |
 
 A `ref` with `relation="runs_on"` is kept as a relationship of that kind from
 this record to the chosen one, instead of in a column. A VM's host is one:

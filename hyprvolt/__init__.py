@@ -223,7 +223,9 @@ def create_app(config_class=Config) -> Flask:
 
     from . import about_docs
     app.jinja_env.globals["app_changelog"] = about_docs.changelog
-    from .core.fields import speed_parts, when_value
+    from .core.fields import cidr_parts, iprange_parts, mask_choices, speed_parts, when_value
+    app.jinja_env.globals.update(cidr_parts=cidr_parts, iprange_parts=iprange_parts,   # the range controls
+                                 mask_choices=mask_choices)
     app.jinja_env.globals["speed_parts"] = speed_parts     # the speed control's number and unit
     app.jinja_env.globals["when_value"] = when_value       # a shown_when value as the page compares it
 

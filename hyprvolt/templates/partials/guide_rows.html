@@ -4,7 +4,7 @@
    row once it has a name (Enter, the Add button, or leaving the row), and
    deletes a row after asking, each change at once; then this is drawn again
    from data-rows-url. #}
-{% from "sheet/controls.html" import speed, switch %}
+{% from "sheet/controls.html" import cidr, iprange, speed, switch %}
 {% macro choice_options(choices, v) %}
   {%- for c in choices %}
     {%- if c is mapping %}<optgroup label="{{ c.label }}">{{ choice_options(c.options, v) }}</optgroup>
@@ -14,6 +14,10 @@
 {% macro control(c, v, off=false, fresh=false) %}
   {% if c.kind == 'speed' %}
   {{ speed(c.name, v if v != '' else none, label=c.label, disabled=off) }}
+  {% elif c.kind == 'cidr' %}
+  {{ cidr(c.name, v, label=c.label, disabled=off, placeholder=(c.placeholder or '').split('/')[0]) }}
+  {% elif c.kind == 'iprange' %}
+  {{ iprange(c.name, v, label=c.label, disabled=off) }}
   {% elif c.kind == 'select' %}
   <select name="{{ c.name }}" {{ 'disabled' if off }}>
     {% if not c.required %}<option value="">{{ '—' if off else 'Not set' }}</option>{% endif %}
@@ -41,7 +45,7 @@
   {% elif c.kind == 'check' %}
   <label class="check guide-check"{{ follows }}><input type="checkbox" name="{{ c.name }}" value="1" {{ 'checked' if v }} {{ 'disabled' if r and c.name in r.absent }}><span>{{ c.label }}</span></label>
   {% else %}
-  <label class="field {{ 'guide-wide' if c.name == 'name' }}"{{ follows }}><span class="field-label">{{ c.label }}</span>
+  <label class="field {{ 'guide-wide' if c.name == 'name' }}{{ ' guide-joined' if c.kind in ('cidr', 'iprange') }}"{{ follows }}><span class="field-label">{{ c.label }}</span>
     {{ control(c, v, r and c.name in r.absent, not r) }}</label>
   {% endif %}
   {% endfor %}
