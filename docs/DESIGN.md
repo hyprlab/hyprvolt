@@ -116,7 +116,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.history`, `.changes` | Who changed what: a line per change, old value struck through, new value after |
 | `.elevation`, `.rack-grid`, `.rack-u`, `.rack-slot`, `.rack-item`, `.rack-summary`, `.rack-problems` | A rack, front and rear, one grid row per unit. An empty unit is a button; overlapping items share the width, and a conflict is drawn in the danger color |
 | `.palette` and its parts | The Ctrl/Cmd+K search |
-| `.toast`, `.toast--error`, `.toast-action` | Confirmations under the topbar, with an optional action such as Undo |
+| `.toast`, `.toast--error`, `.toast-action` | Confirmations under the topbar, with an optional action such as Undo in the accent: a dark pill in the light theme, a raised charcoal one in the dark, and a red one for an error in each |
 | `.about-hero`, `.tech-stack`, `.release-list` | The About section |
 | `.auth-card`, `.auth-mark`, `.flash`, `.wizard`, `.wiz-*`, `.error-code` | Sign-in, setup and error pages |
 | `.ptr` | Pull to refresh on touch devices |

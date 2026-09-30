@@ -1445,6 +1445,10 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 .toast.is-leaving { animation: toast-out .25s ease forwards; }
 @keyframes toast-out { to { transform: translate(-50%, -16px); opacity: 0; } }
 .toast--error { background: var(--danger); color: #fff; }
+/* Dark: a raised charcoal pill with light text, where the light theme's is
+   dark on light; the accent Undo reads on both. */
+html[data-theme="dark"] .toast { background: #34343B; color: var(--ink); box-shadow: var(--shadow-2), 0 0 0 1px var(--line-strong); }
+html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box-shadow: var(--shadow-2), 0 0 0 1px #6E302B; }
 .toast-action {
   margin-left: 12px; color: var(--accent); font-weight: 750; font-size: 13px;
   text-transform: uppercase; letter-spacing: .05em;
