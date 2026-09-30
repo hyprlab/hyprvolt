@@ -1327,12 +1327,74 @@
     var p = row.querySelector(".guide-row-error");
     if (p) { p.textContent = message || ""; p.hidden = !message; }
   }
+  // A saved row folded to one line ([data-row-toggle]): its name and a
+  // summary of what it holds, written from its fields; open to change it.
+  // Moving into another row folds an open one again, so the list stays tidy.
+  var openRows = {};              // row id -> open, kept across a redraw
+  function fieldText(item) {
+    if (item.hidden || item.classList.contains("guide-break")) return "";
+    var locked = item.querySelector(".guide-locked-text");
+    if (locked) return locked.textContent.trim();
+    var speed = item.querySelector("[data-speed]");
+    if (speed) {
+      var n = speed.querySelector('input[type="number"]').value.trim(), unit = speed.querySelector("select");
+      return n ? n + " " + unit.options[unit.selectedIndex].text : "";
+    }
+    var joined = item.querySelector("[data-join]");
+    if (joined) {
+      var v = joined.querySelector("input[name]").value;
+      return joined.getAttribute("data-join") === "-" ? v.replace("-", " to ") : v;
+    }
+    var chosen = item.querySelector('input[type="radio"]:checked');
+    if (chosen) return chosen.parentNode.textContent.trim();
+    var box = item.querySelector('input[type="checkbox"]');
+    if (box) return box.checked ? item.textContent.trim() : "";
+    var select = item.querySelector("select");
+    if (select) return select.value ? select.options[select.selectedIndex].text : "";
+    var input = item.querySelector("input[name]");
+    return input && input.name !== "name" && !input.disabled ? input.value.trim() : "";
+  }
+  function summarizeRow(row) {
+    var body = row.querySelector(".guide-row-body"), out = row.querySelector("[data-row-summary]");
+    if (!body || !out) return;
+    out.textContent = Array.prototype.map.call(body.children, fieldText).filter(Boolean).join(" · ");
+  }
+  function setRowOpen(row, open) {
+    row.classList.toggle("is-collapsed", !open);
+    var toggle = row.querySelector("[data-row-toggle]");
+    if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    openRows[row.getAttribute("data-row-id")] = open;
+    if (!open) summarizeRow(row);
+  }
+  function initRows(box) {
+    box.querySelectorAll("[data-row]").forEach(function (row) {
+      summarizeRow(row);
+      if (openRows[row.getAttribute("data-row-id")]) setRowOpen(row, true);
+    });
+  }
+  document.querySelectorAll("[data-rows]").forEach(initRows);
+  document.addEventListener("click", function (e) {
+    var toggle = e.target.closest && e.target.closest("[data-row-toggle]");
+    if (!toggle) return;
+    var row = toggle.closest("[data-row]");
+    setRowOpen(row, row.classList.contains("is-collapsed"));
+  });
+  document.addEventListener("focusin", function (e) {
+    var here = e.target.closest && e.target.closest("[data-row], [data-row-new]");
+    var box = here && rowsOf(here);
+    if (!box) return;
+    box.querySelectorAll("[data-row]:not(.is-collapsed)").forEach(function (row) {
+      if (row !== here && !row.contains(e.target)) setRowOpen(row, false);
+    });
+  });
+
   function redrawRows(box, then) {
     return fetchHTML(box.getAttribute("data-rows-url")).then(function (html) {
       var holder = document.createElement("div");
       holder.innerHTML = html;
       var fresh = holder.querySelector("[data-rows]");
       box.replaceWith(fresh);
+      initRows(fresh);
       if (then) then(fresh);
       return fresh;
     });
@@ -1409,7 +1471,11 @@
       if (data && data.value !== undefined && data.value !== null && el.type === "text" && document.activeElement !== el) {
         el.value = data.value;
       }
-      if (el.name === "name") row.setAttribute("data-name", el.value.trim());
+      if (el.name === "name") {
+        row.setAttribute("data-name", el.value.trim());
+        var title = row.querySelector("[data-row-title]");
+        if (title) title.textContent = el.value.trim();
+      }
       // Another kind can have other fields (a printer has no Used by).
       if (el.name === "_kind") redrawRows(rowsOf(row));
     }, function (err) {

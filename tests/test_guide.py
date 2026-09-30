@@ -95,6 +95,9 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     change(client, h, "vendors", isp["id"], "f.support_phone", "+1 555 010 0199", site["id"])
     page = client.get(f"/site-setup/vendors?site={site['id']}").data.decode()
     assert page.count("data-row ") == 2 and 'value="+1 555 010 0199"' in page and "data-row-new" in page
+    # A saved row is folded to its name, and opens to be changed.
+    assert page.count('class="guide-row is-collapsed"') == 2
+    assert 'aria-expanded="false"' in page and '<span class="guide-row-title" data-row-title>Ubiquiti</span>' in page
     # Where a record goes is chosen among the site's places, the site first.
     page = client.get(f"/site-setup/racks?site={site['id']}").data.decode()
     assert f'<option value="{basement["id"]}" >Basement</option>' in page.replace("selected", "")

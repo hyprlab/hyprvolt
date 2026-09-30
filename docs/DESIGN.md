@@ -68,6 +68,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.joined`, `.joined-to` | A value typed in parts (`[data-join]` joins them into the input that is saved): a subnet's address and its mask chosen beside it, a range's first and last address with "to" between |
 | `.speed` | A speed: its number and, beside it, Mb/s or Gb/s (`[data-speed]` keeps the megabits in the input that is saved) |
 | `.seg--choice` | A segmented control for a Field with `switch`: its two states side by side, the chosen one raised, as radios valued 0 and 1. `[data-when]` shows the fields that follow it |
+| `.guide-row-head`, `.guide-row-toggle`, `.guide-row-summary`, `.guide-row-body` | A saved guide row folded to one line (`.is-collapsed`): a chevron, its name and a summary of what it holds, written by app.js from its fields; it opens to its fields, and folds again when another row is worked in |
 | `.guide-break` | A new line in a guide row (`SetupField.newline`), hidden with the field it comes before |
 | `.switch`, `.switch-track` | An on/off switch over a checkbox, for something that takes effect at once (a module) |
 | `.theme-picker`, `.theme-chip` | Chip-style radio group |

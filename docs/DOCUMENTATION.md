@@ -433,15 +433,17 @@ and says how many, and Undo brings them all back.
 Every other step is a list of rows, one record a row: what the site has
 already, and a blank row at the end. Typing a name in the blank row and
 pressing Enter or its Add button adds it (nothing is added until then), and
-a new blank row appears for the next, so every endpoint or every service goes in
-one after another. Any field of a row is changed in place and saved when it
-is left, a row's kind too (a router into a firewall); a change that doesn't
-fit says why under the row and saves nothing. The × on a row deletes it,
-asked first and with Undo. Continue goes on; anything typed in the blank
-row is added first, and if it can't be (it has no name), it says why and
-the step stays. Back, the steps down the side and Exit setup do the same.
-On the first step, the Site choice picks another site, or a new one; the
-guide can be run again to add what was left out, or for another site.
+a new blank row appears for the next, so every endpoint or every service
+goes in one after another. A row once added folds to one line, its name and
+what it holds; choosing it opens it again, and moving into another row folds
+it back. Any field of a row is changed in place and saved when it is left, a
+row's kind too (a router into a firewall); a change that doesn't fit says
+why under the row and saves nothing. The × on a row deletes it, asked first
+and with Undo. Continue goes on; anything typed in the blank row is added
+first, and if it can't be (it has no name), it says why and the step stays.
+Back, the steps down the side and Exit setup do the same. On the first step,
+the Site choice picks another site, or a new one; the guide can be run again
+to add what was left out, or for another site.
 
 ## Records
 

@@ -3,7 +3,8 @@
    app.js ([data-rows]) saves a field of a row as it changes, adds the blank
    row when asked (Enter, the Add button, or Continue), and
    deletes a row after asking, each change at once; then this is drawn again
-   from data-rows-url. #}
+   from data-rows-url. A saved row is folded to one line, its name and what
+   it holds (app.js writes that summary), and opens to change it. #}
 {% from "sheet/controls.html" import cidr, iprange, speed, switch %}
 {% macro choice_options(choices, v) %}
   {%- for c in choices %}
@@ -56,15 +57,23 @@
      own in every row, not one across the page. #}
   {% for r in rows %}
   <form class="guide-row-form" data-row-form novalidate>
-  <fieldset class="guide-row" data-row data-name="{{ r.label }}"
+  <fieldset class="guide-row is-collapsed" data-row data-row-id="{{ r.id }}" data-name="{{ r.label }}"
             data-update="{{ url_for('guide.row_update', key=step.key, row_id=r.id, **site) }}"
             data-delete="{{ url_for('guide.row_delete', key=step.key, row_id=r.id, **site) }}">
     <legend class="visually-hidden">{{ r.label }}</legend>
-    {{ row_fields(r) }}
-    <button type="button" class="iconbtn iconbtn--sm iconbtn--danger guide-remove" data-row-delete
-            aria-label="Delete {{ r.label }}" title="Delete">
-      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
+    <div class="guide-row-head">
+      <button type="button" class="guide-row-toggle" data-row-toggle aria-expanded="false"
+              aria-controls="{{ step.key }}-row-{{ r.id }}" title="Show or change it">
+        <svg class="guide-row-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        <span class="guide-row-title" data-row-title>{{ r.label }}</span>
+        <span class="guide-row-summary" data-row-summary></span>
+      </button>
+      <button type="button" class="iconbtn iconbtn--sm iconbtn--danger guide-remove" data-row-delete
+              aria-label="Delete {{ r.label }}" title="Delete">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="guide-row-body" id="{{ step.key }}-row-{{ r.id }}">{{ row_fields(r) }}</div>
     <p class="form-error guide-row-error" role="alert" hidden></p>
   </fieldset>
   </form>
@@ -73,8 +82,10 @@
   <form class="guide-row-form" data-row-form novalidate>
   <fieldset class="guide-row guide-row--new" data-row-new>
     <legend class="visually-hidden">A new one</legend>
-    {{ row_fields(none) }}
-    <button type="button" class="btn btn--ghost guide-add-row" data-row-add>Add</button>
+    <div class="guide-row-body">
+      {{ row_fields(none) }}
+      <button type="button" class="btn btn--ghost guide-add-row" data-row-add>Add</button>
+    </div>
     <p class="form-error guide-row-error" role="alert" hidden></p>
   </fieldset>
   </form>

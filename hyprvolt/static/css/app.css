@@ -1628,20 +1628,40 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 .guide-pick { max-width: 360px; margin-bottom: 16px; }
 .guide-rows { display: flex; flex-direction: column; gap: 10px; }
 .guide-row {
-  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 0; min-width: 0;
+  display: flex; flex-direction: column; gap: 10px; margin: 0; min-width: 0;
   padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
 }
-.guide-row > .field { flex: 1 1 150px; min-width: 0; }
-.guide-row > .guide-wide { flex: 2 1 200px; }
-.guide-row > .guide-joined { flex: 3 1 360px; }
+.guide-row-body { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; min-width: 0; }
+.guide-row-body > .field { flex: 1 1 150px; min-width: 0; }
+.guide-row-body > .guide-wide { flex: 2 1 200px; }
+.guide-row-body > .guide-joined { flex: 3 1 360px; }
+/* A saved row folded to one line: its name and what it holds; it opens to
+   change it. */
+.guide-row-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.guide-row-toggle {
+  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 4px 6px; margin: -4px -6px;
+  border: 0; border-radius: var(--radius-sm); background: none; color: inherit; font: inherit; text-align: left;
+  cursor: pointer;
+}
+.guide-row-toggle:hover { background: var(--hover); }
+.guide-row-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.guide-row-chev { flex: none; width: 16px; height: 16px; color: var(--muted); transition: transform .15s; }
+.guide-row:not(.is-collapsed) .guide-row-chev { transform: rotate(90deg); }
+.guide-row-title { flex: none; max-width: 40%; font-size: 14.5px; font-weight: 700; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guide-row-summary { flex: 1; min-width: 0; font-size: 13.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guide-row.is-collapsed { padding-block: 10px; }
+.guide-row.is-collapsed .guide-row-body { display: none; }
+.guide-row:not(.is-collapsed) .guide-row-summary { visibility: hidden; }
 .guide-check { flex: none; padding-bottom: 11px; }
-.guide-remove { flex: none; margin-bottom: 6px; }
+.guide-remove { flex: none; }
 .guide-row-form { display: contents; }
 .guide-row { transition: opacity .15s; }
 .guide-row.is-saving { opacity: .7; }
 .guide-row--new { border-style: dashed; background: transparent; }
 .guide-add-row { flex: none; margin-bottom: 1px; }
-.guide-row-error { flex-basis: 100%; margin: 0; }
+.guide-row-error { margin: 0; }
 .guide-locked { flex: 1 1 150px; min-width: 0; }
 .guide-locked-text {
   display: block; padding: 10px 0; font-size: 14.5px; font-weight: 600; color: var(--ink);
