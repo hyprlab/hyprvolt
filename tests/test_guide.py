@@ -135,6 +135,8 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     assert f'<option value="{wan["id"]}" >Fiber</option>' in page.replace("selected", "")
     switch_row = page.split('data-name="sw1"')[1].split("</fieldset>")[0]
     assert 'data-when="_kind" data-when-is="0 1 2" hidden>' in switch_row
+    # A wireless bridge's other end: only in a bridge's row.
+    assert 'data-when="_kind" data-when-is="5" hidden><span class="field-label">Other end' in page.split("data-row-new")[1]
     sw = next(e for e in entities(client, "network_device") if e["name"] == "sw1")
     assert sw["fields"]["kind"] == "switch" and any(e["name"] == "10.0.20.2" for e in entities(client, "ip_address"))
     # A row's kind changed: a router into a firewall, another type.

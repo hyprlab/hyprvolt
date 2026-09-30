@@ -7,7 +7,8 @@ Where a device is comes from the core's location, and its rack position
 from Locations' form section: the types that go in a rack carry the
 ``rackmount`` trait. Hardware needs Locations for both.
 """
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, SetupField, SetupKind, SetupStep
+from hyprvolt.manifest import (EntityType, Field, FormSection, ListFilter, Module, RelationKind, SetupField, SetupKind,
+                               SetupStep)
 
 from . import demo, views
 from .models import HardwareDetail
@@ -45,7 +46,9 @@ PORTS = Field("ports", "Ports", "integer", min=0, max=1000, card=True, group="Sp
 FORM_FACTORS = (("rack", "Rack mount"), ("tower", "Tower"), ("mini", "Mini PC"), ("blade", "Blade"),
                 ("sbc", "Single-board computer"), ("other", "Other"))
 NETWORK_KINDS = (("switch", "Switch"), ("router", "Router"), ("modem", "Modem"),
-                 ("patch_panel", "Patch panel"), ("other", "Other"))
+                 ("patch_panel", "Patch panel"), ("bridge", "Wireless bridge"), ("other", "Other"))
+#: Kinds of network gear with no wireless link to another: all but a bridge.
+NOT_BRIDGES = tuple(v for v, _ in NETWORK_KINDS if v != "bridge") + ("",)
 
 # ———— Icons, 24×24 stroked paths ————
 
@@ -93,6 +96,9 @@ SETUP_HELP = {
         "the modem has no address on your network, so leave its IP address empty (or give its status page's "
         "address, such as 192.168.100.1). A modem that is the gateway, the ISP's own router, has an address "
         "on your network, usually 192.168.1.1, which is also your subnet's gateway.",
+        "A wireless bridge links two places over the air, such as the house and a garage. Add each end as "
+        "its own Wireless bridge, with its own location and IP address, and choose the bridge at the other "
+        "end as its Other end: the link reads the same from both.",
         "Public addresses belong to the internet connection, not to the device. Computers and storage come "
         "next, and cabling everything together is the last step.",
     ),
@@ -126,7 +132,8 @@ module = Module(
                   hides=("rack",), hides_when=("tower",)),
             CPU, CORES, RAM, STORAGE, NICS, POWER, OS)),
         hardware("network_device", "Network device", "Network gear", NETWORK, traits=RACK + HOST, specs=(
-            Field("kind", "Kind", "select", options=NETWORK_KINDS, list=True, group="Specs"),
+            Field("kind", "Kind", "select", options=NETWORK_KINDS, list=True, group="Specs",
+                  hides=("bridge",), hides_when=NOT_BRIDGES),
             PORTS, Field("managed", "Managed", "boolean", group="Specs"), FIRMWARE, POWER)),
         hardware("firewall", "Firewall", "Firewalls", FIREWALL, traits=RACK + HOST, specs=(
             PORTS, FIRMWARE, CPU, RAM, POWER)),
@@ -153,6 +160,10 @@ module = Module(
     ),
     filters=(ListFilter("warranty_soon", "Warranty ending soon", views.warranty_soon),
              ListFilter("warranty_over", "Out of warranty", views.warranty_over)),
+    relation_kinds=(RelationKind("wireless_link", "has a wireless link to", "has a wireless link to"),),
+    form_sections=(FormSection("bridge", "Wireless link", views.bridge_form, views.bridge_save,
+                               when=views.is_bridge_gear, values=views.bridge_values,
+                               choices=views.bridge_choices),),
     setup=(
         SetupStep("gear", "Network gear", "The equipment that ties your network together. Start where the "
                   "internet comes in, with the modem and the router or firewall, then add your switches, access "
@@ -164,11 +175,13 @@ module = Module(
                          SetupKind("Firewall", "firewall"),
                          SetupKind("Switch", "network_device", {"f.kind": "switch"}),
                          SetupKind("Access point", "access_point"),
+                         SetupKind("Wireless bridge", "network_device", {"f.kind": "bridge"}),
                          SetupKind("Patch panel", "network_device", {"f.kind": "patch_panel"})),
                   fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"),
                           SetupField("s.internet.line", "Internet connection",
-                                     kinds=("Modem", "Router", "Firewall")))),
+                                     kinds=("Modem", "Router", "Firewall")),
+                          SetupField("s.bridge.other", "Other end", kinds=("Wireless bridge",)))),
         SetupStep("servers", "Servers and storage", "The machines that run things and keep data: servers, "
                   "NAS boxes, and the UPS that keeps them up.", 70, group="Equipment",
                   help=SETUP_HELP["servers"], plan="servers, storage",

@@ -152,7 +152,11 @@ firewall the line plugs into (also set from that device's Internet
 connection section, and in the guide's Network gear step): the device then
 brings in the line, the network diagram draws the line above it, and the
 line depends on it. A modem in bridge mode has no address on your network
-and can be left without one; the ISP is a vendor, chosen in its Supplier
+and can be left without one; A network device of the kind Wireless
+bridge links two places over the air: each end is its own record, with its
+own location and IP address, and its Wireless link section names the bridge
+at the other end, a link that reads the same from both; the diagram draws it
+as a dotted line. the ISP is a vendor, chosen in its Supplier
 section, with the contract for the line. The sidebar lists internet
 connections. A domain's DNS records
 are written down by hand in its DNS records tab, and an A record or a CNAME

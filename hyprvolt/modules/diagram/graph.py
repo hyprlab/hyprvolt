@@ -54,9 +54,14 @@ class Edge:
     vlans: str = ""
     path: str = ""
     mid: tuple = (0, 0)
+    kind: str = ""                   # "internet" (a line coming in), "wireless" (bridges), or a cable
 
     def title(self, nodes) -> str:
         a, b = nodes[self.a].entity.name, nodes[self.b].entity.name
+        if self.kind == "internet":
+            return f"{a} comes in at {b}"
+        if self.kind == "wireless":
+            return f"{a} to {b}, a wireless link"
         text = f"{a} {self.ends[0]} to {b} {self.ends[1]}".replace("  ", " ").strip() if self.cabled else f"{a} to {b}"
         if self.via:
             text += " through " + ", ".join(self.via)
@@ -147,7 +152,18 @@ def network() -> tuple[dict[int, Node], list[Edge]]:
             continue
         devices.setdefault(line.id, line)
         devices.setdefault(device.id, device)
-        edges.append(Edge(line.id, device.id))
+        edges.append(Edge(line.id, device.id, kind="internet"))
+    # A wireless link between two bridges (Hardware's), once each pair.
+    air = Relationship.query.filter_by(kind="wireless_link").all()
+    ends_of = _live_devices({i for r in air for i in (r.source_id, r.target_id)})
+    for r in air:
+        a, b = ends_of.get(r.source_id), ends_of.get(r.target_id)
+        if a is None or b is None or frozenset((a.id, b.id)) in joined:
+            continue
+        joined.add(frozenset((a.id, b.id)))
+        devices.setdefault(a.id, a)
+        devices.setdefault(b.id, b)
+        edges.append(Edge(a.id, b.id, kind="wireless"))
     # A device only on the way (a patch panel) is named on its links, not drawn.
     ends = {i for e in edges for i in (e.a, e.b)}
     nodes = {i: Node(e) for i, e in devices.items() if i in ends}

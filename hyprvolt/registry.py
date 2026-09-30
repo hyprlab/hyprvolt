@@ -428,8 +428,9 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
             p.append(f"{where} is a switch, so it must be a boolean with an off and an on label")
         if f.shown_when and (len(f.shown_when) != 2 or f.shown_when[0] not in keys):
             p.append(f"{where} is shown when another field has a value; name one of the type's fields before it")
-        if f.hides and (f.kind != "select" or not set(f.hides_when) <= {v for v, _ in f.options}):
-            p.append(f"{where} hides form sections, so it must be a select and hides_when some of its options")
+        if f.hides and (f.kind != "select" or not set(f.hides_when) <= {v for v, _ in f.options} | {""}):
+            p.append(f"{where} hides form sections, so it must be a select and hides_when some of its options "
+                     "(or \"\" for none chosen)")
         if f.relation and f.kind != "ref":
             p.append(f"{where} is kept as a link, so it must be a ref")
         if columns and f.key not in columns and not f.relation:

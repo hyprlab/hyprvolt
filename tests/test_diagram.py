@@ -29,6 +29,16 @@ def test_the_internet_is_drawn_coming_in_at_its_device(client, h, admin):
     assert page.count('class="diagram-node') == 2 and page.index(">Fiber<") < page.index(">modem<")
 
 
+def test_two_wireless_bridges_are_joined_by_a_dotted_line(client, h, admin):
+    a = make(client, h, "network_device", name="Bridge house", **{"f.kind": "bridge"})
+    b = make(client, h, "network_device", name="Bridge garage", **{"f.kind": "bridge"})
+    client.post(f"/api/entities/{a['id']}", json={"s.bridge.other": b["id"]}, headers=h)
+    page = client.get("/p/diagram/network").data.decode()
+    assert page.count('class="diagram-node') == 2 and 'diagram-link--wireless' in page
+    assert "a dotted one is a wireless link between two bridges" in page
+    assert "Bridge house to Bridge garage, a wireless link" in page or "Bridge garage to Bridge house" in page
+
+
 def test_an_empty_network_says_what_to_do(client, h, admin):
     assert "No cables yet" in client.get("/p/diagram/network").data.decode()
 

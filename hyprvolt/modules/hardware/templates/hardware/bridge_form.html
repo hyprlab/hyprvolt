@@ -1,0 +1,12 @@
+{# The Wireless link section in the form of a wireless bridge: the bridge at
+   the other end, a link that reads the same from either end. #}
+<div class="form-grid">
+  <label class="field">
+    <span class="field-label">Other end</span>
+    <select name="s.bridge.other">
+      <option value="">Not linked</option>
+      {% for id, name in bridges %}<option value="{{ id }}" {{ 'selected' if id == other_id }}>{{ name }}</option>{% endfor %}
+    </select>
+    <span class="hint">{% if bridges %}The bridge this one links to over the air, often in another building. Each end has its own location and IP address.{% else %}Add the bridge at the other end, then link them here.{% endif %}</span>
+  </label>
+</div>

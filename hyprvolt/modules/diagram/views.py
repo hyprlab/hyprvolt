@@ -22,7 +22,9 @@ def network_page() -> str:
     ordered = sorted(nodes.values(), key=lambda n: (n.tier, n.x))
     return render_template("diagram/network.html", nodes=ordered, edges=edges, by_id=nodes,
                            width=width, height=height, w=graph.NODE_W, h=graph.NODE_H,
-                           dashed=sum(1 for e in edges if not e.cabled))
+                           dashed=sum(1 for e in edges if not e.cabled),
+                           wireless=any(e.kind == "wireless" for e in edges),
+                           internet=any(e.kind == "internet" for e in edges))
 
 
 # ———— One record's neighborhood ————
