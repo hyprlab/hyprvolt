@@ -21,6 +21,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- Once a subnet's range is typed, its gateway is filled in with the first address and its DHCP range with the upper half of the subnet, unless they were typed by hand
 - A subnet's range is typed as its network address with the subnet mask chosen beside it (/24 · 255.255.255.0 · 254 hosts), and its DHCP range as a first and a last address in two boxes, in its record and in the setup guide
 - The chosen option of a segmented control (Dynamic or Static, a theme, a user's role, List or Diagram) is shown in the yellow accent
 - An internet connection's Bandwidth is now a Download and an Upload speed, each a number with Mb/s or Gb/s chosen beside it. Bandwidth already typed is read into them, and text that can't be read is kept at the end of the connection's notes

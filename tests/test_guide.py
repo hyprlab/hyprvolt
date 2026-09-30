@@ -277,6 +277,10 @@ def test_a_module_steps_are_checked():
     assert "makes 'server', not one of the module's types" in problems
     assert "needs either kinds of record or a save function" in problems
     own = Module(id="gizmos", name="Gizmos", setup=(SetupStep("bits", "Bits", "", 10, save=lambda *a: None),))
+    from hyprvolt.manifest import EntityType, Field
+    fills = Module(id="fills", name="Fills", types=(EntityType("thing", "Thing", "Things", detail=object, fields=(
+        Field("name2", "Name", prefills=("x",)),)),))
+    assert "fills in other fields from a subnet" in " ".join(validate(fills, Registry()))
     assert "needs a rows function" in " ".join(validate(own, Registry()))
 
 

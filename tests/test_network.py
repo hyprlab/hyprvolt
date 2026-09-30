@@ -374,7 +374,7 @@ def test_a_subnet_is_typed_as_address_and_mask_and_its_dhcp_as_first_and_last(cl
     assert subnet["fields"]["dhcp_range"] == "10.0.30.100-10.0.30.199"
     sheet = client.get(f"/e/{subnet['id']}/sheet").data.decode()
     # The range: its address, and the mask chosen from the sizes beside it.
-    assert 'data-join="/"' in sheet and 'value="10.0.30.0"' in sheet
+    assert 'data-join="/" data-prefills="f.gateway f.dhcp_range"' in sheet and 'value="10.0.30.0"' in sheet
     assert '<option value="24" selected>/24 · 255.255.255.0 · 254 hosts</option>' in sheet
     # The DHCP range: its first and last address in two boxes.
     assert 'data-join="-"' in sheet and 'value="10.0.30.100"' in sheet and 'value="10.0.30.199"' in sheet

@@ -1262,6 +1262,54 @@
     box.querySelector("input[name]").dispatchEvent(new Event("change", { bubbles: true }));
   });
 
+  // A subnet that fills in others ([data-prefills]: a gateway, a DHCP
+  // range): once it is typed, the first host becomes the gateway and the
+  // upper half of it the DHCP range, leaving the lower half for fixed
+  // addresses. Only a field left empty, or filled in this way, is filled;
+  // one typed in is left alone. IPv4 only.
+  function ipv4(text) {
+    var m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(text);
+    if (!m) return null;
+    var n = 0;
+    for (var i = 1; i <= 4; i++) { if (+m[i] > 255) return null; n = n * 256 + +m[i]; }
+    return n;
+  }
+  function ipv4Text(n) { return [n >>> 24 & 255, n >>> 16 & 255, n >>> 8 & 255, n & 255].join("."); }
+  function prefill(box) {
+    var cidr = box.querySelector("input[name]").value.split("/"), start = ipv4(cidr[0]), prefix = +cidr[1];
+    if (start === null || !(prefix >= 8 && prefix <= 30)) return;
+    var size = Math.pow(2, 32 - prefix), net = start - start % size, first = net + 1, last = net + size - 2;
+    var scope = box.closest("[data-row], [data-row-new], form, [data-autosave]") || document;
+    box.getAttribute("data-prefills").split(" ").forEach(function (name) {
+      var el = scope.querySelector('[name="' + CSS.escape(name) + '"]');
+      if (!el || el.disabled || (el.value && !el.hasAttribute("data-prefilled"))) return;
+      var range = el.closest('[data-join="-"]'), value;
+      if (range) {
+        if (size < 16) return;                       // too small to share
+        var from = net + size / 2, parts = range.querySelectorAll("[data-part]");
+        parts[0].value = ipv4Text(from);
+        parts[1].value = ipv4Text(last);
+        value = ipv4Text(from) + "-" + ipv4Text(last);
+      } else {
+        value = ipv4Text(first);
+      }
+      if (el.value === value) return;
+      el.value = value;
+      el.setAttribute("data-prefilled", "");
+      el.dispatchEvent(new Event("change", { bubbles: true }));   // a saved row saves it
+    });
+  }
+  document.addEventListener("change", function (e) {
+    var box = e.target.closest && e.target.closest("[data-prefills]");
+    if (box && e.target === box.querySelector("input[name]")) prefill(box);
+  });
+  // Typed in by hand: no longer filled in.
+  document.addEventListener("input", function (e) {
+    var el = e.target, range = el.closest && el.closest('[data-join="-"]');
+    var target = range ? range.querySelector("input[name]") : el;
+    if (target && target.hasAttribute && target.hasAttribute("data-prefilled")) target.removeAttribute("data-prefilled");
+  });
+
   // A choice that is a page: the site setup guide's choice of site.
   document.addEventListener("change", function (e) {
     var select = e.target.closest && e.target.closest("select[data-go]");
@@ -1269,9 +1317,9 @@
   });
 
   // A step of rows in the site setup guide ([data-rows]): each row a record,
-  // each field saved as it changes; the blank row at the end added once it
-  // has a name (Enter, its Add button, or leaving it); a row deleted after
-  // asking, with Undo. Adding or deleting draws the rows again.
+  // each field saved as it changes; the blank row at the end added only when
+  // asked (Enter, its Add button, or Continue with a name typed in it); a row
+  // deleted after asking, with Undo. Adding or deleting draws the rows again.
   var rowAdding = null;          // the add on its way, so Continue waits for it
   function rowsOf(el) { return el.closest("[data-rows]"); }
   function rowValue(el) { return el.type === "checkbox" ? el.checked : el.value; }
@@ -1369,13 +1417,6 @@
     e.preventDefault();
     var fresh = form.querySelector("[data-row-new]");
     if (fresh) addRow(fresh);
-  });
-  document.addEventListener("focusout", function (e) {
-    var row = e.target.closest && e.target.closest("[data-row-new]");
-    if (!row || !rowsOf(row) || !row.querySelector('[name="name"]')) return;
-    var next = e.relatedTarget;
-    if (next && (row.contains(next) || next.matches("[data-rows-continue]"))) return;   // Continue adds it
-    addRow(row);
   });
   document.addEventListener("click", function (e) {
     var add = e.target.closest("[data-row-add]");

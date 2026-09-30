@@ -206,6 +206,10 @@ following a hidden one is hidden too); what it holds is kept. Network's
 internet connection uses both: its static address, subnet mask, gateway and
 DNS servers follow the Dynamic or Static switch, which follows its kind.
 
+A `cidr` with `prefills=("gateway", "dhcp_range")` fills those fields in
+once the subnet is typed, while they are empty or still as it filled them:
+an `ip` with the first host, an `iprange` with the upper half of the subnet.
+
 A `select` can hide another module's form sections while it has certain
 values: Hardware's form factor has `hides=("rack",)` and
 `hides_when=("tower",)`, so a tower server's form and Overview have no Rack

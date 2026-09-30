@@ -50,6 +50,8 @@ class Field:
     expires: bool = False            # date: when something ends or is due; reminded of
     remind: Callable | None = None   # expires: remind(detail) -> days ahead, or None for the window
     switch: tuple = ()               # boolean: a switch reading (off, on): ("Dynamic", "Static")
+    prefills: tuple = ()             # cidr: fields filled in from it while empty: an ip with its first
+                                     # host (a gateway), an iprange with its upper half (DHCP)
     shown_when: tuple = ()           # (field key, value): shown only while that field has it:
                                      # ("static_ip", True), the static address of a static line
     hides: tuple = ()                # select: form sections (their keys) hidden while

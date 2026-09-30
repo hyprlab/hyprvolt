@@ -1,7 +1,7 @@
 {# A step of rows in the site setup guide (core/guide.py, _rows_html): what is
    recorded already, one row each, and a blank row at the end for the next.
    app.js ([data-rows]) saves a field of a row as it changes, adds the blank
-   row once it has a name (Enter, the Add button, or leaving the row), and
+   row when asked (Enter, the Add button, or Continue), and
    deletes a row after asking, each change at once; then this is drawn again
    from data-rows-url. #}
 {% from "sheet/controls.html" import cidr, iprange, speed, switch %}
@@ -15,7 +15,7 @@
   {% if c.kind == 'speed' %}
   {{ speed(c.name, v if v != '' else none, label=c.label, disabled=off) }}
   {% elif c.kind == 'cidr' %}
-  {{ cidr(c.name, v, label=c.label, disabled=off, placeholder=(c.placeholder or '').split('/')[0]) }}
+  {{ cidr(c.name, v, label=c.label, disabled=off, placeholder=(c.placeholder or '').split('/')[0], prefills=c.prefills or ()) }}
   {% elif c.kind == 'iprange' %}
   {{ iprange(c.name, v, label=c.label, disabled=off) }}
   {% elif c.kind == 'select' %}

@@ -127,6 +127,10 @@ Recently deleted), or only unassigned if it has notes or tags. An address can
 belong to one record at a time. A subnet's range is typed as its network
 address with the subnet mask chosen beside it, and its DHCP range as its
 first and last address; a range the DHCP addresses don't fit in is refused.
+Once the range is typed, the gateway is filled in with its first address
+and the DHCP range with its upper half (.128 to .254 in a /24), leaving the
+lower half for fixed addresses; a gateway or range typed by hand is left
+alone.
 A subnet's Addresses tab draws an IPv4 subnet
 up to a /22 as a grid: used, reserved, held for DHCP or free. Choosing a free
 address records it. Anything with network ports has a Cabling tab. A cable
@@ -419,8 +423,8 @@ and says how many, and Undo brings them all back.
 
 Every other step is a list of rows, one record a row: what the site has
 already, and a blank row at the end. Typing a name in the blank row and
-pressing Enter (or its Add button, or moving on from it) adds it, and a new
-blank row appears for the next, so every endpoint or every service goes in
+pressing Enter or its Add button adds it (nothing is added until then), and
+a new blank row appears for the next, so every endpoint or every service goes in
 one after another. Any field of a row is changed in place and saved when it
 is left, a row's kind too (a router into a firewall); a change that doesn't
 fit says why under the row and saves nothing. The × on a row deletes it,
