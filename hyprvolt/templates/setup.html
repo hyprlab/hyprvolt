@@ -2,6 +2,7 @@
 {% block title %}Set up {{ app_name }}{% endblock %}
 {% block bodyclass %}auth-body{% endblock %}
 {% block body %}
+{% with cls = 'theme-corner' %}{% include "partials/theme_button.html" %}{% endwith %}
 <main class="auth-wrap">
   <div class="auth-card wizard" id="wizard">
 
@@ -155,6 +156,7 @@
           username: document.getElementById("wiz-email").value.trim(),
           password: document.getElementById("wiz-password").value,
           registration_open: document.getElementById("wiz-registration").checked,
+          theme: document.documentElement.getAttribute("data-theme"),
           worker_minutes: parseInt(document.getElementById("wiz-worker").value, 10)
         }).then(function () {
           // On into the site setup guide, where a new install starts.

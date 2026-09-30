@@ -1546,6 +1546,8 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   max-width: 1180px; margin: 0 auto; padding: 22px clamp(16px, 3.5vw, 36px) 0;
 }
+.guide-top-side { display: flex; align-items: center; gap: 14px; }
+.theme-corner { position: fixed; top: 16px; right: 16px; z-index: 5; }
 .guide-exit { font-size: 13.5px; font-weight: 550; color: var(--muted); }
 .guide-exit:hover { color: var(--ink); }
 .guide-wrap { max-width: 1180px; margin: 0 auto; padding: clamp(22px, 4vw, 44px) clamp(16px, 3.5vw, 36px) 60px; }
@@ -1597,7 +1599,7 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 .guide-add { margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; }
 .guide-add svg { width: 15px; height: 15px; }
 .guide-form .form-error { margin: 14px 0 0; }
-.guide-form > .hint { margin-top: 12px; }
+.guide-form > .hint, .guide-nav + .hint { margin-top: 16px; }
 .guide-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 22px; }
 .guide-nav-side { display: flex; flex-wrap: wrap; gap: 10px; }
 /* Save and continue comes first, so Enter does it, and shows last. */

@@ -1,7 +1,8 @@
 {# A tree step of the site setup guide (core/guide.py, tree()): the site and
    what the step records in it, each inside the place it is in. app.js
-   ([data-tree]) adds, moves and deletes through the records API, each change
-   saved at once, and redraws this from data-tree-url. #}
+   ([data-tree]) adds and moves through the records API and deletes a place
+   with everything of the step in it (data-tree-delete), each change saved at
+   once, and redraws this from data-tree-url. #}
 {% from "partials/macros.html" import type_icon %}
 {% macro node(n) %}
 {% set e = n.entity %}
@@ -22,8 +23,10 @@
       <button type="button" class="btn btn--xs btn--ghost" data-tree-add="{{ k.type }}" data-tree-label="{{ k.label }}"
               aria-label="Add a {{ k.label|lower }} in {{ e.name }}">+ {{ k.label }}</button>
       {% endfor %}
-      {% if not n.root and not n.children %}
-      <button type="button" class="iconbtn iconbtn--sm iconbtn--danger" data-tree-delete aria-label="Delete {{ e.name }}" title="Delete">
+      {% if not n.root %}
+      <button type="button" class="iconbtn iconbtn--sm iconbtn--danger" aria-label="Delete {{ e.name }}" title="Delete"
+              data-tree-delete="{{ url_for('guide.tree_delete', key=step.key, entity_id=e.id) }}"
+              data-inside="{{ n.inside }}" data-holds="{{ n.holds }}">
         <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
       {% endif %}

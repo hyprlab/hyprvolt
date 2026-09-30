@@ -117,7 +117,10 @@
       applyTheme(next);
       var radio = document.querySelector('input[name="theme"][value="' + next + '"]');
       if (radio) radio.checked = true;
-      api("/settings", { theme: next }).catch(function () {});
+      // Signed in it is the account's; before that (the first-run setup
+      // page), this browser's, and the setup gives it to the admin.
+      if (root.hasAttribute("data-signed-in")) api("/settings", { theme: next }).catch(function () {});
+      else try { localStorage.setItem("theme", next); } catch (_) {}
     });
   }
   document.querySelectorAll('input[name="theme"]').forEach(function (radio) {
@@ -1117,11 +1120,19 @@
     var del = e.target.closest("[data-tree-delete]");
     if (!del || !treeOf(del)) return;
     var node = treeNode(del), tree = treeOf(del);
-    del.setAttribute("data-confirm", "Delete " + node.getAttribute("data-name") + "?");
-    del.setAttribute("data-confirm-text", "It goes to Recently deleted, where it can be restored until it is purged.");
+    // A building goes with the rooms in it; the dialog says how many, and
+    // what else was placed in them.
+    var inside = del.getAttribute("data-inside");     // "2 rooms", or ""
+    var holds = parseInt(del.getAttribute("data-holds"), 10) || 0;
+    var name = node.getAttribute("data-name");
+    del.setAttribute("data-confirm", "Delete " + name + (inside ? " and the " + inside + " in it?" : "?"));
+    del.setAttribute("data-confirm-text", (inside ? "They go" : "It goes") + " to Recently deleted, where " +
+      (inside ? "they" : "it") + " can be restored until purged, and Undo brings " + (inside ? "them all" : "it") +
+      " back." + (holds ? " " + holds + (holds === 1 ? " other record is" : " other records are") + " placed in " +
+      (inside ? "them" : "it") + ", and will show no location unless " + (inside ? "they are" : "it is") + " restored." : ""));
     del.setAttribute("data-confirm-go", "Delete");
     confirmFirst(del, function () {
-      api("/api/entities/" + node.getAttribute("data-node") + "/delete").then(function (data) {
+      api(del.getAttribute("data-tree-delete")).then(function (data) {
         redrawTree(tree).then(function () {
           offerUndo("Deleted", data.undo, function () {
             var now = document.querySelector("[data-tree]");

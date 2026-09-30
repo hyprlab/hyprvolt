@@ -144,8 +144,9 @@ def test_buildings_and_rooms_are_a_tree_of_the_site(client, h, admin):
     assert order == sorted(order)
     office_node = tree.split(f'data-node="{office["id"]}"')[1]
     assert 'data-accepts=""' in office_node.split("\n")[1] and "Add a room in Office 1" not in tree
-    # Only a place with nothing in it can be deleted from the tree.
-    assert 'aria-label="Delete Office 1"' in tree and 'aria-label="Delete Building 1"' not in tree
+    # Every place can be deleted; the dialog is told what else goes with it.
+    assert 'aria-label="Delete Office 1"' in tree and 'aria-label="Delete Building 1"' in tree
+    assert 'data-inside="1 room" data-holds="0"' in tree and 'aria-label="Delete Home"' not in tree
     # Moving a level: a room into the building; not into a room, and a
     # building not into a room either.
     client.post(f"/api/entities/{closet['id']}", json={"location_id": b1["id"]}, headers=h)
@@ -154,6 +155,25 @@ def test_buildings_and_rooms_are_a_tree_of_the_site(client, h, admin):
         wrong = client.post(f"/api/entities/{moving['id']}", json={"location_id": into["id"]}, headers=h)
         assert wrong.status_code == 400 and "can only be in a" in wrong.get_json()["error"]
     assert client.get("/site-setup/vendors/tree").status_code == 404
+
+
+def test_deleting_a_building_takes_its_rooms_and_undo_brings_them_back(client, h, admin):
+    step(client, h, "site", r0={"name": "Home"})
+    site = entities(client, "site")[0]
+    b1 = make(client, h, "building", name="Building 1", location_id=site["id"])
+    rooms = [make(client, h, "room", name=n, location_id=b1["id"]) for n in ("Office", "Lab")]
+    make(client, h, "rack", name="Rack 1", location_id=rooms[0]["id"])
+    tree = client.get(f"/site-setup/rooms/tree?site={site['id']}").data.decode()
+    assert 'data-inside="2 rooms" data-holds="1"' in tree
+    gone = client.post(f"/site-setup/rooms/tree/{b1['id']}/delete", headers=h).get_json()
+    assert gone["deleted"] == 3 and entities(client, "room") == [] and entities(client, "building") == []
+    assert len(entities(client, "rack")) == 1           # the rack stays, placed nowhere until Undo
+    client.post(gone["undo"]["url"], json=gone["undo"]["body"], headers=h)
+    assert {r["name"] for r in entities(client, "room")} == {"Office", "Lab"}
+    assert entities(client, "rack")[0]["location"]["id"] == rooms[0]["id"]
+    # Only a place of the step: a rack isn't one.
+    rack = entities(client, "rack")[0]
+    assert client.post(f"/site-setup/rooms/tree/{rack['id']}/delete", headers=h).status_code == 404
 
 
 def test_a_step_is_saved_whole_or_not_at_all(client, h, admin):
@@ -195,3 +215,22 @@ def test_a_module_steps_are_checked():
     assert "is not a SetupFinish" in problems
     assert "makes 'server', not one of the module's types" in problems
     assert "needs either kinds of record or a save function" in problems
+
+
+def test_a_new_install_is_dark_and_the_wizard_can_switch(app, client, csrf):
+    setup = client.get("/setup").data.decode()
+    assert 'data-theme-pref="dark"' in setup and 'id="theme-btn"' in setup
+    # The choice made on the setup page is the admin's from then on.
+    client.post("/setup", json={"username": "ada@example.com", "password": "password1", "theme": "light",
+                                "worker_minutes": 0}, headers={"X-CSRF": csrf})
+    guide = client.get("/site-setup").data.decode()
+    assert 'data-theme-pref="light"' in guide and 'id="theme-btn"' in guide
+    with app.app_context():
+        from hyprvolt.models import User
+        from hyprvolt.models import db
+        assert User.query.first().theme == "light"
+        later = User(username="x@example.com", role="viewer")
+        later.set_password("password1")
+        db.session.add(later)
+        db.session.commit()
+        assert later.theme == "dark"            # every new account starts dark

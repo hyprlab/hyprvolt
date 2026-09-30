@@ -15,7 +15,9 @@ docker compose up -d
 Open `http://<host>:8101`. The first visit opens the setup wizard, which
 creates the admin account, then goes on into the guide that documents the
 first site a step at a time ([Setting up a site](#setting-up-a-site)). There
-is no default account or password. The guide's first page, and the dashboard
+is no default account or password. It is in the dark theme, as every new
+account is; the sun button at the top switches to light, and the admin
+account keeps the choice (Settings > Appearance changes it later). The guide's first page, and the dashboard
 while the instance is empty, offer to load a demo homelab to look around in
 instead; `flask seed-demo` does the same from the server.
 
@@ -399,8 +401,9 @@ it is in, and its + buttons add a building or a room right there, saved as
 Enter is pressed, with the next name typed straight after. A room is in a
 building or straight in the site. Dragging a place by its handle onto another puts it inside that one, and
 onto the site brings it back to the top; with the handle focused, → puts it
-inside the place above it and ← takes it out a level. A place with nothing
-in it can be deleted there, asked first and with Undo.
+inside the place above it and ← takes it out a level. The × beside a place
+deletes it, and a building goes with the rooms in it: the dialog asks first
+and says how many, and Undo brings them all back.
 
 Every other step is a few fields to a row, and Add another adds a row, so
 every endpoint or every service can go in at once. Save and continue saves

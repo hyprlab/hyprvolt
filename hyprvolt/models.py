@@ -32,7 +32,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(10), default="viewer", nullable=False)
     # Preferences live on the account, not in localStorage, so they follow the
     # user to another browser.
-    theme = db.Column(db.String(10), default="system", nullable=False)     # system|light|dark
+    theme = db.Column(db.String(10), default="dark", nullable=False)       # system|light|dark
     view_mode = db.Column(db.String(10), default="cards", nullable=False)  # cards|list
     infinite_scroll = db.Column(db.Boolean, default=True, nullable=False)
     # A record's sections all on one page, followed as it scrolls; off, one

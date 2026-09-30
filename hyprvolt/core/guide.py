@@ -10,7 +10,7 @@ through ``records.create``, as the record form would, and a step is saved
 whole or not at all. The site chosen in the first step (``?site=``) is where
 the later steps' records are placed by default.
 """
-from flask import Blueprint, abort, redirect, render_template, request, url_for
+from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
 from markupsafe import Markup
 
@@ -192,7 +192,9 @@ def _found(step, scope) -> list[Entity]:
 
 def tree(step, scope) -> dict | None:
     """The site and the step's records under it, each where it is:
-    {"entity", "type", "accepts" [kinds it can hold], "children", "root"}.
+    {"entity", "type", "accepts" [kinds it can hold], "children", "root",
+    "inside" (how many of the step's records are in it, at any depth),
+    "holds" (how many other records, such as racks and servers, are)}.
     A record whose place is outside the site, or gone, isn't in it."""
     if scope is None:
         return None
@@ -206,14 +208,39 @@ def tree(step, scope) -> dict | None:
     for e in rows:
         below.setdefault(e.location_id, []).append(e)
     order = {k.type: n for n, k in enumerate(kinds)}
+    others = dict(db.session.query(Entity.location_id, db.func.count(Entity.id))
+                  .filter(Entity.deleted_at.is_(None), Entity.type.notin_({k.type for k in kinds}))
+                  .group_by(Entity.location_id).all())
 
     def node(e, root=False, seen=()):
         children = [node(c, seen=seen + (e.id,)) for c in
                     sorted(below.get(e.id, []), key=lambda c: (order.get(c.type, 9), c.name.lower()))
                     if c.id not in seen]
         etype = reg.type(e.type)
-        return {"entity": e, "type": etype, "accepts": accepts(e.type), "children": children, "root": root}
+        count = {}                      # type key -> how many, at any depth
+        for c in children:
+            count[c["type"].key] = count.get(c["type"].key, 0) + 1
+            for t, n in c["count"].items():
+                count[t] = count.get(t, 0) + n
+        words = [f"{n} {reg.type(t).text(n != 1)}" for t, n in sorted(count.items(), key=lambda x: order.get(x[0], 9))]
+        return {"entity": e, "type": etype, "accepts": accepts(e.type), "children": children, "root": root,
+                "count": count, "inside": " and ".join(words),
+                "holds": others.get(e.id, 0) + sum(c["holds"] for c in children)}
     return node(scope, root=True)
+
+
+def _subtree(step, entity) -> list[Entity]:
+    """A record of a tree step and the step's records in it, at any depth,
+    the deepest first."""
+    types = {k.type for k in _kinds(step)}
+    out, todo = [], [entity]
+    while todo:
+        e = todo.pop()
+        if any(e.id == x.id for x in out):
+            continue
+        out.append(e)
+        todo += Entity.live().filter(Entity.location_id == e.id, Entity.type.in_(types)).all()
+    return list(reversed(out))
 
 
 def _tree_html(step, scope) -> str:
@@ -368,6 +395,35 @@ def tree_part(key):
     if not current.tree:
         abort(404)
     return _tree_html(current, _scope())
+
+
+@bp.route("/site-setup/<key>/tree/<int:entity_id>/delete", methods=["POST"])
+@role("editor")
+def tree_delete(key, entity_id):
+    """Delete a place of a tree step and the step's places in it (a building
+    and its rooms), all at once; one Undo brings them all back."""
+    current = _step_or_404(key)
+    entity = records.live(entity_id)
+    if not current.tree or entity is None or entity.type not in {k.type for k in _kinds(current)}:
+        abort(404, description="There is no such place.")
+    gone = _subtree(current, entity)
+    for e in gone:
+        records.delete(e)
+    db.session.commit()
+    return jsonify(ok=True, deleted=len(gone),
+                   undo={"url": url_for("guide.tree_restore", key=key), "body": {"ids": [e.id for e in gone]}})
+
+
+@bp.route("/site-setup/<key>/tree/restore", methods=["POST"])
+@role("editor")
+def tree_restore(key):
+    """Undo of ``tree_delete``: the places it deleted, back where they were."""
+    _step_or_404(key)
+    ids = (request.get_json(silent=True) or {}).get("ids") or []
+    for e in Entity.query.filter(Entity.id.in_([i for i in ids if isinstance(i, int)])):
+        records.restore(e)
+    db.session.commit()
+    return jsonify(ok=True)
 
 
 @bp.route("/site-setup/<key>", methods=["GET", "POST"])
