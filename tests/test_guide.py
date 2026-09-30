@@ -61,6 +61,19 @@ def test_the_guide_has_the_page_to_itself(client, h, admin):
         assert 'id="sidebar"' not in page and 'id="new-btn"' not in page and "searchpill" not in page, url
 
 
+def test_every_step_says_what_goes_there_and_why(app, client, h, admin):
+    with app.app_context():
+        from hyprvolt.registry import current as registry
+        steps = registry().setup_steps()
+    assert steps and all(s.help for s in steps)
+    site = site_named(client, h, "Home")
+    for s in steps:
+        page = client.get(f"/site-setup/{s.key}?site={site['id']}").data.decode()
+        assert f'popovertarget="guide-help-{s.key}"' in page and "What goes here" in page, s.key
+    vendors = client.get(f"/site-setup/vendors?site={site['id']}").data.decode()
+    assert "a Usenet provider or an indexer" in vendors and "Logins and API keys go in Secrets" in vendors
+
+
 def test_the_steps_run_from_the_site_to_the_cables(client, h, admin):
     page = client.get("/site-setup/site").data.decode()
     assert "Step 1 of" in page and "· Place" in page

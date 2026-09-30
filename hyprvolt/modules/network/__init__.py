@@ -63,6 +63,36 @@ IP = '<path d="M5 6.5h14M5 17.5h14"/><path d="M8.5 9.5v5M11.5 9.5v5h1.8a1.8 1.8 
 DOMAIN = ('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.5 5.2 3.5 8.5s-1.1 6.2-3.5 8.5'
           'c-2.4-2.3-3.5-5.2-3.5-8.5s1.1-6.2 3.5-8.5Z"/>')
 
+#: What goes in each of the module's steps of the site setup guide, and
+#: why: the paragraphs behind the step's info button.
+SETUP_HELP = {
+    "internet": (
+        "An internet connection is one line from an ISP: fiber, cable, a mobile backup. It holds the public "
+        "addresses, the bandwidth, and the circuit ID the ISP asks for when you report a fault.",
+        "The ISP itself is a vendor, chosen here as Provider, so its support number is a click away. The "
+        "modem or ONT is network gear, a later step.",
+    ),
+    "vlans": (
+        "A VLAN splits one physical network into separate ones, each with a number from 1 to 4094, such as "
+        "Servers or IoT. Record them if your switches and router use them; skip this for one flat network.",
+        "The address range each VLAN uses is a subnet, the next step, which names its VLAN.",
+    ),
+    "subnets": (
+        "A subnet is an address range in use, such as 192.168.1.0/24, with its gateway and DHCP range. Each "
+        "IP address recorded later is placed in the subnet that holds it, and the subnet shows which "
+        "addresses are used and which are free.",
+        "Public addresses from the ISP belong on the internet connection, not here.",
+    ),
+    "cables": (
+        "A cable connects two devices. A device is cabled as a whole unless its ports are recorded one by one "
+        "(Record each port, on its Cabling tab), as a switch or patch panel usually is; then its free ports "
+        "are offered here.",
+        "Cables draw the network diagram, and a trace follows a port through patch panels to the far end. To "
+        "move a cable, delete it and connect it again.",
+    ),
+}
+
+
 module = Module(
     id="network",
     name="Network",
@@ -128,25 +158,29 @@ module = Module(
     setup=(
         SetupStep("internet", "Internet connection", "How the site reaches the internet: each line from an "
                   "ISP, with the provider chosen from the vendors. Most places have one.", 40,
-                  group="Network", plan="internet connections",
+                  group="Network",
+                  help=SETUP_HELP["internet"], plan="internet connections",
                   kinds=(SetupKind("Internet connection", "network", {"f.kind": "wan"}),),
                   fields=(SetupField("name", placeholder="Fiber"), SetupField("location_id"),
                           SetupField("s.supplier.vendor_id", "Provider", types=("vendor",)),
                           SetupField("f.bandwidth", placeholder="1 Gb/s"), SetupField("f.public_ips"),
                           SetupField("f.circuit_id"))),
         SetupStep("vlans", "VLANs", "The VLANs the network is split into, each with its number. Skip this if "
-                  "the network is one flat LAN.", 45, group="Network", plan="VLANs",
+                  "the network is one flat LAN.", 45, group="Network",
+                  help=SETUP_HELP["vlans"], plan="VLANs",
                   kinds=(SetupKind("VLAN", "vlan"),),
                   fields=(SetupField("name", placeholder="Servers"), SetupField("f.vid"))),
         SetupStep("subnets", "Subnets", "The address ranges in use, such as 192.168.1.0/24, with their gateway. "
-                  "Addresses recorded in the later steps are found in these.", 50, group="Network", plan="subnets",
+                  "Addresses recorded in the later steps are found in these.", 50, group="Network",
+                  help=SETUP_HELP["subnets"], plan="subnets",
                   kinds=(SetupKind("Subnet", "subnet"),),
                   fields=(SetupField("name", placeholder="Servers"), SetupField("f.cidr", placeholder="10.0.20.0/24"),
                           SetupField("f.gateway", placeholder="10.0.20.1"), SetupField("f.vlan"),
                           SetupField("f.dhcp_range"))),
         SetupStep("cables", "Cables", "What plugs into what, from each endpoint back to the switch. A device "
                   "is cabled as a whole; one with its ports recorded offers its free ports.", 110,
-                  group="Endpoints", plan="cables",
+                  group="Endpoints",
+                  help=SETUP_HELP["cables"], plan="cables",
                   save=views.setup_cable, rows=views.setup_rows, update=views.setup_update,
                   delete=views.setup_delete,
                   fields=(SetupField("from", "From", choices=views.setup_ends),

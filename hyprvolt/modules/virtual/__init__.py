@@ -50,6 +50,23 @@ DOCKER = '<rect x="3.5" y="11" width="17" height="6.5" rx="1.5"/><path d="M6.5 1
 STACK = '<path d="m12 4 8.5 4-8.5 4-8.5-4L12 4Z"/><path d="m3.5 12 8.5 4 8.5-4M3.5 16l8.5 4 8.5-4"/>'
 CONTAINER = '<rect x="4" y="6.5" width="16" height="11" rx="1"/><path d="M8 6.5v11M12 6.5v11M16 6.5v11"/>'
 
+#: What goes in each of the module's steps of the site setup guide, and
+#: why: the paragraphs behind the step's info button.
+SETUP_HELP = {
+    "hypervisors": (
+        "A hypervisor is the software that runs virtual machines, such as Proxmox, ESXi or Hyper-V, on the "
+        "server it is installed on. Recorded apart from the server, it lets each VM say which host it runs "
+        "on, and shows what stops when that server goes down.",
+        "Skip this if nothing is virtualized.",
+    ),
+    "guests": (
+        "Virtual machines and LXC containers, each on its hypervisor, with its operating system and address. "
+        "Docker hosts, stacks and containers can be added later in Virtual.",
+        "What a VM runs for people, such as a media server or a website, is a service: the next step.",
+    ),
+}
+
+
 module = Module(
     id="virtual",
     name="Virtual",
@@ -110,12 +127,14 @@ module = Module(
     setup=(
         SetupStep("hypervisors", "Hypervisors", "What runs virtual machines: Proxmox, ESXi or Hyper-V, each on "
                   "the server it is installed on. Skip this if nothing is virtualized.", 80,
-                  group="What runs", plan="hypervisors",
+                  group="What runs",
+                  help=SETUP_HELP["hypervisors"], plan="hypervisors",
                   kinds=(SetupKind("Hypervisor", "hypervisor"),),
                   fields=(SetupField("name", placeholder="pve1"), SetupField("f.platform"), SetupField("f.host"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.21"))),
         SetupStep("guests", "Virtual machines and containers", "The virtual machines and LXC containers, each "
-                  "on its hypervisor.", 85, group="What runs", plan="virtual machines, containers",
+                  "on its hypervisor.", 85, group="What runs",
+                  help=SETUP_HELP["guests"], plan="virtual machines, containers",
                   kinds=(SetupKind("Virtual machine", "vm"), SetupKind("LXC container", "lxc")),
                   fields=(SetupField("name", placeholder="docker1"), SetupField("f.host"), SetupField("f.os"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.21"))),

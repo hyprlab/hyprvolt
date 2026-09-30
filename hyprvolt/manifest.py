@@ -173,6 +173,8 @@ class SetupStep:
     order: int
     group: str = ""
     plan: str = ""                   # what it covers on the first page, lower case: "buildings, rooms"
+    help: tuple = ()                 # paragraphs behind the step's info button: what goes here, what goes
+                                     # elsewhere, and why
     fields: tuple = ()
     kinds: tuple = ()
     scope: bool = False

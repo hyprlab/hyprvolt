@@ -80,6 +80,30 @@ def hardware(key, label, plural, icon, specs=(), traits=()):
                       fields=IDENTITY + tuple(specs) + PURCHASE)
 
 
+#: What goes in each of the module's steps of the site setup guide, and
+#: why: the paragraphs behind the step's info button.
+SETUP_HELP = {
+    "gear": (
+        "Network gear is what moves traffic: the modem or ONT, the router or firewall, switches, access "
+        "points and patch panels. Give each its management address; it is recorded as an IP address in its "
+        "subnet.",
+        "Computers and storage come next, and cabling everything together is the last step.",
+    ),
+    "servers": (
+        "Servers, NAS boxes and UPSes: the machines that run things, keep data, and keep the power on. A "
+        "server that runs virtual machines is recorded here as hardware; its hypervisor (Proxmox, ESXi) is a "
+        "later step, running on it.",
+        "Desktops, laptops and printers are endpoints, a later step.",
+    ),
+    "endpoints": (
+        "Endpoints are what people use at the edge of the network: workstations and laptops, printers, and "
+        "peripherals such as a monitor, a KVM or a PDU. Say who uses a computer and where it is.",
+        "Phones and tablets that only join the Wi-Fi rarely need a record; add them if you keep track of "
+        "them.",
+    ),
+}
+
+
 module = Module(
     id="hardware",
     name="Hardware",
@@ -125,7 +149,8 @@ module = Module(
     setup=(
         SetupStep("gear", "Network gear", "What connects everything, from where the internet comes in: the "
                   "modem, the router or firewall, then switches, access points and patch panels.", 60,
-                  group="Equipment", plan="network gear",
+                  group="Equipment",
+                  help=SETUP_HELP["gear"], plan="network gear",
                   kinds=(SetupKind("Modem", "network_device", {"f.kind": "modem"}),
                          SetupKind("Router", "network_device", {"f.kind": "router"}),
                          SetupKind("Firewall", "firewall"),
@@ -135,12 +160,14 @@ module = Module(
                   fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
         SetupStep("servers", "Servers and storage", "The machines that run things and keep data: servers, "
-                  "NAS boxes, and the UPS that keeps them up.", 70, group="Equipment", plan="servers, storage",
+                  "NAS boxes, and the UPS that keeps them up.", 70, group="Equipment",
+                  help=SETUP_HELP["servers"], plan="servers, storage",
                   kinds=(SetupKind("Server", "server"), SetupKind("NAS", "nas"), SetupKind("UPS", "ups")),
                   fields=(SetupField("name", placeholder="srv1"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
         SetupStep("endpoints", "Endpoints", "What people use at the edge of the network: computers, printers "
-                  "and other devices. Add them all here, one row each.", 100, group="Endpoints", plan="endpoints",
+                  "and other devices. Add them all here, one row each.", 100, group="Endpoints",
+                  help=SETUP_HELP["endpoints"], plan="endpoints",
                   kinds=(SetupKind("Workstation", "workstation"), SetupKind("Printer", "printer"),
                          SetupKind("Peripheral", "peripheral")),
                   fields=(SetupField("name", placeholder="desk-pc"), SetupField("location_id"),

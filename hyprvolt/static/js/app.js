@@ -1472,7 +1472,10 @@
     var btn = document.querySelector('[popovertarget="' + pop.id + '"]');
     if (!btn) return;
     var r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
-    var left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+    // A wide one (the setup guide's help) opens from the button's left edge,
+    // over the step rather than the steps beside it.
+    var from = pop.classList.contains("infotip-pop--wide") ? r.left : r.left + r.width / 2 - w / 2;
+    var left = Math.min(Math.max(8, from), window.innerWidth - w - 8);
     var top = r.bottom + 8;
     if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8);
     pop.style.left = left + "px";

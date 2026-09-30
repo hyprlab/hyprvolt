@@ -230,7 +230,10 @@ gear (60), servers (70) and endpoints (100), Virtual hypervisors (80) and
 guests (85), Services services (90), and Network cables (110). A step of a
 new module takes a place between them. `group` is the part of the guide a
 step is in, a heading over its steps: Place, Network, Equipment, What runs
-or Endpoints. `plan` is how the guide's first page lists what the step
+or Endpoints. `help` is a few paragraphs behind the step's What goes here
+button: what belongs in the step, what belongs elsewhere and why (a Usenet
+provider is a vendor, SABnzbd a service). Give every step one. `plan` is how
+the guide's first page lists what the step
 covers, in lower case, commas between several: `"buildings, rooms"`; the
 group's steps read as one list, "Site, buildings, rooms, and racks".
 

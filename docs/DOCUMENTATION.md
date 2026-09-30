@@ -387,7 +387,10 @@ covers, in five parts: the place (the site, its buildings and rooms,
 racks), the network (vendors, the internet connection, VLANs, subnets), the
 equipment (network gear, servers and storage), what runs (hypervisors,
 virtual machines, services), and the endpoints and the cables between them.
-Steps of turned-off modules are left out. The guide has the screen to
+Steps of turned-off modules are left out. Each step has a What goes here
+button beside its title that says what belongs in it, what belongs in
+another step, and why: a Usenet provider or an indexer is a vendor, with its
+subscription as a contract, while SABnzbd, which you run, is a service. The guide has the screen to
 itself, the first time and every time after: no sidebar, search or New menu,
 only the steps. The app comes back at the end, or with Exit setup at the top.
 

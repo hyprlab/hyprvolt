@@ -174,6 +174,9 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   box-shadow: 0 8px 24px rgb(0 0 0 / .18);
 }
 .infotip-pop:popover-open { animation: pop-in .12s ease both; }
+.infotip-pop--wide { max-width: min(460px, calc(100vw - 16px)); padding: 14px 16px; font-size: 13.5px; }
+.infotip-pop--wide p { margin: 0; }
+.infotip-pop--wide p + p { margin-top: 8px; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-3px); } }
 .form-check { display: flex; align-items: center; gap: 5px; }
 .field input, .field textarea, .field select {
@@ -1580,6 +1583,16 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 .guide-step.is-active .guide-num { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
 .guide-main { min-width: 0; max-width: 900px; }
 .guide-count { font-size: 12px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); margin: 4px 0 6px; }
+.guide-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 8px; }
+.guide-title-row .guide-title { margin: 0; }
+.guide-help {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border: 0; border-radius: 99px;
+  background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: color .15s, background .15s;
+}
+.guide-help svg { width: 17px; height: 17px; stroke-width: 1.8; }
+.guide-help:hover, .guide-help:focus-visible { color: var(--ink); background: var(--wash); }
+.guide-help:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .guide-title { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 8px; }
 .guide-intro { font-size: 14.5px; color: var(--muted); line-height: 1.55; max-width: 64ch; margin: 0 0 18px; }
 .guide-pick { max-width: 360px; margin-bottom: 16px; }

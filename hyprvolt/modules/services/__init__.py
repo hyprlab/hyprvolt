@@ -24,6 +24,19 @@ STATUSES = (("running", "Running"), ("degraded", "Degraded"), ("down", "Down"), 
 ICON = ('<path d="M12 3.5 4.5 7.5v4.2c0 4.3 3.1 7.7 7.5 8.8 4.4-1.1 7.5-4.5 7.5-8.8V7.5L12 3.5Z"/>'
         '<path d="m8.8 12.2 2.2 2.2 4.2-4.4"/>')
 
+#: What goes in each of the module's steps of the site setup guide, and
+#: why: the paragraphs behind the step's info button.
+SETUP_HELP = {
+    "services": (
+        "A service is something people use that you run: a website, file sharing, a media server, DNS, "
+        "SABnzbd. Say what it runs on (a server, a VM or a container), so the dependency view shows what "
+        "breaks when that host goes down.",
+        "An outside company it relies on, such as a Usenet provider or a cloud host, is a vendor, linked in "
+        "the service's Supplier section.",
+    ),
+}
+
+
 module = Module(
     id="services",
     name="Services",
@@ -52,7 +65,8 @@ module = Module(
     widgets=(Widget("services", "Services", views.services_widget),),
     setup=(SetupStep("services", "Services", "What people use: a website, file sharing, a media server, "
                      "DNS. Say what each runs on, so a host going down shows what goes with it.", 90,
-                     group="What runs", plan="services", kinds=(SetupKind("Service", "service"),),
+                     group="What runs",
+                     help=SETUP_HELP["services"], plan="services", kinds=(SetupKind("Service", "service"),),
                      fields=(SetupField("name", placeholder="Jellyfin"), SetupField("f.kind"), SetupField("f.host"),
                              SetupField("f.url"))),),
     seed=demo.seed,
