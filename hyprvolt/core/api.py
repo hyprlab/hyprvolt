@@ -141,7 +141,7 @@ def entity_create():
     except Invalid as err:
         return _fail(err)
     db.session.commit()
-    return jsonify(ok=True, entity=to_json(entity))
+    return jsonify(ok=True, entity=to_json(entity), notices=records.notices())
 
 
 def _attach_new(entity: Entity, target_id) -> None:
@@ -218,7 +218,7 @@ def entity_update(entity_id):
     except Invalid as err:
         return _fail(err)
     db.session.commit()
-    return jsonify(ok=True, entity=to_json(entity))
+    return jsonify(ok=True, entity=to_json(entity), notices=records.notices())
 
 
 @bp.route("/entities/<int:entity_id>/archive", methods=["POST"])

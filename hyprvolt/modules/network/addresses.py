@@ -9,6 +9,7 @@ from hyprvolt.core import records
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity
 from hyprvolt.models import db
+from hyprvolt.registry import current as registry
 
 from .models import DnsRecord, NetworkDetail
 
@@ -282,6 +283,16 @@ def section_values(entity) -> dict:
     return {"list": ", ".join(d.address for _, d in addresses_of(entity))}
 
 
+def _takes_from(entity, holder) -> bool:
+    """A hypervisor (a type with the ``takes_host_address`` trait) takes an
+    address from the machine it runs on: it is that machine's operating
+    system, and the address is where it is reached."""
+    from hyprvolt.core import relations
+    etype = registry().type(entity.type)
+    return (etype is not None and "takes_host_address" in etype.traits
+            and any(e.id == holder.id for e in relations.linked("runs_on", entity, "source")))
+
+
 def section_save(entity, values, user) -> list[dict]:
     """Make the record's addresses the ones listed: new ones become IP
     address records assigned to it, and one taken off the list is deleted
@@ -305,9 +316,14 @@ def section_save(entity, values, user) -> list[dict]:
         found = _live_details("ip_address").filter(NetworkDetail.address == text).first()
         if found:
             ip, d = found
-            if d.assigned and d.assigned != entity.id and records.live(d.assigned):
-                raise Invalid(f"{text} is assigned to {records.live(d.assigned).name}. Change it there first.")
+            holder = records.live(d.assigned) if d.assigned and d.assigned != entity.id else None
+            if holder is not None and not _takes_from(entity, holder):
+                raise Invalid(f"{text} is assigned to {holder.name}. Change it there first.")
             records.update(ip, {"fields": {"assigned": entity.id}}, user)
+            if holder is not None:
+                records.audit(holder, "edited", [{"field": "addresses", "label": "IP addresses", "old": text,
+                                                  "new": f"moved to {entity.name}"}], user)
+                records.notice(f"{text} moved from {holder.name} to {entity.name}, which runs on it.")
         else:
             records.create("ip_address", {"fields": {"address": text, "assigned": entity.id}}, user)
     for text, ip in have.items():

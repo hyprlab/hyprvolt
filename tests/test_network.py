@@ -546,3 +546,22 @@ def test_wireless_networks_are_broadcast_by_wireless_gear(client, h, admin):
     ext_form = client.get(f"/e/{ext['id']}/form").data.decode()
     assert '<div data-section="wifi">' in ext_form and '<div data-section="bridge" hidden>' in ext_form
     assert "wifi=switch,patch_panel,other," in ext_form
+
+
+def test_a_hypervisor_takes_the_address_of_the_server_it_runs_on(client, h, admin):
+    srv = make(client, h, "server", name="srv1", **{"s.addresses.list": "10.0.20.21"})
+    other = make(client, h, "server", name="srv2", **{"s.addresses.list": "10.0.20.22"})
+    resp = client.post("/api/entities", json={"type": "hypervisor", "name": "pve1", "f.host": srv["id"],
+                                              "s.addresses.list": "10.0.20.21"}, headers=h)
+    assert resp.status_code == 200, resp.get_json()
+    assert resp.get_json()["notices"] == ["10.0.20.21 moved from srv1 to pve1, which runs on it."]
+    ip = client.get("/api/entities?type=ip_address&q=10.0.20.21").get_json()["entities"][0]
+    assert client.get(f"/api/entities/{ip['id']}").get_json()["entity"]["fields"]["assigned"] == resp.get_json()["entity"]["id"]
+    assert any(c["label"] == "IP addresses" and c["new"] == "moved to pve1"
+               for e in history(client, srv["id"]) for c in e["changes"])
+    # Another server's address, or a VM given its host's, is still refused.
+    assert "assigned to srv2" in error(client, h, "hypervisor", name="pve2", **{"f.host": srv["id"],
+                                                                                "s.addresses.list": "10.0.20.22"})
+    pve = resp.get_json()["entity"]
+    assert "assigned to pve1" in error(client, h, "vm", name="vm1", **{"f.host": pve["id"],
+                                                                       "s.addresses.list": "10.0.20.21"})

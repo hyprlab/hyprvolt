@@ -333,3 +333,16 @@ def test_a_new_install_is_dark_and_the_wizard_can_switch(app, client, csrf):
         db.session.add(later)
         db.session.commit()
         assert later.theme == "dark"            # every new account starts dark
+
+
+def test_a_hypervisor_row_takes_its_servers_address(client, h, admin):
+    site = site_named(client, h, "Home")
+    add(client, h, "servers", site["id"], **{"_kind": "0", "name": "srv1", "s.addresses.list": "10.0.20.21"})
+    srv = entities(client, "server")[0]
+    page = client.get(f"/site-setup/hypervisors?site={site['id']}").data.decode()
+    assert "Management IP" in page and "iDRAC, iLO or IPMI" in page
+    add(client, h, "hypervisors", site["id"], **{"name": "pve1", "f.host": str(srv["id"])})
+    pve = entities(client, "hypervisor")[0]
+    got = change(client, h, "hypervisors", pve["id"], "s.addresses.list", "10.0.20.21", site["id"])
+    assert got["notices"] == ["10.0.20.21 moved from srv1 to pve1, which runs on it."]
+    assert 'value="10.0.20.21"' not in client.get(f"/site-setup/servers?site={site['id']}").data.decode()

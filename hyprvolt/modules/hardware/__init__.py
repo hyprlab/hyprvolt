@@ -123,6 +123,10 @@ SETUP_HELP = {
         "Servers and NAS boxes: the machines that run things and keep data. A server that runs virtual "
         "machines is recorded here as hardware; its hypervisor (Proxmox, ESXi) is a later step, running on "
         "it.",
+        "Its IP address depends on what runs on it. A server with a hypervisor (Proxmox, ESXi, Hyper-V) "
+        "gets the address of its management controller here, its iDRAC, iLO or IPMI, if it has one; the "
+        "address you reach the hypervisor at goes on the hypervisor. A server whose operating system runs "
+        "straight on it, such as Ubuntu with Docker, gets that address here.",
         "Desktops, laptops and printers are endpoints, a later step. UPSes come after the endpoints, to tick "
         "everything each one powers.",
     ),

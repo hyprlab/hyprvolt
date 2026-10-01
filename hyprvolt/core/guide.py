@@ -595,7 +595,7 @@ def row_create(key):
     db.session.commit()
     if step.scope and made is not None:
         return jsonify(ok=True, go=_url(step.key, made))
-    return jsonify(ok=True)
+    return jsonify(ok=True, notices=records.notices())
 
 
 @bp.route("/site-setup/<key>/rows/<int:row_id>", methods=["POST"])
@@ -615,8 +615,8 @@ def row_update(key, row_id):
     db.session.commit()
     if step.save is None and name.startswith(("f.", "name")):
         kept = _row(step, cols, _record_of(step, row_id))["values"].get(name)
-        return jsonify(ok=True, value=kept)
-    return jsonify(ok=True)
+        return jsonify(ok=True, value=kept, notices=records.notices())
+    return jsonify(ok=True, notices=records.notices())
 
 
 @bp.route("/site-setup/<key>/rows/<int:row_id>/delete", methods=["POST"])

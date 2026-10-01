@@ -920,6 +920,8 @@
       setBusy(btn, true);
       api(id ? "/api/entities/" + id : "/api/entities", formData(form)).then(function (data) {
         entityModal.close();   // saved: the page that follows shows the record, not the form
+        // What the save did beyond what was asked (an address moved), told after the reload.
+        if (data.notices && data.notices.length) queueToast(data.notices.join(" "));
         // Edited from its open sheet: reload, and the sheet comes back in
         // place (same tab, same scroll) over the refreshed list.
         if (id && sheet && sheet.open && new URLSearchParams(location.search).get("open") === id) location.reload();
@@ -1331,6 +1333,12 @@
     if (select && select.value) location.href = select.value;
   });
 
+  // What a save did beyond what was asked (an address moved from a server
+  // to its hypervisor), as the server says it.
+  function showNotices(data) {
+    if (data && data.notices && data.notices.length) toast(data.notices.join(" "));
+  }
+
   // A step of rows in the site setup guide ([data-rows]): each row a record,
   // each field saved as it changes; the blank row at the end added only when
   // asked (Enter, its Add button, or Continue with a name typed in it); a row
@@ -1463,6 +1471,7 @@
     rowError(row, null);
     row.classList.add("is-saving");
     rowAdding = api(box.getAttribute("data-create"), { values: values }).then(function (data) {
+      showNotices(data);
       // The site's own step: where to go next, about the new site.
       if (data && data.go) { rowAdding = null; return { go: data.go }; }
       return redrawRows(box, focusNewRow).then(function () { rowAdding = null; return true; },
@@ -1490,6 +1499,7 @@
     rowSaves = saving.catch(function () {});
     saving.then(function (data) {
       row.classList.remove("is-saving");
+      showNotices(data);
       // What was kept, as the server wrote it, unless the field is being typed in.
       if (data && data.value !== undefined && data.value !== null && el.type === "text" && document.activeElement !== el) {
         el.value = data.value;

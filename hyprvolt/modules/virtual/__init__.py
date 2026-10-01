@@ -22,6 +22,9 @@ MACHINES = ("server", "workstation", "nas")
 #: Traits other modules look for: an IP address (Network), software
 #: installed and services run (Software, Services).
 ADDRESSABLE = ("addressable", "host", "tls")
+#: A hypervisor is the operating system of the machine it runs on: an
+#: address recorded on that machine moves to it when given to it (Network).
+SYSTEM = ("takes_host_address",)
 HOST = ("host", "tls")
 
 # ———— Fields ————
@@ -57,6 +60,10 @@ SETUP_HELP = {
         "A hypervisor is the software that runs virtual machines, such as Proxmox, ESXi or Hyper-V, on the "
         "server it is installed on. Recorded apart from the server, it lets each VM say which host it runs "
         "on, and shows what stops when that server goes down.",
+        "A bare-metal hypervisor is the server's operating system, so it has no address of its own apart "
+        "from the server: give it the management address, the one its web interface is at (Proxmox on port "
+        "8006). The server keeps only its iDRAC, iLO or IPMI address, if it has one. An address typed on "
+        "the server in the step before moves here when it is given to the hypervisor running on it.",
         "Skip this if nothing is virtualized.",
     ),
     "guests": (
@@ -81,7 +88,7 @@ module = Module(
                    fields=(PLATFORM, VERSION, MANAGEMENT),
                    tabs=(Tab("guests", "Guests", views.cluster_tab, count=views.cluster_count),)),
         EntityType("hypervisor", "Hypervisor", "Hypervisors", detail=VirtualDetail, located_in=(), icon=HYPERVISOR,
-                   traits=ADDRESSABLE,
+                   traits=ADDRESSABLE + SYSTEM,
                    fields=(PLATFORM, VERSION,
                            host("Runs on", MACHINES, card=True, list=True,
                                 help="The hardware it is installed on."),
@@ -131,7 +138,7 @@ module = Module(
                   help=SETUP_HELP["hypervisors"], plan="hypervisors",
                   kinds=(SetupKind("Hypervisor", "hypervisor"),),
                   fields=(SetupField("name", placeholder="pve1"), SetupField("f.platform"), SetupField("f.host"),
-                          SetupField("s.addresses.list", "IP address", placeholder="10.0.20.21"))),
+                          SetupField("s.addresses.list", "Management IP", placeholder="10.0.20.21"))),
         SetupStep("guests", "Virtual machines and containers", "The virtual machines and LXC containers, each "
                   "on its hypervisor.", 85, group="What runs",
                   help=SETUP_HELP["guests"], plan="virtual machines, containers",

@@ -120,7 +120,11 @@ through its hypervisor and VMs down to the containers. A hypervisor's
 Guests tab adds up the vCPUs and memory of its running guests against the
 cores and memory recorded for its hardware, and a cluster's does the same
 for all its hypervisors. The sidebar lists VMs, containers and the rest that
-have no host yet.
+have no host yet. A bare-metal hypervisor is its server's operating system,
+so the address it is managed at goes on the hypervisor, and the server keeps
+only its iDRAC, iLO or IPMI address. Giving a hypervisor an address recorded
+on the server it runs on moves the address to it, and says so; any other
+address already assigned is refused.
 
 In Network, a device's or a VM's IP addresses are typed into its own form,
 separated by commas; each becomes an IP address record in the subnet that
@@ -380,7 +384,9 @@ refused anything but reading. No token can reveal a secret, download the
 secrets key or a backup, restore one, or make or revoke tokens; those need
 someone signed in. Revoking one takes effect at once, and a restore revokes
 them all. Errors are
-`{"error": "..."}`, with a sentence meant for a person.
+`{"error": "..."}`, with a sentence meant for a person. A change that did
+more than was asked (an address moved from a server to its hypervisor) says
+so in `notices`, a list of sentences, beside the record.
 
 | Route | What it does |
 | --- | --- |
