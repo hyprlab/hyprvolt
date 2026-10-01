@@ -554,7 +554,7 @@ def test_a_hypervisor_takes_the_address_of_the_server_it_runs_on(client, h, admi
     resp = client.post("/api/entities", json={"type": "hypervisor", "name": "pve1", "f.host": srv["id"],
                                               "s.addresses.list": "10.0.20.21"}, headers=h)
     assert resp.status_code == 200, resp.get_json()
-    assert resp.get_json()["notices"] == ["10.0.20.21 moved from srv1 to pve1, which runs on it."]
+    assert resp.get_json()["notices"] == ["10.0.20.21 moved from the server srv1 to the hypervisor pve1 running on it."]
     ip = client.get("/api/entities?type=ip_address&q=10.0.20.21").get_json()["entities"][0]
     assert client.get(f"/api/entities/{ip['id']}").get_json()["entity"]["fields"]["assigned"] == resp.get_json()["entity"]["id"]
     assert any(c["label"] == "IP addresses" and c["new"] == "moved to pve1"

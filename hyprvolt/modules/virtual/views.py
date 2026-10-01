@@ -247,14 +247,14 @@ def hypervisor_save(server, values, user) -> list[dict]:
     if on and current is None:
         data.update({"name": server.name, "f.host": server.id})
         made = records.create("hypervisor", data, user)
-        records.notice(f"{made.name} is added to Hypervisors, running on this server.")
+        records.notice(f"Added the hypervisor {made.name}, running on the server {server.name}.")
         return [{"field": "hypervisor", "label": "Hypervisor", "old": "", "new": made.name}]
     if not on and current is not None:
         blocked = _blocked(current)
         if blocked:
             raise Invalid(f"{blocked[0]}: {blocked[1]}")
         records.delete(current, user)
-        records.notice(f"The hypervisor {current.name} is deleted; Recently deleted can bring it back.")
+        records.notice(f"Deleted the hypervisor {current.name}.")
         return [{"field": "hypervisor", "label": "Hypervisor", "old": current.name, "new": ""}]
     if current is not None and data:
         records.update(current, data, user)

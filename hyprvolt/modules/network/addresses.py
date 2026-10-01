@@ -328,7 +328,10 @@ def section_save(entity, values, user) -> list[dict]:
             if holder is not None:
                 records.audit(holder, "edited", [{"field": "addresses", "label": "IP addresses", "old": text,
                                                   "new": f"moved to {entity.name}"}], user)
-                records.notice(f"{text} moved from {holder.name} to {entity.name}, which runs on it.")
+                # Named with what each is: a server and its hypervisor often share a name.
+                kind = {e.id: registry().type(e.type).text() for e in (holder, entity)}
+                records.notice(f"{text} moved from the {kind[holder.id]} {holder.name} to the "
+                               f"{kind[entity.id]} {entity.name} running on it.")
         else:
             records.create("ip_address", {"fields": {"address": text, "assigned": entity.id}}, user)
     for text, ip in have.items():

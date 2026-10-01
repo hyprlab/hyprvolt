@@ -344,7 +344,7 @@ def test_a_hypervisor_row_takes_its_servers_address(client, h, admin):
     add(client, h, "hypervisors", site["id"], **{"name": "pve1", "f.host": str(srv["id"])})
     pve = entities(client, "hypervisor")[0]
     got = change(client, h, "hypervisors", pve["id"], "s.addresses.list", "10.0.20.21", site["id"])
-    assert got["notices"] == ["10.0.20.21 moved from srv1 to pve1, which runs on it."]
+    assert got["notices"] == ["10.0.20.21 moved from the server srv1 to the hypervisor pve1 running on it."]
     servers = client.get(f"/site-setup/servers?site={site['id']}").data.decode()
     assert 'name="s.addresses.list" value="10.0.20.21"' not in servers
     assert 'name="s.hypervisor.address" value="10.0.20.21"' in servers     # its hypervisor's, shown on its row
@@ -360,7 +360,7 @@ def test_a_server_ticked_as_running_a_hypervisor_makes_and_links_one(client, h, 
     got = add(client, h, "servers", site["id"], **{"_kind": "0", "name": "srv1", "s.addresses.list": "10.0.20.21",
                                                     "s.hypervisor.on": "1", "s.hypervisor.platform": "proxmox",
                                                     "s.hypervisor.address": "10.0.20.21"})
-    assert "srv1 is added to Hypervisors, running on this server." in got["notices"]
+    assert "Added the hypervisor srv1, running on the server srv1." in got["notices"]
     ip = entities(client, "ip_address")[0]
     hyp = entities(client, "hypervisor")[0]
     srv = entities(client, "server")[0]
@@ -388,4 +388,4 @@ def test_a_server_ticked_as_running_a_hypervisor_makes_and_links_one(client, h, 
     row = client.get(f"/site-setup/servers?site={site['id']}").data.decode().split('data-name="srv1"')[1]
     assert "data-confirm-blocked" not in row.split("</fieldset>")[0]
     got = change(client, h, "servers", srv["id"], "s.hypervisor.on", False, site["id"])
-    assert not entities(client, "hypervisor") and "Recently deleted" in got["notices"][0]
+    assert not entities(client, "hypervisor") and got["notices"] == ["Deleted the hypervisor srv1."]
