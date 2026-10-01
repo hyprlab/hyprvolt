@@ -414,9 +414,9 @@ documents a site a step at a time; New > Set up a site, step by step (and
 the empty dashboard) opens it again later. Its first page says what it
 covers, in five parts: the place (the site, its buildings and rooms,
 racks), the network (vendors, the internet connection, VLANs, subnets,
-wireless networks), the equipment (network gear, servers and storage,
-UPSes), what runs (hypervisors,
-virtual machines, services), and the endpoints and the cables between them.
+wireless networks), the equipment (network gear, servers and storage),
+what runs (hypervisors, virtual machines, services), and the endpoints, the
+UPSes that power them and everything else, and the cables between them.
 Steps of turned-off modules are left out. Each step has a What goes here
 button beside its title that says what belongs in it, what belongs in
 another step, and why: a Usenet provider or an indexer is a vendor, with its

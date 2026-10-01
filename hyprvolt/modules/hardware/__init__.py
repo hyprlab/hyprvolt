@@ -114,17 +114,17 @@ SETUP_HELP = {
     "ups": (
         "A UPS keeps equipment running through a power outage, long enough to ride it out or shut down "
         "cleanly. Record its capacity and runtime, and give it an IP address if it has a network card.",
-        "Tick what each one powers, from the network gear, servers and storage recorded in the steps before. "
-        "Each is then powered by the UPS, so a UPS that fails shows everything that goes down with it. "
-        "Endpoints come later; link one to its UPS from its own record.",
-        "A PDU is a peripheral, recorded with the endpoints.",
+        "Tick what each one powers, from the equipment recorded in the steps before: network gear, servers, "
+        "storage and endpoints. Each is then powered by the UPS, so a UPS that fails shows everything that "
+        "goes down with it.",
+        "A PDU is a peripheral, recorded with the endpoints; tick it here if a UPS feeds it.",
     ),
     "servers": (
         "Servers and NAS boxes: the machines that run things and keep data. A server that runs virtual "
         "machines is recorded here as hardware; its hypervisor (Proxmox, ESXi) is a later step, running on "
         "it.",
-        "Desktops, laptops and printers are endpoints, a later step. The UPS each one is plugged into is the "
-        "next step.",
+        "Desktops, laptops and printers are endpoints, a later step. UPSes come after the endpoints, to tick "
+        "everything each one powers.",
     ),
     "endpoints": (
         "Endpoints are what people use at the edge of the network: workstations and laptops, printers, and "
@@ -213,14 +213,6 @@ module = Module(
                   kinds=(SetupKind("Server", "server"), SetupKind("NAS", "nas")),
                   fields=(SetupField("name", placeholder="srv1"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
-        SetupStep("ups", "UPSes", "The battery backups that keep everything running through a power "
-                  "outage, with their capacity, how long they last, and the equipment each one powers.", 75,
-                  group="Equipment", help=SETUP_HELP["ups"], plan="UPSes",
-                  kinds=(SetupKind("UPS", "ups"),),
-                  fields=(SetupField("name", placeholder="ups1"), SetupField("location_id"), SetupField("f.model"),
-                          SetupField("f.capacity_va"), SetupField("f.runtime_min"),
-                          SetupField("s.addresses.list", "IP address", placeholder="10.0.10.30"),
-                          SetupField("s.powers.list", "Powers", kind="multi", newline=True))),
         SetupStep("endpoints", "Endpoints", "What people use at the edge of the network: computers, printers "
                   "and other devices. Add them all here, one row each.", 100, group="Endpoints",
                   help=SETUP_HELP["endpoints"], plan="endpoints",
@@ -229,6 +221,14 @@ module = Module(
                   fields=(SetupField("name", placeholder="desk-pc"), SetupField("location_id"),
                           SetupField("f.assigned_to"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
+        SetupStep("ups", "UPSes", "The battery backups that keep everything running through a power "
+                  "outage, with their capacity, how long they last, and the equipment each one powers.", 105,
+                  group="Endpoints", help=SETUP_HELP["ups"], plan="UPSes",
+                  kinds=(SetupKind("UPS", "ups"),),
+                  fields=(SetupField("name", placeholder="ups1"), SetupField("location_id"), SetupField("f.model"),
+                          SetupField("f.capacity_va"), SetupField("f.runtime_min"),
+                          SetupField("s.addresses.list", "IP address", placeholder="10.0.10.30"),
+                          SetupField("s.powers.list", "Powers", kind="multi", newline=True))),
     ),
     seed=demo.seed,
 )
