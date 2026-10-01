@@ -31,6 +31,7 @@
          {%- if c.kind == 'number' %} step="any"{% if c.unit %} data-unit="{{ c.unit }}"{% endif %}{% endif %} autocomplete="off" spellcheck="false" maxlength="500">
   {% endif %}
 {% endmacro %}
+{% macro _shown(v) %}{{ '1' if v is sameas true else '0' if v is sameas false else (v if v is not none else '') }}{% endmacro %}
 {% macro row_fields(r) %}
   {% for c in cols %}
   {% set v = r['values'].get(c.name, c.default if c.default is not none else '') if r else (c.default if c.default is not none else '') %}
@@ -38,6 +39,10 @@
   {% set follows %}{% if c.when %} data-when="{{ c.when[0] }}" data-when-is="{{ c.when[1] }}"{% if c.name in (r.hidden if r else new_hidden) %} hidden{% endif %}{% endif %}{% endset %}
   {# A new line of the row (SetupField.newline), hidden with its field. #}
   {% if c.newline %}<span class="guide-break" aria-hidden="true"{{ follows }}></span>{% endif %}
+  {# A label that changes with another column (SetupField relabel): a
+     server's IP address is its BMC's once it runs a hypervisor. #}
+  {% set label %}{% if c.relabel and r and _shown(r['values'].get(c.relabel[0])) == c.relabel[1] %}{{ c.relabel[2] }}{% else %}{{ c.label }}{% endif %}{% endset %}
+  {% set relabel %}{% if c.relabel %} data-relabel="{{ c.relabel[0] }}" data-relabel-is="{{ c.relabel[1] }}" data-relabel-to="{{ c.relabel[2] }}" data-relabel-from="{{ c.label }}"{% endif %}{% endset %}
   {% if r and c.name in r.locked %}
   <div class="field guide-locked"><span class="field-label">{{ c.label }}</span><span class="guide-locked-text">{{ r.text[c.name] }}</span></div>
   {% elif c.kind == 'check' and c.switch %}
@@ -48,9 +53,10 @@
     {{ multi(c.name, v, c.choices, label=c.label, disabled=r and c.name in r.absent,
              empty='None recorded yet: add them in the ' ~ c.label ~ ' step.') }}</div>
   {% elif c.kind == 'check' %}
-  <label class="check guide-check"{{ follows }}><input type="checkbox" name="{{ c.name }}" value="1" {{ 'checked' if v }} {{ 'disabled' if r and c.name in r.absent }}><span>{{ c.label }}</span></label>
+  <label class="check guide-check"{{ follows }}><input type="checkbox" name="{{ c.name }}" value="1" {{ 'checked' if v }} {{ 'disabled' if r and c.name in r.absent }}
+    {%- if c.confirm_off %} data-confirm-off="{{ c.confirm_off[0] }}" data-confirm-text="{{ c.confirm_off[1] }}"{% endif %}><span>{{ c.label }}</span></label>
   {% else %}
-  <label class="field {{ 'guide-wide' if c.name == 'name' }}{{ ' guide-joined' if c.kind in ('cidr', 'iprange') }}"{{ follows }}><span class="field-label">{{ c.label }}</span>
+  <label class="field {{ 'guide-wide' if c.name == 'name' }}{{ ' guide-joined' if c.kind in ('cidr', 'iprange') }}"{{ follows }}><span class="field-label"{{ relabel }}>{{ label }}</span>
     {{ control(c, v, r and c.name in r.absent, not r) }}</label>
   {% endif %}
   {% endfor %}

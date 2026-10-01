@@ -124,7 +124,12 @@ have no host yet. A bare-metal hypervisor is its server's operating system,
 so the address it is managed at goes on the hypervisor, and the server keeps
 only its iDRAC, iLO or IPMI address. Giving a hypervisor an address recorded
 on the server it runs on moves the address to it, and says so; any other
-address already assigned is refused.
+address already assigned is refused. A server's Hypervisor section (also in
+the setup guide's Servers and storage step) has Runs a hypervisor: ticked,
+it adds a hypervisor of the same name running on the server, with its
+platform and management IP, and the server's IP address becomes its BMC's;
+unticked, it deletes that hypervisor after asking, unless something runs on
+it.
 
 In Network, a device's or a VM's IP addresses are typed into its own form,
 separated by commas; each becomes an IP address record in the subnet that

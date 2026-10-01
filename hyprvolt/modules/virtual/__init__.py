@@ -8,7 +8,7 @@ a hypervisor's cluster and a container's stack are "part of" links. So the
 form, the Relationships tab and the dependency view all say the same thing,
 and "what breaks if this server goes down" reaches every container on it.
 """
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, SetupField, SetupKind, SetupStep, Tab, Widget
+from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, SetupField, SetupKind, SetupStep, Tab, Widget
 
 from . import demo, views
 from .models import VirtualDetail
@@ -64,6 +64,7 @@ SETUP_HELP = {
         "from the server: give it the management address, the one its web interface is at (Proxmox on port "
         "8006). The server keeps only its iDRAC, iLO or IPMI address, if it has one. An address typed on "
         "the server in the step before moves here when it is given to the hypervisor running on it.",
+        "A server ticked as running a hypervisor in the step before is here already, by the server's name.",
         "Skip this if nothing is virtualized.",
     ),
     "guests": (
@@ -130,6 +131,9 @@ module = Module(
                            Field("ports", "Published ports", help="8080:80, 8443:443"))),
     ),
     filters=(ListFilter("no_host", "Without a host", views.no_host),),
+    form_sections=(FormSection("hypervisor", "Hypervisor", views.hypervisor_form, views.hypervisor_save,
+                               when=views.runs_hypervisor, values=views.hypervisor_values,
+                               choices=views.hypervisor_choices),),
     widgets=(Widget("hypervisors", "Hypervisors", views.hypervisor_widget),),
     setup=(
         SetupStep("hypervisors", "Hypervisors", "What runs virtual machines: Proxmox, ESXi or Hyper-V, each on "

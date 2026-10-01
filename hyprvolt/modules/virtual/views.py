@@ -1,12 +1,15 @@
 """Virtual's tabs, filter and widget: what runs on a hypervisor, a cluster
-or a Docker host, and how much of the hardware underneath it is handed out."""
+or a Docker host, and how much of the hardware underneath it is handed out;
+and the Hypervisor section of a server, which makes the one running on it."""
 from flask import render_template
 from sqlalchemy.orm import aliased
 
-from hyprvolt.core import present
+from hyprvolt.core import present, records
+from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity, Relationship
 from hyprvolt.models import db
 from hyprvolt.modules.hardware.models import HardwareDetail
+from hyprvolt.registry import current as registry
 
 from .models import VirtualDetail
 
@@ -167,3 +170,75 @@ def hypervisor_widget() -> str:
         cap = capacity([host])
         rows.append({"host": host, "guests": len(cap["guests"]), "memory": cap["meters"][1]})
     return render_template("virtual/widget.html", rows=rows)
+
+
+# ———— A server's hypervisor: the Hypervisor section of its form ————
+
+def runs_hypervisor(etype) -> bool:
+    return etype.key == "server"
+
+
+def hypervisors_on(server) -> list[Entity]:
+    """The hypervisors that run on a server."""
+    from hyprvolt.core import relations
+    return [e for e in relations.linked("runs_on", server, "target") if e.type == "hypervisor"]
+
+
+def _addresses(entity) -> str:
+    section = next((s for s in registry().form_sections(registry().type(entity.type)) if s.key == "addresses"), None)
+    return (section.values(entity) or {}).get("list", "") if section and section.values else ""
+
+
+def hypervisor_choices(name) -> list[tuple[str, str]] | None:
+    """The platform is a choice; the management address is typed."""
+    from . import PLATFORMS
+    return list(PLATFORMS) if name == "platform" else None
+
+
+def hypervisor_values(server) -> dict:
+    hyp = next(iter(hypervisors_on(server)), None)
+    if hyp is None:
+        return {"on": False, "platform": "", "address": ""}
+    return {"on": True, "platform": records.own_values(hyp).get("platform") or "", "address": _addresses(hyp)}
+
+
+def hypervisor_form(etype, server) -> str:
+    from . import PLATFORMS
+    values = hypervisor_values(server) if server is not None else {"on": False, "platform": "", "address": ""}
+    return render_template("virtual/hypervisor_form.html", v=values, platforms=PLATFORMS,
+                           name=hypervisors_on(server)[0].name if values["on"] else "")
+
+
+def _listed(entities) -> str:
+    names = [e.name for e in entities]
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def hypervisor_save(server, values, user) -> list[dict]:
+    """Runs a hypervisor, ticked: a hypervisor record running on the server,
+    by the server's name, with its platform and management address. Unticked:
+    that record deleted (Undo in Recently deleted), unless guests run on it."""
+    from hyprvolt.core import relations
+    current = next(iter(hypervisors_on(server)), None)
+    on = values.get("on") in (True, "1", "on", "true") if "on" in values else current is not None
+    data = {}
+    if values.get("platform") not in (None, ""):
+        data["f.platform"] = values["platform"]
+    if "address" in values and (values["address"] or current is not None):
+        data["s.addresses.list"] = values["address"] or ""
+    if on and current is None:
+        data.update({"name": server.name, "f.host": server.id})
+        made = records.create("hypervisor", data, user)
+        records.notice(f"{made.name} is added to Hypervisors, running on this server.")
+        return [{"field": "hypervisor", "label": "Hypervisor", "old": "", "new": made.name}]
+    if not on and current is not None:
+        guests = [e for e in relations.linked("runs_on", current, "target")]
+        if guests:
+            raise Invalid(f"{current.name} has {_listed(guests)} running on it. Delete or move "
+                          f"{'it' if len(guests) == 1 else 'them'} first.")
+        records.delete(current, user)
+        records.notice(f"The hypervisor {current.name} is deleted; Recently deleted can bring it back.")
+        return [{"field": "hypervisor", "label": "Hypervisor", "old": current.name, "new": ""}]
+    if current is not None and data:
+        records.update(current, data, user)
+    return []

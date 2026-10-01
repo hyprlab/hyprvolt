@@ -286,7 +286,9 @@ def section_values(entity) -> dict:
 def _takes_from(entity, holder) -> bool:
     """A hypervisor (a type with the ``takes_host_address`` trait) takes an
     address from the machine it runs on: it is that machine's operating
-    system, and the address is where it is reached."""
+    system, and the address is where it is reached. The other way round, an
+    address the hypervisor has is left with it when its machine lists it
+    too, as a server's form saved with its new hypervisor does."""
     from hyprvolt.core import relations
     etype = registry().type(entity.type)
     return (etype is not None and "takes_host_address" in etype.traits
@@ -310,13 +312,16 @@ def section_save(entity, values, user) -> list[dict]:
             wanted.append(text)
     have = {d.address: e for e, d in addresses_of(entity)}
     old = ", ".join(sorted(have, key=ip_key))
-    for text in wanted:
+    for text in list(wanted):
         if text in have:
             continue
         found = _live_details("ip_address").filter(NetworkDetail.address == text).first()
         if found:
             ip, d = found
             holder = records.live(d.assigned) if d.assigned and d.assigned != entity.id else None
+            if holder is not None and _takes_from(holder, entity):
+                wanted.remove(text)      # the hypervisor on this server has it: it stays there
+                continue
             if holder is not None and not _takes_from(entity, holder):
                 raise Invalid(f"{text} is assigned to {holder.name}. Change it there first.")
             records.update(ip, {"fields": {"assigned": entity.id}}, user)

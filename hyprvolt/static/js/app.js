@@ -1237,11 +1237,33 @@
       el.hidden = !!(holder && holder.hidden) || el.getAttribute("data-when-is").split(" ").indexOf(value) === -1;
     });
   }
+  // A label that changes with another field ([data-relabel]): a server's IP
+  // address is its BMC's once it runs a hypervisor.
+  function applyRelabel(scope) {
+    scope.querySelectorAll("[data-relabel]").forEach(function (label) {
+      var ctl = scope.querySelector('[name="' + CSS.escape(label.getAttribute("data-relabel")) + '"]');
+      if (!ctl) return;
+      var value = ctl.type === "checkbox" ? (ctl.checked ? "1" : "0") : ctl.value;
+      label.textContent = label.getAttribute(value === label.getAttribute("data-relabel-is") ? "data-relabel-to" : "data-relabel-from");
+    });
+  }
   document.addEventListener("change", function (e) {
     var el = e.target;
     if (!el.name || !el.closest) return;
     var scope = el.closest("[data-row], [data-row-new], form, [data-autosave]");
     if (scope && scope.querySelector("[data-when]")) applyWhen(scope);
+    if (scope && scope.querySelector("[data-relabel]")) applyRelabel(scope);
+  });
+  // A box whose unticking deletes something ([data-confirm-off]: a server's
+  // hypervisor) asks first; ticking it doesn't.
+  document.addEventListener("click", function (e) {
+    var box = e.target.closest && e.target.closest("input[type=checkbox][data-confirm-off]");
+    if (!box || box.checked) return;     // during a click it is already as it will be: ticked is fine
+    e.preventDefault();                  // unticked: it stays ticked until the answer
+    askFirst(box.getAttribute("data-confirm-off"), box.getAttribute("data-confirm-text"), "Delete", function () {
+      box.checked = false;
+      box.dispatchEvent(new Event("change", { bubbles: true }));
+    });
   });
 
   // A value typed in parts ([data-join]): a subnet's address and mask
@@ -1756,13 +1778,18 @@
   // Cancel, Escape or closing it does nothing.
   var confirmModal = document.getElementById("confirm-modal");
   function confirmFirst(btn, go) {
-    if (!confirmModal || !btn.hasAttribute("data-confirm")) { go(); return; }
-    document.getElementById("confirm-title").textContent = btn.getAttribute("data-confirm");
+    if (!btn.hasAttribute("data-confirm")) { go(); return; }
+    askFirst(btn.getAttribute("data-confirm"), btn.getAttribute("data-confirm-text"),
+             btn.getAttribute("data-confirm-go") || "Remove", go);
+  }
+  function askFirst(question, detail, goLabel, go) {
+    if (!confirmModal) { go(); return; }
+    document.getElementById("confirm-title").textContent = question;
     var text = document.getElementById("confirm-text");
-    text.textContent = btn.getAttribute("data-confirm-text") || "";
+    text.textContent = detail || "";
     text.hidden = !text.textContent;
     var yes = document.getElementById("confirm-go");
-    yes.textContent = btn.getAttribute("data-confirm-go") || "Remove";
+    yes.textContent = goLabel;
     yes.onclick = function () {
       yes.onclick = null;
       confirmModal.close();

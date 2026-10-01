@@ -117,7 +117,8 @@ class FormSection:
     and returns the changes for the history: [{"field", "label", "old",
     "new"}]. ``values(entity)``, if given, returns what the section holds as
     those same names ({"list": "10.0.20.5"}), for the site setup guide's rows;
-    ``choices(name)`` the options of one that is a choice."""
+    ``choices(name)`` the options of one that is a choice (None for one
+    that is typed)."""
     key: str
     label: str
     render: Callable
@@ -164,6 +165,12 @@ class SetupField:
     choices: Callable | None = None
     newline: bool = False            # starts a new line of the row: download and upload, then the IP
     kinds: tuple = ()                # only in rows of these kinds (their labels): a modem's internet line
+    shown_when: tuple = ()           # (column, value): shown only while that column of the row has it:
+                                     # ("s.hypervisor.on", "1"), a server's hypervisor platform
+    relabel: tuple = ()              # (column, value, label): another label while that column has it:
+                                     # a server's IP address is its BMC's once it runs a hypervisor
+    confirm_off: tuple = ()          # check: (question, text) asked before it is unticked, when that
+                                     # deletes something
 
 
 @dataclass(frozen=True)

@@ -119,3 +119,26 @@ def test_the_demo_runs_from_the_ups_to_the_containers(client, h, admin):
     body = client.get(f"/e/{outage['id']}/sheet").data.decode()
     pve1 = client.get("/api/entities?type=hypervisor&q=pve1").get_json()["entities"][0]
     assert f'href="/e/{pve1["id"]}"' in body and "<s>" not in body
+
+
+def test_a_servers_form_makes_its_hypervisor(client, h, admin):
+    srv = make(client, h, "server", name="pve-host", **{"s.addresses.list": "10.0.20.21"})
+    form = client.get(f"/e/{srv['id']}/form").data.decode()
+    assert 'name="s.hypervisor.on"' in form and "Runs a hypervisor" in form
+    # The form is saved whole: the server's own list still has the address it gives the hypervisor.
+    resp = client.post(f"/api/entities/{srv['id']}", headers=h, json={
+        "s.addresses.list": "10.0.20.21", "s.hypervisor.on": True, "s.hypervisor.platform": "proxmox",
+        "s.hypervisor.address": "10.0.20.21"})
+    assert resp.status_code == 200, resp.get_json()
+    hyp = client.get("/api/entities?type=hypervisor").get_json()["entities"][0]
+    ip = client.get("/api/entities?type=ip_address").get_json()["entities"][0]
+    assert client.get(f"/api/entities/{ip['id']}").get_json()["entity"]["fields"]["assigned"] == hyp["id"]
+    # Saved again as it now shows: nothing changes.
+    resp = client.post(f"/api/entities/{srv['id']}", headers=h, json={
+        "s.addresses.list": "", "s.hypervisor.on": True, "s.hypervisor.platform": "proxmox",
+        "s.hypervisor.address": "10.0.20.21"})
+    assert resp.status_code == 200 and not resp.get_json()["notices"]
+    assert len(client.get("/api/entities?type=hypervisor").get_json()["entities"]) == 1
+    # A NAS has no such section.
+    nas = make(client, h, "nas", name="nas1")
+    assert 'name="s.hypervisor.on"' not in client.get(f"/e/{nas['id']}/form").data.decode()

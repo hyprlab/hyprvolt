@@ -188,14 +188,20 @@ def columns(step, scope) -> list[dict]:
             section = next((s for t in types for s in reg.form_sections(t) if s.key == key), None)
             if section is None:
                 continue
-            if section.choices is not None and sf.kind == "multi":
+            if sf.kind == "check":
+                col.update(kind="check", confirm_off=sf.confirm_off)
+            elif section.choices is not None and sf.kind == "multi":
                 col.update(kind="multi", choices=_in_site(section.choices(name), scope))
-            elif section.choices is not None:
+            elif section.choices is not None and section.choices(name) is not None:
                 col.update(kind="select", choices=section.choices(name))
             elif sf.types:
                 col.update(kind="select", choices=_records_of(sf.types))
         elif sf.choices is not None:
             col.update(kind="select", choices=sf.choices(scope))
+        if sf.shown_when:
+            col["when"] = col["follows"] = (sf.shown_when[0], str(sf.shown_when[1]))
+        if sf.relabel:
+            col["relabel"] = (sf.relabel[0], str(sf.relabel[1]), sf.relabel[2])
         if sf.kinds and len(kinds) > 1:
             # Only in rows of those kinds: shown as the row's kind is chosen.
             col["when"] = ("_kind", " ".join(str(i) for i, k in enumerate(kinds) if k.label in sf.kinds))
@@ -334,8 +340,28 @@ def _row(step, cols, entity) -> dict:
     gone = {"f." + k for k in F.hidden_keys(etype.fields, own)}
     kind = int(values["_kind"]) if "_kind" in values else 0
     gone |= {c["name"] for c in cols if "only" in c and kind not in c["only"]}
+    gone |= _not_followed(cols, values, gone)
     return {"id": entity.id, "label": entity.name, "values": values, "absent": absent, "text": {}, "locked": (),
             "hidden": {c["name"] for c in cols if c["name"] in gone}}
+
+
+def _shown_as(value) -> str:
+    """A column's value as app.js compares it: a box is "1" or "0"."""
+    if value is True or value is False:
+        return "1" if value else "0"
+    return "" if value is None else str(value)
+
+
+def _not_followed(cols, values, gone) -> set:
+    """The columns shown only while another has a value (SetupField
+    shown_when), where it hasn't, or where that one is hidden itself."""
+    out = set()
+    for c in cols:
+        if "follows" in c:
+            name, wanted = c["follows"]
+            if name in gone | out or _shown_as(values.get(name, "")) not in wanted.split(" "):
+                out.add(c["name"])
+    return out
 
 
 def rows_of(step, cols, scope) -> list[dict]:
@@ -427,6 +453,8 @@ def _new_hidden(step, cols) -> set:
     values.update({n[2:]: v for n, v in kinds[0].values.items() if n.startswith("f.")})
     gone = {"f." + k for k in F.hidden_keys(etype.fields, values)}
     gone |= {c["name"] for c in cols if "only" in c and 0 not in c["only"]}
+    starts = {c["name"]: False if c["kind"] == "check" else c.get("default", "") for c in cols}
+    gone |= _not_followed(cols, starts, gone)
     return {c["name"] for c in cols if c["name"] in gone}
 
 

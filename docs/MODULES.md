@@ -282,6 +282,13 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
 - `SetupField("s.wifi.list", "Wireless networks", kind="multi")` makes a
   section's choices (`FormSection.choices(name)`) a box each, several ticked
   at once, the ids saved joined by commas.
+- `SetupField(..., shown_when=("s.hypervisor.on", "1"))` shows a column
+  only while another column of the row has that value, and
+  `relabel=("s.hypervisor.on", "1", "BMC IP (iDRAC, iLO)")` gives it another
+  label meanwhile. A `kind="check"` column of a section is a box;
+  `confirm_off=(question, text)` asks before it is unticked, when that
+  deletes something (a server's hypervisor). A section's `choices(name)`
+  returns None for a name that is typed rather than chosen.
 - `SetupField(..., newline=True)` starts a new line of the row, so what
   belongs together reads together: the internet connection's speeds, then
   its IP address switch, then the static fields.

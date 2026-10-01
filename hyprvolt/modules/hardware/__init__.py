@@ -123,10 +123,11 @@ SETUP_HELP = {
         "Servers and NAS boxes: the machines that run things and keep data. A server that runs virtual "
         "machines is recorded here as hardware; its hypervisor (Proxmox, ESXi) is a later step, running on "
         "it.",
-        "Its IP address depends on what runs on it. A server with a hypervisor (Proxmox, ESXi, Hyper-V) "
-        "gets the address of its management controller here, its iDRAC, iLO or IPMI, if it has one; the "
-        "address you reach the hypervisor at goes on the hypervisor. A server whose operating system runs "
-        "straight on it, such as Ubuntu with Docker, gets that address here.",
+        "Tick Runs a hypervisor for a server with Proxmox, ESXi or Hyper-V on it: that adds the hypervisor "
+        "to the Hypervisors step, running on the server, with its platform and the management address its "
+        "web interface is at. The server's IP address is then its management controller's, its iDRAC, iLO "
+        "or IPMI, if it has one. A server whose operating system runs straight on it, such as Ubuntu with "
+        "Docker, keeps that address as its IP address.",
         "Desktops, laptops and printers are endpoints, a later step. UPSes come after the endpoints, to tick "
         "everything each one powers.",
     ),
@@ -216,7 +217,17 @@ module = Module(
                   help=SETUP_HELP["servers"], plan="servers, storage",
                   kinds=(SetupKind("Server", "server"), SetupKind("NAS", "nas")),
                   fields=(SetupField("name", placeholder="srv1"), SetupField("location_id"), SetupField("f.model"),
-                          SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
+                          SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11",
+                                     relabel=("s.hypervisor.on", "1", "BMC IP (iDRAC, iLO)")),
+                          # Virtual's: ticked, the hypervisor running on it, made and linked.
+                          SetupField("s.hypervisor.on", "Runs a hypervisor", kind="check", kinds=("Server",),
+                                     confirm_off=("Delete its hypervisor?",
+                                                  "The hypervisor is deleted, and can be brought back from "
+                                                  "Recently deleted. One with virtual machines on it can't be.")),
+                          SetupField("s.hypervisor.platform", "Hypervisor", newline=True,
+                                     shown_when=("s.hypervisor.on", "1")),
+                          SetupField("s.hypervisor.address", "Management IP", placeholder="10.0.20.21",
+                                     shown_when=("s.hypervisor.on", "1")))),
         SetupStep("endpoints", "Endpoints", "What people use at the edge of the network: computers, printers "
                   "and other devices. Add them all here, one row each.", 100, group="Endpoints",
                   help=SETUP_HELP["endpoints"], plan="endpoints",

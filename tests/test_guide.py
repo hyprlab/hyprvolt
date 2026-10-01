@@ -345,4 +345,41 @@ def test_a_hypervisor_row_takes_its_servers_address(client, h, admin):
     pve = entities(client, "hypervisor")[0]
     got = change(client, h, "hypervisors", pve["id"], "s.addresses.list", "10.0.20.21", site["id"])
     assert got["notices"] == ["10.0.20.21 moved from srv1 to pve1, which runs on it."]
-    assert 'value="10.0.20.21"' not in client.get(f"/site-setup/servers?site={site['id']}").data.decode()
+    servers = client.get(f"/site-setup/servers?site={site['id']}").data.decode()
+    assert 'name="s.addresses.list" value="10.0.20.21"' not in servers
+    assert 'name="s.hypervisor.address" value="10.0.20.21"' in servers     # its hypervisor's, shown on its row
+
+
+def test_a_server_ticked_as_running_a_hypervisor_makes_and_links_one(client, h, admin):
+    site = site_named(client, h, "Home")
+    page = client.get(f"/site-setup/servers?site={site['id']}").data.decode()
+    new_row = page.split("data-row-new")[1]
+    # Its platform and management address wait for the box; the IP's label changes with it.
+    assert 'data-when="s.hypervisor.on" data-when-is="1" hidden><span class="field-label">Hypervisor' in new_row
+    assert 'data-relabel-to="BMC IP (iDRAC, iLO)" data-relabel-from="IP address">IP address<' in new_row
+    got = add(client, h, "servers", site["id"], **{"_kind": "0", "name": "srv1", "s.addresses.list": "10.0.20.21",
+                                                    "s.hypervisor.on": "1", "s.hypervisor.platform": "proxmox",
+                                                    "s.hypervisor.address": "10.0.20.21"})
+    assert "srv1 is added to Hypervisors, running on this server." in got["notices"]
+    ip = entities(client, "ip_address")[0]
+    hyp = entities(client, "hypervisor")[0]
+    srv = entities(client, "server")[0]
+    assert hyp["name"] == "srv1" and hyp["fields"]["platform"] == "proxmox" and hyp["fields"]["host"] == srv["id"]
+    assert ip["fields"]["assigned"] == hyp["id"]          # the management address is the hypervisor's
+    page = client.get(f"/site-setup/servers?site={site['id']}").data.decode()
+    row = page.split('data-name="srv1"')[1].split("</fieldset>")[0]
+    assert ">BMC IP (iDRAC, iLO)<" in row and 'data-confirm-off="Delete its hypervisor?"' in row
+    assert 'name="s.hypervisor.address" value="10.0.20.21"' in row
+    assert 'name="s.addresses.list" value=""' in row
+    assert 'data-name="srv1"' in client.get(f"/site-setup/hypervisors?site={site['id']}").data.decode()
+    # The platform changed from the server's row.
+    change(client, h, "servers", srv["id"], "s.hypervisor.platform", "vmware", site["id"])
+    assert entities(client, "hypervisor")[0]["fields"]["platform"] == "vmware"
+    # Unticked with a VM on it: refused. Without: the hypervisor is deleted.
+    add(client, h, "guests", site["id"], **{"_kind": "0", "name": "vm1", "f.host": str(hyp["id"])})
+    got = change(client, h, "servers", srv["id"], "s.hypervisor.on", False, site["id"], status=400)
+    assert "srv1 has vm1 running on it" in got["error"]
+    vm = entities(client, "vm")[0]
+    client.post(f"/api/entities/{vm['id']}/delete", headers=h)
+    got = change(client, h, "servers", srv["id"], "s.hypervisor.on", False, site["id"])
+    assert not entities(client, "hypervisor") and "Recently deleted" in got["notices"][0]
