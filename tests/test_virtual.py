@@ -142,3 +142,15 @@ def test_a_servers_form_makes_its_hypervisor(client, h, admin):
     # A NAS has no such section.
     nas = make(client, h, "nas", name="nas1")
     assert 'name="s.hypervisor.on"' not in client.get(f"/e/{nas['id']}/form").data.decode()
+
+
+def test_operating_systems_are_offered_as_they_are_typed(client, h, admin):
+    groups = client.get("/api/catalogs/os").get_json()["groups"]
+    names = [n for g in groups for n in g["items"]]
+    assert "Ubuntu Server 24.04 LTS" in names and "Windows Server 2022" in names and len(names) == len(set(names))
+    assert client.get("/api/catalogs/nope").status_code == 404
+    # The field offers them, and anything typed is kept.
+    form = client.get("/e/form?type=vm").data.decode()
+    assert 'data-suggest="os" role="combobox"' in form
+    vm = make(client, h, "vm", name="vm1", **{"f.os": "My own build 1.0"})
+    assert vm["fields"]["os"] == "My own build 1.0"

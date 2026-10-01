@@ -39,7 +39,7 @@ RAM = Field("ram_gb", "Memory", "integer", min=0, max=1_000_000, unit="GB", card
 STORAGE = Field("storage", "Disks", "longtext", group="Specs", help="One per line: 2 × 960 GB SSD, mirror.")
 NICS = Field("nics", "Network ports", "longtext", group="Specs", help="One per line: 4 × 1 GbE, 2 × 10 GbE SFP+.")
 POWER = Field("power_w", "Power draw", "integer", min=0, max=100_000, unit="W", group="Specs")
-OS = Field("os", "Operating system", group="Specs")
+OS = Field("os", "Operating system", group="Specs", suggest="os")
 FIRMWARE = Field("os", "Firmware", group="Specs")
 PORTS = Field("ports", "Ports", "integer", min=0, max=1000, card=True, group="Specs")
 

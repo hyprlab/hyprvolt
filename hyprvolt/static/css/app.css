@@ -369,6 +369,12 @@ html[data-theme="dark"] .icon-moon { display: none; }
 .menupop[hidden] { display: none; }
 .menupop--scroll { max-height: min(460px, 70vh); overflow-y: auto; }
 button.menuopt { width: 100%; text-align: left; }
+/* The names a field offers as it is typed in (app.js, [data-suggest]), under it. */
+.has-suggest { position: relative; }
+.suggest-pop { top: calc(100% + 4px); left: 0; right: auto; width: max(100%, 280px); max-height: min(340px, 50vh); }
+.suggest-pop .menuopt { cursor: pointer; padding: 7px 10px; font-size: 13.5px; }
+.suggest-pop .menuopt.is-current { background: var(--wash); color: var(--ink); }
+.suggest-pop .suggest-custom { margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0; font-style: italic; }
 .menupop-head {
   padding: 6px 10px 8px; font-size: 11px; font-weight: 700;
   letter-spacing: .07em; text-transform: uppercase; color: var(--faint);

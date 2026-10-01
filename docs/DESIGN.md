@@ -60,6 +60,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.iconbtn` + `--sm`, `--danger`, `.is-busy`, `[aria-pressed="true"]` | Square icon buttons; `.is-busy` spins the icon; pressed is a switch that is on (a user's access to secrets) |
 | `.field`, `.field-label`, `.check`, `.hint`, `.form-error` | Form parts |
 | `.multi` | A choice of several, a `.check` each; the values ticked kept in one hidden input (`[data-multi]`) |
+| `.suggest-pop` | Names offered under a text field as it is typed in (`[data-suggest]`), a `.menupop` of `.menuopt`s under group heads, the last keeping what was typed |
 | `.field--narrow`, `.inline-form`, `.inst-grid`, `.stack` | A short input; a field and its button on one line; the Admin settings' grid of number fields; a form whose parts stack with even gaps |
 | `.setting-label`, `.setting-label--spaced` | The small capitals heading a group in a tab, pane or card; `--spaced` puts room above one that follows content |
 | `.manage-list`, `.manage-item`, `.manage-meta`, `.manage-title`, `.manage-sub` | Rows of things with their actions: users, backups, tokens, and most module tabs (ports, installations, secrets, DNS records). The title is one line, the sub line is quieter and cut with an ellipsis |

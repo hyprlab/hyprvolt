@@ -29,6 +29,7 @@ from flask import Blueprint, Flask, abort, current_app, g, request
 from jinja2 import ChoiceLoader, FileSystemLoader
 from werkzeug.routing import BaseConverter
 
+from .core.catalogs import CATALOGS
 from .core.relations import CORE_KINDS
 from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, FormSection, Job, ListFilter, Module, Page,
                        Pane, RelationKind, SetupField, SetupFinish, SetupKind, SetupStep, Step, Tab, Widget)
@@ -422,6 +423,8 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
             p.append(f"{where} is a ref that names no types and no trait")
         if f.remind is not None and (not callable(f.remind) or not f.expires):
             p.append(f"{where} has a remind that isn't a function of an expiring date")
+        if f.suggest and (f.kind != "text" or f.suggest not in CATALOGS):
+            p.append(f"{where} suggests names, so it must be text and name a catalog in core/catalogs.py")
         if f.prefills and f.kind != "cidr":
             p.append(f"{where} fills in other fields from a subnet, so it must be a cidr")
         if f.switch and (f.kind != "boolean" or len(f.switch) != 2):

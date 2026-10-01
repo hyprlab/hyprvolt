@@ -5,7 +5,7 @@
    deletes a row after asking, each change at once; then this is drawn again
    from data-rows-url. A saved row is folded to one line, its name and what
    it holds (app.js writes that summary), and opens to change it. #}
-{% from "sheet/controls.html" import cidr, iprange, multi, speed, switch %}
+{% from "sheet/controls.html" import cidr, iprange, multi, speed, suggest_attrs, switch %}
 {% macro choice_options(choices, v) %}
   {%- for c in choices %}
     {%- if c is mapping %}<optgroup label="{{ c.label }}">{{ choice_options(c.options, v) }}</optgroup>
@@ -28,7 +28,8 @@
   <input type="{{ 'number' if c.kind == 'number' else 'text' }}" name="{{ c.name }}" value="{{ v }}"
          {%- if off %} disabled placeholder="—"{% elif fresh and c.name == 'name' %} placeholder="Type a name to add one"
          {%- elif c.placeholder %} placeholder="{{ c.placeholder }}"{% endif %}
-         {%- if c.kind == 'number' %} step="any"{% if c.unit %} data-unit="{{ c.unit }}"{% endif %}{% endif %} autocomplete="off" spellcheck="false" maxlength="500">
+         {%- if c.kind == 'number' %} step="any"{% if c.unit %} data-unit="{{ c.unit }}"{% endif %}{% endif %}
+         {%- if c.suggest and not off %}{{ suggest_attrs(c.suggest) }}{% else %} autocomplete="off"{% endif %} spellcheck="false" maxlength="500">
   {% endif %}
 {% endmacro %}
 {% macro _shown(v) %}{{ '1' if v is sameas true else '0' if v is sameas false else (v if v is not none else '') }}{% endmacro %}

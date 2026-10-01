@@ -113,6 +113,11 @@ near their end. A UPS's Powers section ticks the equipment plugged into it,
 also in the setup guide's UPSes step, which offers the site's equipment:
 each is then powered by the UPS, and shows as going down with it.
 
+An operating system field (a VM's, a container's, a server's) offers known
+operating systems as it is typed in: typing "ubu 24" lists Ubuntu Server and
+Ubuntu Desktop 24.04 LTS, and a click or the arrow keys and Enter fills it
+in. The last choice keeps what was typed, for a name not on the list.
+
 In Virtual, what something runs on is a field in its form: a VM's host, a
 hypervisor's hardware, a container's Docker host and stack. Each is also a
 link in the Relationships tab, so the dependency view goes from a server
@@ -403,6 +408,7 @@ so in `notices`, a list of sentences, beside the record.
 | `POST /api/entities/by-slug/<slug>` | Create the record with that slug, or change it if it exists, so an import can run again without making copies. Creating needs `type` and `name`. The answer says `created` true or false; a slug held by a deleted record is refused until it is restored |
 | `POST /api/entities/<id>/archive`, `/delete`, `/restore` | Archive (`{"archived": false}` to undo), delete, restore |
 | `GET /api/entities/<id>/history`, `/relationships`, `/dependencies` | Its history, its links, what depends on it (`direction=dependencies` for the other way) |
+| `GET /api/catalogs/<key>` | A list of known names a field offers as it is typed in, under group headings: `os`, operating systems |
 | `POST /api/relationships`, `POST /api/relationships/<id>/delete` | Link two records (`kind`, `source_id`, `target_id`), unlink |
 | `GET /api/tags`, `GET /api/custom-fields` | Tags in use, custom field definitions |
 | `GET /api/entities/<id>/attachments`, `POST` the same | A record's files, the featured image aside; upload with multipart `file` parts. An image also has `thumb` and `large` |

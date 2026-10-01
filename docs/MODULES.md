@@ -197,6 +197,12 @@ Overview) do what they say. `help` says what the field is for, in a sentence
 or two: the form shows it in a popover from an info button beside the label.
 Give every field one; a person new to the app should not have to guess. `list=True` puts the value in the list row,
 `card=True` on the card. `search=False` keeps it out of the search text.
+A `text` field with `suggest="os"` offers the names of a catalog in
+`core/catalogs.py` as it is typed in, under their groups: one is picked with
+a click or the arrow keys, and anything else typed is kept as a custom name.
+Virtual's and Hardware's operating system fields use the `os` catalog; add a
+catalog there for another list.
+
 A `boolean` with `switch=("Dynamic", "Static")` is a segmented control of
 the two, the first on the left and the second on the right, in the form,
 the Overview and the site setup guide.

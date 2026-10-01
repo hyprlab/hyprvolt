@@ -167,6 +167,7 @@ def columns(step, scope) -> list[dict]:
             f = fields[0]
             col["label"] = sf.label or (f"{f.label} ({f.unit})" if f.unit else f.label)
             col["unit"] = f.unit
+            col["suggest"] = f.suggest
             col["switch"] = f.switch
             if f.shown_when:
                 col["when"] = ("f." + f.shown_when[0], F.when_value(f.shown_when[1]))

@@ -1306,6 +1306,143 @@
     input.dispatchEvent(new Event("change", { bubbles: true }));
   });
 
+  // A text field that offers a catalog's names as it is typed in
+  // ([data-suggest]: operating systems, core/catalogs.py): the names that
+  // hold every word typed, under their groups, picked with a click or with
+  // the arrow keys and Enter. The last choice keeps what was typed, a custom
+  // name. A pick is a change of the field, saved as any other. One list, put
+  // under whichever field is open; each catalog is fetched once.
+  var catalogs = {}, suggestPop = null, suggestFor = null, suggestItems = [], suggestAt = -1;
+  function catalogOf(key) {
+    if (!catalogs[key]) {
+      catalogs[key] = get("/api/catalogs/" + encodeURIComponent(key)).then(function (data) { return data.groups || []; });
+      catalogs[key].catch(function () { delete catalogs[key]; });
+    }
+    return catalogs[key];
+  }
+  function suggestClose() {
+    if (!suggestPop || suggestPop.hidden) return;
+    suggestPop.hidden = true;
+    if (suggestFor) {
+      suggestFor.setAttribute("aria-expanded", "false");
+      suggestFor.removeAttribute("aria-activedescendant");
+    }
+    suggestFor = null;
+  }
+  function suggestMark(n) {
+    suggestAt = n;
+    suggestItems.forEach(function (el, i) { el.classList.toggle("is-current", i === n); });
+    if (n >= 0 && suggestItems[n]) {
+      suggestFor.setAttribute("aria-activedescendant", suggestItems[n].id);
+      suggestItems[n].scrollIntoView({ block: "nearest" });
+    } else if (suggestFor) suggestFor.removeAttribute("aria-activedescendant");
+  }
+  function suggestOpen(input) {
+    catalogOf(input.getAttribute("data-suggest")).then(function (groups) {
+      if (document.activeElement !== input) return;
+      if (!suggestPop) {
+        suggestPop = document.createElement("div");
+        suggestPop.className = "menupop menupop--scroll suggest-pop";
+        suggestPop.id = "suggest-pop";
+        suggestPop.setAttribute("role", "listbox");
+        // Picking keeps the focus in the field.
+        suggestPop.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        suggestPop.addEventListener("click", function (e) {
+          e.preventDefault();          // inside the field's label: not a click on the field too
+          var opt = e.target.closest("[data-pick-value]");
+          if (opt) suggestPick(opt);
+        });
+      }
+      var typed = input.value.trim(), all = [];
+      groups.forEach(function (g) { g.items.forEach(function (name) { all.push(name); }); });
+      // A name picked before shows the whole list again, to choose another.
+      var exact = all.some(function (name) { return name.toLowerCase() === typed.toLowerCase(); });
+      var words = exact ? [] : typed.toLowerCase().split(/\s+/).filter(Boolean);
+      suggestPop.textContent = "";
+      suggestItems = [];
+      function option(text, value, custom) {
+        var el = document.createElement("div");
+        el.className = "menuopt" + (custom ? " suggest-custom" : "");
+        el.id = "suggest-" + suggestItems.length;
+        el.setAttribute("role", "option");
+        el.setAttribute("data-pick-value", value);
+        if (custom) el.setAttribute("data-custom", "");
+        el.textContent = text;
+        suggestPop.appendChild(el);
+        suggestItems.push(el);
+      }
+      groups.forEach(function (g) {
+        var found = g.items.filter(function (name) {
+          var hay = (g.label + " " + name).toLowerCase();
+          return words.every(function (w) { return hay.indexOf(w) !== -1; });
+        });
+        if (!found.length) return;
+        var head = document.createElement("p");
+        head.className = "menupop-head";
+        head.textContent = g.label;
+        suggestPop.appendChild(head);
+        found.forEach(function (name) { option(name, name); });
+      });
+      if (!suggestItems.length) {
+        var none = document.createElement("p");
+        none.className = "menupop-head";
+        none.textContent = "No known name matches";
+        suggestPop.appendChild(none);
+      }
+      option(typed && !exact ? "Use “" + typed + "” as typed" : "Custom: type the name", typed, true);
+      var holder = input.parentNode;
+      holder.classList.add("has-suggest");
+      if (suggestPop.parentNode !== holder) input.insertAdjacentElement("afterend", suggestPop);
+      suggestFor = input;
+      input.setAttribute("aria-controls", "suggest-pop");
+      input.setAttribute("aria-expanded", "true");
+      suggestPop.hidden = false;
+      suggestMark(-1);
+    }).catch(function () { /* no list: the field is typed in as any other */ });
+  }
+  function suggestPick(opt) {
+    var input = suggestFor;
+    if (!input) return;
+    if (!opt.hasAttribute("data-custom")) {
+      input.value = opt.getAttribute("data-pick-value");
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    suggestClose();
+    input.focus();
+  }
+  document.addEventListener("input", function (e) {
+    if (e.target.matches && e.target.matches("input[data-suggest]")) suggestOpen(e.target);
+  });
+  document.addEventListener("click", function (e) {
+    var input = e.target.closest && e.target.closest("input[data-suggest]");
+    if (!input) return;
+    if (suggestFor === input) suggestClose();
+    else suggestOpen(input);
+  });
+  document.addEventListener("focusout", function (e) {
+    if (suggestFor && e.target === suggestFor) suggestClose();
+  });
+  // Before the guide's Enter (add the row) and a dialog's Escape (close it).
+  document.addEventListener("keydown", function (e) {
+    var input = e.target;
+    if (!input.matches || !input.matches("input[data-suggest]")) return;
+    var open = suggestFor === input && suggestPop && !suggestPop.hidden;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!open) { suggestOpen(input); return; }
+      var n = suggestAt + (e.key === "ArrowDown" ? 1 : -1);
+      suggestMark(Math.max(0, Math.min(suggestItems.length - 1, n)));
+    } else if (e.key === "Enter" && open && suggestAt >= 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      suggestPick(suggestItems[suggestAt]);
+    } else if (e.key === "Escape" && open) {
+      e.preventDefault();
+      e.stopPropagation();
+      suggestClose();
+    }
+  }, true);
+
   // A subnet that fills in others ([data-prefills]: a gateway, a DHCP
   // range): once it is typed, the first host becomes the gateway and the
   // upper half of it the DHCP range, leaving the lower half for fixed

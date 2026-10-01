@@ -92,6 +92,19 @@ def _fail(err: Invalid):
 
 # ———— Entities ————
 
+@bp.route("/catalogs/<key>")
+@role("viewer")
+def catalog(key):
+    """A list of known names a field offers as it is typed in (core/catalogs.py)."""
+    from .catalogs import catalog as find
+    groups = find(key)
+    if groups is None:
+        return jsonify(error="There is no such list."), 404
+    resp = jsonify(groups=groups)
+    resp.headers["Cache-Control"] = "private, max-age=3600"
+    return resp
+
+
 @bp.route("/entities")
 @role("viewer")
 def entity_list():

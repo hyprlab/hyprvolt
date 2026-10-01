@@ -103,6 +103,13 @@
 </span>
 {% endmacro %}
 
+{# A text field that offers a catalog's names as it is typed in (app.js,
+   [data-suggest]; core/catalogs.py): one picked with a click, or a custom
+   name typed in full. #}
+{% macro suggest_attrs(key) -%}
+{% if key %} data-suggest="{{ key }}" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off"{% endif %}
+{%- endmacro %}
+
 {% macro control(item, save=false, cls='', prefix='ef-') %}
 {% set f = item.field %}{% set v = item.value %}{% set id = prefix ~ item.name|replace('.', '-') %}
 {% set extra %}{% if save %} data-save{% endif %}{% if cls %} class="{{ cls }}"{% endif %}{% endset %}
@@ -144,7 +151,7 @@
   <input type="{{ 'email' if f.kind == 'email' else ('tel' if f.kind == 'phone' else 'text') }}" name="{{ item.name }}" value="{{ v or '' }}" {{ described(id, f.help) }}
          maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https://" spellcheck="false"{% elif f.kind not in ('ip', 'cidr') %}{{ empty }}{% endif %}
          {%- if f.kind in ('ip', 'cidr') %} spellcheck="false" autocomplete="off" placeholder="{{ '10.0.20.11' if f.kind == 'ip' else '10.0.20.0/24' }}"{% endif %}
-         {%- if not save and etype.name_from == f.key %} autofocus{% endif %}{{ extra }}>
+         {%- if not save and etype.name_from == f.key %} autofocus{% endif %}{{ suggest_attrs(f.suggest) }}{{ extra }}>
 {% endif %}
 {% endmacro %}
 
