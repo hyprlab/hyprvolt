@@ -1,6 +1,7 @@
 """Hardware's sidebar filters (warranties about to end and already over; the
-window is the reminder window, core/reminders.py, an admin setting) and the
-Wireless link section of a wireless bridge."""
+window is the reminder window, core/reminders.py, an admin setting), the
+Wireless link section of a wireless bridge, and the Powers section of a
+UPS."""
 from datetime import date
 
 from flask import render_template
@@ -9,6 +10,7 @@ from hyprvolt.core import records, relations, reminders
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity, Relationship
 from hyprvolt.models import db
+from hyprvolt.registry import current as registry
 
 from .models import HardwareDetail
 
@@ -93,3 +95,49 @@ def bridge_save(bridge, values, user) -> list[dict]:
         relations.link("wireless_link", bridge, wanted, user=user)
     return [{"field": "bridge", "label": "Wireless link", "old": current.name if current else "",
              "new": wanted.name if wanted else ""}]
+
+
+# ———— What a UPS powers ————
+
+def is_ups(etype) -> bool:
+    return etype.key == "ups"
+
+
+def _powerable() -> list[Entity]:
+    """Every piece of hardware a UPS can power: all but the UPSes."""
+    from . import KINDS
+    return (Entity.live().filter(Entity.type.in_([k for k in KINDS if k != "ups"]))
+            .order_by(Entity.name).all())
+
+
+def powers_choices(name) -> list[dict]:
+    """The hardware to tick, under each type's name: Servers, then Network gear."""
+    from . import KINDS
+    reg = registry()
+    groups = {}
+    for e in _powerable():
+        groups.setdefault(e.type, []).append((e.id, e.name))
+    return [{"label": reg.type(k).plural, "options": groups[k]} for k in KINDS if k in groups and reg.type(k)]
+
+
+def _powered(ups) -> str:
+    return ",".join(str(e.id) for e in relations.linked("powered_by", ups, "target")) if ups is not None else ""
+
+
+def powers_values(ups) -> dict:
+    return {"list": _powered(ups)}
+
+
+def powers_form(etype, ups) -> str:
+    return render_template("sheet/multi_section.html", name="s.powers.list", label="Powers",
+                           choices=powers_choices("list"), value=_powered(ups),
+                           hint="The equipment plugged into it. Each is then powered by it, and goes down with it.",
+                           empty="No other hardware recorded yet.")
+
+
+def powers_save(ups, values, user) -> list[dict]:
+    """The equipment a UPS powers, ticked: each is powered by it."""
+    if "list" not in values:
+        return []
+    changed = relations.set_linked("powered_by", ups, "target", values["list"], _powerable(), "hardware", user)
+    return [{"field": "powers", "label": "Powers", **changed}] if changed else []

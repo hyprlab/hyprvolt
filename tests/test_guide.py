@@ -43,7 +43,7 @@ def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
         assert f'<p class="guide-group">{group}</p>' in page
     assert "This guide covers the 5 main categories of a site" in page
     for plan in ("Site, buildings, rooms, and racks", "Vendors, internet connections, VLANs, subnets, and wireless networks",
-                 "Network gear, UPSes, servers, and storage", "Endpoints and cables"):
+                 "Network gear, servers, storage, and UPSes", "Endpoints and cables"):
         assert f'<span class="guide-plan-steps">{plan}</span>' in page
     # Once something is recorded it is the guide's overview, run again.
     site_named(client, h, "Home")
@@ -152,6 +152,15 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     assert page.split('data-name="sw1"')[1].split("</fieldset>")[0].count("data-multi-item") == 1   # hidden
     change(client, h, "gear", ap["id"], "s.wifi.list", "", site["id"])
     assert not client.get(f"/api/entities/{home['id']}/relationships").get_json()["relationships"]
+    # A UPS ticks what it powers, from this site's equipment only.
+    away = site_named(client, h, "Cabin")
+    add(client, h, "servers", away["id"], **{"_kind": "0", "name": "cabin-srv", "location_id": away["id"]})
+    page = client.get(f"/site-setup/ups?site={site['id']}").data.decode()
+    assert '<span class="multi-group">Network gear</span>' in page and "cabin-srv" not in page
+    sw1 = next(e for e in entities(client, "network_device") if e["name"] == "sw1")
+    add(client, h, "ups", site["id"], **{"name": "ups1", "f.capacity_va": "1500", "s.powers.list": str(sw1["id"])})
+    rels = client.get(f"/api/entities/{sw1['id']}/relationships").get_json()["relationships"]
+    assert [r["other"]["name"] for r in rels if r["label"] == "powered by"] == ["ups1"]
     sw = next(e for e in entities(client, "network_device") if e["name"] == "sw1")
     assert sw["fields"]["kind"] == "switch" and any(e["name"] == "10.0.20.2" for e in entities(client, "ip_address"))
     # A row's kind changed: a router into a firewall, another type.

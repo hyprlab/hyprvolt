@@ -112,17 +112,19 @@ SETUP_HELP = {
         "next, and cabling everything together is the last step.",
     ),
     "ups": (
-        "A UPS keeps equipment running through a power cut, long enough to ride it out or shut down cleanly. "
-        "Record its capacity and runtime, and give it an IP address if it has a network card.",
-        "What it powers is linked from either record's Relationships, as powered by, so a UPS that fails "
-        "shows everything that goes down with it. A PDU is a peripheral, an endpoint.",
+        "A UPS keeps equipment running through a power outage, long enough to ride it out or shut down "
+        "cleanly. Record its capacity and runtime, and give it an IP address if it has a network card.",
+        "Tick what each one powers, from the network gear, servers and storage recorded in the steps before. "
+        "Each is then powered by the UPS, so a UPS that fails shows everything that goes down with it. "
+        "Endpoints come later; link one to its UPS from its own record.",
+        "A PDU is a peripheral, recorded with the endpoints.",
     ),
     "servers": (
         "Servers and NAS boxes: the machines that run things and keep data. A server that runs virtual "
-        "machines is recorded here as hardware; its hypervisor (Proxmox, ESXi) is the next step, running on "
+        "machines is recorded here as hardware; its hypervisor (Proxmox, ESXi) is a later step, running on "
         "it.",
-        "Desktops, laptops and printers are endpoints, a later step. UPSes have their own step, before this "
-        "one.",
+        "Desktops, laptops and printers are endpoints, a later step. The UPS each one is plugged into is the "
+        "next step.",
     ),
     "endpoints": (
         "Endpoints are what people use at the edge of the network: workstations and laptops, printers, and "
@@ -179,7 +181,9 @@ module = Module(
     relation_kinds=(RelationKind("wireless_link", "has a wireless link to", "has a wireless link to"),),
     form_sections=(FormSection("bridge", "Wireless link", views.bridge_form, views.bridge_save,
                                when=views.is_bridge_gear, values=views.bridge_values,
-                               choices=views.bridge_choices),),
+                               choices=views.bridge_choices),
+                   FormSection("powers", "Powers", views.powers_form, views.powers_save, when=views.is_ups,
+                               values=views.powers_values, choices=views.powers_choices)),
     setup=(
         SetupStep("gear", "Network gear", "The equipment that ties your network together. Start where the "
                   "internet comes in, with the modem and the router or firewall, then add your switches, access "
@@ -202,20 +206,21 @@ module = Module(
                           SetupField("s.wifi.list", "Wireless networks", kind="multi", newline=True,
                                      kinds=("Modem", "Router", "Access point", "Wireless extender",
                                             "Wireless bridge")))),
-        SetupStep("ups", "UPSes", "The battery backups that keep everything running through a power cut, "
-                  "with their capacity and how long they last.", 65, group="Equipment",
-                  help=SETUP_HELP["ups"], plan="UPSes",
-                  kinds=(SetupKind("UPS", "ups"),),
-                  fields=(SetupField("name", placeholder="ups1"), SetupField("location_id"), SetupField("f.model"),
-                          SetupField("f.capacity_va"), SetupField("f.runtime_min"),
-                          SetupField("s.addresses.list", "IP address", placeholder="10.0.10.30"))),
         SetupStep("servers", "Servers and storage", "Physical machines that store and serve data. A server "
-                  "that runs virtual machines is recorded here as hardware; its hypervisor is added in the next "
+                  "that runs virtual machines is recorded here as hardware; its hypervisor is added in a later "
                   "step.", 70, group="Equipment",
                   help=SETUP_HELP["servers"], plan="servers, storage",
                   kinds=(SetupKind("Server", "server"), SetupKind("NAS", "nas")),
                   fields=(SetupField("name", placeholder="srv1"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
+        SetupStep("ups", "UPSes", "The battery backups that keep everything running through a power "
+                  "outage, with their capacity, how long they last, and the equipment each one powers.", 75,
+                  group="Equipment", help=SETUP_HELP["ups"], plan="UPSes",
+                  kinds=(SetupKind("UPS", "ups"),),
+                  fields=(SetupField("name", placeholder="ups1"), SetupField("location_id"), SetupField("f.model"),
+                          SetupField("f.capacity_va"), SetupField("f.runtime_min"),
+                          SetupField("s.addresses.list", "IP address", placeholder="10.0.10.30"),
+                          SetupField("s.powers.list", "Powers", kind="multi", newline=True))),
         SetupStep("endpoints", "Endpoints", "What people use at the edge of the network: computers, printers "
                   "and other devices. Add them all here, one row each.", 100, group="Endpoints",
                   help=SETUP_HELP["endpoints"], plan="endpoints",

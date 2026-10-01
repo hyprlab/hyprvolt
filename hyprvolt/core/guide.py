@@ -118,6 +118,26 @@ def _field_choices(fields) -> list[tuple]:
     return sorted(out, key=lambda c: str(c[1]).lower())
 
 
+def _in_site(choices, scope) -> list:
+    """Choices of records, (id, label) or groups of them ({"label",
+    "options"}), only those in the site or in no place: the equipment of
+    this site a UPS can power, not another's."""
+    if scope is None:
+        return choices
+    place_ids = {i for i, _ in _places(scope)}
+    ids = {o[0] for c in choices for o in (c["options"] if isinstance(c, dict) else [c])}
+    keep = {e.id for e in Entity.query.filter(Entity.id.in_(ids)) if _inside(e, scope, place_ids)}
+    out = []
+    for c in choices:
+        if isinstance(c, dict):
+            options = [o for o in c["options"] if o[0] in keep]
+            if options:
+                out.append({**c, "options": options})
+        elif c[0] in keep:
+            out.append(c)
+    return out
+
+
 def columns(step, scope) -> list[dict]:
     """What each row asks for: {"name", "label", "kind" (text, number,
     select, multi, check), "choices", "placeholder", "required", "default"}. A
@@ -168,8 +188,10 @@ def columns(step, scope) -> list[dict]:
             section = next((s for t in types for s in reg.form_sections(t) if s.key == key), None)
             if section is None:
                 continue
-            if section.choices is not None:
-                col.update(kind="multi" if sf.kind == "multi" else "select", choices=section.choices(name))
+            if section.choices is not None and sf.kind == "multi":
+                col.update(kind="multi", choices=_in_site(section.choices(name), scope))
+            elif section.choices is not None:
+                col.update(kind="select", choices=section.choices(name))
             elif sf.types:
                 col.update(kind="select", choices=_records_of(sf.types))
         elif sf.choices is not None:

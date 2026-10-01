@@ -209,6 +209,11 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 /* A choice of several, a box each (controls.html, multi). */
 .multi { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; min-height: 40px; }
 .multi .check { color: var(--ink); }
+.multi-group {
+  flex-basis: 100%; margin-top: 4px; font-size: 11px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--faint);
+}
+.multi-group:first-child { margin-top: 0; }
 .hint { font-size: 13px; color: var(--muted); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .form-error { font-size: 13.5px; color: var(--danger); font-weight: 550; }

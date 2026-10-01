@@ -66,6 +66,71 @@ def unlink(rel, user=None, audit_source: bool = True) -> dict:
     return snapshot
 
 
+# ———— Links ticked from a list: what a UPS powers, what an access point broadcasts ————
+
+def _other(rel, side) -> int:
+    return rel.target_id if side == "source" else rel.source_id
+
+
+def _ends(kind_key: str, entity, side: str) -> list:
+    from .models import Relationship
+    end = Relationship.source_id if side == "source" else Relationship.target_id
+    return Relationship.query.filter(Relationship.kind == kind_key, end == entity.id).order_by(Relationship.id).all()
+
+
+def linked(kind_key: str, entity, side: str) -> list:
+    """The live records at the other end of ``entity``'s links of a kind,
+    ``entity`` being the links' ``side`` ("source" or "target"), by name."""
+    from . import records
+    found = {}
+    for rel in _ends(kind_key, entity, side):
+        other = records.live(_other(rel, side))
+        if other is not None:
+            found[other.id] = other
+    return sorted(found.values(), key=lambda e: e.name.lower())
+
+
+def chosen_ids(raw) -> list[int]:
+    """Record ids ticked in a list, as a form sends them: "3,5", or a list."""
+    from .fields import Invalid
+    items = raw if isinstance(raw, (list, tuple)) else str(raw or "").split(",")
+    out = []
+    for item in (str(i).strip() for i in items):
+        if item and not item.isdigit():
+            raise Invalid("Choose from the list.")
+        if item and int(item) not in out:
+            out.append(int(item))
+    return out
+
+
+def set_linked(kind_key: str, entity, side: str, raw, offered, what: str, user=None) -> dict | None:
+    """Make ``entity``'s links of a kind the ones ticked (``raw``, ids) from
+    ``offered`` (records): one no longer ticked is removed, one newly ticked
+    made. A link to a record out of sight (deleted) is left alone. None when
+    nothing changed, else the names before and after, for the history."""
+    from .fields import Invalid
+    offered = {e.id: e for e in offered}
+    wanted = []
+    for i in chosen_ids(raw):
+        if i not in offered:
+            raise Invalid(f"Choose {what} that exists.")
+        wanted.append(offered[i])
+    current = linked(kind_key, entity, side)
+    have, want = {e.id for e in current}, {e.id for e in wanted}
+    if have == want:
+        return None
+    for rel in _ends(kind_key, entity, side):
+        if _other(rel, side) in have - want:
+            unlink(rel, user)
+    for e in wanted:
+        if e.id not in have:
+            link(kind_key, entity if side == "source" else e, e if side == "source" else entity, user=user)
+
+    def names(es):
+        return ", ".join(e.name for e in sorted(es, key=lambda e: e.name.lower()))
+    return {"old": names(current), "new": names(wanted)}
+
+
 def visible_ids() -> set[int]:
     """Entities that can appear on the other end of a link: not deleted, and
     of a turned-on module."""

@@ -231,65 +231,10 @@ def _wireless_gear() -> list[Entity]:
             .order_by(Entity.name).all())
 
 
-def _other(rel, side) -> int:
-    return rel.target_id if side == "source" else rel.source_id
-
-
-def _broadcasts(entity, side) -> list[Relationship]:
-    """The broadcast_by links of a wireless network (``side`` "source") or
-    of a device that broadcasts networks ("target")."""
-    end = Relationship.source_id if side == "source" else Relationship.target_id
-    return Relationship.query.filter(Relationship.kind == "broadcast_by", end == entity.id).order_by(Relationship.id).all()
-
-
-def _linked(entity, side) -> list[Entity]:
-    found = {}
-    for rel in _broadcasts(entity, side):
-        other = records.live(_other(rel, side))
-        if other is not None:
-            found[other.id] = other
-    return sorted(found.values(), key=lambda e: e.name.lower())
-
-
-def _ids(raw) -> list[int]:
-    items = raw if isinstance(raw, (list, tuple)) else str(raw or "").split(",")
-    out = []
-    for item in (str(i).strip() for i in items):
-        if item and not item.isdigit():
-            raise Invalid("Choose from the list.")
-        if item and int(item) not in out:
-            out.append(int(item))
-    return out
-
-
-def _set_broadcast(entity, raw, side, offered, what, user) -> list[dict] | None:
-    """Make ``entity``'s broadcast links the ones chosen from ``offered``:
-    one no longer chosen is removed, one newly chosen made. The link reads
-    the same from both ends, a network broadcast by a device. None when
-    nothing changed, else the names before and after."""
-    offered = {e.id: e for e in offered}
-    wanted = []
-    for i in _ids(raw):
-        if i not in offered:
-            raise Invalid(f"Choose {what} that exists.")
-        wanted.append(offered[i])
-    current = _linked(entity, side)
-    have, want = {e.id for e in current}, {e.id for e in wanted}
-    if have == want:
-        return None
-    for rel in _broadcasts(entity, side):
-        if _other(rel, side) in have - want:
-            relations.unlink(rel, user)
-    for e in wanted:
-        if e.id not in have:
-            relations.link("broadcast_by", entity if side == "source" else e, e if side == "source" else entity,
-                           user=user)
-    names = lambda es: ", ".join(e.name for e in sorted(es, key=lambda e: e.name.lower()))    # noqa: E731
-    return {"old": names(current), "new": names(wanted)}
-
-
 def _chosen(entity, side) -> str:
-    return ",".join(str(e.id) for e in _linked(entity, side)) if entity is not None else ""
+    if entity is None:
+        return ""
+    return ",".join(str(e.id) for e in relations.linked("broadcast_by", entity, side))
 
 
 def wifi_choices(name) -> list[tuple[int, str]]:
@@ -301,7 +246,7 @@ def wifi_values(device) -> dict:
 
 
 def wifi_form(etype, device) -> str:
-    return render_template("network/broadcast_form.html", name="s.wifi.list", label="Wireless networks",
+    return render_template("sheet/multi_section.html", name="s.wifi.list", label="Wireless networks",
                            choices=wifi_choices("list"), value=_chosen(device, "target"),
                            hint="The Wi-Fi networks it broadcasts.",
                            empty="No wireless networks recorded yet: add them under Network, then tick them here.")
@@ -311,7 +256,8 @@ def wifi_save(device, values, user) -> list[dict]:
     """The wireless networks a device broadcasts, ticked."""
     if "list" not in values:
         return []
-    changed = _set_broadcast(device, values["list"], "target", _wifi_networks(), "a wireless network", user)
+    changed = relations.set_linked("broadcast_by", device, "target", values["list"], _wifi_networks(),
+                                   "a wireless network", user)
     return [{"field": "wifi", "label": "Wireless networks", **changed}] if changed else []
 
 
@@ -324,7 +270,7 @@ def broadcast_values(wifi) -> dict:
 
 
 def broadcast_form(etype, wifi) -> str:
-    return render_template("network/broadcast_form.html", name="s.broadcast.list", label="Broadcast by",
+    return render_template("sheet/multi_section.html", name="s.broadcast.list", label="Broadcast by",
                            choices=broadcast_choices("list"), value=_chosen(wifi, "source"),
                            hint="The access points, extenders, bridges and Wi-Fi routers that broadcast it.",
                            empty="No access points or other wireless gear recorded yet.")
@@ -334,7 +280,8 @@ def broadcast_save(wifi, values, user) -> list[dict]:
     """The gear that broadcasts a wireless network, ticked."""
     if "list" not in values:
         return []
-    changed = _set_broadcast(wifi, values["list"], "source", _wireless_gear(), "wireless gear", user)
+    changed = relations.set_linked("broadcast_by", wifi, "source", values["list"], _wireless_gear(),
+                                   "wireless gear", user)
     return [{"field": "broadcast", "label": "Broadcast by", **changed}] if changed else []
 
 

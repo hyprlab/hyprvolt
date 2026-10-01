@@ -84,13 +84,18 @@
 
 {# A choice of several (app.js, [data-multi]): a box each, the values of
    those ticked kept in the named, hidden input, joined by commas: the
-   wireless networks a device broadcasts. ``empty`` says why there is
-   nothing to tick. #}
+   wireless networks a device broadcasts. A choice can be a group
+   ({"label", "options"}), its boxes under its label: a UPS's servers, then
+   its network gear. ``empty`` says why there is nothing to tick. #}
 {% macro multi(name, value, choices, label='', disabled=false, empty='') %}
 {% set chosen = (value or '')|string %}{% set chosen = chosen.split(',') %}
+{% macro box(id, text) %}<label class="check"><input type="checkbox" value="{{ id }}" data-multi-item {{ 'checked' if id|string in chosen }}{{ ' disabled' if disabled }}><span>{{ text }}</span></label>{% endmacro %}
 <span class="multi" data-multi role="group"{% if label %} aria-label="{{ label }}"{% endif %}>
-  {% for id, text in choices %}
-  <label class="check"><input type="checkbox" value="{{ id }}" data-multi-item {{ 'checked' if id|string in chosen }}{{ ' disabled' if disabled }}><span>{{ text }}</span></label>
+  {% for c in choices %}
+  {% if c is mapping %}
+  <span class="multi-group">{{ c.label }}</span>
+  {% for id, text in c.options %}{{ box(id, text) }}{% endfor %}
+  {% else %}{{ box(c[0], c[1]) }}{% endif %}
   {% else %}
   <span class="hint">{{ empty or 'Nothing to choose from yet.' }}</span>
   {% endfor %}

@@ -7,7 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
-- The setup guide has a UPSes step of its own, with each UPS's capacity and runtime, before Servers and storage, whose description is reworded
+- The setup guide has a UPSes step of its own after Servers and storage, with each UPS's capacity and runtime and the equipment it powers, ticked from the site's network gear, servers and storage. A UPS's record has the same Powers section
 - Wireless networks: record each Wi-Fi network with its security, bands, hidden or not, VLAN and subnet, and tick the access points, extenders, bridges and Wi-Fi routers that broadcast it, from either record or from the setup guide, which has a Wireless networks step before Network gear
 - Network gear can be a Wireless extender, also offered in the setup guide's Network gear step
 - Wireless bridges: network gear of the kind Wireless bridge, each end its own record with its own location and IP address, linked to the bridge at the other end from either one (and in the setup guide's Network gear step). The network diagram draws the link as a dotted line, and an internet connection as a thick one

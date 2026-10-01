@@ -109,7 +109,9 @@ rack, units and face in its own form, and choosing a rack there makes the
 rack its location. The sidebar lists hardware whose warranty ends within the
 reminder window and hardware out of warranty (retired and disposed hardware
 is left out of both), and the dashboard's Coming up card shows warranties
-near their end.
+near their end. A UPS's Powers section ticks the equipment plugged into it,
+also in the setup guide's UPSes step, which offers the site's equipment:
+each is then powered by the UPS, and shows as going down with it.
 
 In Virtual, what something runs on is a field in its form: a VM's host, a
 hypervisor's hardware, a container's Docker host and stack. Each is also a
@@ -411,8 +413,9 @@ A new install goes from the setup wizard straight into a guide that
 documents a site a step at a time; New > Set up a site, step by step (and
 the empty dashboard) opens it again later. Its first page says what it
 covers, in five parts: the place (the site, its buildings and rooms,
-racks), the network (vendors, the internet connection, VLANs, subnets), the
-equipment (network gear, servers and storage), what runs (hypervisors,
+racks), the network (vendors, the internet connection, VLANs, subnets,
+wireless networks), the equipment (network gear, servers and storage,
+UPSes), what runs (hypervisors,
 virtual machines, services), and the endpoints and the cables between them.
 Steps of turned-off modules are left out. Each step has a What goes here
 button beside its title that says what belongs in it, what belongs in

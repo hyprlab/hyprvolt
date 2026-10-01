@@ -139,3 +139,21 @@ def test_wireless_bridges_link_two_places_each_with_its_own_address(client, h, a
     assert not [r for r in client.get(f"/api/entities/{a['id']}/relationships").get_json()["relationships"]
                 if r["label"] == "has a wireless link to"]
 
+
+
+def test_a_ups_powers_the_equipment_ticked(client, h, admin):
+    ups = make(client, h, "ups", name="ups1")
+    srv = make(client, h, "server", name="srv1")
+    sw = make(client, h, "network_device", name="sw1", **{"f.kind": "switch"})
+    other = make(client, h, "ups", name="ups2")
+    client.post(f"/api/entities/{ups['id']}", json={"s.powers.list": f"{srv['id']},{sw['id']}"}, headers=h)
+    rels = client.get(f"/api/entities/{srv['id']}/relationships").get_json()["relationships"]
+    assert [r["other"]["name"] for r in rels if r["label"] == "powered by"] == ["ups1"]
+    form = client.get(f"/e/{ups['id']}/form").data.decode()
+    assert '<span class="multi-group">Servers</span>' in form and ">ups2<" not in form
+    assert f'value="{srv["id"]}" data-multi-item checked' in form
+    # Unticked: the switch is no longer powered by it; a UPS can't be ticked.
+    client.post(f"/api/entities/{ups['id']}", json={"s.powers.list": str(srv["id"])}, headers=h)
+    assert not client.get(f"/api/entities/{sw['id']}/relationships").get_json()["relationships"]
+    bad = client.post(f"/api/entities/{ups['id']}", json={"s.powers.list": str(other["id"])}, headers=h)
+    assert bad.status_code == 400 and "hardware that exists" in bad.get_json()["error"]
