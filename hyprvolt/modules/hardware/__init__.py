@@ -222,8 +222,8 @@ module = Module(
                           # Virtual's: ticked, the hypervisor running on it, made and linked.
                           SetupField("s.hypervisor.on", "Runs a hypervisor", kind="check", kinds=("Server",),
                                      confirm_off=("Delete its hypervisor?",
-                                                  "This deletes the hypervisor record; Recently deleted can bring "
-                                                  "it back. If virtual machines or containers still run on it, "
+                                                  "This deletes the hypervisor record. It can be brought back from "
+                                                  "Recently deleted. If virtual machines or containers still run on it, "
                                                   "nothing is deleted: move or delete them first.")),
                           SetupField("s.hypervisor.platform", "Hypervisor", newline=True,
                                      shown_when=("s.hypervisor.on", "1")),
