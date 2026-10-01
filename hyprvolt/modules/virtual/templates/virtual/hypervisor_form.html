@@ -1,10 +1,11 @@
 {# The Hypervisor section in a server's form: Runs a hypervisor, ticked,
    makes the hypervisor record running on it, with its platform and the
-   address it is managed at; unticked deletes it, asked first. #}
+   address it is managed at; unticked deletes it, asked first, or says what
+   still runs on it instead. #}
 <div class="form-grid">
   <label class="check form-wide"><input type="checkbox" name="s.hypervisor.on" value="1" {{ 'checked' if v.on }}
-         data-confirm-off="Delete its hypervisor?"
-         data-confirm-text="This deletes the hypervisor record{{ ' ' ~ name if name }}. If virtual machines or containers still run on it, nothing is deleted: move or delete them first."><span>Runs a hypervisor</span></label>
+         data-confirm-off="Delete its hypervisor?" data-confirm-text="This deletes the hypervisor record{{ ' ' ~ name if name }}."
+         {%- if v.on_blocked %} data-confirm-blocked="{{ v.on_blocked[0] }}" data-confirm-blocked-text="{{ v.on_blocked[1] }}"{% endif %}><span>Runs a hypervisor</span></label>
   <label class="field" data-when="s.hypervisor.on" data-when-is="1"{{ ' hidden' if not v.on }}>
     <span class="field-label">Platform</span>
     <select name="s.hypervisor.platform">

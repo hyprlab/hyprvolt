@@ -54,7 +54,9 @@
              empty='None recorded yet: add them in the ' ~ c.label ~ ' step.') }}</div>
   {% elif c.kind == 'check' %}
   <label class="check guide-check"{{ follows }}><input type="checkbox" name="{{ c.name }}" value="1" {{ 'checked' if v }} {{ 'disabled' if r and c.name in r.absent }}
-    {%- if c.confirm_off %} data-confirm-off="{{ c.confirm_off[0] }}" data-confirm-text="{{ c.confirm_off[1] }}"{% endif %}><span>{{ c.label }}</span></label>
+    {%- if c.confirm_off %} data-confirm-off="{{ c.confirm_off[0] }}" data-confirm-text="{{ c.confirm_off[1] }}"{% endif %}
+    {%- set why = (r.blocked or {}).get(c.name) if r else none %}
+    {%- if why %} data-confirm-blocked="{{ why[0] }}" data-confirm-blocked-text="{{ why[1] }}"{% endif %}><span>{{ c.label }}</span></label>
   {% else %}
   <label class="field {{ 'guide-wide' if c.name == 'name' }}{{ ' guide-joined' if c.kind in ('cidr', 'iprange') }}"{{ follows }}><span class="field-label"{{ relabel }}>{{ label }}</span>
     {{ control(c, v, r and c.name in r.absent, not r) }}</label>

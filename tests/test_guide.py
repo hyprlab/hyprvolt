@@ -377,9 +377,15 @@ def test_a_server_ticked_as_running_a_hypervisor_makes_and_links_one(client, h, 
     assert entities(client, "hypervisor")[0]["fields"]["platform"] == "vmware"
     # Unticked with a VM on it: refused. Without: the hypervisor is deleted.
     add(client, h, "guests", site["id"], **{"_kind": "0", "name": "vm1", "f.host": str(hyp["id"])})
+    # The box says so before it is unticked, instead of asking to delete.
+    row = client.get(f"/site-setup/servers?site={site['id']}").data.decode().split('data-name="srv1"')[1]
+    assert ('data-confirm-blocked="srv1 can&#39;t be deleted yet" data-confirm-blocked-text="vm1 runs on it. '
+            'Move it to another hypervisor or delete it first."') in row
     got = change(client, h, "servers", srv["id"], "s.hypervisor.on", False, site["id"], status=400)
-    assert "srv1 has vm1 running on it" in got["error"]
+    assert "srv1 can't be deleted yet: vm1 runs on it." in got["error"]
     vm = entities(client, "vm")[0]
     client.post(f"/api/entities/{vm['id']}/delete", headers=h)
+    row = client.get(f"/site-setup/servers?site={site['id']}").data.decode().split('data-name="srv1"')[1]
+    assert "data-confirm-blocked" not in row.split("</fieldset>")[0]
     got = change(client, h, "servers", srv["id"], "s.hypervisor.on", False, site["id"])
     assert not entities(client, "hypervisor") and "Recently deleted" in got["notices"][0]

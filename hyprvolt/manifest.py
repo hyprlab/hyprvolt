@@ -170,7 +170,8 @@ class SetupField:
     relabel: tuple = ()              # (column, value, label): another label while that column has it:
                                      # a server's IP address is its BMC's once it runs a hypervisor
     confirm_off: tuple = ()          # check: (question, text) asked before it is unticked, when that
-                                     # deletes something
+                                     # deletes something; the section's values may give
+                                     # "<name>_blocked", (title, text), said instead when it can't be
 
 
 @dataclass(frozen=True)

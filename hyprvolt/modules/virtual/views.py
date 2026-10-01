@@ -195,11 +195,30 @@ def hypervisor_choices(name) -> list[tuple[str, str]] | None:
     return list(PLATFORMS) if name == "platform" else None
 
 
+def _guests(hyp) -> list[Entity]:
+    from hyprvolt.core import relations
+    return relations.linked("runs_on", hyp, "target")
+
+
+def _blocked(hyp) -> tuple | None:
+    """Why unticking can't delete the hypervisor, as the dialog says it
+    instead of asking: what still runs on it."""
+    guests = _guests(hyp)
+    if not guests:
+        return None
+    return (f"{hyp.name} can't be deleted yet",
+            f"{_listed(guests)} {'runs' if len(guests) == 1 else 'run'} on it. Move "
+            f"{'it' if len(guests) == 1 else 'them'} to another hypervisor or delete "
+            f"{'it' if len(guests) == 1 else 'them'} first.")
+
+
 def hypervisor_values(server) -> dict:
+    """What the section holds, and ``on_blocked``: why it can't be unticked."""
     hyp = next(iter(hypervisors_on(server)), None)
     if hyp is None:
         return {"on": False, "platform": "", "address": ""}
-    return {"on": True, "platform": records.own_values(hyp).get("platform") or "", "address": _addresses(hyp)}
+    return {"on": True, "platform": records.own_values(hyp).get("platform") or "", "address": _addresses(hyp),
+            "on_blocked": _blocked(hyp)}
 
 
 def hypervisor_form(etype, server) -> str:
@@ -218,7 +237,6 @@ def hypervisor_save(server, values, user) -> list[dict]:
     """Runs a hypervisor, ticked: a hypervisor record running on the server,
     by the server's name, with its platform and management address. Unticked:
     that record deleted (Undo in Recently deleted), unless guests run on it."""
-    from hyprvolt.core import relations
     current = next(iter(hypervisors_on(server)), None)
     on = values.get("on") in (True, "1", "on", "true") if "on" in values else current is not None
     data = {}
@@ -232,10 +250,9 @@ def hypervisor_save(server, values, user) -> list[dict]:
         records.notice(f"{made.name} is added to Hypervisors, running on this server.")
         return [{"field": "hypervisor", "label": "Hypervisor", "old": "", "new": made.name}]
     if not on and current is not None:
-        guests = [e for e in relations.linked("runs_on", current, "target")]
-        if guests:
-            raise Invalid(f"{current.name} has {_listed(guests)} running on it. Delete or move "
-                          f"{'it' if len(guests) == 1 else 'them'} first.")
+        blocked = _blocked(current)
+        if blocked:
+            raise Invalid(f"{blocked[0]}: {blocked[1]}")
         records.delete(current, user)
         records.notice(f"The hypervisor {current.name} is deleted; Recently deleted can bring it back.")
         return [{"field": "hypervisor", "label": "Hypervisor", "old": current.name, "new": ""}]

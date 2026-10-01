@@ -311,12 +311,14 @@ def _kind_index(step, entity) -> int:
 
 def _row(step, cols, entity) -> dict:
     """A record as a row: {"id", "label", "values" {column: value},
-    "absent" (columns its type doesn't have: a printer has no Used by)}."""
+    "absent" (columns its type doesn't have: a printer has no Used by),
+    "blocked" {column: (title, text)}: a box that can't be unticked, and
+    why (a hypervisor with VMs on it)}."""
     reg = registry()
     etype = reg.type(entity.type)
     own = records.own_values(entity)
     sections = {s.key: s for s in reg.form_sections(etype)}
-    held, values, absent = {}, {}, set()
+    held, values, absent, blocked = {}, {}, set(), {}
     for c in cols:
         n = c["name"]
         if n == "_kind":
@@ -337,11 +339,14 @@ def _row(step, cols, entity) -> dict:
             elif section.values is not None:
                 held.setdefault(key, section.values(entity) or {})
                 values[n] = held[key].get(name, "")
+                if c.get("confirm_off") and held[key].get(name + "_blocked"):
+                    blocked[n] = held[key][name + "_blocked"]
     gone = {"f." + k for k in F.hidden_keys(etype.fields, own)}
     kind = int(values["_kind"]) if "_kind" in values else 0
     gone |= {c["name"] for c in cols if "only" in c and kind not in c["only"]}
     gone |= _not_followed(cols, values, gone)
     return {"id": entity.id, "label": entity.name, "values": values, "absent": absent, "text": {}, "locked": (),
+            "blocked": blocked,
             "hidden": {c["name"] for c in cols if c["name"] in gone}}
 
 

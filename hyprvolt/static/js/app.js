@@ -1260,6 +1260,11 @@
     var box = e.target.closest && e.target.closest("input[type=checkbox][data-confirm-off]");
     if (!box || box.checked) return;     // during a click it is already as it will be: ticked is fine
     e.preventDefault();                  // unticked: it stays ticked until the answer
+    // What it would delete can't be deleted yet (a hypervisor with VMs on it): say why instead.
+    if (box.hasAttribute("data-confirm-blocked")) {
+      askFirst(box.getAttribute("data-confirm-blocked"), box.getAttribute("data-confirm-blocked-text"));
+      return;
+    }
     askFirst(box.getAttribute("data-confirm-off"), box.getAttribute("data-confirm-text"), "Delete", function () {
       box.checked = false;
       box.dispatchEvent(new Event("change", { bubbles: true }));
@@ -1782,14 +1787,17 @@
     askFirst(btn.getAttribute("data-confirm"), btn.getAttribute("data-confirm-text"),
              btn.getAttribute("data-confirm-go") || "Remove", go);
   }
+  // With no ``go``, it only tells: why it can't be done, and OK.
   function askFirst(question, detail, goLabel, go) {
-    if (!confirmModal) { go(); return; }
+    if (!confirmModal) { if (go) go(); return; }
     document.getElementById("confirm-title").textContent = question;
     var text = document.getElementById("confirm-text");
     text.textContent = detail || "";
     text.hidden = !text.textContent;
     var yes = document.getElementById("confirm-go");
-    yes.textContent = goLabel;
+    yes.hidden = !go;
+    confirmModal.querySelector("[data-close]").textContent = go ? "Cancel" : "OK";
+    yes.textContent = goLabel || "";
     yes.onclick = function () {
       yes.onclick = null;
       confirmModal.close();
