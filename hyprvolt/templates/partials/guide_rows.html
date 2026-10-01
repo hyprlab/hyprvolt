@@ -28,7 +28,7 @@
   <input type="{{ 'number' if c.kind == 'number' else 'text' }}" name="{{ c.name }}" value="{{ v }}"
          {%- if off %} disabled placeholder="—"{% elif fresh and c.name == 'name' %} placeholder="Type a name to add one"
          {%- elif c.placeholder %} placeholder="{{ c.placeholder }}"{% endif %}
-         {%- if c.kind == 'number' %} step="any"{% endif %} autocomplete="off" spellcheck="false" maxlength="500">
+         {%- if c.kind == 'number' %} step="any"{% if c.unit %} data-unit="{{ c.unit }}"{% endif %}{% endif %} autocomplete="off" spellcheck="false" maxlength="500">
   {% endif %}
 {% endmacro %}
 {% macro row_fields(r) %}

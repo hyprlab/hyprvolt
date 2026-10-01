@@ -1373,7 +1373,9 @@
     var select = item.querySelector("select");
     if (select) return select.value ? select.options[select.selectedIndex].text : "";
     var input = item.querySelector("input[name]");
-    return input && input.name !== "name" && !input.disabled ? input.value.trim() : "";
+    if (!input || input.name === "name" || input.disabled || !input.value.trim()) return "";
+    // A number with its unit: 1500 VA, 25 min.
+    return input.value.trim() + (input.getAttribute("data-unit") ? " " + input.getAttribute("data-unit") : "");
   }
   function summarizeRow(row) {
     var body = row.querySelector(".guide-row-body"), out = row.querySelector("[data-row-summary]");

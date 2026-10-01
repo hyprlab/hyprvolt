@@ -111,11 +111,18 @@ SETUP_HELP = {
         "Public addresses belong to the internet connection, not to the device. Computers and storage come "
         "next, and cabling everything together is the last step.",
     ),
+    "ups": (
+        "A UPS keeps equipment running through a power cut, long enough to ride it out or shut down cleanly. "
+        "Record its capacity and runtime, and give it an IP address if it has a network card.",
+        "What it powers is linked from either record's Relationships, as powered by, so a UPS that fails "
+        "shows everything that goes down with it. A PDU is a peripheral, an endpoint.",
+    ),
     "servers": (
-        "Servers, NAS boxes and UPSes: the machines that run things, keep data, and keep the power on. A "
-        "server that runs virtual machines is recorded here as hardware; its hypervisor (Proxmox, ESXi) is a "
-        "later step, running on it.",
-        "Desktops, laptops and printers are endpoints, a later step.",
+        "Servers and NAS boxes: the machines that run things and keep data. A server that runs virtual "
+        "machines is recorded here as hardware; its hypervisor (Proxmox, ESXi) is the next step, running on "
+        "it.",
+        "Desktops, laptops and printers are endpoints, a later step. UPSes have their own step, before this "
+        "one.",
     ),
     "endpoints": (
         "Endpoints are what people use at the edge of the network: workstations and laptops, printers, and "
@@ -195,10 +202,18 @@ module = Module(
                           SetupField("s.wifi.list", "Wireless networks", kind="multi", newline=True,
                                      kinds=("Modem", "Router", "Access point", "Wireless extender",
                                             "Wireless bridge")))),
-        SetupStep("servers", "Servers and storage", "The machines that run things and keep data: servers, "
-                  "NAS boxes, and the UPS that keeps them up.", 70, group="Equipment",
+        SetupStep("ups", "UPSes", "The battery backups that keep everything running through a power cut, "
+                  "with their capacity and how long they last.", 65, group="Equipment",
+                  help=SETUP_HELP["ups"], plan="UPSes",
+                  kinds=(SetupKind("UPS", "ups"),),
+                  fields=(SetupField("name", placeholder="ups1"), SetupField("location_id"), SetupField("f.model"),
+                          SetupField("f.capacity_va"), SetupField("f.runtime_min"),
+                          SetupField("s.addresses.list", "IP address", placeholder="10.0.10.30"))),
+        SetupStep("servers", "Servers and storage", "Physical machines that store and serve data. A server "
+                  "that runs virtual machines is recorded here as hardware; its hypervisor is added in the next "
+                  "step.", 70, group="Equipment",
                   help=SETUP_HELP["servers"], plan="servers, storage",
-                  kinds=(SetupKind("Server", "server"), SetupKind("NAS", "nas"), SetupKind("UPS", "ups")),
+                  kinds=(SetupKind("Server", "server"), SetupKind("NAS", "nas")),
                   fields=(SetupField("name", placeholder="srv1"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
         SetupStep("endpoints", "Endpoints", "What people use at the edge of the network: computers, printers "
