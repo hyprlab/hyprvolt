@@ -92,7 +92,7 @@ module = Module(
     setup=(SetupStep("vendors", "Vendors", "Internet service providers, domain registrars, equipment sellers, "
                      "warranty providers, software and license vendors, cloud and hosting services, support "
                      "contractors, and utilities.", 35,
-                     group="Network",
+                     group="Place",
                      help=SETUP_HELP["vendors"], plan="vendors",
                      kinds=(SetupKind("Vendor", "vendor"),),
                      fields=(SetupField("name", placeholder="Springfield Cable"), SetupField("f.support_phone"),

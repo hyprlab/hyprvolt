@@ -28,6 +28,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - A hypervisor given the IP address recorded on the server it runs on takes it, with a message saying it moved, instead of refusing it. The setup guide's Servers and storage and Hypervisors help explains which address goes where (the management address on the hypervisor, the iDRAC, iLO or IPMI address on the server), and the Hypervisors step's column is now Management IP
 - In the site setup guide, each place in a Where choice says what it is: Hyprlab (site), Garage (building), Main House › Basement (room)
 - In the dark theme, messages such as Deleted with Undo are a dark pill with light text, and errors a dark red one, instead of a light pill the yellow Undo was hard to read on
@@ -51,6 +52,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Pictures on records: a featured image in a place of its own at the top of a record's Overview, added, replaced or removed there, and shown on the record's card in card view. The record's attached images show below it as a strip, and any picture opens a viewer that moves through them with the arrow keys or a swipe
 
 ### Changed
+- In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - In the light theme, the chosen row in the sidebar, settings and search is a darker grey instead of yellow, keeping its yellow edge
 - The dark theme is lighter: charcoal backgrounds instead of near-black, with brighter borders and secondary text, so it is easier to read
 - A record is edited where it is shown, instead of in a form: in its Overview, an editor changes a field in place, and it is saved on leaving the field, on Enter, or on closing the record. A change that can't be saved says why under the field and keeps the record open until it is fixed or closed again. Notes and other long text show formatted until their Edit button. New records are still made in the form
@@ -74,6 +76,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - The API finds a record by its slug (`GET /api/entities/by-slug/<slug>`, or `?slug=` on the list) and creates or updates one by slug (`POST /api/entities/by-slug/<slug>`), so an import can run again without making copies
 
 ### Changed
+- In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - Back and Forward work in a record: following a link to another record, a page's Next, or j and k adds a step that the browser's Back and Forward, and the ‹ › buttons in the record's bar, walk through. Back from the first record closes it, and closing it leaves the browser's history as it was
 - A record's notes come first in its Overview, above its fields
 - A record's close button is on the right of its bar, with Back, Forward and its actions on the left
@@ -84,6 +87,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [1.1.0] — 2026-09-28
 
 ### Changed
+- In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - Windows such as the record form and Settings, and a record's sheet, no longer close on a click beside them; they close with their close button or Escape, so a form half filled in isn't lost
 - A record's sheet slides back down when it closes, the way it came in
 - Every field in the record form has an info button beside its label that says what the field is for, tags, slug and codes included, instead of hints under some of them
@@ -153,6 +157,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Accounts have a role: viewers read everything, editors also change the documentation, admins also manage users and the instance. Admins pick the role per user and the role new accounts start with
 
 ### Changed
+- In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - Hyprvolt is released under the MIT License
 - Secondary text and the red of errors and alerts have more contrast, meeting WCAG AA in both themes, and links and small buttons are easier to tap on a touch screen
 - The app icon is Hyprvolt's own, in the sidebar, on the sign-in page and as the browser tab's icon
