@@ -369,6 +369,32 @@ with a header row, up to 5 MB and 5,000 rows) becomes records of one kind:
 5. Import. Rows with a problem are left out; the rest are saved, each with
    its line in the history. An exported file imports back unchanged.
 
+Services can also be read from a [Homepage](https://gethomepage.dev)
+dashboard: Import from Homepage, under Services in the sidebar and in the
+setup guide's Services step. Choose its `services.yaml`, and its
+`docker.yaml` if it has one (each up to 1 MB). Each service's name, group,
+link and description are read, and what it runs on is worked out from what
+the file says:
+
+- its Docker server and container: the container record on the Docker host
+  of that name, or at the address docker.yaml gives;
+- its Proxmox node and ID: the VM or LXC container with that ID on that
+  node;
+- its addresses (the widget's, the site monitor's, the ping's, then the
+  link's, which may be a reverse proxy's): the record an IP address is
+  assigned to, a name in a DNS record written down in Network, or a host
+  name like a record's own name.
+
+The review lists every service with what it would run on and why: Matched
+when one record is clearly best, Check when it is only likely, and Choose
+when nothing points anywhere or two are as likely, those first. Each has its
+Runs on, kind (guessed from the app: Sonarr is media, AdGuard Home DNS) and
+whether to add it, update the service of the same name, or leave it out.
+Import saves them, tagged with their Homepage group unless that is turned
+off, the description as notes and an address's port as Ports. API keys and
+passwords in the file are never read, and a value Homepage fills in itself
+(`{{HOMEPAGE_VAR_...}}`) is left out.
+
 Settings > Admin exports the whole instance as one JSON file: every table
 and row, the modules' own included, with password hashes, secret values, API
 token hashes and the Turnstile secret left out. Attached files are listed but

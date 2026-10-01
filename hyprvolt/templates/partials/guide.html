@@ -106,6 +106,8 @@
         <option value="{{ url(step.key, none, new=1) }}" {{ 'selected' if not scope }}>A new site</option>
       </select></label>
     {% endif %}
+    {# A module's other way to fill the step: Services' Import from Homepage. #}
+    {% if extra %}{{ extra }}{% endif %}
     {% if body %}{{ body }}{% else %}
     <p class="hint">These go in a site: choose or add the site in step 1 first.</p>{% endif %}
     <div class="guide-nav">

@@ -673,9 +673,10 @@ def step(key):
     index = steps.index(current)
     scope = _scope()
     body = (_tree_html(current, scope) if scope is not None else "") if current.tree else _rows_html(current, scope)
+    extra = Markup(current.extra(scope)) if current.extra is not None else ""
     sites = _records_of({k.type for k in _kinds(current)}) if current.scope else []
     return _page(render_template(
         "partials/guide.html", done=False, steps=steps, groups=_groups(steps), step=current, index=index,
-        scope=scope, body=Markup(body), sites=sites,
+        scope=scope, body=Markup(body), sites=sites, extra=extra,
         back=steps[index - 1].key if index else None,
         following=steps[index + 1].key if index + 1 < len(steps) else "done", url=_url))

@@ -1,6 +1,7 @@
 """Services: what people actually use. A web app, a mail server, a reverse
 proxy, with its address, ports, who uses it, how much it matters, and what
-it runs on.
+it runs on. A Homepage dashboard's services can be read in, each matched to
+what it runs on (homepage.py).
 
 "Runs on" points at anything with the ``host`` trait and "Domain" at
 anything with the ``domain`` trait (Network's domains), and both are kept as
@@ -9,9 +10,9 @@ services that go down with it, and a domain's lists what breaks if it
 lapses, without Services needing either module. The ``tls`` trait lets
 Certificates say which certificate a service serves.
 """
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, SetupField, SetupKind, SetupStep, Widget
+from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Page, SetupField, SetupKind, SetupStep, Widget
 
-from . import demo, views
+from . import demo, homepage, views
 from .models import ServiceDetail
 
 KINDS = (("web", "Web app"), ("files", "File sharing"), ("mail", "Mail"), ("dns", "DNS"), ("vpn", "VPN"),
@@ -45,6 +46,8 @@ module = Module(
     group="Operations",
     order=50,
     models=(ServiceDetail,),
+    blueprint=homepage.bp,
+    pages=(Page("homepage", "Import from Homepage", homepage.page),),
     types=(
         EntityType("service", "Service", "Services", detail=ServiceDetail, located_in=(), icon=ICON,
                    statuses=STATUSES, traits=("supplied", "tls"),
@@ -67,6 +70,7 @@ module = Module(
                      "DNS. Say what each runs on, so a host going down shows what goes with it.", 90,
                      group="What runs",
                      help=SETUP_HELP["services"], plan="services", kinds=(SetupKind("Service", "service"),),
+                     extra=homepage.setup_extra,
                      fields=(SetupField("name", placeholder="Jellyfin"), SetupField("f.kind"), SetupField("f.host"),
                              SetupField("f.url"))),),
     seed=demo.seed,

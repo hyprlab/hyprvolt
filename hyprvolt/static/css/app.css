@@ -227,6 +227,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   background: var(--accent); color: var(--accent-ink); vertical-align: 1px;
 }
 .chip--muted { background: var(--field); color: var(--muted); border: 1px solid var(--line); }
+.chip--warn { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 
 /* ————— Shell layout ————— */
 .shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100dvh; }
@@ -519,6 +520,7 @@ a.tagchip:hover { color: var(--ink); border-color: var(--line-strong); }
   border: 1px solid var(--line);
 }
 .modal--wide { width: min(620px, calc(100vw - 32px)); }
+.modal--xwide { width: min(880px, calc(100vw - 32px)); }
 .modal::backdrop, .sheet::backdrop { background: var(--scrim); backdrop-filter: blur(3px); }
 /* Every dialog is modal, and each leaves viewport around it: the sheet's
    gutters, the backdrop around a modal or the palette. A wheel over that space
@@ -690,6 +692,17 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .manage-sub { font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .manage-sub.form-error { color: var(--danger); white-space: normal; }
 .manage-item .avatar { width: 30px; height: 30px; font-size: 13px; }
+/* A list of things to review before an import, each with its choices under
+   it: what was read, why it was matched, and what to do with it. */
+.review-list { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; }
+.review-item { display: flex; flex-direction: column; gap: 10px; padding: 14px 2px; border-bottom: 1px solid var(--line); }
+.review-item:last-child { border-bottom: 0; }
+.review-title { font-size: 14.5px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
+.review-why { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.review-controls { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 10px; }
+@media (max-width: 700px) { .review-controls { grid-template-columns: 1fr; } }
+/* Above a guide step's rows: another way to fill it (Import from Homepage). */
+.guide-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 16px; }
 
 /* A switch: a checkbox that turns something on or off at once. */
 .switch { position: relative; display: inline-flex; flex: none; cursor: pointer; }

@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
 - Operating system fields (virtual machines, containers, servers, NAS, workstations) list known operating systems as you type, from Ubuntu and Debian to Windows Server, TrueNAS and pfSense: click one, or pick it with the arrow keys and Enter, to fill it in, or keep what you typed as a custom name
 - A server or a NAS (TrueNAS SCALE, Unraid) can be marked Runs a hypervisor, in its form and in the setup guide's Servers and storage step: that adds the hypervisor running on it, with its platform and management IP, and the server's IP address becomes its BMC IP. Unticking it deletes the hypervisor, asked first, unless virtual machines run on it
 - The setup guide has a UPSes step of its own after Endpoints, with each UPS's capacity and runtime and the equipment it powers, ticked from the site's network gear, servers, storage and endpoints. A UPS's record has the same Powers section
@@ -48,6 +49,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [1.3.0] — 2026-09-28
 
 ### Added
+- Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
 - A location, a piece of hardware, or a VM or LXC container can be changed into another kind after it is saved, under Type in its Overview: a room into a building, a server into a NAS, a VM into an LXC container. It keeps its links, files and history
 - Pictures on records: a featured image in a place of its own at the top of a record's Overview, added, replaced or removed there, and shown on the record's card in card view. The record's attached images show below it as a strip, and any picture opens a viewer that moves through them with the arrow keys or a swipe
 
@@ -65,6 +67,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [1.2.0] — 2026-09-28
 
 ### Added
+- Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
 - Headings in documents get anchors, and a page with three or more headings opens with a contents list linking to them
 - A fenced code block that names its language (bash, PowerShell, Python and the rest) is colored for it, with the language named above the block
 - Task lists: `- [ ]` and `- [x]` items show as checkboxes
@@ -96,6 +99,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [1.0.0] — 2026-09-28
 
 ### Added
+- Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
 - Records of every kind share one interface: cards or a list with filters and live counts in the sidebar, a detail sheet with Overview, Relationships, Documents, Attachments and History tabs, and one form
 - Locations: sites, buildings, rooms, racks and shelves, with breadcrumbs on everything that has a place
 - Rack elevations show what occupies each unit on the front and rear, and flag overlaps and anything that no longer fits; a sidebar filter lists the racks with conflicts
@@ -167,4 +171,5 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [0.1.0] — 2026-09-25
 
 ### Added
+- Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
 - The first version, started from the Hyprlab Flask template

@@ -204,6 +204,8 @@ class SetupStep:
     kinds: tuple = ()
     scope: bool = False
     tree: bool = False               # records that hold each other (buildings, rooms) as a tree
+    extra: Callable | None = None    # extra(scope) -> HTML above the rows: another way to fill the step
+                                     # (Services' Import from Homepage)
     save: Callable | None = None
     rows: Callable | None = None
     update: Callable | None = None

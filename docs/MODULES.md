@@ -310,6 +310,8 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
   column shows its text rather than a control), `update(id, values, user)`
   and `delete(id)` (returning its Undo), and `SetupField(..., choices=fn)`
   for its choices.
+- `extra(scope)` returns HTML shown above a step's rows: another way to
+  fill it, such as Services' Import from Homepage, a button and its dialog.
 - A `SetupFinish(key, label, text, make, made=None, open_label="")` is
   offered on the guide's last page. `make(site, found, user)` gets what the
   steps recorded in the site, `[{"group", "title", "records"}]`, and returns

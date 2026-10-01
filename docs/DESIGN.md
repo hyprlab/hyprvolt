@@ -74,7 +74,9 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.guide-break` | A new line in a guide row (`SetupField.newline`), hidden with the field it comes before |
 | `.switch`, `.switch-track` | An on/off switch over a checkbox, for something that takes effect at once (a module) |
 | `.theme-picker`, `.theme-chip` | Chip-style radio group |
-| `.chip`, `.chip--muted`, `.count`, `.count--alert`, `.title-chip` | Small labels and counters. `--alert` is a count that needs attention (conflicts); a `.title-chip` link clears a filter |
+| `.chip`, `.chip--muted`, `.chip--warn`, `.count`, `.count--alert`, `.title-chip` | Small labels and counters. `--alert` is a count that needs attention (conflicts), `.chip--warn` a label that does (Choose, in an import's review); a `.title-chip` link clears a filter |
+| `.review-list`, `.review-item`, `.review-title`, `.review-why`, `.review-controls` | Things to review before an import, each with why it was matched and its choices under it (Import from Homepage) |
+| `.guide-extra` | Above a guide step's rows: another way to fill the step (`SetupStep.extra`) |
 | `.tagchip`, `.tagdot` | A tag, the same in every module; a link where it filters. The dot marks tags in the sidebar |
 | `.shell`, `.sidebar`, `.sidebar-head/-scroll/-foot` | The layout. The head and foot stay pinned; only the middle scrolls. |
 | `.navitem`, `.sidebar-label`, `.sidelist`, `.sidelist--nested`, `.sideitem` | Sidebar rows: a module is a `.navitem`; the open module's types and filters are a nested list under it. `.is-active` adds the wash and an inset accent bar. |
@@ -89,7 +91,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.secret-value` | A secret's value in its row: a mask until Show, then the value as typed, lines kept, selectable in one click |
 | `.trace`, `.trace-path`, `.trace-hop`, `.trace-link` | A cable path inside a port's row, opened from a `<details>`: each port a pill, the cables and patch panels between them in small text |
 | `.empty`, `.empty--onboard`, `.pager`, `.pager-end` | Empty states and paging; `--onboard` is the first-run dashboard with the mark |
-| `.modal`, `.modal--wide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>` |
+| `.modal`, `.modal--wide`, `.modal--xwide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>`; `--xwide` for a review with choices side by side |
 | `[data-sortable]`, `[data-sort-item]`, `.sort-handle`, `.sort-group` | A list reordered by hand: each item's grip handle drags it (mouse, pen or touch, scrolling its pane at the edges), or moves it with ↑ and ↓ while focused. A move fires `sorted` from the list, and its listener saves the order. Settings > Modules uses it for the sidebar |
 | `#confirm-modal`, `.confirm-text`, `.confirm-actions` | The one confirmation dialog, filled in from the `data-confirm` button that opened it: a question, a line saying what happens, Cancel (focused) and the action |
 | `.form-grid`, `.form-wide`, `.form-check`, `.req` | The record form: two columns, long text across both, a required mark |
