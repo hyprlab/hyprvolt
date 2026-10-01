@@ -123,9 +123,10 @@ SETUP_HELP = {
         "Servers and NAS boxes: the machines that run things and keep data. A server that runs virtual "
         "machines is recorded here as hardware; its hypervisor (Proxmox, ESXi) is a later step, running on "
         "it.",
-        "Tick Runs a hypervisor for a server with Proxmox, ESXi or Hyper-V on it: that adds the hypervisor "
-        "to the Hypervisors step, running on the server, with its platform and the management address its "
-        "web interface is at. The server's IP address is then its management controller's, its iDRAC, iLO "
+        "Tick Runs a hypervisor for a server with Proxmox, ESXi or Hyper-V on it, or a NAS that runs "
+        "virtual machines too, such as TrueNAS SCALE or Unraid: that adds the hypervisor to the Hypervisors "
+        "step, running on it, with its platform and the management address its web interface is at, and "
+        "virtual machines can then choose it as their host. The server's IP address is then its management controller's, its iDRAC, iLO "
         "or IPMI, if it has one. A server whose operating system runs straight on it, such as Ubuntu with "
         "Docker, keeps that address as its IP address.",
         "Desktops, laptops and printers are endpoints, a later step. UPSes come after the endpoints, to tick "
@@ -220,7 +221,7 @@ module = Module(
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11",
                                      relabel=("s.hypervisor.on", "1", "BMC IP (iDRAC, iLO)")),
                           # Virtual's: ticked, the hypervisor running on it, made and linked.
-                          SetupField("s.hypervisor.on", "Runs a hypervisor", kind="check", kinds=("Server",),
+                          SetupField("s.hypervisor.on", "Runs a hypervisor", kind="check",
                                      confirm_off=("Delete its hypervisor?",
                                                   "This deletes the hypervisor record.")),
                           SetupField("s.hypervisor.platform", "Hypervisor", newline=True,

@@ -174,8 +174,13 @@ def hypervisor_widget() -> str:
 
 # ———— A server's hypervisor: the Hypervisor section of its form ————
 
+#: Machines that can be marked as running a hypervisor: a server, and a
+#: NAS whose system runs VMs too (TrueNAS SCALE, Unraid).
+HYPERVISOR_MACHINES = ("server", "nas")
+
+
 def runs_hypervisor(etype) -> bool:
-    return etype.key == "server"
+    return etype.key in HYPERVISOR_MACHINES
 
 
 def hypervisors_on(server) -> list[Entity]:
@@ -224,7 +229,7 @@ def hypervisor_values(server) -> dict:
 def hypervisor_form(etype, server) -> str:
     from . import PLATFORMS
     values = hypervisor_values(server) if server is not None else {"on": False, "platform": "", "address": ""}
-    return render_template("virtual/hypervisor_form.html", v=values, platforms=PLATFORMS,
+    return render_template("virtual/hypervisor_form.html", v=values, platforms=PLATFORMS, kind=etype.text(),
                            name=hypervisors_on(server)[0].name if values["on"] else "")
 
 
@@ -234,8 +239,8 @@ def _listed(entities) -> str:
 
 
 def hypervisor_save(server, values, user) -> list[dict]:
-    """Runs a hypervisor, ticked: a hypervisor record running on the server,
-    by the server's name, with its platform and management address. Unticked:
+    """Runs a hypervisor, ticked: a hypervisor record running on the server
+    (or NAS), by its name, with its platform and management address. Unticked:
     that record deleted (Undo in Recently deleted), unless guests run on it."""
     current = next(iter(hypervisors_on(server)), None)
     on = values.get("on") in (True, "1", "on", "true") if "on" in values else current is not None
@@ -247,7 +252,8 @@ def hypervisor_save(server, values, user) -> list[dict]:
     if on and current is None:
         data.update({"name": server.name, "f.host": server.id})
         made = records.create("hypervisor", data, user)
-        records.notice(f"Added the hypervisor {made.name}, running on the server {server.name}.")
+        kind = registry().type(server.type).text()
+        records.notice(f"Added the hypervisor {made.name}, running on the {kind} {server.name}.")
         return [{"field": "hypervisor", "label": "Hypervisor", "old": "", "new": made.name}]
     if not on and current is not None:
         blocked = _blocked(current)

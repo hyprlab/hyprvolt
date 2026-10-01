@@ -139,9 +139,15 @@ def test_a_servers_form_makes_its_hypervisor(client, h, admin):
         "s.hypervisor.address": "10.0.20.21"})
     assert resp.status_code == 200 and not resp.get_json()["notices"]
     assert len(client.get("/api/entities?type=hypervisor").get_json()["entities"]) == 1
-    # A NAS has no such section.
+    # A NAS that runs VMs (TrueNAS SCALE) is one too: its hypervisor is a host VMs can choose.
     nas = make(client, h, "nas", name="nas1")
-    assert 'name="s.hypervisor.on"' not in client.get(f"/e/{nas['id']}/form").data.decode()
+    assert 'name="s.hypervisor.on"' in client.get(f"/e/{nas['id']}/form").data.decode()
+    resp = client.post(f"/api/entities/{nas['id']}", headers=h, json={"s.hypervisor.on": True,
+                                                                        "s.hypervisor.platform": "truenas"})
+    assert resp.get_json()["notices"] == ["Added the hypervisor nas1, running on the NAS nas1."]
+    vm_form = client.get("/e/form?type=vm").data.decode()
+    host = vm_form[vm_form.index('name="f.host"'):].split("</select>")[0]
+    assert ">nas1" in host and ">pve-host" in host
 
 
 def test_operating_systems_are_offered_as_they_are_typed(client, h, admin):

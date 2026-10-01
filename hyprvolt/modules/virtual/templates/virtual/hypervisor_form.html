@@ -1,4 +1,4 @@
-{# The Hypervisor section in a server's form: Runs a hypervisor, ticked,
+{# The Hypervisor section in a server's or a NAS's form: Runs a hypervisor, ticked,
    makes the hypervisor record running on it, with its platform and the
    address it is managed at; unticked deletes it, asked first, or says what
    still runs on it instead. #}
@@ -17,5 +17,5 @@
     <span class="field-label">Management IP</span>
     <input name="s.hypervisor.address" value="{{ v.address }}" spellcheck="false" autocomplete="off" placeholder="10.0.20.21">
   </label>
-  <span class="hint form-wide">A hypervisor record of the same name, running on this server, in Hypervisors. Its management address is where its web interface is; the server's own IP addresses are then its iDRAC, iLO or IPMI.</span>
+  <span class="hint form-wide">A hypervisor record of the same name, running on this {{ kind }}, in Hypervisors, which virtual machines can choose as their host. Its management address is where its web interface is; this {{ kind }}'s own IP addresses are then its iDRAC, iLO or IPMI, if it has one.</span>
 </div>

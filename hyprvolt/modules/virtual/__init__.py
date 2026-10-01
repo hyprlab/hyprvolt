@@ -14,7 +14,8 @@ from . import demo, views
 from .models import VirtualDetail
 
 PLATFORMS = (("proxmox", "Proxmox VE"), ("vmware", "VMware ESXi"), ("hyperv", "Hyper-V"),
-             ("xcpng", "XCP-ng"), ("kvm", "KVM"), ("other", "Other"))
+             ("xcpng", "XCP-ng"), ("kvm", "KVM"), ("truenas", "TrueNAS SCALE"), ("unraid", "Unraid"),
+             ("other", "Other"))
 GUEST_STATUSES = (("running", "Running"), ("stopped", "Stopped"), ("template", "Template"),
                   ("planned", "Planned"), ("retired", "Retired"))
 RUN_STATUSES = (("running", "Running"), ("stopped", "Stopped"), ("planned", "Planned"), ("retired", "Retired"))

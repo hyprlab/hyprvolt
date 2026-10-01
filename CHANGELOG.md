@@ -8,7 +8,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ### Added
 - Operating system fields (virtual machines, containers, servers, NAS, workstations) list known operating systems as you type, from Ubuntu and Debian to Windows Server, TrueNAS and pfSense: click one, or pick it with the arrow keys and Enter, to fill it in, or keep what you typed as a custom name
-- A server can be marked Runs a hypervisor, in its form and in the setup guide's Servers and storage step: that adds the hypervisor running on it, with its platform and management IP, and the server's IP address becomes its BMC IP. Unticking it deletes the hypervisor, asked first, unless virtual machines run on it
+- A server or a NAS (TrueNAS SCALE, Unraid) can be marked Runs a hypervisor, in its form and in the setup guide's Servers and storage step: that adds the hypervisor running on it, with its platform and management IP, and the server's IP address becomes its BMC IP. Unticking it deletes the hypervisor, asked first, unless virtual machines run on it
 - The setup guide has a UPSes step of its own after Endpoints, with each UPS's capacity and runtime and the equipment it powers, ticked from the site's network gear, servers, storage and endpoints. A UPS's record has the same Powers section
 - Wireless networks: record each Wi-Fi network with its security, bands, hidden or not, VLAN and subnet, and tick the access points, extenders, bridges and Wi-Fi routers that broadcast it, from either record or from the setup guide, which has a Wireless networks step before Network gear
 - Network gear can be a Wireless extender, also offered in the setup guide's Network gear step

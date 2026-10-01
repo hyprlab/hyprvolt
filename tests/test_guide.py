@@ -372,6 +372,12 @@ def test_a_server_ticked_as_running_a_hypervisor_makes_and_links_one(client, h, 
     assert 'name="s.hypervisor.address" value="10.0.20.21"' in row
     assert 'name="s.addresses.list" value=""' in row
     assert 'data-name="srv1"' in client.get(f"/site-setup/hypervisors?site={site['id']}").data.decode()
+    # A NAS row has the box too, and its hypervisor is a host a VM can choose in the guide.
+    add(client, h, "servers", site["id"], **{"_kind": "1", "name": "nas1", "s.hypervisor.on": "1",
+                                              "s.hypervisor.platform": "truenas"})
+    guests = client.get(f"/site-setup/guests?site={site['id']}").data.decode()
+    new_host = guests.split("data-row-new")[1].split('name="f.host"')[1].split("</select>")[0]
+    assert ">nas1" in new_host and ">srv1" in new_host
     # The platform changed from the server's row.
     change(client, h, "servers", srv["id"], "s.hypervisor.platform", "vmware", site["id"])
     assert entities(client, "hypervisor")[0]["fields"]["platform"] == "vmware"
@@ -388,4 +394,5 @@ def test_a_server_ticked_as_running_a_hypervisor_makes_and_links_one(client, h, 
     row = client.get(f"/site-setup/servers?site={site['id']}").data.decode().split('data-name="srv1"')[1]
     assert "data-confirm-blocked" not in row.split("</fieldset>")[0]
     got = change(client, h, "servers", srv["id"], "s.hypervisor.on", False, site["id"])
-    assert not entities(client, "hypervisor") and got["notices"] == ["Deleted the hypervisor srv1."]
+    assert [e["name"] for e in entities(client, "hypervisor")] == ["nas1"]
+    assert got["notices"] == ["Deleted the hypervisor srv1."]
