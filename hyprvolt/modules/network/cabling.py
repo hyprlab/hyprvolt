@@ -21,9 +21,9 @@ from hyprvolt.models import db
 from hyprvolt.permissions import role
 from hyprvolt.registry import current as registry
 
-from . import ports
-from .models import Cable, Port
-from .views import bp, setup_ends
+from . import addresses, ports
+from .models import Cable, NetworkDetail, Port
+from .views import bp, carriers_of, setup_ends
 
 MAX_ROWS = 500
 FAR = 100          # the distance between places with nothing in common
@@ -99,6 +99,15 @@ class Site:
     def where(self, a) -> str:
         chain = self.chain[a]
         return self.places[chain[0]].name if chain and chain[0] in self.places else ""
+
+    def networks(self, a) -> list[Entity]:
+        """The subnets its addresses are in, and the VLAN and subnet of each
+        wireless network it broadcasts."""
+        out = [addresses.subnet_of(d.address) for _, d in addresses.addresses_of(self.devices[a])]
+        for wifi in Relationship.query.filter(Relationship.kind == "broadcast_by", Relationship.target_id == a):
+            d = db.session.get(NetworkDetail, wifi.source_id)
+            out += [records.live(i) for i in (d.vlan, d.subnet) if d is not None and i]
+        return [n for n in dict.fromkeys(out) if n is not None]
 
     def kind_of(self, a) -> str:
         """What the device's place is: "rack", "room"."""
@@ -202,13 +211,22 @@ def plan(scope) -> list[dict]:
     for d in site.devices:
         if d in placed or site.role[d] in LEFT_OUT or site.neighbors[d]:
             continue
+        # A switch that carries its network, if any does; else any switch.
+        nets = site.networks(d)
+        carrying = carriers_of(n.id for n in nets) & set(switches) if nets else set()
+        candidates = [s for s in switches if s in carrying] or switches
         unplaced = site.devices[d].location_id is None
-        target = (core if unplaced else None) or \
-            _nearest(site, d, switches + [f for f in far_ends if site.serves(f, d)]) or gateway
+        target = (core if unplaced and not carrying else None) or \
+            _nearest(site, d, candidates + [f for f in far_ends if site.serves(f, d)]) or gateway
         if target is None:
             continue
         steps = site.distance(d, target)
-        if target not in points:
+        if target in carrying:
+            net = next(n for n in nets if target in carriers_of([n.id]))
+            why = f"{name[target]} carries its network, {net.name}" + \
+                (f", in the same {site.kind_of(d)}." if steps == 0 else
+                 f", in {site.where(target)}." if steps < FAR and site.where(target) else ".")
+        elif target not in points:
             why = f"There is no switch, so it plugs into the {GATEWAY_WORDS[site.role[target]]} {name[target]}."
         elif unplaced:
             why = f"Nothing records where it is, so it goes to the core switch {name[target]}."
@@ -220,7 +238,8 @@ def plan(scope) -> list[dict]:
             why = f"{name[target]} is the switch in the same {site.kind_of(d)}, {site.where(d)}."
         else:
             why = f"{name[target]}, in {site.where(target)}, is the nearest switch."
-        link(leaves, d, target, why, sure=not unplaced and (steps <= 1 or target not in points), group=target)
+        sure = target in carrying or (not unplaced and (steps <= 1 or target not in points))
+        link(leaves, d, target, why, sure=sure, group=target)
     leaves.sort(key=lambda r: (points.index(r["group"]) if r["group"] in points else -1, name[r["a"]].lower()))
     return [_ends(site, r, uplink=r["group"] == "backbone") for r in backbone + leaves]
 

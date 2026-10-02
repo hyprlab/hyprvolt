@@ -130,8 +130,11 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     assert 'data-when="f.static_ip" data-when-is="1"><span class="field-label">Static IP' in saved
     add(client, h, "subnets", site["id"], **{"name": "LAN", "f.cidr": "10.0.20.0/24", "f.gateway": "10.0.20.1"})
     # The kind of each row: a switch is network gear of the kind switch.
+    lan = entities(client, "subnet")[0]
     add(client, h, "gear", site["id"], **{"_kind": "3", "name": "sw1", "location_id": rack["id"],
-                                          "s.addresses.list": "10.0.20.2"})
+                                          "s.addresses.list": "10.0.20.2", "s.networks.list": str(lan["id"])})
+    rels = client.get(f"/api/entities/{lan['id']}/relationships").get_json()["relationships"]
+    assert [(r["label"], r["other"]["name"]) for r in rels] == [("is carried by", "sw1")]
     add(client, h, "gear", site["id"], **{"_kind": "1", "name": "fw1", "location_id": rack["id"]})
     # The Internet connection column: only in a modem's, router's or firewall's row.
     page = client.get(f"/site-setup/gear?site={site['id']}").data.decode()
@@ -149,7 +152,9 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     page = client.get(f"/site-setup/gear?site={site['id']}").data.decode()
     ap_row = page.split('data-name="ap1"')[1].split("</fieldset>")[0]
     assert f'value="{home["id"]}" data-multi-item checked' in ap_row
-    assert page.split('data-name="sw1"')[1].split("</fieldset>")[0].count("data-multi-item") == 1   # hidden
+    sw_row = page.split('data-name="sw1"')[1].split("</fieldset>")[0]
+    assert f'value="{lan["id"]}" data-multi-item checked' in sw_row          # the networks it carries
+    assert f'value="{home["id"]}" data-multi-item' in sw_row.split('data-when-is="0 1 4 5 6" hidden>')[-1]
     change(client, h, "gear", ap["id"], "s.wifi.list", "", site["id"])
     assert not client.get(f"/api/entities/{home['id']}/relationships").get_json()["relationships"]
     # A UPS ticks what it powers, from this site's equipment only.

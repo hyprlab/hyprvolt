@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- Switches, routers, firewalls and gateway modems record the VLANs and subnets they carry, in their Networks section and in the setup guide's Network gear step, and a VLAN or subnet the gear it is carried by. A switch's dependency view lists the networks it takes down, and Suggest cables plugs a device into a switch that carries its subnet
 - The setup guide's Cables step has Suggest cables: the cabling worked out from the gear and where each piece is (the modem to the router or firewall, that to the core switch, other switches to the core, MoCA pairs and wireless bridges, and every other device to its nearest switch), each cable with why, to check, change or untick before they are added
 - IP phones are a kind of hardware, with who uses each one and its extension, and are offered in the setup guide's Endpoints step
 - IP cameras are a kind of hardware, with their firmware and power draw, and are offered in the setup guide's Endpoints step

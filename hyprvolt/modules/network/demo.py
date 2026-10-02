@@ -113,3 +113,7 @@ def seed(demo):
                                       ("@", "TXT", "v=spf1 mx -all", {})):
         dns.add_record(net, {"name": name, "type": rtype, "value": value, **extra})
     demo.link("depends_on", "vlan-20", "edge-fw", "Routes between the VLANs")
+    # Every VLAN runs through the core switch, and the firewall routes them.
+    for vid in vlans:
+        for gear in ("sw-core", "edge-fw"):
+            demo.link("carried_by", f"vlan-{vid}", gear)

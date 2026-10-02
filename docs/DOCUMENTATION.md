@@ -184,7 +184,12 @@ its password belongs on its Secrets tab. The gear that broadcasts it (an
 access point, or network gear of the kind Modem, Router, Wireless extender
 or Wireless bridge) is ticked in its Broadcast by section, or the other way
 round in that gear's Wireless networks section; the network depends on the
-gear that broadcasts it. A domain's DNS records
+gear that broadcasts it. A switch, a router, a firewall or a modem that
+is the gateway ticks the VLANs and subnets it carries in its Networks
+section (and in the guide's Network gear step), or the other way round in
+a VLAN's or subnet's Carried by section; a subnet on a VLAN comes with the
+VLAN. A network depends on the gear that carries it, so the dependency view
+of a switch lists the networks it takes down. A domain's DNS records
 are written down by hand in its DNS records tab, and an A record or a CNAME
 that leads to a recorded address links to the device holding it. The
 palette finds DNS names and MAC addresses. The sidebar lists addresses with
@@ -508,7 +513,9 @@ building), and each other switch to the core. Of two or more MoCA
 adapters, the one nearest the gateway plugs into a switch and the others
 join it over the coax; a wireless bridge's near end plugs into a switch.
 The far end of either serves the place it is in. Every other device goes to
-the switch nearest it, or to the far end serving its place, and a switch
+a switch that carries its subnet (or the VLAN of it, or of a wireless
+network it broadcasts) if any does, otherwise to the switch nearest it, or
+to the far end serving its place, and a switch
 with its ports recorded gives its free ports in order. Wireless extenders,
 patch panels, peripherals and anything with a cable already are left out.
 Each suggestion says why and is marked Likely, Check (the switch is

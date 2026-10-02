@@ -55,6 +55,10 @@ NOT_BRIDGES = tuple(v for v, _ in NETWORK_KINDS if v != "bridge") + ("",)
 #: ISP's gateway with Wi-Fi built in, an extender, a bridge.
 WIRELESS_KINDS = ("modem", "router", "extender", "bridge")
 NOT_WIRELESS = tuple(v for v, _ in NETWORK_KINDS if v not in WIRELESS_KINDS) + ("",)
+#: Kinds of network gear that carry VLANs and subnets (Network's Networks
+#: section), as a firewall does: a switch, a router, an ISP's gateway.
+CARRIER_KINDS = ("modem", "router", "switch")
+NOT_CARRIERS = tuple(v for v, _ in NETWORK_KINDS if v not in CARRIER_KINDS) + ("",)
 
 # ———— Icons, 24×24 stroked paths ————
 
@@ -118,6 +122,10 @@ SETUP_HELP = {
         "A wireless extender repeats an access point's signal further out. An access point, an extender, a "
         "bridge, and a router or modem with Wi-Fi built in each tick the wireless networks it broadcasts, "
         "from those recorded in the Wireless networks step.",
+        "A switch, a router, a firewall and a modem that is the gateway each tick the networks they carry: "
+        "the VLANs, and the subnets, recorded in the steps before. That says which switch serves which "
+        "network, so a switch that fails shows the networks it takes down, and Suggest cables plugs a device "
+        "into a switch that carries its subnet.",
         "A MoCA adapter carries the network over the coaxial cable already in the walls, to a room with no "
         "Ethernet. Add each adapter, one at each end of the coax, where it is.",
         "Public addresses belong to the internet connection, not to the device. Computers and storage come "
@@ -171,7 +179,7 @@ module = Module(
             CPU, CORES, RAM, STORAGE, NICS, POWER, OS)),
         hardware("network_device", "Network device", "Network gear", NETWORK, traits=RACK + HOST, specs=(
             Field("kind", "Kind", "select", options=NETWORK_KINDS, list=True, group="Specs",
-                  hides=(("bridge", NOT_BRIDGES), ("wifi", NOT_WIRELESS))),
+                  hides=(("bridge", NOT_BRIDGES), ("wifi", NOT_WIRELESS), ("networks", NOT_CARRIERS))),
             PORTS, Field("managed", "Managed", "boolean", group="Specs"), FIRMWARE, POWER)),
         hardware("firewall", "Firewall", "Firewalls", FIREWALL, traits=RACK + HOST, specs=(
             PORTS, FIRMWARE, CPU, RAM, POWER)),
@@ -230,6 +238,8 @@ module = Module(
                           SetupField("s.internet.line", "Internet connection",
                                      kinds=("Modem", "Router", "Firewall")),
                           SetupField("s.bridge.other", "Other end", kinds=("Wireless bridge",)),
+                          SetupField("s.networks.list", "Networks", kind="multi", newline=True,
+                                     kinds=("Modem", "Router", "Firewall", "Switch")),
                           SetupField("s.wifi.list", "Wireless networks", kind="multi", newline=True,
                                      kinds=("Modem", "Router", "Access point", "Wireless extender",
                                             "Wireless bridge")))),

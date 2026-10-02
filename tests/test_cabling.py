@@ -97,6 +97,21 @@ def test_a_switch_with_its_ports_recorded_gives_its_free_ports(client, h, admin)
     assert "sw1 has no free port left" in rows["c-pc to sw1"]["why"]
 
 
+def test_a_device_plugs_into_a_switch_that_carries_its_network(client, h, admin):
+    site = make(client, h, "site", name="Home")
+    room = make(client, h, "room", name="Office", location_id=site["id"])
+    iot = make(client, h, "subnet", name="IoT", **{"f.cidr": "10.0.40.0/24"})
+    make(client, h, "network_device", name="sw-a", location_id=room["id"], **{"f.kind": "switch"})
+    make(client, h, "network_device", name="sw-iot", location_id=site["id"],
+         **{"f.kind": "switch", "s.networks.list": str(iot["id"])})
+    make(client, h, "ip_camera", name="cam1", location_id=room["id"], **{"s.addresses.list": "10.0.40.21"})
+    make(client, h, "workstation", name="pc1", location_id=room["id"])
+    _, rows = suggest(client, h, site)
+    # Nearer sw-a is in the same room, but sw-iot carries the camera's subnet.
+    assert rows["cam1 to sw-iot"]["chip"] == "Likely" and "carries its network, IoT" in rows["cam1 to sw-iot"]["why"]
+    assert "pc1 to sw-a" in rows
+
+
 def test_the_cables_checked_are_added(client, h, admin):
     d = lab(client, h)
     _, rows = suggest(client, h, d["site"])

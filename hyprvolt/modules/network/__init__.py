@@ -284,9 +284,15 @@ module = Module(
                    FormSection("wifi", "Wireless networks", views.wifi_form, views.wifi_save,
                                when=views.is_wireless_gear, values=views.wifi_values, choices=views.wifi_choices),
                    FormSection("broadcast", "Broadcast by", views.broadcast_form, views.broadcast_save,
-                               when=views.is_wifi, values=views.broadcast_values, choices=views.broadcast_choices)),
+                               when=views.is_wifi, values=views.broadcast_values, choices=views.broadcast_choices),
+                   FormSection("networks", "Networks", views.networks_form, views.networks_save,
+                               when=views.is_carrier_gear, values=views.networks_values,
+                               choices=views.networks_choices),
+                   FormSection("carriers", "Carried by", views.carriers_form, views.carriers_save,
+                               when=views.is_segment, values=views.carriers_values, choices=views.carriers_choices)),
     relation_kinds=(RelationKind("comes_in_at", "comes in at", "brings in", impact="source"),
-                    RelationKind("broadcast_by", "is broadcast by", "broadcasts", impact="source")),
+                    RelationKind("broadcast_by", "is broadcast by", "broadcasts", impact="source"),
+                    RelationKind("carried_by", "is carried by", "carries", impact="source")),
     before_retype=ports.before_retype,
     setup=(
         SetupStep("internet", "Internet connection", "How the site reaches the internet: each line from an "

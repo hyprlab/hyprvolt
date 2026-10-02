@@ -285,6 +285,113 @@ def broadcast_save(wifi, values, user) -> list[dict]:
     return [{"field": "broadcast", "label": "Broadcast by", **changed}] if changed else []
 
 
+# ———— VLANs and subnets, and the gear that carries them ————
+
+#: What can carry a VLAN or a subnet: a firewall, and network gear of a
+#: kind that does (Hardware's CARRIER_KINDS: a switch, a router, a modem
+#: that is the gateway). The kind's choice hides the section for the others.
+CARRIER_TYPES = ("network_device", "firewall")
+SEGMENT_TYPES = ("vlan", "subnet")
+
+
+def is_carrier_gear(etype) -> bool:
+    return etype.key in CARRIER_TYPES
+
+
+def is_segment(etype) -> bool:
+    return etype.key in SEGMENT_TYPES
+
+
+def _segments() -> list[Entity]:
+    return Entity.live().filter(Entity.type.in_(SEGMENT_TYPES)).order_by(Entity.name).all()
+
+
+def _carrier_gear() -> list[Entity]:
+    from hyprvolt.modules.hardware import CARRIER_KINDS
+    carriers = db.session.query(HardwareDetail.entity_id).filter(HardwareDetail.kind.in_(CARRIER_KINDS))
+    return (Entity.live().filter((Entity.type == "firewall")
+                                 | ((Entity.type == "network_device") & Entity.id.in_(carriers)))
+            .order_by(Entity.name).all())
+
+
+def _carried(entity, side) -> str:
+    if entity is None:
+        return ""
+    return ",".join(str(e.id) for e in relations.linked("carried_by", entity, side))
+
+
+def networks_choices(name) -> list[dict]:
+    """The VLANs, by number, and the subnets, by range, each named for what
+    it is: "Servers (VLAN 20)", "Servers 10.0.20.0/24, on VLAN 20"."""
+    details = {d.entity_id: d for d in NetworkDetail.query.filter(
+        NetworkDetail.entity_id.in_([e.id for e in _segments()]))}
+    vlans, subnets = [], []
+    for e in _segments():
+        d = details.get(e.id)
+        if e.type == "vlan":
+            vlans.append((d.vid if d else 0, e.id, f"{e.name} (VLAN {d.vid})" if d and d.vid else e.name))
+        else:
+            vlan = details.get(d.vlan) if d and d.vlan else None
+            label = e.name if not d or not d.cidr or d.cidr in e.name else f"{e.name}, {d.cidr}"
+            subnets.append((addresses.ip_key(d.cidr.split("/")[0]) if d and d.cidr else (9, 0), e.id,
+                            f"{label}, on VLAN {vlan.vid}" if vlan and vlan.vid else label))
+    groups = [("VLANs", sorted(vlans)), ("Subnets", sorted(subnets, key=lambda s: (s[0], s[2])))]
+    return [{"label": label, "options": [(i, text) for _, i, text in rows]} for label, rows in groups if rows]
+
+
+def networks_values(device) -> dict:
+    return {"list": _carried(device, "target")}
+
+
+def networks_form(etype, device) -> str:
+    return render_template("sheet/multi_section.html", name="s.networks.list", label="Networks",
+                           choices=networks_choices("list"), value=_carried(device, "target"),
+                           hint="The VLANs and subnets it carries. A subnet on a VLAN comes with the VLAN.",
+                           empty="No VLANs or subnets recorded yet: add them under Network, then tick them here.")
+
+
+def networks_save(device, values, user) -> list[dict]:
+    """The VLANs and subnets a switch, router or firewall carries, ticked."""
+    if "list" not in values:
+        return []
+    changed = relations.set_linked("carried_by", device, "target", values["list"], _segments(),
+                                   "a VLAN or subnet", user)
+    return [{"field": "networks", "label": "Networks", **changed}] if changed else []
+
+
+def carriers_choices(name) -> list[tuple[int, str]]:
+    return [(e.id, e.name) for e in _carrier_gear()]
+
+
+def carriers_values(segment) -> dict:
+    return {"list": _carried(segment, "source")}
+
+
+def carriers_form(etype, segment) -> str:
+    return render_template("sheet/multi_section.html", name="s.carriers.list", label="Carried by",
+                           choices=carriers_choices("list"), value=_carried(segment, "source"),
+                           hint="The switches, routers and firewalls it runs through.",
+                           empty="No switches, routers or firewalls recorded yet.")
+
+
+def carriers_save(segment, values, user) -> list[dict]:
+    """The gear that carries a VLAN or subnet, ticked."""
+    if "list" not in values:
+        return []
+    changed = relations.set_linked("carried_by", segment, "source", values["list"], _carrier_gear(),
+                                   "a switch, router or firewall", user)
+    return [{"field": "carriers", "label": "Carried by", **changed}] if changed else []
+
+
+def carriers_of(segment_ids) -> set[int]:
+    """The gear that carries any of these VLANs or subnets, or the VLAN of
+    any of these subnets."""
+    ids = set(segment_ids)
+    ids |= {d.vlan for d in NetworkDetail.query.filter(NetworkDetail.entity_id.in_(ids)) if d.vlan}
+    return {r.target_id for r in Relationship.query.filter(Relationship.kind == "carried_by",
+                                                           Relationship.source_id.in_(ids))}
+
+
 # ———— The site setup guide's cables step ————
 
 def setup_ends(scope) -> list[dict]:

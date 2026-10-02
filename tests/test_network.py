@@ -565,3 +565,29 @@ def test_a_hypervisor_takes_the_address_of_the_server_it_runs_on(client, h, admi
     pve = resp.get_json()["entity"]
     assert "assigned to pve1" in error(client, h, "vm", name="vm1", **{"f.host": pve["id"],
                                                                        "s.addresses.list": "10.0.20.21"})
+
+
+def test_switches_routers_and_firewalls_carry_vlans_and_subnets(client, h, admin):
+    vlan = make(client, h, "vlan", name="IoT", **{"f.vid": 40})
+    make(client, h, "subnet", name="IoT", **{"f.cidr": "10.0.40.0/24", "f.vlan": vlan["id"]})
+    lab = make(client, h, "subnet", name="Lab", **{"f.cidr": "10.0.50.0/24"})
+    sw = make(client, h, "network_device", name="sw1", **{"f.kind": "switch",
+                                                           "s.networks.list": f"{vlan['id']},{lab['id']}"})
+    fw = make(client, h, "firewall", name="fw1")
+    form = client.get(f"/e/{sw['id']}/form").data.decode()
+    # The VLANs by number, the subnets by range, each saying its VLAN.
+    assert "IoT (VLAN 40)" in form and "IoT, 10.0.40.0/24, on VLAN 40" in form and "Lab, 10.0.50.0/24" in form
+    assert f'value="{vlan["id"]}" data-multi-item checked' in form
+    # The other way round, from the subnet: the firewall too.
+    post(client, h, f"/api/entities/{lab['id']}", **{"s.carriers.list": f"{sw['id']},{fw['id']}"})
+    rels = client.get(f"/api/entities/{fw['id']}/relationships").get_json()["relationships"]
+    assert [(r["label"], r["other"]["name"]) for r in rels] == [("carries", "Lab")]
+    # An access point, or a patch panel, carries nothing: refused, and hidden by its kind.
+    ap = make(client, h, "access_point", name="ap1")
+    assert "a switch, router or firewall" in post(client, h, f"/api/entities/{lab['id']}", 400,
+                                                  **{"s.carriers.list": str(ap["id"])})["error"]
+    panel = make(client, h, "network_device", name="pp1", **{"f.kind": "patch_panel"})
+    assert '<div data-section="networks" hidden>' in client.get(f"/e/{panel['id']}/form").data.decode()
+    # A switch that fails takes the networks it carries with it.
+    tree = client.get(f"/api/entities/{sw['id']}/dependencies?direction=dependents").get_json()["tree"]
+    assert {n["name"] for n in tree} == {"IoT", "Lab"}
