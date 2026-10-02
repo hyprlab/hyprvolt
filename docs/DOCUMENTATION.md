@@ -531,6 +531,18 @@ further away, or nothing records where the device is) or Choose a port
 added until Add the cables. The ones ticked are added, and any that can't
 be are listed with the reason.
 
+A cable added in the Cables step without a label is given one from its
+network: the VLAN's number, or with no VLAN the subnet's third number
+(192.168.50.0/24 is 50), then a running number, so 20-03 is the third cable
+on VLAN 20. The network is the VLAN set on the switch port it plugs into,
+if any, otherwise the subnet of the device's address (one the switch
+carries, if it has several), with patch panels followed to the device at
+the far end. A cable between two pieces of network gear is an uplink,
+UP-01, from a modem to the gateway WAN-01, and one whose network isn't
+known C-01. Suggest cables fills in each label the same way, to change
+before adding, and Label the unlabeled cables, shown while any cable in the
+site has none, labels those.
+
 ## Records
 
 A record shows all of its sections, Overview first, one after another. The

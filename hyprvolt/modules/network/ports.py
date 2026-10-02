@@ -31,6 +31,16 @@ def before_retype(entity: Entity, old, new) -> None:
                           f"can't. Remove {'it' if n == 1 else 'them'} from its Cabling tab first.")
 
 
+def role(entity: Entity) -> str:
+    """What a device is to the network: modem, router, firewall, switch,
+    moca, bridge, patch_panel, extender, peripheral, or "device"."""
+    if entity.type in ("firewall", "peripheral"):
+        return entity.type
+    detail = db.session.get(HardwareDetail, entity.id) if entity.type == "network_device" else None
+    kind = detail.kind if detail is not None else None
+    return kind if kind and kind != "other" else "device"
+
+
 def records_ports(device_id: int) -> bool:
     return db.session.get(PortsRecorded, device_id) is not None
 

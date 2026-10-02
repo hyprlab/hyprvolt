@@ -182,6 +182,9 @@ SETUP_HELP = {
         "are offered here.",
         "Cables draw the network diagram, and a trace follows a port through patch panels to the far end. To "
         "move a cable, delete it and connect it again.",
+        "A cable left without a label is given one from its network: the VLAN's number, or the subnet's "
+        "third number with no VLAN, and a running number, so 20-03 is the third cable on VLAN 20. A cable "
+        "between two pieces of network gear is an uplink, UP-01, and from the modem, WAN-01.",
         "Suggest cables works the cabling out from the steps before: the modem to the router or firewall, that "
         "to the core switch, other switches to the core, and each device to the switch nearest it by rack, "
         "room and building. Each suggestion is checked before it is added.",
@@ -333,7 +336,7 @@ module = Module(
                   delete=views.setup_delete, extra=cabling.setup_extra,
                   fields=(SetupField("from", "From", choices=views.setup_ends),
                           SetupField("to", "To", choices=views.setup_ends),
-                          SetupField("label", "Label", placeholder="C12"))),
+                          SetupField("label", "Label", placeholder="Automatic"))),
     ),
     seed=demo.seed,
 )

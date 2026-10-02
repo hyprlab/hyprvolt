@@ -21,7 +21,7 @@ from hyprvolt.models import db
 from hyprvolt.permissions import role
 from hyprvolt.registry import current as registry
 
-from . import addresses, ports
+from . import addresses, cable_labels, ports
 from .models import Cable, NetworkDetail, Port
 from .views import bp, carriers_of, setup_ends
 
@@ -34,15 +34,6 @@ LEFT_OUT = {"extender", "patch_panel", "peripheral"}
 GATEWAY_WORDS = {"firewall": "firewall", "router": "router", "modem": "modem"}
 
 
-def _role(entity, detail) -> str:
-    """What a device is to the plan: modem, router, firewall, switch, moca,
-    bridge, one of LEFT_OUT, or "device"."""
-    if entity.type in ("firewall", "peripheral"):
-        return entity.type
-    kind = getattr(detail, "kind", None) if entity.type == "network_device" else None
-    return kind if kind and kind != "other" else "device"
-
-
 class Site:
     """The site's cabled devices, where each is, and what is cabled now."""
 
@@ -53,7 +44,7 @@ class Site:
         details = {e.id: records.detail_of(e) for e in found}
         self.devices = {e.id: e for e in found}
         self.name = {e.id: e.name for e in found}
-        self.role = {e.id: _role(e, details[e.id]) for e in found}
+        self.role = {e.id: ports.role(e) for e in found}
         self.port_count = {e.id: getattr(details[e.id], "ports", None) or 0 for e in found}
         self.root = scope.id if scope is not None else None
         self.places = {e.id: e for e in Entity.live().filter(Entity.type.in_([t.key for t in reg.location_types()]))}
@@ -302,11 +293,30 @@ def _back(value) -> str:
 
 
 def setup_extra(scope) -> str:
-    """The Cables step: a way to have the cabling worked out."""
+    """The Cables step: a way to have the cabling worked out, and to label
+    the cables that have no label."""
     if not current_user.can_edit:
         return ""
+    loose = Cable.query.filter(Cable.label == "").all()
+    devices = Site(scope).devices if loose else {}
+    unlabeled = sum(1 for c in loose if c.a.device_id in devices or c.b.device_id in devices)
     return render_template("network/cabling_guide.html", site=scope.id if scope else "",
-                           back=request.full_path.rstrip("?"))
+                           back=request.full_path.rstrip("?"), unlabeled=unlabeled)
+
+
+def _site(form):
+    site = records.live(int(form["site"])) if str(form.get("site") or "").isdigit() else None
+    return site if site is not None and registry().type(site.type) in registry().location_types() else None
+
+
+@bp.route("/cables/label", methods=["POST"])
+@role("editor")
+def cables_label():
+    """Every cable in the site with no label, given one from its network."""
+    n = cable_labels.label_unlabeled(Site(_site(request.get_json(silent=True) or {})).devices, current_user)
+    db.session.commit()
+    return jsonify(ok=True, message=f"Labeled {n} {'cable' if n == 1 else 'cables'}." if n
+                   else "Every cable has a label already.")
 
 
 @bp.route("/cables/suggest", methods=["POST"])
@@ -314,10 +324,12 @@ def setup_extra(scope) -> str:
 def cables_suggest():
     """The cables suggested for the site, each to check."""
     form = request.get_json(silent=True) or {}
-    site = records.live(int(form["site"])) if str(form.get("site") or "").isdigit() else None
-    if site is not None and registry().type(site.type) not in registry().location_types():
-        site = None
+    site = _site(form)
     rows = plan(site)
+    used = cable_labels.taken()
+    for r in rows:
+        a, b = cable_labels.end_of(r["a_end"]), cable_labels.end_of(r["b_end"])
+        r["label"] = cable_labels.label_for(a, b, used) if a is not None and b is not None else ""
     groups = {}
     for r in rows:
         groups.setdefault(r["group"], []).append(r)

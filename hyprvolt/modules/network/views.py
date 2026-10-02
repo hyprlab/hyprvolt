@@ -416,8 +416,11 @@ def _setup_end(value):
 
 
 def setup_cable(values, scope, user) -> None:
-    ports.connect(_setup_end(values.get("from")), _setup_end(values.get("to")),
-                  {"label": values.get("label", "")}, user)
+    """A cable from the guide; with no label given, one from its network."""
+    from . import cable_labels
+    a, b = _setup_end(values.get("from")), _setup_end(values.get("to"))
+    label = str(values.get("label") or "").strip() or cable_labels.label_for(a, b, cable_labels.taken())
+    ports.connect(a, b, {"label": label}, user)
 
 
 def setup_rows(scope) -> list[dict]:
