@@ -8,6 +8,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ### Added
 - IP phones are a kind of hardware, with who uses each one and its extension, and are offered in the setup guide's Endpoints step
+- IP cameras are a kind of hardware, with their firmware and power draw, and are offered in the setup guide's Endpoints step
 - Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
 - Operating system fields (virtual machines, containers, servers, NAS, workstations) list known operating systems as you type, from Ubuntu and Debian to Windows Server, TrueNAS and pfSense: click one, or pick it with the arrow keys and Enter, to fill it in, or keep what you typed as a custom name
 - A server or a NAS (TrueNAS SCALE, Unraid) can be marked Runs a hypervisor, in its form and in the setup guide's Servers and storage step: that adds the hypervisor running on it, with its platform and management IP, and the server's IP address becomes its BMC IP. Unticking it deletes the hypervisor, asked first, unless virtual machines run on it
@@ -30,7 +31,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
-- Devices and machines on the network (servers, network gear, firewalls, access points, UPSes, NAS, workstations, printers, IP phones, hypervisors, virtual machines and LXC containers) call their name Name or hostname, in their form, the setup guide, import and history
+- Devices and machines on the network (servers, network gear, firewalls, access points, UPSes, NAS, workstations, printers, IP phones, IP cameras, hypervisors, virtual machines and LXC containers) call their name Name or hostname, in their form, the setup guide, import and history
 - In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - A hypervisor given the IP address recorded on the server it runs on takes it, with a message saying it moved, instead of refusing it. The setup guide's Servers and storage and Hypervisors help explains which address goes where (the management address on the hypervisor, the iDRAC, iLO or IPMI address on the server), and the Hypervisors step's column is now Management IP
 - In the site setup guide, each place in a Where choice says what it is: Hyprlab (site), Garage (building), Main House › Basement (room)

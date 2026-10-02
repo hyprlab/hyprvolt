@@ -113,7 +113,7 @@ near their end. A UPS's Powers section ticks the equipment plugged into it,
 also in the setup guide's UPSes step, which offers the site's equipment:
 each is then powered by the UPS, and shows as going down with it. An IP
 phone records who uses it and its extension, and is added with the other
-endpoints in the setup guide's Endpoints step.
+endpoints in the setup guide's Endpoints step, as is an IP camera.
 
 An operating system field (a VM's, a container's, a server's) offers known
 operating systems as it is typed in: typing "ubu 24" lists Ubuntu Server and

@@ -1,7 +1,7 @@
 """Hardware: the physical things. Servers, network gear, firewalls, access
-points, UPSes, NAS boxes, workstations, printers, IP phones and peripherals,
-each with its make, serial, asset tag, purchase, warranty and specs, and a
-lifecycle status from ordered to disposed.
+points, UPSes, NAS boxes, workstations, printers, IP phones, IP cameras and
+peripherals, each with its make, serial, asset tag, purchase, warranty and
+specs, and a lifecycle status from ordered to disposed.
 
 Where a device is comes from the core's location, and its rack position
 from Locations' form section: the types that go in a rack carry the
@@ -68,6 +68,7 @@ NAS = '<rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M8.5 7.5h7M
 WORKSTATION = '<rect x="3.5" y="4.5" width="17" height="11" rx="1"/><path d="M9 19.5h6M12 15.5v4"/>'
 PRINTER = '<path d="M7 9V4.5h10V9"/><rect x="3.5" y="9" width="17" height="7" rx="1"/><path d="M7 14h10v5.5H7z"/>'
 PHONE = '<path d="M7.5 9V5a1.5 1.5 0 0 1 3 0v4"/><rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M13.5 12.5h3M8 15h.1M11 15h.1M14 15h.1M17 15h.1M8 17.5h.1M11 17.5h.1M14 17.5h.1M17 17.5h.1"/>'
+CAMERA = '<path d="M3.5 6h12.5l3.5 4.5H7z"/><path d="M15.5 8.25h.1M10 10.5v3.5H5.5M5.5 11.5v7"/>'
 PERIPHERAL = '<rect x="3" y="8" width="18" height="9" rx="1.2"/><path d="M6.5 11h.1M9.5 11h.1M12.5 11h.1M15.5 11h.1M8 14h8"/>'
 
 #: Traits other modules look for. Every hardware type has network ports,
@@ -82,7 +83,7 @@ HOSTNAME = "Name or hostname"
 
 
 KINDS = ("server", "network_device", "firewall", "access_point", "ups", "nas", "workstation", "printer",
-         "ip_phone", "peripheral")
+         "ip_phone", "ip_camera", "peripheral")
 
 
 def _extension(m):
@@ -143,7 +144,7 @@ SETUP_HELP = {
     ),
     "endpoints": (
         "Endpoints are what people use at the edge of the network: workstations and laptops, printers, IP "
-        "phones, and peripherals such as a monitor, a KVM or a PDU. Say who uses a computer or a phone and "
+        "phones, IP cameras, and peripherals such as a monitor, a KVM or a PDU. Say who uses a computer or a phone and "
         "where it is, and give a phone its extension.",
         "Phones and tablets that only join the Wi-Fi rarely need a record; add them if you keep track of "
         "them.",
@@ -193,6 +194,7 @@ module = Module(
             Field("assigned_to", "Used by", list=True, group="Specs"),
             Field("extension", "Extension", list=True, card=True, group="Specs", help="The number it rings: 104."),
             FIRMWARE, POWER)),
+        hardware("ip_camera", "IP camera", "IP cameras", CAMERA, traits=NET, specs=(FIRMWARE, POWER)),
         # A monitor or a KVM has no hostname.
         hardware("peripheral", "Peripheral", "Peripherals", PERIPHERAL, traits=RACK, name_label="Name", specs=(
             Field("category", "What it is", list=True, group="Specs",
@@ -245,10 +247,11 @@ module = Module(
                           SetupField("s.hypervisor.address", "Management IP", placeholder="10.0.20.21",
                                      shown_when=("s.hypervisor.on", "1")))),
         SetupStep("endpoints", "Endpoints", "What people use at the edge of the network: computers, printers, "
-                  "phones and other devices. Add them all here, one row each.", 100, group="Endpoints",
+                  "phones, cameras and other devices. Add them all here, one row each.", 100, group="Endpoints",
                   help=SETUP_HELP["endpoints"], plan="endpoints",
                   kinds=(SetupKind("Workstation", "workstation"), SetupKind("Printer", "printer"),
-                         SetupKind("IP phone", "ip_phone"), SetupKind("Peripheral", "peripheral")),
+                         SetupKind("IP phone", "ip_phone"), SetupKind("IP camera", "ip_camera"),
+                         SetupKind("Peripheral", "peripheral")),
                   fields=(SetupField("name", placeholder="desk-pc"), SetupField("location_id"),
                           SetupField("f.assigned_to"), SetupField("f.extension", placeholder="104", kinds=("IP phone",)),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),

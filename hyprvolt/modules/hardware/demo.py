@@ -68,6 +68,8 @@ def seed(demo):
              manufacturer="Brother", model="HL-L2350DW", power_w=440)
     demo.add("ip_phone", "office-phone", location="office", sections=at(ip="10.0.30.70"),
              manufacturer="Yealink", model="T54W", assigned_to="Sam", extension="104", power_w=7)
+    demo.add("ip_camera", "cam-office", location="office", sections=at(ip="10.0.30.80"),
+             manufacturer="Reolink", model="RLC-520A", os="v3.1.0", power_w=6)
     demo.add("server", "Spare mini PC", key="spare-pc", location="storage-shelf", status="in_stock",
              manufacturer="Lenovo", model="ThinkCentre M720q", kind="mini", cpu="Core i5-8500T", cpu_cores=6,
              ram_gb=16, notes="Kept as a replacement for nuc1.")

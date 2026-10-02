@@ -29,15 +29,16 @@ def test_a_server_with_its_specs(client, h, admin):
 
 def test_every_type_has_a_form(client, h, admin):
     for key in ("server", "network_device", "firewall", "access_point", "ups", "nas", "workstation",
-                "printer", "ip_phone", "peripheral"):
+                "printer", "ip_phone", "ip_camera", "peripheral"):
         form = client.get(f"/e/form?type={key}").data.decode()
         assert 'name="f.warranty_until"' in form, key
         # What goes in a rack has the rack position; the rest don't.
-        assert ('name="s.rack.rack_id"' in form) == (key not in ("access_point", "workstation", "printer", "ip_phone")), key
+        assert ('name="s.rack.rack_id"' in form) == (key not in ("access_point", "workstation", "printer", "ip_phone",
+                                                                "ip_camera")), key
 
 
 def test_what_answers_on_the_network_is_named_or_hostnamed(client, h, admin):
-    for key in ("server", "network_device", "ip_phone", "vm", "lxc", "hypervisor"):
+    for key in ("server", "network_device", "ip_phone", "ip_camera", "vm", "lxc", "hypervisor"):
         assert '>Name or hostname <span class="req"' in client.get(f"/e/form?type={key}").data.decode(), key
     for key in ("peripheral", "service", "container"):
         assert '>Name <span class="req"' in client.get(f"/e/form?type={key}").data.decode(), key

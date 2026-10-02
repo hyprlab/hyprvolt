@@ -177,6 +177,8 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     add(client, h, "endpoints", site["id"], **{"_kind": "2", "name": "phone1", "f.assigned_to": "Ada",
                                                "f.extension": "104"})
     phone = entities(client, "ip_phone")[0]
+    add(client, h, "endpoints", site["id"], **{"_kind": "3", "name": "cam1"})
+    assert entities(client, "ip_camera")[0]["name"] == "cam1"
     assert phone["fields"]["extension"] == "104" and phone["fields"]["assigned_to"] == "Ada"
     # A printer has no Used by: its row shows that field off. Extension is only in an IP phone's row.
     page = client.get(f"/site-setup/endpoints?site={site['id']}").data.decode()
