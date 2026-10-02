@@ -201,6 +201,8 @@ def columns(step, scope) -> list[dict]:
                 continue
             if sf.kind == "check":
                 col.update(kind="check", confirm_off=sf.confirm_off)
+            elif sf.kind == "place":
+                col.update(kind="select", choices=_places(scope))
             elif section.choices is not None and sf.kind == "multi":
                 col.update(kind="multi", choices=_in_site(section.choices(name), scope))
             elif section.choices is not None and section.choices(name) is not None:
@@ -244,6 +246,10 @@ def _found(step, scope) -> list[Entity]:
                                         if n.startswith("f."))
                for k in kinds):
             out.append(e)
+    if step.joined is not None:
+        # Shown in another's row: a MoCA pair is one row.
+        inside = {j.id for e in out for j in step.joined(e)}
+        out = [e for e in out if e.id not in inside]
     return out
 
 
@@ -463,7 +469,11 @@ def delete_row(step, row_id) -> dict:
             raise Invalid("This can't be deleted here.")
         return step.delete(row_id)
     entity = _record_of(step, row_id)
-    records.delete(entity)
+    gone = [entity] + (list(step.joined(entity)) if step.joined is not None else [])
+    for e in gone:
+        records.delete(e)
+    if len(gone) > 1:
+        return {"url": url_for("guide.tree_restore", key=step.key), "body": {"ids": [e.id for e in gone]}}
     return {"url": url_for("api.entity_restore", entity_id=entity.id), "body": {}}
 
 
@@ -606,7 +616,9 @@ def tree_delete(key, entity_id):
 @bp.route("/site-setup/<key>/tree/restore", methods=["POST"])
 @role("editor")
 def tree_restore(key):
-    """Undo of ``tree_delete``: the places it deleted, back where they were."""
+    """Undo of a delete that took several records at once: ``tree_delete``
+    (a building and its rooms), or a row with records joined to it (a MoCA
+    pair). They come back where they were."""
     _step_or_404(key)
     ids = (request.get_json(silent=True) or {}).get("ids") or []
     for e in Entity.query.filter(Entity.id.in_([i for i in ids if isinstance(i, int)])):

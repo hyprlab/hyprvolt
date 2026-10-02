@@ -303,6 +303,11 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
   its IP address switch, then the static fields.
 - `scope=True` marks the step whose record the steps after it are about
   (the site). Only Locations has one.
+- `joined=fn` shows the records `fn(entity)` gives in that entity's row
+  rather than their own, and deletes them with it (one Undo brings all
+  back): Hardware's MoCA pair is one row, the far adapter made and moved
+  from it by a `SetupField(..., kind="place")` column, a choice of the
+  site's places that its section saves.
 - `grouped=True` puts a step's rows under a heading for each of its kinds,
   in the kinds' order: Network gear lists modems, then routers, firewalls
   and switches. The heading is the kind's label made plural ("Switches",

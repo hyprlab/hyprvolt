@@ -175,7 +175,8 @@ class SetupField:
     name: str
     label: str = ""
     kind: str = "text"               # text, number or select, where not from a Field; multi: a
-                                     # section's choice of several, ticked (wireless networks)
+                                     # section's choice of several, ticked (wireless networks);
+                                     # place: a section's choice of the site's places
     placeholder: str = ""            # a multi's: what it says when there is nothing to tick
     types: tuple = ()
     choices: Callable | None = None
@@ -219,6 +220,8 @@ class SetupStep:
     scope: bool = False
     tree: bool = False               # records that hold each other (buildings, rooms) as a tree
     grouped: bool = False            # rows under a heading for each kind, in the kinds' order
+    joined: Callable | None = None   # joined(entity) -> records shown in its row, not their own,
+                                     # and deleted with it: a MoCA adapter's far end, in the pair's
     extra: Callable | None = None    # extra(scope) -> HTML above the rows: another way to fill the step
                                      # (Services' Import from Homepage)
     save: Callable | None = None

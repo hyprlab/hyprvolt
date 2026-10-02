@@ -131,9 +131,11 @@ SETUP_HELP = {
         "network, so a switch that fails shows the networks it takes down, and Suggest cables plugs a device "
         "into a switch that carries its subnet.",
         "A pair of MoCA adapters carries the network over the coaxial cable already in the walls, to a room "
-        "with no Ethernet, and works like one cable. Add each adapter where it is, and choose the adapter at "
-        "the other end of the coax as its Other end. Then cable each adapter to what it plugs into, a switch "
-        "at one end and a device at the other: a trace, and the network diagram, go straight through.",
+        "with no Ethernet, and works like one cable. Add the pair as one MoCA adapter row: Where is the end "
+        "nearer your switch, and Other end at is the room the coax comes out in, where the other adapter is "
+        "added for you. Each adapter is its own record, so the UPSes step can tick a UPS for each end. Then "
+        "cable each to what it plugs into, a switch at one end and a device at the other: a trace, and the "
+        "network diagram, go straight through.",
         "Public addresses belong to the internet connection, not to the device. Computers and storage come "
         "next, and cabling everything together is the last step.",
     ),
@@ -234,7 +236,7 @@ module = Module(
                   "internet comes in, with the modem and the router or firewall, then add your switches, access "
                   "points, extenders, MoCA adapters and patch panels.", 60,
                   group="Equipment",
-                  help=SETUP_HELP["gear"], plan="network gear", grouped=True,
+                  help=SETUP_HELP["gear"], plan="network gear", grouped=True, joined=views.far_moca,
                   kinds=(SetupKind("Modem", "network_device", {"f.kind": "modem"}),
                          SetupKind("Router", "network_device", {"f.kind": "router"}),
                          SetupKind("Firewall", "firewall"),
@@ -250,7 +252,9 @@ module = Module(
                           SetupField("s.internet.line", "Internet connection",
                                      kinds=("Modem", "Router", "Firewall")),
                           SetupField("s.bridge.other", "Other end", kinds=("Wireless bridge",)),
-                          SetupField("s.moca.other", "Other end", kinds=("MoCA adapter",)),
+                          # A MoCA pair is one row: this end's place, and the other end's,
+                          # which makes or moves that adapter (powered by a UPS of its own).
+                          SetupField("s.moca.at", "Other end at", kind="place", kinds=("MoCA adapter",)),
                           SetupField("s.networks.list", "Networks", kind="multi", newline=True,
                                      kinds=("Modem", "Router", "Firewall", "Switch"),
                                      placeholder="None recorded yet: add them in the VLANs and Subnets steps."),

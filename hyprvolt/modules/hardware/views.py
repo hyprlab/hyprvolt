@@ -78,7 +78,41 @@ def pair_choices(kind, name) -> list[tuple[int, str]]:
 
 def pair_values(kind, entity) -> dict:
     other = other_end(entity, PAIRS[kind][0])
-    return {"other": other.id if other else ""}
+    return {"other": other.id if other else "", "at": (other.location_id or "") if other else ""}
+
+
+def far_moca(entity) -> list[Entity]:
+    """A MoCA adapter's far end (the later made of the two), shown in the
+    site setup guide in its pair's row and deleted with it."""
+    if entity.type != "network_device":
+        return []
+    detail = db.session.get(HardwareDetail, entity.id)
+    if detail is None or detail.kind != "moca":
+        return []
+    other = other_end(entity, "coax_link")
+    return [other] if other is not None and other.id > entity.id else []
+
+
+def _far_end_at(entity, at, user) -> list[dict]:
+    """The pair's far end put at a place: moved there, or, with none yet,
+    made there (named for this one and the place, with its model) and
+    linked over the coax."""
+    place = records.live(at)
+    if place is None or registry().type(place.type) not in registry().location_types():
+        raise Invalid("Choose a place for the other end.")
+    other = other_end(entity, "coax_link")
+    if other is not None:
+        if other.location_id == place.id:
+            return []
+        records.update(other, {"location_id": place.id}, user)
+        return [{"field": "moca_at", "label": "Other end at", "old": "", "new": place.name}]
+    detail = db.session.get(HardwareDetail, entity.id)
+    made = records.create("network_device", {
+        "name": f"{entity.name} ({place.name})", "location_id": place.id, "status": entity.status,
+        "f.kind": "moca", "f.manufacturer": detail.manufacturer if detail else "",
+        "f.model": detail.model if detail else ""}, user)
+    relations.link("coax_link", entity, made, user=user)
+    return [{"field": "moca_at", "label": "Other end at", "old": "", "new": f"{made.name}, {place.name}"}]
 
 
 def pair_form(kind, etype, entity) -> str:
@@ -93,6 +127,8 @@ def pair_form(kind, etype, entity) -> str:
 def pair_save(kind, entity, values, user) -> list[dict]:
     """The one at the other end. The link between the two is one, read the
     same from both; another chosen replaces this end's link."""
+    if kind == "moca" and values.get("at") not in (None, "", 0, "0"):
+        return _far_end_at(entity, values["at"], user)
     if "other" not in values:
         return []
     relation, what, label, _ = PAIRS[kind]

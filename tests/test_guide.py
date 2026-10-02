@@ -423,3 +423,43 @@ def test_rows_are_grouped_by_kind_in_the_kinds_order(client, h, admin):
     assert order == sorted(order)
     # A step that isn't grouped has no headings.
     assert "guide-kind" not in client.get("/site-setup/guests").data.decode()
+
+
+def test_a_moca_pair_is_one_row_with_a_place_for_each_end(client, h, admin):
+    site = site_named(client, h, "Home")
+    office = client.post("/api/entities", json={"type": "room", "name": "Office", "location_id": site["id"]},
+                         headers=h).get_json()["entity"]
+    den = client.post("/api/entities", json={"type": "room", "name": "Den", "location_id": site["id"]},
+                      headers=h).get_json()["entity"]
+    # MoCA adapter is the eighth kind of Network gear.
+    add(client, h, "gear", site["id"], **{"_kind": "7", "name": "Screenbeam", "location_id": office["id"],
+                                          "f.model": "ECB6250", "s.moca.at": den["id"]})
+    ends = {e["name"]: e for e in entities(client, "network_device")}
+    assert set(ends) == {"Screenbeam", "Screenbeam (Den)"}
+    far = ends["Screenbeam (Den)"]
+    assert far["location"]["id"] == den["id"] and far["fields"]["kind"] == "moca" and far["fields"]["model"] == "ECB6250"
+    rels = client.get(f"/api/entities/{far['id']}/relationships").get_json()["relationships"]
+    assert [(r["label"], r["other"]["name"]) for r in rels] == [("is joined over coax to", "Screenbeam")]
+    # One row, its other end's place chosen in it.
+    page = client.get(f"/site-setup/gear?site={site['id']}").data.decode()
+    assert 'data-name="Screenbeam"' in page and 'data-name="Screenbeam (Den)"' not in page
+    row = page.split('data-name="Screenbeam"')[1].split("</fieldset>")[0]
+    assert f'<option value="{den["id"]}" selected' in row
+    # Another place moves the other adapter, not makes one.
+    garage = client.post("/api/entities", json={"type": "room", "name": "Garage", "location_id": site["id"]},
+                         headers=h).get_json()["entity"]
+    change(client, h, "gear", ends["Screenbeam"]["id"], "s.moca.at", garage["id"], site["id"])
+    moved = {e["name"]: e for e in entities(client, "network_device")}
+    assert len(moved) == 2 and moved["Screenbeam (Den)"]["location"]["id"] == garage["id"]
+    # Each end is its own to power: a UPS for each.
+    page = client.get(f"/site-setup/ups?site={site['id']}").data.decode()
+    assert "Screenbeam (Den)</span>" in page and ">Screenbeam</span>" in page
+    add(client, h, "ups", site["id"], **{"name": "ups-den", "s.powers.list": str(far["id"])})
+    rels = client.get(f"/api/entities/{far['id']}/relationships").get_json()["relationships"]
+    assert ("powered by", "ups-den") in [(r["label"], r["other"]["name"]) for r in rels]
+    # Deleting the row deletes the pair; one Undo brings both back.
+    resp = client.post(f"/site-setup/gear/rows/{ends['Screenbeam']['id']}/delete?site={site['id']}", headers=h)
+    undo = resp.get_json()["undo"]
+    assert not entities(client, "network_device")
+    client.post(undo["url"], json=undo["body"], headers=h)
+    assert {e["name"] for e in entities(client, "network_device")} == {"Screenbeam", "Screenbeam (Den)"}

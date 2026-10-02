@@ -182,9 +182,13 @@ address, and its Wireless link section names the bridge at the other end, a
 link that reads the same from both; the diagram draws it as a dotted line.
 A Wireless extender is network gear that repeats an access point's signal.
 A MoCA adapter carries the network over the coaxial cable in the walls, and
-two of them work like one cable: each is its own record, where it is, and
-its Coax link section (or the guide's Other end) names the adapter at the
-other end of the coax. Each is cabled to what it plugs into, and a trace,
+two of them work like one cable: each is its own record, where it is (so
+each can be powered by a UPS of its own), and its Coax link section names
+the adapter at the other end of the coax. In the guide's Network gear step
+a pair is one row: Where is one end, and Other end at the place of the
+other, which adds that adapter there (named for the pair and the place,
+with the same model) or moves it; deleting the row deletes both, and its Undo
+brings both back. Each is cabled to what it plugs into, and a trace,
 the Neighborhood and the network diagram go straight through the pair,
 naming the two adapters on the link as they do a patch panel.
 A wireless network is one Wi-Fi network name (SSID), with its security,
