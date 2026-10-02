@@ -151,3 +151,16 @@ def test_the_button_is_in_the_cables_step(client, h, admin):
     assert 'data-api-post="/network/cables/suggest"' in page and 'popovertarget="cabling-how-help"' in page
     empty = post(client, h, "/network/cables/suggest", site=1)["html"]
     assert "Nothing to suggest" in empty
+
+
+def test_the_ends_to_choose_are_grouped_by_kind(client, h, admin):
+    client.post("/site-setup/site/rows", json={"values": {"name": "Home"}}, headers=h)
+    make(client, h, "ups", name="ups1")
+    make(client, h, "server", name="srv1")
+    make(client, h, "network_device", name="sw1", **{"f.kind": "switch"})
+    make(client, h, "network_device", name="modem", **{"f.kind": "modem"})
+    core = make(client, h, "network_device", name="sw-core", **{"f.kind": "switch"})
+    post(client, h, f"/network/devices/{core['id']}/ports", prefix="Port ", first=1, last=1)
+    page = client.get("/site-setup/cables").data.decode().split("data-row-new")[1]
+    groups = re.findall(r'<optgroup label="([^"]+)"', page.split('name="to"')[0])
+    assert groups == ["Modems", "Switches", "Servers", "UPSes", "sw-core ports"]

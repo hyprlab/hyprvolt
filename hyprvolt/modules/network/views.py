@@ -399,8 +399,9 @@ def carriers_of(segment_ids) -> set[int]:
 
 def setup_ends(scope) -> list[dict]:
     ends = ports.free_ends()
-    out = [{"label": "Devices", "options": [(f"device:{d.id}", d.name) for d in ends["devices"]]}]
-    out += [{"label": g["device"], "options": [(f"port:{p.id}", p.label) for p in g["ports"]]}
+    out = [{"label": g["label"], "options": [(f"device:{d.id}", d.name) for d in g["devices"]]}
+           for g in ends["groups"]]
+    out += [{"label": f"{g['device']} ports", "options": [(f"port:{p.id}", p.label) for p in g["ports"]]}
             for g in ends["ports"]]
     return [g for g in out if g["options"]]
 

@@ -142,6 +142,14 @@ class ListFilter:
     alert: bool = True
 
 
+def plural(label: str) -> str:
+    """A kind's label made plural: "Switches", "Access points"; one ending
+    in an acronym stays as it is: "NAS"."""
+    if label.rsplit(" ", 1)[-1].isupper():
+        return label
+    return label + ("es" if label.endswith(("ch", "sh", "s", "x")) else "s")
+
+
 @dataclass(frozen=True)
 class SetupKind:
     """One thing a row of a setup step can be: a type of this module, and
@@ -153,12 +161,7 @@ class SetupKind:
 
     def heading(self) -> str:
         """The kind's rows' heading: "Switches", "Access points", "NAS"."""
-        if self.plural:
-            return self.plural
-        last = self.label.rsplit(" ", 1)[-1]
-        if last.isupper():
-            return self.label
-        return self.label + ("es" if self.label.endswith(("ch", "sh", "s", "x")) else "s")
+        return self.plural or plural(self.label)
 
 
 @dataclass(frozen=True)

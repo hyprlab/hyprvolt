@@ -137,8 +137,8 @@
   <label class="field mountform-what"><span class="field-label">To</span>
     <select name="to" data-fill-focus>
       <option value="">Choose a device or port…</option>
-      {% if targets.devices %}<optgroup label="Devices">{% for d in targets.devices %}<option value="device:{{ d.id }}">{{ d.name }}</option>{% endfor %}</optgroup>{% endif %}
-      {% for g in targets.ports %}<optgroup label="{{ g.device }}">{% for p in g.ports %}<option value="port:{{ p.id }}">{{ g.device }} {{ p.name }}</option>{% endfor %}</optgroup>{% endfor %}
+      {% for g in targets.groups %}<optgroup label="{{ g.label }}">{% for d in g.devices %}<option value="device:{{ d.id }}">{{ d.name }}</option>{% endfor %}</optgroup>{% endfor %}
+      {% for g in targets.ports %}<optgroup label="{{ g.device }} ports">{% for p in g.ports %}<option value="port:{{ p.id }}">{{ g.device }} {{ p.name }}</option>{% endfor %}</optgroup>{% endfor %}
     </select></label>
   <label class="field"><span class="field-label">Label</span><input name="label" maxlength="60" placeholder="A12"></label>
   <label class="field"><span class="field-label">Color</span><input name="color" maxlength="30"></label>

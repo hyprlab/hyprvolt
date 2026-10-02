@@ -41,6 +41,37 @@ def role(entity: Entity) -> str:
     return kind if kind and kind != "other" else "device"
 
 
+#: The order devices are listed in to cable, by what each is: the network
+#: from where the internet comes in, then what plugs into it.
+ORDER = ("modem", "router", "firewall", "switch", "access_point", "extender", "bridge", "moca", "patch_panel",
+         "network_device", "server", "nas", "workstation", "printer", "ip_phone", "ip_camera", "peripheral", "ups")
+
+
+def group_of(entity: Entity) -> str:
+    """What a device is listed under: its kind of network gear, else its
+    type."""
+    r = role(entity)
+    return entity.type if r == "device" else r
+
+
+def group_label(key: str) -> str:
+    """A group's heading: "Switches", "Firewalls", "Other network gear"."""
+    from hyprvolt.manifest import plural
+    from hyprvolt.modules.hardware import NETWORK_KINDS
+    from hyprvolt.registry import current as registry
+    if key == "network_device":
+        return "Other network gear"
+    kinds = dict(NETWORK_KINDS)
+    if key in kinds:
+        return plural(kinds[key])
+    etype = registry().type(key)
+    return etype.plural if etype else key
+
+
+def _rank(key: str):
+    return (ORDER.index(key) if key in ORDER else len(ORDER), key)
+
+
 def records_ports(device_id: int) -> bool:
     return db.session.get(PortsRecorded, device_id) is not None
 
@@ -101,14 +132,21 @@ def free_ends(exclude: int | None = None) -> dict:
     used = cabled_counts(limits)
     wholes = [e for e in wholes if e.id not in limits or used.get(e.id, 0) < limits[e.id]]
     taken = {i for c in db.session.query(Cable.a_id, Cable.b_id) for i in c}
-    groups = {}
+    by_kind = {}
+    for e in wholes:
+        by_kind.setdefault(group_of(e), []).append(e)
+    groups = [{"label": group_label(k), "devices": by_kind[k]} for k in sorted(by_kind, key=_rank)]
+    own = {}
     for p in (Port.query.join(Entity, Entity.id == Port.device_id).options(contains_eager(Port.device))
               .filter(Entity.deleted_at.is_(None), Entity.type.in_(keys), Port.device_id != (exclude or 0),
                       Port.device_id.in_(recorded), Port.name != "")
               .order_by(Entity.name, Port.position)):
         if p.id not in taken:
-            groups.setdefault(p.device.name, []).append(p)
-    return {"devices": wholes, "ports": [{"device": name, "ports": ps} for name, ps in groups.items()]}
+            own.setdefault(p.device, []).append(p)
+    # Devices with their ports recorded: a group each, in the same order.
+    devices = sorted(own, key=lambda d: (_rank(group_of(d)), d.name.lower()))
+    return {"devices": wholes, "groups": groups,
+            "ports": [{"device": d.name, "ports": own[d]} for d in devices]}
 
 
 def cable_of(port: Port) -> Cable | None:

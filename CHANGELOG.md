@@ -36,6 +36,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- Choosing a cable's ends, in the setup guide's Cables step, Suggest cables and a device's Cabling tab, lists the devices grouped by kind (modems, routers, firewalls, switches and so on, then servers and endpoints), and then each device with its ports recorded
 - In the setup guide's Network gear, Servers and storage, and Endpoints steps, the rows are grouped under a heading for each kind: modems, routers, firewalls, switches, access points and so on
 - Devices and machines on the network (servers, network gear, firewalls, access points, UPSes, NAS, workstations, printers, IP phones, IP cameras, hypervisors, virtual machines and LXC containers) call their name Name or hostname, in their form, the setup guide, import and history
 - In the site setup guide, Vendors is the last step of Place instead of the first of Network
