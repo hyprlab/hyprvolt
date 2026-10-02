@@ -501,6 +501,22 @@ Back, the steps down the side and Exit setup do the same. On the first step,
 the Site choice picks another site, or a new one; the guide can be run again
 to add what was left out, or for another site.
 
+The Cables step's Suggest cables works the cabling out from the steps
+before. Each modem goes to the gateway (a firewall, otherwise a router), the
+gateway to the core switch (the switch nearest it, by rack, room and
+building), and each other switch to the core. Of two or more MoCA
+adapters, the one nearest the gateway plugs into a switch and the others
+join it over the coax; a wireless bridge's near end plugs into a switch.
+The far end of either serves the place it is in. Every other device goes to
+the switch nearest it, or to the far end serving its place, and a switch
+with its ports recorded gives its free ports in order. Wireless extenders,
+patch panels, peripherals and anything with a cable already are left out.
+Each suggestion says why and is marked Likely, Check (the switch is
+further away, or nothing records where the device is) or Choose a port
+(the switch has none free); either end can be changed, and nothing is
+added until Add the cables. The ones ticked are added, and any that can't
+be are listed with the reason.
+
 ## Records
 
 A record shows all of its sections, Overview first, one after another. The

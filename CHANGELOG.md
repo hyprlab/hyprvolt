@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- The setup guide's Cables step has Suggest cables: the cabling worked out from the gear and where each piece is (the modem to the router or firewall, that to the core switch, other switches to the core, MoCA pairs and wireless bridges, and every other device to its nearest switch), each cable with why, to check, change or untick before they are added
 - IP phones are a kind of hardware, with who uses each one and its extension, and are offered in the setup guide's Endpoints step
 - IP cameras are a kind of hardware, with their firmware and power draw, and are offered in the setup guide's Endpoints step
 - Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read

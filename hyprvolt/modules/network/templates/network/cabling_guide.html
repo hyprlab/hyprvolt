@@ -1,0 +1,35 @@
+{# The guide's Cables step: Suggest cables, in a dialog of its own
+   (cabling.py). The suggestions, and then what was added, take the place
+   of the first step in #cabling-suggest; Done comes back to the step. #}
+<div class="guide-extra">
+  <button type="button" class="btn btn--ghost" data-open="cabling-modal">Suggest cables…</button>
+  <span class="hint">Have the cabling worked out from the gear and places recorded so far.</span>
+</div>
+<dialog class="modal modal--xwide" id="cabling-modal" aria-labelledby="cabling-modal-title" data-restore="off">
+  <div class="modal-head">
+    <h3 id="cabling-modal-title">Suggest cables</h3>
+    <button class="iconbtn" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="modal-body">
+    <div id="cabling-suggest">
+      <form class="stack" data-api="{{ url_for('network.cables_suggest') }}" data-then="replace"
+            data-replace="cabling-suggest">
+        <input type="hidden" name="site" value="{{ site }}">
+        <input type="hidden" name="back" value="{{ back }}">
+        <p class="hint">The cables are worked out from what the steps before recorded. The modem goes to the
+          router or firewall, that to the core switch (the switch nearest it), and every other switch to the
+          core. A pair of MoCA adapters is joined over the coax, and a wireless bridge's near end is plugged in.
+          Every other device goes to the nearest switch by where each is: same rack, then same room, then
+          same building. Switches with their ports recorded get their free ports in order.</p>
+        <p class="hint">Wireless extenders, patch panels and peripherals are left out, and so is anything that
+          already has a cable. You check every cable before any is added.</p>
+        <div class="doc-actions">
+          <button class="btn btn--primary" type="submit">Work out the cables</button>
+        </div>
+        <p class="form-error" hidden></p>
+      </form>
+    </div>
+  </div>
+</dialog>

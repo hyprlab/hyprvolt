@@ -118,6 +118,14 @@ def _field_choices(fields) -> list[tuple]:
     return sorted(out, key=lambda c: str(c[1]).lower())
 
 
+def in_site(entities, scope) -> list:
+    """Those of ``entities`` in the site, or in no place."""
+    if scope is None:
+        return list(entities)
+    place_ids = {i for i, _ in _places(scope)}
+    return [e for e in entities if _inside(e, scope, place_ids)]
+
+
 def _in_site(choices, scope) -> list:
     """Choices of records, (id, label) or groups of them ({"label",
     "options"}), only those in the site or in no place: the equipment of

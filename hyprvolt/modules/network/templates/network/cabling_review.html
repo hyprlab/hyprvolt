@@ -1,0 +1,52 @@
+{# Suggest cables, step 2: each cable worked out (cabling.py, plan), with
+   why, its ends to change and a label. Nothing is made until Add. #}
+{% set chips = {'likely': ('Likely', 'chip chip--muted'), 'check': ('Check', 'chip'), 'choose': ('Choose a port', 'chip chip--warn')} %}
+{% macro end_select(name, value) %}
+<select name="{{ name }}">
+  <option value="" {{ 'selected' if not value }}>Choose…</option>
+  {% for g in ends %}<optgroup label="{{ g.label }}">
+    {% for v, text in g.options %}<option value="{{ v }}" {{ 'selected' if v == value }}>{{ text }}</option>{% endfor %}
+  </optgroup>{% endfor %}
+</select>
+{% endmacro %}
+{% if not count %}
+<div class="stack">
+  <p class="hint">Nothing to suggest: everything that plugs in already has a cable, or there is no switch, router
+    or firewall to plug it into. Record those in the Network gear step, or connect cables by hand.</p>
+  <div class="doc-actions"><a class="btn btn--primary" href="{{ back }}">Done</a></div>
+</div>
+{% else %}
+<form class="stack" data-api="{{ url_for('network.cables_suggest_add') }}" data-then="replace" data-replace="cabling-suggest">
+  <input type="hidden" name="count" value="{{ count }}">
+  <input type="hidden" name="back" value="{{ back }}">
+  <p class="hint">{{ count }} {{ 'cable' if count == 1 else 'cables' }} worked out:
+    {{ counts.likely }} likely{% if counts.check %}, {{ counts.check }} to check{% endif %}{% if counts.choose %},
+    and {{ counts.choose }} where a switch has no free port left, to choose{% endif %}.
+    Untick any that isn't so, such as a laptop on Wi-Fi, change either end, then add them.</p>
+  {% for g in groups %}
+  <p class="kicker">{{ g.label }}</p>
+  <ul class="review-list">
+    {% for r in g.rows %}{% set i = r.i %}
+    <li class="review-item">
+      <div class="manage-meta">
+        <label class="check review-title"><input type="checkbox" name="use{{ i }}" {{ 'checked' if r.state != 'choose' }}>
+          <span>{{ r.title }}</span> <span class="{{ chips[r.state][1] }}">{{ chips[r.state][0] }}</span></label>
+        <span class="review-why">{{ r.why }}{% if r.full %} {{ r.full|join(' and ') }} {{ 'has' if r.full|length == 1 else 'have' }} no free port left: choose one, or record more on its Cabling tab.{% endif %}</span>
+      </div>
+      <div class="review-controls">
+        <label class="field"><span class="field-label">From</span>{{ end_select('a' ~ i, r.a_end) }}</label>
+        <label class="field"><span class="field-label">To</span>{{ end_select('b' ~ i, r.b_end) }}</label>
+        <label class="field"><span class="field-label">Label</span>
+          <input name="label{{ i }}" maxlength="60" placeholder="C12" autocomplete="off"></label>
+      </div>
+      <input type="hidden" name="title{{ i }}" value="{{ r.title }}">
+    </li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+  <div class="doc-actions">
+    <button class="btn btn--primary" type="submit">Add the cables</button>
+  </div>
+  <p class="form-error" hidden></p>
+</form>
+{% endif %}

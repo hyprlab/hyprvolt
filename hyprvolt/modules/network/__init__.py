@@ -17,7 +17,7 @@ from hyprvolt.manifest import (EntityType, Field, FormSection, ListFilter, Modul
                                Step, Tab, Widget)
 from hyprvolt.models import db
 
-from . import addresses, demo, dns, ports, views
+from . import addresses, cabling, demo, dns, ports, views
 from .models import Cable, DnsRecord, NetworkDetail, Port, PortsRecorded
 
 NETWORK_KINDS = (("lan", "Local network"), ("wan", "Internet connection"), ("vpn", "VPN"), ("other", "Other"))
@@ -182,6 +182,9 @@ SETUP_HELP = {
         "are offered here.",
         "Cables draw the network diagram, and a trace follows a port through patch panels to the far end. To "
         "move a cable, delete it and connect it again.",
+        "Suggest cables works the cabling out from the steps before: the modem to the router or firewall, that "
+        "to the core switch, other switches to the core, and each device to the switch nearest it by rack, "
+        "room and building. Each suggestion is checked before it is added.",
     ),
 }
 
@@ -321,7 +324,7 @@ module = Module(
                   group="Endpoints",
                   help=SETUP_HELP["cables"], plan="cables",
                   save=views.setup_cable, rows=views.setup_rows, update=views.setup_update,
-                  delete=views.setup_delete,
+                  delete=views.setup_delete, extra=cabling.setup_extra,
                   fields=(SetupField("from", "From", choices=views.setup_ends),
                           SetupField("to", "To", choices=views.setup_ends),
                           SetupField("label", "Label", placeholder="C12"))),

@@ -1,0 +1,316 @@
+"""Suggested cables, for the site setup guide's Cables step: the likely
+cabling of a site worked out from what the steps before recorded, each
+cable with why, to check before any is made.
+
+The backbone first: each modem to the router or firewall that is the
+gateway, the gateway to the core switch (the switch nearest it), and each
+other switch to the core. A pair of MoCA adapters is joined over the coax,
+and the near end of each (and of a wireless bridge) plugs into a switch;
+the far end serves the place it is in. Then every other device plugs into
+the nearest of those, by where each is: same rack, same room, same
+building. Wireless extenders, patch panels and peripherals are left out,
+and so is a device that already has a cable.
+"""
+from flask import jsonify, render_template, request
+from flask_login import current_user
+
+from hyprvolt.core import guide, records
+from hyprvolt.core.fields import Invalid
+from hyprvolt.core.models import Entity, Relationship
+from hyprvolt.models import db
+from hyprvolt.permissions import role
+from hyprvolt.registry import current as registry
+
+from . import ports
+from .models import Cable, Port
+from .views import bp, setup_ends
+
+MAX_ROWS = 500
+FAR = 100          # the distance between places with nothing in common
+#: What plugs into nothing by a cable of its own: an extender joins over
+#: the air, a patch panel is cabled through, and a peripheral is a monitor
+#: or a KVM more often than not.
+LEFT_OUT = {"extender", "patch_panel", "peripheral"}
+GATEWAY_WORDS = {"firewall": "firewall", "router": "router", "modem": "modem"}
+
+
+def _role(entity, detail) -> str:
+    """What a device is to the plan: modem, router, firewall, switch, moca,
+    bridge, one of LEFT_OUT, or "device"."""
+    if entity.type in ("firewall", "peripheral"):
+        return entity.type
+    kind = getattr(detail, "kind", None) if entity.type == "network_device" else None
+    return kind if kind and kind != "other" else "device"
+
+
+class Site:
+    """The site's cabled devices, where each is, and what is cabled now."""
+
+    def __init__(self, scope):
+        reg = registry()
+        keys = [t.key for t in reg.enabled_types() if ports.is_cabled(t)]
+        found = guide.in_site(Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name).all(), scope)
+        details = {e.id: records.detail_of(e) for e in found}
+        self.devices = {e.id: e for e in found}
+        self.name = {e.id: e.name for e in found}
+        self.role = {e.id: _role(e, details[e.id]) for e in found}
+        self.port_count = {e.id: getattr(details[e.id], "ports", None) or 0 for e in found}
+        self.root = scope.id if scope is not None else None
+        self.places = {e.id: e for e in Entity.live().filter(Entity.type.in_([t.key for t in reg.location_types()]))}
+        self.chain = {e.id: self._chain(e.location_id) for e in found}
+        self.recorded = ports.recorded_ids()
+        self.taken = {i for c in db.session.query(Cable.a_id, Cable.b_id) for i in c}
+        self.free = {}
+        for p in (Port.query.filter(Port.device_id.in_(self.recorded & set(self.devices)), Port.name != "")
+                  .order_by(Port.position, Port.id)):
+            if p.id not in self.taken:
+                self.free.setdefault(p.device_id, []).append(p)
+        self.neighbors = self._neighbors()
+
+    def _chain(self, location_id) -> list[int]:
+        """A device's place and each one that holds it, up to the site."""
+        out = []
+        while location_id in self.places and location_id not in out:
+            out.append(location_id)
+            location_id = self.places[location_id].location_id
+        return out or ([self.root] if self.root else [])
+
+    def _neighbors(self) -> dict[int, set[int]]:
+        """What each device is cabled to now, through any patch panels."""
+        out = {i: set() for i in self.devices}
+        for port in Port.query.filter(Port.device_id.in_(list(self.devices)), Port.id.in_(self.taken),
+                                      Port.pair_id.is_(None)):
+            far = ports.trace(port)[-1]["port"]
+            if far.device_id != port.device_id:
+                out[port.device_id].add(far.device_id)
+                if far.device_id in out:
+                    out[far.device_id].add(port.device_id)
+        return out
+
+    def distance(self, a, b) -> int:
+        """Steps through places from one device to another: 0 in the same
+        rack or room, 1 for one in the room the other's rack is in."""
+        ca, cb = self.chain[a], self.chain[b]
+        for i, place in enumerate(ca):
+            if place in cb:
+                return i + cb.index(place)
+        return FAR
+
+    def where(self, a) -> str:
+        chain = self.chain[a]
+        return self.places[chain[0]].name if chain and chain[0] in self.places else ""
+
+    def kind_of(self, a) -> str:
+        """What the device's place is: "rack", "room"."""
+        chain = self.chain[a]
+        etype = registry().type(self.places[chain[0]].type) if chain and chain[0] in self.places else None
+        return etype.text() if etype else "place"
+
+    def serves(self, far_end, device_id) -> bool:
+        """A far end serves the place it is in, and what is inside that."""
+        return bool(self.chain[far_end]) and self.chain[far_end][0] in self.chain[device_id]
+
+    def of(self, *roles) -> list[int]:
+        return [i for i in self.devices if self.role[i] in roles]
+
+    def end(self, device_id, uplink=False) -> str | None:
+        """Where a cable meets the device: the device itself, or a free port
+        of one with its ports recorded (the first for a device plugged in,
+        the last for a switch's own uplink); None when none is free."""
+        if device_id not in self.recorded:
+            return f"device:{device_id}"
+        free = self.free.get(device_id, [])
+        return f"port:{free.pop(-1 if uplink else 0).id}" if free else None
+
+
+def _bridges(site) -> list[tuple[int, int]]:
+    ids = list(site.devices)
+    links = Relationship.query.filter(Relationship.kind == "wireless_link", Relationship.source_id.in_(ids),
+                                      Relationship.target_id.in_(ids))
+    return sorted({tuple(sorted((r.source_id, r.target_id))) for r in links})
+
+
+def _nearest(site, device_id, among):
+    """The nearest of ``among`` to the device; the earliest of them on a tie."""
+    among = [a for a in among if a is not None and a != device_id]
+    if not among:
+        return None
+    return min(among, key=lambda a: (site.distance(device_id, a), among.index(a)))
+
+
+def plan(scope) -> list[dict]:
+    """The cables to suggest, the backbone first and then what plugs into
+    each switch: [{"a", "b" (device ids), "a_end", "b_end" (where each
+    meets it), "why", "state" (likely, check, choose), "group", "title"}]."""
+    site = Site(scope)
+    name = site.name
+    lines = {r.target_id for r in Relationship.query.filter(Relationship.kind == "comes_in_at")}
+    modems, switches = site.of("modem"), site.of("switch")
+    gateways = sorted(site.of("firewall", "router"),
+                      key=lambda i: (i not in lines, site.role[i] != "firewall", name[i].lower()))
+    gateway = gateways[0] if gateways else (modems[0] if modems else None)
+    backbone, leaves, placed = [], [], set(modems) | {gateway}
+
+    def link(rows, a, b, why, sure=True, group="backbone"):
+        if a is not None and b is not None and a != b and b not in site.neighbors[a]:
+            rows.append({"a": a, "b": b, "why": why, "sure": sure, "group": group})
+
+    def from_gateway(i):
+        return site.distance(i, gateway) if gateway else 0
+
+    # The internet in, through the gateway, to the core switch.
+    for m in modems:
+        if m != gateway and gateway is not None and not site.neighbors[m]:
+            link(backbone, m, gateway, f"The modem hands the internet to the {GATEWAY_WORDS[site.role[gateway]]} "
+                                       f"{name[gateway]}, the gateway.")
+    core = min(switches, key=lambda s: (from_gateway(s), -site.port_count[s], name[s].lower())) \
+        if switches else None
+    if core is not None and gateway is not None:
+        link(backbone, gateway, core, f"{name[core]} is the switch nearest the gateway, so the core switch.")
+
+    # Places reached over the coax or the air: their far ends serve them.
+    far_ends = []
+    adapters = sorted(site.of("moca"), key=lambda i: (from_gateway(i), name[i].lower()))
+    if len(adapters) >= 2:
+        near = adapters[0]
+        link(backbone, near, _nearest(site, near, switches or [gateway]),
+             "The MoCA adapter nearest the gateway puts the network onto the coax.")
+        for far in adapters[1:]:
+            link(backbone, far, near, f"MoCA adapters talk over the coax: {name[far]} is a far end of {name[near]}, "
+                                      f"bringing the network to {site.where(far) or 'where it is'}.")
+            far_ends.append(far)
+        placed |= set(adapters)
+    for a, b in _bridges(site):
+        near, far = sorted((a, b), key=lambda i: (from_gateway(i), name[i].lower()))
+        link(backbone, near, _nearest(site, near, switches or [gateway]),
+             f"The near end of the wireless bridge to {name[far]}, which joins it over the air.")
+        far_ends.append(far)
+        placed |= {a, b}
+
+    # Every other switch uplinks to the core, or to a far end in its place.
+    upstream = set(switches) | {gateway} | set(far_ends)
+    for s in switches:
+        placed.add(s)
+        if s == core or site.neighbors[s] & upstream:
+            continue
+        up = _nearest(site, s, [core] + [f for f in far_ends if site.serves(f, s)])
+        link(backbone, s, up, f"Another switch, uplinked to the core switch {name[up]}." if up == core else
+             f"Another switch, uplinked to {name[up]}, which brings the network to {site.where(up)}.")
+
+    # The rest plug into the nearest switch, or the far end serving them.
+    points = switches + far_ends
+    for d in site.devices:
+        if d in placed or site.role[d] in LEFT_OUT or site.neighbors[d]:
+            continue
+        unplaced = site.devices[d].location_id is None
+        target = (core if unplaced else None) or \
+            _nearest(site, d, switches + [f for f in far_ends if site.serves(f, d)]) or gateway
+        if target is None:
+            continue
+        steps = site.distance(d, target)
+        if target not in points:
+            why = f"There is no switch, so it plugs into the {GATEWAY_WORDS[site.role[target]]} {name[target]}."
+        elif unplaced:
+            why = f"Nothing records where it is, so it goes to the core switch {name[target]}."
+        elif steps >= FAR:
+            why = f"Nothing places it near a switch, so it goes to {name[target]}."
+        elif target in far_ends:
+            why = f"{name[target]} brings the network to {site.where(target)}."
+        elif steps == 0:
+            why = f"{name[target]} is the switch in the same {site.kind_of(d)}, {site.where(d)}."
+        else:
+            why = f"{name[target]}, in {site.where(target)}, is the nearest switch."
+        link(leaves, d, target, why, sure=not unplaced and (steps <= 1 or target not in points), group=target)
+    leaves.sort(key=lambda r: (points.index(r["group"]) if r["group"] in points else -1, name[r["a"]].lower()))
+    return [_ends(site, r, uplink=r["group"] == "backbone") for r in backbone + leaves]
+
+
+def _ends(site, row, uplink) -> dict:
+    """The row with where each end meets its device, and "choose" when one
+    has no free port left."""
+    a, b = site.end(row["a"], uplink=uplink), site.end(row["b"])
+    full = [site.name[d] for d, e in ((row["a"], a), (row["b"], b)) if e is None]
+    state = "choose" if full else "likely" if row["sure"] else "check"
+    return {**row, "a_end": a or "", "b_end": b or "", "full": full, "state": state,
+            "title": f"{site.name[row['a']]} to {site.name[row['b']]}"}
+
+
+# ———— Making what was reviewed ————
+
+def _end(value):
+    kind, _, raw = str(value or "").partition(":")
+    end = db.session.get(Port, int(raw)) if kind == "port" and raw.isdigit() else \
+        records.live(int(raw)) if kind == "device" and raw.isdigit() else None
+    device = end.device_id if isinstance(end, Port) else end.id if end is not None else None
+    if end is None or records.live(device) is None:
+        raise Invalid("Choose both ends of the cable.")
+    return end
+
+
+def add_reviewed(form: dict, user=None) -> dict:
+    """Make each cable ticked (``use<i>``) from ``a<i>`` to ``b<i>``, with
+    ``label<i>``; ``title<i>`` names it. One that can't be made is left out
+    and said why; the rest are kept."""
+    done = {"added": [], "skipped": 0, "failed": []}
+    for i in range(min(int(form.get("count") or 0), MAX_ROWS)):
+        if form.get(f"use{i}") not in (True, "1", "on", "true"):
+            done["skipped"] += 1
+            continue
+        nested = db.session.begin_nested()
+        try:
+            cable = ports.connect(_end(form.get(f"a{i}")), _end(form.get(f"b{i}")),
+                                  {"label": str(form.get(f"label{i}") or "")}, user)
+            nested.commit()
+            done["added"].append(f"{cable.a.label} to {cable.b.label}")
+        except Invalid as err:
+            nested.rollback()
+            done["failed"].append({"name": str(form.get(f"title{i}") or "")[:200], "error": str(err)})
+    return done
+
+
+# ———— The guide's button, and the routes ————
+
+def _back(value) -> str:
+    back = str(value or "")
+    return back if back.startswith("/") and not back.startswith("//") else "/site-setup/cables"
+
+
+def setup_extra(scope) -> str:
+    """The Cables step: a way to have the cabling worked out."""
+    if not current_user.can_edit:
+        return ""
+    return render_template("network/cabling_guide.html", site=scope.id if scope else "",
+                           back=request.full_path.rstrip("?"))
+
+
+@bp.route("/cables/suggest", methods=["POST"])
+@role("editor")
+def cables_suggest():
+    """The cables suggested for the site, each to check."""
+    form = request.get_json(silent=True) or {}
+    site = records.live(int(form["site"])) if str(form.get("site") or "").isdigit() else None
+    if site is not None and registry().type(site.type) not in registry().location_types():
+        site = None
+    rows = plan(site)
+    groups = {}
+    for r in rows:
+        groups.setdefault(r["group"], []).append(r)
+    for i, r in enumerate(r for g in groups.values() for r in g):
+        r["i"] = i
+    names = {e.id: e.name for e in Entity.query.filter(Entity.id.in_([k for k in groups if k != "backbone"]))}
+    shown = [{"label": "The backbone" if k == "backbone" else f"Plugged into {names.get(k, '')}", "rows": g}
+             for k, g in groups.items()]
+    counts = {k: sum(1 for r in rows if r["state"] == k) for k in ("likely", "check", "choose")}
+    return jsonify(ok=True, html=render_template("network/cabling_review.html", groups=shown, count=len(rows),
+                                                 counts=counts, ends=setup_ends(None), back=_back(form.get("back"))))
+
+
+@bp.route("/cables/suggest/add", methods=["POST"])
+@role("editor")
+def cables_suggest_add():
+    """The cables ticked, made."""
+    form = request.get_json(silent=True) or {}
+    done = add_reviewed(form)
+    db.session.commit()
+    return jsonify(ok=True, html=render_template("network/cabling_done.html", done=done,
+                                                 back=_back(form.get("back"))))
