@@ -2,7 +2,8 @@
 
 Devices are nodes; a cable is an edge, traced through patch panels so a
 switch port and the server at the far side of the panel are one link, with
-the panels named on it. A "connected to" link between two cabled devices
+the panels named on it. A pair of MoCA adapters is passed through the same
+way, over the coax between them. A "connected to" link between two cabled devices
 that no cable joins is an edge too, drawn dashed. Everything is read in a
 handful of queries and laid out here, so the template only draws.
 
@@ -51,6 +52,7 @@ class Edge:
     cabled: bool = True
     ends: tuple = ("", "")           # port names at a and b
     via: list = field(default_factory=list)
+    coax: list = field(default_factory=list)  # MoCA pairs on the way: "moca-a and moca-b"
     vlans: str = ""
     path: str = ""
     mid: tuple = (0, 0)
@@ -65,6 +67,8 @@ class Edge:
         text = f"{a} {self.ends[0]} to {b} {self.ends[1]}".replace("  ", " ").strip() if self.cabled else f"{a} to {b}"
         if self.via:
             text += " through " + ", ".join(self.via)
+        if self.coax:
+            text += " over the coax between " + ", and ".join(self.coax)
         if self.vlans:
             text += f" ({self.vlans})"
         return text if self.cabled else text + ", linked but no cable recorded"
@@ -94,29 +98,45 @@ def network() -> tuple[dict[int, Node], list[Edge]]:
         cable_at[c.a_id] = c
         cable_at[c.b_id] = c
     devices = _live_devices({p.device_id for p in ports.values() if p.id in cable_at})
+    # A MoCA adapter, its partner over the coax, and where that is cabled on.
+    partner_of = {}
+    for r in Relationship.query.filter_by(kind="coax_link"):
+        partner_of.setdefault(r.source_id, r.target_id)
+        partner_of.setdefault(r.target_id, r.source_id)
+    cabled_on = {}
+    for p in sorted(ports.values(), key=lambda p: (p.position, p.id)):
+        if p.id in cable_at:
+            cabled_on.setdefault(p.device_id, p)
 
     def far_end(port):
-        """Follow a cable, and on through panels: (end port, panels on the way)."""
-        via, seen = [], {port.id}
+        """Follow a cable, and on through panels and over MoCA pairs: (end
+        port, the panels on the way, the pairs on the way)."""
+        via, coax, seen = [], [], {port.id}
         cable = cable_at.get(port.id)
         while cable is not None:
             other = ports.get(cable.b_id if cable.a_id == port.id else cable.a_id)
             if other is None or other.id in seen:
-                return None, via
+                return None, via, coax
             seen.add(other.id)
-            pair = ports.get(other.pair_id) if other.pair_id else None
-            if pair is None or pair.id in seen or pair.id not in cable_at:
-                return other, via
-            via.append(other.device.name)
-            seen.add(pair.id)
-            port, cable = pair, cable_at[pair.id]
-        return None, via
+            on = ports.get(other.pair_id) if other.pair_id else None
+            partner = devices.get(partner_of.get(other.device_id)) if on is None else None
+            if partner is not None:
+                on = cabled_on.get(partner.id)
+            if on is None or on.id in seen or on.id not in cable_at:
+                return other, via, coax
+            if partner is not None:
+                coax.append(f"{other.device.name} and {partner.name}")
+            else:
+                via.append(other.device.name)
+            seen.add(on.id)
+            port, cable = on, cable_at[on.id]
+        return None, via, coax
 
     edges, done = [], set()
     for port in ports.values():
-        if port.id not in cable_at or port.pair_id:
-            continue                      # a panel's port: walked from a device's
-        end, via = far_end(port)
+        if port.id not in cable_at or port.pair_id or port.device_id in partner_of:
+            continue                      # a panel's or MoCA adapter's port: walked from a device's
+        end, via, coax = far_end(port)
         if end is None or port.device_id not in devices or end.device_id not in devices:
             continue
         key = frozenset((port.id, end.id))
@@ -124,7 +144,7 @@ def network() -> tuple[dict[int, Node], list[Edge]]:
             continue
         done.add(key)
         vlans = _vlans(port) or _vlans(end)
-        edges.append(Edge(port.device_id, end.device_id, True, (port.name, end.name), via, vlans))
+        edges.append(Edge(port.device_id, end.device_id, True, (port.name, end.name), via, coax, vlans))
 
     # "Connected to" links between cabled devices with no cable between them.
     reg = registry()

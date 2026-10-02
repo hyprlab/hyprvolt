@@ -52,6 +52,8 @@ NETWORK_KINDS = (("switch", "Switch"), ("router", "Router"), ("modem", "Modem"),
                  ("moca", "MoCA adapter"), ("other", "Other"))
 #: Kinds of network gear with no wireless link to another: all but a bridge.
 NOT_BRIDGES = tuple(v for v, _ in NETWORK_KINDS if v != "bridge") + ("",)
+#: Kinds of network gear with no coax link to another: all but a MoCA adapter.
+NOT_MOCA = tuple(v for v, _ in NETWORK_KINDS if v != "moca") + ("",)
 #: Kinds of network gear that can broadcast wireless networks (Network's
 #: Wireless networks section), as an access point does: a router or an
 #: ISP's gateway with Wi-Fi built in, an extender, a bridge.
@@ -128,8 +130,10 @@ SETUP_HELP = {
         "the VLANs, and the subnets, recorded in the steps before. That says which switch serves which "
         "network, so a switch that fails shows the networks it takes down, and Suggest cables plugs a device "
         "into a switch that carries its subnet.",
-        "A MoCA adapter carries the network over the coaxial cable already in the walls, to a room with no "
-        "Ethernet. Add each adapter, one at each end of the coax, where it is.",
+        "A pair of MoCA adapters carries the network over the coaxial cable already in the walls, to a room "
+        "with no Ethernet, and works like one cable. Add each adapter where it is, and choose the adapter at "
+        "the other end of the coax as its Other end. Then cable each adapter to what it plugs into, a switch "
+        "at one end and a device at the other: a trace, and the network diagram, go straight through.",
         "Public addresses belong to the internet connection, not to the device. Computers and storage come "
         "next, and cabling everything together is the last step.",
     ),
@@ -181,7 +185,8 @@ module = Module(
             CPU, CORES, RAM, STORAGE, NICS, POWER, OS)),
         hardware("network_device", "Network device", "Network gear", NETWORK, traits=RACK + HOST, specs=(
             Field("kind", "Kind", "select", options=NETWORK_KINDS, list=True, group="Specs",
-                  hides=(("bridge", NOT_BRIDGES), ("wifi", NOT_WIRELESS), ("networks", NOT_CARRIERS))),
+                  hides=(("bridge", NOT_BRIDGES), ("moca", NOT_MOCA), ("wifi", NOT_WIRELESS),
+                         ("networks", NOT_CARRIERS))),
             PORTS, Field("managed", "Managed", "boolean", group="Specs"), FIRMWARE, POWER)),
         hardware("firewall", "Firewall", "Firewalls", FIREWALL, traits=RACK + HOST, specs=(
             PORTS, FIRMWARE, CPU, RAM, POWER)),
@@ -214,10 +219,14 @@ module = Module(
     ),
     filters=(ListFilter("warranty_soon", "Warranty ending soon", views.warranty_soon),
              ListFilter("warranty_over", "Out of warranty", views.warranty_over)),
-    relation_kinds=(RelationKind("wireless_link", "has a wireless link to", "has a wireless link to"),),
+    relation_kinds=(RelationKind("wireless_link", "has a wireless link to", "has a wireless link to"),
+                    RelationKind("coax_link", "is joined over coax to", "is joined over coax to")),
     form_sections=(FormSection("bridge", "Wireless link", views.bridge_form, views.bridge_save,
                                when=views.is_bridge_gear, values=views.bridge_values,
                                choices=views.bridge_choices),
+                   FormSection("moca", "Coax link", views.moca_form, views.moca_save,
+                               when=views.is_bridge_gear, values=views.moca_values,
+                               choices=views.moca_choices),
                    FormSection("powers", "Powers", views.powers_form, views.powers_save, when=views.is_ups,
                                values=views.powers_values, choices=views.powers_choices)),
     setup=(
@@ -241,6 +250,7 @@ module = Module(
                           SetupField("s.internet.line", "Internet connection",
                                      kinds=("Modem", "Router", "Firewall")),
                           SetupField("s.bridge.other", "Other end", kinds=("Wireless bridge",)),
+                          SetupField("s.moca.other", "Other end", kinds=("MoCA adapter",)),
                           SetupField("s.networks.list", "Networks", kind="multi", newline=True,
                                      kinds=("Modem", "Router", "Firewall", "Switch"),
                                      placeholder="None recorded yet: add them in the VLANs and Subnets steps."),

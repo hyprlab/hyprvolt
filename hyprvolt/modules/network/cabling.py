@@ -4,9 +4,9 @@ cable with why, to check before any is made.
 
 The backbone first: each modem to the router or firewall that is the
 gateway, the gateway to the core switch (the switch nearest it), and each
-other switch to the core. A pair of MoCA adapters is joined over the coax,
-and the near end of each (and of a wireless bridge) plugs into a switch;
-the far end serves the place it is in. Then every other device plugs into
+other switch to the core. A pair of MoCA adapters (or wireless bridges)
+works like one cable: its near end plugs into a switch, and its far end
+serves the place it is in. Then every other device plugs into
 the nearest of those, by where each is: same rack, same room, same
 building. Wireless extenders, patch panels and peripherals are left out,
 and so is a device that already has a cable.
@@ -130,9 +130,11 @@ class Site:
         return f"port:{free.pop(-1 if uplink else 0).id}" if free else None
 
 
-def _bridges(site) -> list[tuple[int, int]]:
+def _pairs(site, relation) -> list[tuple[int, int]]:
+    """The site's wireless bridges (wireless_link), or MoCA adapters
+    (coax_link), two by two."""
     ids = list(site.devices)
-    links = Relationship.query.filter(Relationship.kind == "wireless_link", Relationship.source_id.in_(ids),
+    links = Relationship.query.filter(Relationship.kind == relation, Relationship.source_id.in_(ids),
                                       Relationship.target_id.in_(ids))
     return sorted({tuple(sorted((r.source_id, r.target_id))) for r in links})
 
@@ -175,24 +177,19 @@ def plan(scope) -> list[dict]:
     if core is not None and gateway is not None:
         link(backbone, gateway, core, f"{name[core]} is the switch nearest the gateway, so the core switch.")
 
-    # Places reached over the coax or the air: their far ends serve them.
+    # Places reached over the coax or the air: a MoCA pair, or a wireless
+    # bridge, works like one cable. Its near end plugs into a switch, and
+    # its far end serves the place it is in.
     far_ends = []
-    adapters = sorted(site.of("moca"), key=lambda i: (from_gateway(i), name[i].lower()))
-    if len(adapters) >= 2:
-        near = adapters[0]
-        link(backbone, near, _nearest(site, near, switches or [gateway]),
-             "The MoCA adapter nearest the gateway puts the network onto the coax.")
-        for far in adapters[1:]:
-            link(backbone, far, near, f"MoCA adapters talk over the coax: {name[far]} is a far end of {name[near]}, "
-                                      f"bringing the network to {site.where(far) or 'where it is'}.")
+    for relation, why in (("coax_link", "The MoCA adapter nearer the gateway, which puts the network onto the "
+                                        "coax to {far}."),
+                          ("wireless_link", "The near end of the wireless bridge to {far}, which joins it over "
+                                            "the air.")):
+        for a, b in _pairs(site, relation):
+            near, far = sorted((a, b), key=lambda i: (from_gateway(i), name[i].lower()))
+            link(backbone, near, _nearest(site, near, switches or [gateway]), why.format(far=name[far]))
             far_ends.append(far)
-        placed |= set(adapters)
-    for a, b in _bridges(site):
-        near, far = sorted((a, b), key=lambda i: (from_gateway(i), name[i].lower()))
-        link(backbone, near, _nearest(site, near, switches or [gateway]),
-             f"The near end of the wireless bridge to {name[far]}, which joins it over the air.")
-        far_ends.append(far)
-        placed |= {a, b}
+            placed |= {a, b}
 
     # Every other switch uplinks to the core, or to a far end in its place.
     upstream = set(switches) | {gateway} | set(far_ends)
@@ -236,6 +233,8 @@ def plan(scope) -> list[dict]:
             why = f"{name[target]} is the switch in the same {site.kind_of(d)}, {site.where(d)}."
         else:
             why = f"{name[target]}, in {site.where(target)}, is the nearest switch."
+        if site.role[d] == "moca":
+            why += " Choose the adapter at the other end of its coax in Network gear, and what it serves follows."
         sure = target in carrying or (not unplaced and (steps <= 1 or target not in points))
         link(leaves, d, target, why, sure=sure, group=target)
     leaves.sort(key=lambda r: (points.index(r["group"]) if r["group"] in points else -1, name[r["a"]].lower()))

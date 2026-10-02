@@ -45,6 +45,7 @@
           {%- for step in i.trace %}
           {%- if step.port %}<li class="trace-hop">{{ entity_link(step.port.device.id, step.port.device.name) }} {{ step.port.name }}</li>
           {%- elif step.cable %}<li class="trace-link" title="Cable{% if step.cable.text %}: {{ step.cable.text }}{% endif %}">cable{% if step.cable.label %} {{ step.cable.label }}{% endif %}</li>
+          {%- elif step.coax %}<li class="trace-link" title="Over the coax from {{ step.through.name }} to {{ step.coax.name }}">coax</li>
           {%- else %}<li class="trace-link" title="Through {{ step.through.name }}">through</li>{% endif %}
           {%- endfor %}
         </ol>

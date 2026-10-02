@@ -174,10 +174,32 @@ def kind_label(kind) -> str:
     return dict(PORT_KINDS).get(kind, kind or "")
 
 
+def coax_partner(device: Entity) -> Entity | None:
+    """The MoCA adapter at the other end of this one's coax (Hardware's
+    Coax link), if it is one and has one."""
+    if role(device) != "moca":
+        return None
+    from hyprvolt.modules.hardware.views import other_end
+    return other_end(device, "coax_link")
+
+
+def across_coax(device: Entity) -> Port | None:
+    """Over the coax from a MoCA adapter: where its partner is cabled on
+    (the first of its cables), so a pair works like one cable."""
+    partner = coax_partner(device)
+    if partner is None:
+        return None
+    for p in Port.query.filter_by(device_id=partner.id).order_by(Port.position, Port.id):
+        if cable_of(p) is not None:
+            return p
+    return None
+
+
 def trace(port: Port) -> list[dict]:
     """The path from ``port``: [{"port"}, {"cable"}, {"port"}, {"through"},
-    {"port"}, ...]. A patch panel's paired port is "through"; a loop stops
-    the walk instead of following it."""
+    {"port"}, ...]. A patch panel's paired port is "through"; so is a MoCA
+    adapter, with its partner over the coax as "coax". A loop stops the walk
+    instead of following it."""
     path, seen, p = [], set(), port
     while p is not None and p.id not in seen:
         seen.add(p.id)
@@ -191,10 +213,17 @@ def trace(port: Port) -> list[dict]:
             break
         seen.add(other.id)
         path.append({"port": other})
-        if other.pair is None or other.device.deleted_at is not None:
+        if other.device.deleted_at is not None:
             break
-        path.append({"through": other.device})
-        p = other.pair
+        if other.pair is not None:
+            path.append({"through": other.device})
+            p = other.pair
+            continue
+        on = across_coax(other.device)
+        if on is None or on.id in seen:
+            break
+        path.append({"through": other.device, "coax": on.device})
+        p = on
     return path
 
 

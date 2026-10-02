@@ -1,8 +1,9 @@
 """Hardware's sidebar filters (warranties about to end and already over; the
 window is the reminder window, core/reminders.py, an admin setting), the
-Wireless link section of a wireless bridge, and the Powers section of a
-UPS."""
+Wireless link and Coax link sections of a wireless bridge and a MoCA
+adapter, and the Powers section of a UPS."""
 from datetime import date
+from functools import partial
 
 from flask import render_template
 
@@ -28,72 +29,90 @@ def warranty_over(query):
     return query.filter(Entity.status.notin_(GONE), Entity.id.in_(ids))
 
 
-# ———— A wireless bridge and the one at the other end ————
+# ———— Gear that comes in pairs: a wireless bridge, a MoCA adapter ————
+
+#: A kind of network gear with one other end, and the link between the two
+#: (read the same from both): {kind: (relation, what it is, its section's
+#: label, the hint beside the choice)}.
+PAIRS = {
+    "bridge": ("wireless_link", "wireless bridge", "Wireless link",
+               "The bridge this one links to over the air, often in another building. Each end has its own "
+               "location and IP address."),
+    "moca": ("coax_link", "MoCA adapter", "Coax link",
+             "The adapter at the other end of the coax. The two work like one cable: from what is plugged "
+             "into this one to what is plugged into that one."),
+}
+
 
 def is_bridge_gear(etype) -> bool:
     return etype.key == "network_device"
 
 
-def _bridges(exclude=None) -> list[Entity]:
-    ids = db.session.query(HardwareDetail.entity_id).filter(HardwareDetail.kind == "bridge")
+def _paired(kind, exclude=None) -> list[Entity]:
+    ids = db.session.query(HardwareDetail.entity_id).filter(HardwareDetail.kind == kind)
     query = Entity.live().filter(Entity.type == "network_device", Entity.id.in_(ids))
     if exclude is not None:
         query = query.filter(Entity.id != exclude.id)
     return query.order_by(Entity.name).all()
 
 
-def _links(bridge) -> list[Relationship]:
-    """Its wireless links, either way: the link reads the same from both ends."""
-    return (Relationship.query.filter(Relationship.kind == "wireless_link")
-            .filter((Relationship.source_id == bridge.id) | (Relationship.target_id == bridge.id))
+def _links(entity, relation) -> list[Relationship]:
+    """Its links of the pair's kind, either way: one reads the same from both ends."""
+    return (Relationship.query.filter(Relationship.kind == relation)
+            .filter((Relationship.source_id == entity.id) | (Relationship.target_id == entity.id))
             .order_by(Relationship.id).all())
 
 
-def other_end(bridge):
-    for rel in _links(bridge):
-        other = records.live(rel.target_id if rel.source_id == bridge.id else rel.source_id)
+def other_end(entity, relation="wireless_link"):
+    """The bridge, or MoCA adapter, at the other end of this one."""
+    for rel in _links(entity, relation):
+        other = records.live(rel.target_id if rel.source_id == entity.id else rel.source_id)
         if other is not None:
             return other
     return None
 
 
-def bridge_choices(name) -> list[tuple[int, str]]:
-    return [(e.id, e.name) for e in _bridges()]
+def pair_choices(kind, name) -> list[tuple[int, str]]:
+    return [(e.id, e.name) for e in _paired(kind)]
 
 
-def bridge_values(bridge) -> dict:
-    other = other_end(bridge)
+def pair_values(kind, entity) -> dict:
+    other = other_end(entity, PAIRS[kind][0])
     return {"other": other.id if other else ""}
 
 
-def bridge_form(etype, bridge) -> str:
-    other = other_end(bridge) if bridge is not None else None
-    return render_template("hardware/bridge_form.html", bridges=[(e.id, e.name) for e in _bridges(bridge)],
-                           other_id=other.id if other else None)
+def pair_form(kind, etype, entity) -> str:
+    relation, what, _, hint = PAIRS[kind]
+    other = other_end(entity, relation) if entity is not None else None
+    return render_template("hardware/pair_form.html", name=f"s.{kind}.other",
+                           choices=[(e.id, e.name) for e in _paired(kind, entity)],
+                           other_id=other.id if other else None, hint=hint,
+                           empty=f"Add the {what} at the other end, then link them here.")
 
 
-def bridge_save(bridge, values, user) -> list[dict]:
-    """The bridge at the other end. The link between two bridges is one,
-    read the same from both; another chosen replaces this end's link."""
+def pair_save(kind, entity, values, user) -> list[dict]:
+    """The one at the other end. The link between the two is one, read the
+    same from both; another chosen replaces this end's link."""
     if "other" not in values:
         return []
+    relation, what, label, _ = PAIRS[kind]
     wanted = None
     if values["other"] not in (None, "", 0, "0"):
         wanted = records.live(values["other"])
-        if wanted is None or wanted.id not in {e.id for e in _bridges()}:
-            raise Invalid("Choose a wireless bridge that exists for the other end.")
-        if wanted.id == bridge.id:
-            raise Invalid("A bridge links to another bridge, not to itself.")
-    current = other_end(bridge)
+        if wanted is None or wanted.id not in {e.id for e in _paired(kind)}:
+            raise Invalid(f"Choose a {what} that exists for the other end.")
+        if wanted.id == entity.id:
+            raise Invalid(f"A {what} links to another, not to itself.")
+    current = other_end(entity, relation)
     if (wanted and current and wanted.id == current.id) or (wanted is None and current is None):
         return []
-    for rel in _links(bridge):
-        other_id = rel.target_id if rel.source_id == bridge.id else rel.source_id
+    for rel in _links(entity, relation):
+        other_id = rel.target_id if rel.source_id == entity.id else rel.source_id
         if current is not None and other_id == current.id:
             relations.unlink(rel, user)
     if wanted is not None:
-        relations.link("wireless_link", bridge, wanted, user=user)
-    return [{"field": "bridge", "label": "Wireless link", "old": current.name if current else "",
+        relations.link(relation, entity, wanted, user=user)
+    return [{"field": kind, "label": label, "old": current.name if current else "",
              "new": wanted.name if wanted else ""}]
 
 
@@ -141,3 +160,9 @@ def powers_save(ups, values, user) -> list[dict]:
         return []
     changed = relations.set_linked("powered_by", ups, "target", values["list"], _powerable(), "hardware", user)
     return [{"field": "powers", "label": "Powers", **changed}] if changed else []
+
+
+bridge_choices, bridge_values, bridge_form, bridge_save = (partial(f, "bridge") for f in (
+    pair_choices, pair_values, pair_form, pair_save))
+moca_choices, moca_values, moca_form, moca_save = (partial(f, "moca") for f in (
+    pair_choices, pair_values, pair_form, pair_save))

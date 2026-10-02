@@ -93,3 +93,14 @@ def test_suggested_cables_come_labeled_in_turn(client, h, admin):
     assert labels["srv2 to sw1"] == "20-02"                 # after the one there already
     assert labels["modem to fw"] == "WAN-01" and labels["fw to sw1"] == "UP-01"
     assert labels["pc1 to sw1"] == "50-01" and labels["cam1 to sw1"] == "C-01"
+
+
+def test_both_cables_of_a_moca_pair_take_the_far_devices_network(client, h, admin):
+    d = lab(client, h)
+    near = make(client, h, "network_device", name="moca-a", **{"f.kind": "moca"})
+    far = make(client, h, "network_device", name="moca-b", **{"f.kind": "moca", "s.moca.other": near["id"]})
+    rows = f"/site-setup/cables/rows?site={d['site']['id']}"
+    post(client, h, rows, values={"from": f"device:{far['id']}", "to": f"device:{d['srv1']['id']}"})
+    post(client, h, rows, values={"from": f"device:{near['id']}", "to": f"device:{d['sw']['id']}"})
+    # Not an uplink: the switch reaches srv1, on VLAN 20, over the coax.
+    assert (cable_label(client, far), cable_label(client, near)) == ("20-01", "20-02")

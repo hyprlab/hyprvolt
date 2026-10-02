@@ -608,3 +608,30 @@ def test_a_switch_takes_no_more_cables_than_its_ports(client, h, admin):
     post(client, h, f"/api/entities/{sw['id']}", **{"f.ports": ""})
     post(client, h, "/network/cables", device_id=pcs[2]["id"], other_device_id=sw["id"])
     assert "3 cables." in client.get(f"/e/{sw['id']}/sheet?tab=ports").data.decode()
+
+
+def test_a_pair_of_moca_adapters_works_like_one_cable(client, h, admin):
+    sw = make(client, h, "network_device", name="sw1", **{"f.kind": "switch"})
+    near = make(client, h, "network_device", name="moca-office", **{"f.kind": "moca"})
+    far = make(client, h, "network_device", name="moca-den", **{"f.kind": "moca", "s.moca.other": near["id"]})
+    tv = make(client, h, "workstation", name="den-pc")
+    # The link reads the same from both ends.
+    form = client.get(f"/e/{near['id']}/form").data.decode()
+    assert f'<option value="{far["id"]}" selected>moca-den</option>' in form
+    assert '<div data-section="moca" hidden>' in client.get(f"/e/{sw['id']}/form").data.decode()
+    assert "Choose a MoCA adapter that exists" in post(client, h, f"/api/entities/{far['id']}", 400,
+                                                         **{"s.moca.other": sw["id"]})["error"]
+    post(client, h, "/network/cables", device_id=near["id"], other_device_id=sw["id"])
+    post(client, h, "/network/cables", device_id=far["id"], other_device_id=tv["id"])
+    # A trace goes from the PC over the coax to the switch.
+    start = client.get(f"/network/devices/{tv['id']}/ports").get_json()["ports"][0]
+    path = client.get(f"/network/ports/{start['id']}/trace").get_json()["path"]
+    assert path[-1]["port"]["device"] == "sw1"
+    coax = [s["through"] for s in path if "through" in s]
+    assert coax == [{"device_id": far["id"], "device": "moca-den",
+                     "coax": {"device_id": near["id"], "device": "moca-office"}}]
+    # The diagram draws one link, the adapters named on it.
+    page = client.get("/p/diagram/network").data.decode()
+    assert "den-pc to sw1 over the coax between moca-den and moca-office" in page \
+        or "sw1 to den-pc over the coax between moca-office and moca-den" in page
+    assert ">over coax</text>" in page and "and over pairs of MoCA adapters" in page

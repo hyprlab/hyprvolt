@@ -605,7 +605,10 @@ def port_trace(port_id):
             c = step["cable"]
             path.append({"cable": {"id": c.id, "label": c.label, "color": c.color, "length_m": c.length_m}})
         else:
-            path.append({"through": {"device_id": step["through"].id, "device": step["through"].name}})
+            through = {"device_id": step["through"].id, "device": step["through"].name}
+            if step.get("coax") is not None:
+                through["coax"] = {"device_id": step["coax"].id, "device": step["coax"].name}
+            path.append({"through": through})
     return jsonify(path=path)
 
 

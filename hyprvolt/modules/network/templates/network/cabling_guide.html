@@ -21,8 +21,9 @@
       <h3 id="cabling-modal-title">Suggest cables</h3>
       {{ tip("cabling-how", "How cables are suggested",
              "The modem goes to the router or firewall, that to the core switch (the switch nearest it), and "
-             "every other switch to the core. A pair of MoCA adapters is joined over the coax, and a wireless "
-             "bridge's near end is plugged in. Every other device goes to a switch that carries its network, "
+             "every other switch to the core. A pair of MoCA adapters, or of wireless bridges, works like one "
+             "cable: its near end plugs into a switch, and what is in the far end's room plugs into that. "
+             "Every other device goes to a switch that carries its network, "
              "or else the nearest switch: same rack, then same room, then same building. Switches with their "
              "ports recorded give their free ports in order. Wireless extenders, patch panels, peripherals and "
              "anything with a cable already are left out, and nothing is added until you add it.") }}

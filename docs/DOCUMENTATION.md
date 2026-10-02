@@ -180,8 +180,13 @@ connections. A network device of the kind Wireless bridge links two places
 over the air: each end is its own record, with its own location and IP
 address, and its Wireless link section names the bridge at the other end, a
 link that reads the same from both; the diagram draws it as a dotted line.
-A Wireless extender is network gear that repeats an access point's signal,
-and a MoCA adapter network gear that carries the network over coaxial cable.
+A Wireless extender is network gear that repeats an access point's signal.
+A MoCA adapter carries the network over the coaxial cable in the walls, and
+two of them work like one cable: each is its own record, where it is, and
+its Coax link section (or the guide's Other end) names the adapter at the
+other end of the coax. Each is cabled to what it plugs into, and a trace,
+the Neighborhood and the network diagram go straight through the pair,
+naming the two adapters on the link as they do a patch panel.
 A wireless network is one Wi-Fi network name (SSID), with its security,
 bands, whether it is hidden, and the VLAN and subnet it puts devices on;
 its password belongs on its Secrets tab. The gear that broadcasts it (an
@@ -252,8 +257,8 @@ were rolled back. The history of each record still logs every edit to it;
 changes are what people did to the systems themselves.
 
 Diagram draws the network from its cables: every device with a cable to
-another, the cables traced through patch panels (which are named on the
-link rather than drawn), in tiers from the internet side: modems, then
+another, the cables traced through patch panels and over pairs of MoCA
+adapters (which are named on the link rather than drawn), in tiers from the internet side: modems, then
 routers and firewalls, then outward. A "connected to" link between two
 devices with no cable recorded is drawn dashed. Hovering a link shows its
 ports and VLANs; choosing a device opens it. Every record with links or
@@ -516,10 +521,10 @@ to add what was left out, or for another site.
 The Cables step's Suggest cables works the cabling out from the steps
 before. Each modem goes to the gateway (a firewall, otherwise a router), the
 gateway to the core switch (the switch nearest it, by rack, room and
-building), and each other switch to the core. Of two or more MoCA
-adapters, the one nearest the gateway plugs into a switch and the others
-join it over the coax; a wireless bridge's near end plugs into a switch.
-The far end of either serves the place it is in. Every other device goes to
+building), and each other switch to the core. A pair of MoCA adapters, or
+of wireless bridges, works like one cable: its end nearer the gateway plugs
+into a switch, and its far end serves the place it is in, with no cable
+between the two. Every other device goes to
 a switch that carries its subnet (or the VLAN of it, or of a wireless
 network it broadcasts) if any does, otherwise to the switch nearest it, or
 to the far end serving its place, and a switch

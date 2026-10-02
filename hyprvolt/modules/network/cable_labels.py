@@ -8,7 +8,8 @@ the device's address (one the switch carries, of several), by the VLAN's
 number or, with no VLAN, the subnet's third number (192.168.50.0/24 is
 50). A cable between two pieces of network gear is an uplink, "UP-01";
 from a modem to the gateway, "WAN-01"; and one whose network isn't known,
-"C-01". Through a patch panel, the devices at the ends of the path count.
+"C-01". Through a patch panel, or over a pair of MoCA adapters, the devices at the
+ends of the path count.
 """
 import ipaddress
 import re
@@ -41,16 +42,20 @@ def next_label(prefix: str, used: set[str]) -> str:
 
 def _far_side(end) -> tuple[Entity, Port | None]:
     """The device at the end of the path on this side of a cable, through
-    any patch panels, and the port it ends at."""
-    if isinstance(end, Entity):
-        return end, None
+    any patch panels and over any MoCA pair, and the port it ends at."""
     p, seen = end, set()
-    while p.pair is not None and p.id not in seen:
+    if isinstance(end, Entity):
+        on = ports.across_coax(end)
+        if on is None:
+            return end, None
+        p = ports.cable_of(on).other(on)
+    while p.id not in seen:
         seen.add(p.id)
-        cable = ports.cable_of(p.pair)
+        on = p.pair if p.pair is not None else ports.across_coax(p.device)
+        cable = ports.cable_of(on) if on is not None else None
         if cable is None:
             break
-        p = cable.other(p.pair)
+        p = cable.other(on)
     return p.device, p
 
 

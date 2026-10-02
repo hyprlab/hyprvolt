@@ -23,7 +23,7 @@ def network_page() -> str:
     return render_template("diagram/network.html", nodes=ordered, edges=edges, by_id=nodes,
                            width=width, height=height, w=graph.NODE_W, h=graph.NODE_H,
                            dashed=sum(1 for e in edges if not e.cabled),
-                           wireless=any(e.kind == "wireless" for e in edges),
+                           wireless=any(e.kind == "wireless" for e in edges), coax=any(e.coax for e in edges),
                            internet=any(e.kind == "internet" for e in edges))
 
 

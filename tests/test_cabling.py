@@ -30,7 +30,7 @@ def lab(client, h):
     d["core"] = gear("sw-core", "switch", rack, **{"f.ports": 24})
     d["sw-office"] = gear("sw-office", "switch", office, **{"f.ports": 8})
     d["moca1"] = gear("moca-basement", "moca", basement)
-    d["moca2"] = gear("moca-den", "moca", den)
+    d["moca2"] = gear("moca-den", "moca", den, **{"s.moca.other": d["moca1"]["id"]})
     d["br-house"] = gear("br-house", "bridge", basement)
     d["br-garage"] = gear("br-garage", "bridge", garage, **{"s.bridge.other": d["br-house"]["id"]})
     d["ext"] = gear("ext1", "extender", office)
@@ -65,7 +65,8 @@ def suggest(client, h, site):
 def test_the_cabling_is_worked_out_from_the_gear_and_where_it_is(client, h, admin):
     d = lab(client, h)
     html, rows = suggest(client, h, d["site"])
-    assert set(rows) == {"modem to fw", "fw to sw-core", "moca-basement to sw-core", "moca-den to moca-basement",
+    # A MoCA pair works like a cable: no cable between the two adapters.
+    assert set(rows) == {"modem to fw", "fw to sw-core", "moca-basement to sw-core",
                          "br-house to sw-core", "sw-office to sw-core", "srv1 to sw-core", "ap-office to sw-office",
                          "desk-pc to sw-office", "phone-den to moca-den", "cam-garage to br-garage", "cam-loose to sw-core"}
     # The backbone comes first, then what plugs into each switch and far end.
@@ -134,7 +135,7 @@ def test_the_cables_checked_are_added(client, h, admin):
     bad = rows["ap-office to sw-office"]["i"]
     form[f"b{bad}"] = form[f"a{bad}"]
     done = post(client, h, "/network/cables/suggest/add", **form)["html"]
-    assert "10 cables added, 1 left out, and 1 that couldn't be added" in done
+    assert "9 cables added, 1 left out, and 1 that couldn't be added" in done
     assert "ap-office to sw-office" in done and 'href="/site-setup/cables?site=1"' in done
     cable = client.get(f"/network/devices/{d['srv1']['id']}/ports").get_json()["ports"][0]["cable"]
     assert cable["to"] == "sw-core" and cable["label"] == "C1"
