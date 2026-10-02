@@ -153,7 +153,11 @@ A subnet's Addresses tab draws an IPv4 subnet
 up to a /22 as a grid: used, reserved, held for DHCP or free. Choosing a free
 address records it. Anything with network ports has a Cabling tab. A cable
 goes to the device as a whole, to another device or to one of its ports,
-with no ports to set up first. To be more exact about a device, turn on
+with no ports to set up first. A switch, router or firewall given a number
+of Ports (in its form, or the guide's Network gear step) takes no more
+cables than that: its Cabling tab counts them, a full one is no longer
+offered as the other end, and Suggest cables stops at it; with Ports left
+empty there is no limit. To be more exact about a device, turn on
 Record each port, the switch at the top of its Cabling tab: then add its
 ports in a run (Port 1 to 24, or a patch panel's Front and Rear pairs), set
 a port's VLANs, and cable each port; a patch panel needs its ports recorded

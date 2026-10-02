@@ -3,7 +3,7 @@
    change one and cable the device to another. #}
 {% from "partials/macros.html" import entity_link %}
 {% set cabled = items|selectattr('cable')|list|length %}
-{% set can_cable = (own_free or not recorded) and (targets.devices or targets.ports) %}
+{% set can_cable = (own_free or not recorded) and not full and (targets.devices or targets.ports) %}
 {% if current_user.can_edit %}
 <form data-api="/network/devices/{{ device.id }}/ports/recorded" data-then="sheet">
   <ul class="manage-list">
@@ -22,6 +22,8 @@
 {% endif %}
 {% if recorded %}
 {% if items %}<p class="hint">{{ items|length }} {{ 'port' if items|length == 1 else 'ports' }}, {{ cabled }} cabled.</p>{% endif %}
+{% elif limit %}
+<p class="hint">{{ cabled }} of {{ limit }} {{ 'port' if limit == 1 else 'ports' }} cabled{% if full %}: give it more ports, or record them one by one, to cable more{% endif %}.</p>
 {% elif items %}
 <p class="hint">{{ cabled }} {{ 'cable' if cabled == 1 else 'cables' }}.</p>
 {% endif %}

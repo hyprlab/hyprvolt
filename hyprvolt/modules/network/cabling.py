@@ -66,6 +66,8 @@ class Site:
             if p.id not in self.taken:
                 self.free.setdefault(p.device_id, []).append(p)
         self.neighbors = self._neighbors()
+        # Devices cabled as a whole with a port count: the cables they have.
+        self.used = ports.cabled_counts(self.devices)
 
     def _chain(self, location_id) -> list[int]:
         """A device's place and each one that holds it, up to the site."""
@@ -125,8 +127,13 @@ class Site:
     def end(self, device_id, uplink=False) -> str | None:
         """Where a cable meets the device: the device itself, or a free port
         of one with its ports recorded (the first for a device plugged in,
-        the last for a switch's own uplink); None when none is free."""
+        the last for a switch's own uplink); None when none is free, or a
+        device cabled as a whole has as many cables as its port count."""
         if device_id not in self.recorded:
+            limit = self.port_count[device_id]
+            if limit and self.used.get(device_id, 0) >= limit:
+                return None
+            self.used[device_id] = self.used.get(device_id, 0) + 1
             return f"device:{device_id}"
         free = self.free.get(device_id, [])
         return f"port:{free.pop(-1 if uplink else 0).id}" if free else None

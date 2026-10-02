@@ -31,7 +31,7 @@
       <div class="manage-meta">
         <label class="check review-title"><input type="checkbox" name="use{{ i }}" {{ 'checked' if r.state != 'choose' }}>
           <span>{{ r.title }}</span> <span class="{{ chips[r.state][1] }}">{{ chips[r.state][0] }}</span></label>
-        <span class="review-why">{{ r.why }}{% if r.full %} {{ r.full|join(' and ') }} {{ 'has' if r.full|length == 1 else 'have' }} no free port left: choose one, or record more on its Cabling tab.{% endif %}</span>
+        <span class="review-why">{{ r.why }}{% if r.full %} {{ r.full|join(' and ') }} {{ 'has' if r.full|length == 1 else 'have' }} no free port left: choose another end, or give {{ 'it' if r.full|length == 1 else 'them' }} more ports.{% endif %}</span>
       </div>
       <div class="review-controls">
         <label class="field"><span class="field-label">From</span>{{ end_select('a' ~ i, r.a_end) }}</label>

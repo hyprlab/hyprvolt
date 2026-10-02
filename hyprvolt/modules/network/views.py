@@ -119,11 +119,14 @@ def ports_tab(device: Entity) -> str:
                       if p.name else []})
     own_free = [i["port"] for i in items if i["cable"] is None] if recorded else []
     detail = db.session.get(HardwareDetail, device.id)
+    limit = ports.port_limit(device.id)
+    full = limit is not None and sum(1 for i in items if i["cable"]) >= limit
     vlans = present.views(Entity.live().filter(Entity.type == "vlan").order_by(Entity.name).all())
     return render_template("network/ports.html", device=device, items=items, recorded=recorded,
                            targets=ports.free_ends(device.id), own_free=own_free, kinds=PORT_KINDS, speeds=SPEEDS,
                            vlans=vlans, is_panel=detail is not None and detail.kind == "patch_panel",
-                           count=detail.ports if detail is not None and detail.ports else None)
+                           count=detail.ports if detail is not None and detail.ports else None,
+                           limit=limit, full=full)
 
 
 def ports_count(device: Entity):

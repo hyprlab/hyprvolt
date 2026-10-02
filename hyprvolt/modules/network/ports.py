@@ -10,6 +10,7 @@ from hyprvolt.core import records
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity
 from hyprvolt.models import db
+from hyprvolt.modules.hardware.models import HardwareDetail
 
 from .models import PORT_KINDS, SPEEDS, Cable, Port, PortsRecorded
 
@@ -53,6 +54,24 @@ def record_ports(device: Entity, on: bool, user=None) -> list[dict]:
              "new": "Yes" if on else "No"}]
 
 
+def port_limit(device_id: int) -> int | None:
+    """How many cables a device cabled as a whole takes: its port count
+    (Hardware's Ports), if it has one. One with its ports recorded takes a
+    cable on each of them instead."""
+    if records_ports(device_id):
+        return None
+    detail = db.session.get(HardwareDetail, device_id)
+    return detail.ports if detail is not None and detail.ports else None
+
+
+def cabled_counts(device_ids) -> dict[int, int]:
+    """How many cables each device has."""
+    ends = (db.session.query(Port.device_id, db.func.count(Port.id))
+            .join(Cable, (Cable.a_id == Port.id) | (Cable.b_id == Port.id))
+            .filter(Port.device_id.in_(list(device_ids))).group_by(Port.device_id))
+    return dict(ends.all())
+
+
 def ports_of(device_id: int) -> list[Port]:
     return (Port.query.filter_by(device_id=device_id).options(joinedload(Port.vlan), joinedload(Port.pair))
             .order_by(Port.position, Port.id).all())
@@ -66,6 +85,11 @@ def free_ends(exclude: int | None = None) -> dict:
     recorded = recorded_ids()
     everyone = Entity.live().filter(Entity.type.in_(keys), Entity.id != (exclude or 0)).order_by(Entity.name)
     wholes = [e for e in everyone if e.id not in recorded]
+    # A device whose every port is cabled takes no more.
+    limits = {d.entity_id: d.ports for d in HardwareDetail.query.filter(
+        HardwareDetail.entity_id.in_([e.id for e in wholes]), HardwareDetail.ports > 0)}
+    used = cabled_counts(limits)
+    wholes = [e for e in wholes if e.id not in limits or used.get(e.id, 0) < limits[e.id]]
     taken = {i for c in db.session.query(Cable.a_id, Cable.b_id) for i in c}
     groups = {}
     for p in (Port.query.join(Entity, Entity.id == Port.device_id).options(contains_eager(Port.device))
@@ -306,6 +330,12 @@ def connect(port: Port | Entity, other: Port | Entity, data: dict, user=None) ->
     for end in ends:
         if isinstance(end, Entity) and records_ports(end.id):
             raise Invalid(f"{end.name} has its ports recorded one by one: choose one of them.")
+    for end in ends:
+        limit = port_limit(end.id) if isinstance(end, Entity) else None
+        if limit is not None and cabled_counts([end.id]).get(end.id, 0) >= limit:
+            raise Invalid(f"{end.name} has {limit} {'port' if limit == 1 else 'ports'}, and "
+                          f"{'it is' if limit == 1 else 'all of them are'} cabled. Give it more ports, or "
+                          f"record its ports one by one.")
     devices = [e.id if isinstance(e, Entity) else e.device_id for e in ends]
     if devices[0] == devices[1] and any(isinstance(e, Entity) for e in ends):
         raise Invalid("A cable goes to another device.")

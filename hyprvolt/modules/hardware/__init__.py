@@ -41,7 +41,9 @@ NICS = Field("nics", "Network ports", "longtext", group="Specs", help="One per l
 POWER = Field("power_w", "Power draw", "integer", min=0, max=100_000, unit="W", group="Specs")
 OS = Field("os", "Operating system", group="Specs", suggest="os")
 FIRMWARE = Field("os", "Firmware", group="Specs")
-PORTS = Field("ports", "Ports", "integer", min=0, max=1000, card=True, group="Specs")
+PORTS = Field("ports", "Ports", "integer", min=0, max=1000, card=True, group="Specs",
+              help="How many network ports it has: it takes no more cables than that. Leave it empty for no "
+                   "limit; once its ports are recorded one by one, each takes a cable of its own instead.")
 
 FORM_FACTORS = (("rack", "Rack mount"), ("tower", "Tower"), ("mini", "Mini PC"), ("blade", "Blade"),
                 ("sbc", "Single-board computer"), ("other", "Other"))
@@ -235,6 +237,7 @@ module = Module(
                          SetupKind("Patch panel", "network_device", {"f.kind": "patch_panel"})),
                   fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"),
+                          SetupField("f.ports", placeholder="24", kinds=("Router", "Firewall", "Switch")),
                           SetupField("s.internet.line", "Internet connection",
                                      kinds=("Modem", "Router", "Firewall")),
                           SetupField("s.bridge.other", "Other end", kinds=("Wireless bridge",)),

@@ -591,3 +591,20 @@ def test_switches_routers_and_firewalls_carry_vlans_and_subnets(client, h, admin
     # A switch that fails takes the networks it carries with it.
     tree = client.get(f"/api/entities/{sw['id']}/dependencies?direction=dependents").get_json()["tree"]
     assert {n["name"] for n in tree} == {"IoT", "Lab"}
+
+
+def test_a_switch_takes_no_more_cables_than_its_ports(client, h, admin):
+    sw = make(client, h, "network_device", name="sw1", **{"f.kind": "switch", "f.ports": 2})
+    pcs = [make(client, h, "workstation", name=f"pc{i}") for i in range(3)]
+    for pc in pcs[:2]:
+        post(client, h, "/network/cables", device_id=pc["id"], other_device_id=sw["id"])
+    tab = client.get(f"/e/{sw['id']}/sheet?tab=ports").data.decode()
+    assert "2 of 2 ports cabled: give it more ports" in tab and "Connect a cable" not in tab
+    # Full: refused, and no longer offered as the other end.
+    error = post(client, h, "/network/cables", 400, device_id=pcs[2]["id"], other_device_id=sw["id"])["error"]
+    assert error == "sw1 has 2 ports, and all of them are cabled. Give it more ports, or record its ports one by one."
+    assert f'value="device:{sw["id"]}"' not in client.get(f"/e/{pcs[2]['id']}/sheet?tab=ports").data.decode()
+    # More ports, or none recorded: it takes the cable.
+    post(client, h, f"/api/entities/{sw['id']}", **{"f.ports": ""})
+    post(client, h, "/network/cables", device_id=pcs[2]["id"], other_device_id=sw["id"])
+    assert "3 cables." in client.get(f"/e/{sw['id']}/sheet?tab=ports").data.decode()

@@ -112,6 +112,16 @@ def test_a_device_plugs_into_a_switch_that_carries_its_network(client, h, admin)
     assert "pc1 to sw-a" in rows
 
 
+def test_a_switch_cabled_as_a_whole_takes_as_many_as_its_ports(client, h, admin):
+    site = make(client, h, "site", name="Home")
+    make(client, h, "network_device", name="sw1", location_id=site["id"], **{"f.kind": "switch", "f.ports": 2})
+    for name in ("a-pc", "b-pc", "c-pc"):
+        make(client, h, "workstation", name=name, location_id=site["id"])
+    _, rows = suggest(client, h, site)
+    assert [rows[f"{n} to sw1"]["chip"] for n in ("a-pc", "b-pc", "c-pc")] == ["Likely", "Likely", "Choose a port"]
+    assert "sw1 has no free port left: choose another end, or give it more ports" in rows["c-pc to sw1"]["why"]
+
+
 def test_the_cables_checked_are_added(client, h, admin):
     d = lab(client, h)
     _, rows = suggest(client, h, d["site"])
