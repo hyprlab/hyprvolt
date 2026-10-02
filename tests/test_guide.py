@@ -174,9 +174,14 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     add(client, h, "endpoints", site["id"], **{"_kind": "1", "name": "lp"})
     pc = entities(client, "workstation")[0]
     assert pc["fields"]["assigned_to"] == "Ada" and pc["location"]["id"] == basement["id"]
-    # A printer has no Used by: its row shows that field off.
+    add(client, h, "endpoints", site["id"], **{"_kind": "2", "name": "phone1", "f.assigned_to": "Ada",
+                                               "f.extension": "104"})
+    phone = entities(client, "ip_phone")[0]
+    assert phone["fields"]["extension"] == "104" and phone["fields"]["assigned_to"] == "Ada"
+    # A printer has no Used by or Extension, a computer no Extension: their rows show those fields off.
     page = client.get(f"/site-setup/endpoints?site={site['id']}").data.decode()
-    assert page.split('data-name="lp"')[1].split("</fieldset>")[0].count("disabled") == 1
+    assert page.split('data-name="lp"')[1].split("</fieldset>")[0].count("disabled") == 2
+    assert page.split('data-name="desk-pc"')[1].split("</fieldset>")[0].count("disabled") == 1
     # Cables: from a device to a device, each cabled as a whole; its label changed.
     page = client.get(f"/site-setup/cables?site={site['id']}").data.decode()
     assert f'value="device:{pc["id"]}"' in page

@@ -66,6 +66,8 @@ def seed(demo):
              cpu_cores=8, ram_gb=32, storage="2 TB NVMe", os="Fedora 40", purchase_date=days(-300), price=1150)
     demo.add("printer", "Office printer", key="printer", location="office", sections=at(ip="10.0.30.60"),
              manufacturer="Brother", model="HL-L2350DW", power_w=440)
+    demo.add("ip_phone", "office-phone", location="office", sections=at(ip="10.0.30.70"),
+             manufacturer="Yealink", model="T54W", assigned_to="Sam", extension="104", power_w=7)
     demo.add("server", "Spare mini PC", key="spare-pc", location="storage-shelf", status="in_stock",
              manufacturer="Lenovo", model="ThinkCentre M720q", kind="mini", cpu="Core i5-8500T", cpu_cores=6,
              ram_gb=16, notes="Kept as a replacement for nuc1.")
