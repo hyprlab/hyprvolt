@@ -147,5 +147,7 @@ def test_the_button_is_in_the_cables_step(client, h, admin):
     client.post("/site-setup/site/rows", json={"values": {"name": "Home"}}, headers=h)
     page = client.get("/site-setup/cables").data.decode()
     assert 'data-open="cabling-modal"' in page and 'id="cabling-modal"' in page
+    # The button works the cables out as it opens the dialog; how, behind its info button.
+    assert 'data-api-post="/network/cables/suggest"' in page and 'popovertarget="cabling-how-help"' in page
     empty = post(client, h, "/network/cables/suggest", site=1)["html"]
     assert "Nothing to suggest" in empty

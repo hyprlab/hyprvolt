@@ -1,8 +1,12 @@
-{# The guide's Cables step: Suggest cables, in a dialog of its own
-   (cabling.py). The suggestions, and then what was added, take the place
-   of the first step in #cabling-suggest; Done comes back to the step. #}
+{# The guide's Cables step: Suggest cables opens its dialog and works the
+   cabling out at once (cabling.py), the suggestions in #cabling-suggest,
+   then what was added; Done comes back to the step. How they are worked
+   out is behind the info button beside the title. #}
+{% from "sheet/controls.html" import tip %}
 <div class="guide-extra">
-  <button type="button" class="btn btn--ghost" data-open="cabling-modal">Suggest cables…</button>
+  <button type="button" class="btn btn--ghost" data-open="cabling-modal"
+          data-api-post="{{ url_for('network.cables_suggest') }}" data-body='{{ {"site": site, "back": back}|tojson }}'
+          data-then="replace" data-replace="cabling-suggest">Suggest cables…</button>
   {% if unlabeled %}
   <button type="button" class="btn btn--ghost" data-api-post="{{ url_for('network.cables_label') }}"
           data-body='{"site": {{ site or 'null' }}}' data-then="reload">Label the unlabeled cables</button>
@@ -13,29 +17,21 @@
 </div>
 <dialog class="modal modal--xwide" id="cabling-modal" aria-labelledby="cabling-modal-title" data-restore="off">
   <div class="modal-head">
-    <h3 id="cabling-modal-title">Suggest cables</h3>
+    <span class="field-head">
+      <h3 id="cabling-modal-title">Suggest cables</h3>
+      {{ tip("cabling-how", "How cables are suggested",
+             "The modem goes to the router or firewall, that to the core switch (the switch nearest it), and "
+             "every other switch to the core. A pair of MoCA adapters is joined over the coax, and a wireless "
+             "bridge's near end is plugged in. Every other device goes to a switch that carries its network, "
+             "or else the nearest switch: same rack, then same room, then same building. Switches with their "
+             "ports recorded give their free ports in order. Wireless extenders, patch panels, peripherals and "
+             "anything with a cable already are left out, and nothing is added until you add it.") }}
+    </span>
     <button class="iconbtn" data-close aria-label="Close">
       <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
   </div>
   <div class="modal-body">
-    <div id="cabling-suggest">
-      <form class="stack" data-api="{{ url_for('network.cables_suggest') }}" data-then="replace"
-            data-replace="cabling-suggest">
-        <input type="hidden" name="site" value="{{ site }}">
-        <input type="hidden" name="back" value="{{ back }}">
-        <p class="hint">The cables are worked out from what the steps before recorded. The modem goes to the
-          router or firewall, that to the core switch (the switch nearest it), and every other switch to the
-          core. A pair of MoCA adapters is joined over the coax, and a wireless bridge's near end is plugged in.
-          Every other device goes to the nearest switch by where each is: same rack, then same room, then
-          same building. Switches with their ports recorded get their free ports in order.</p>
-        <p class="hint">Wireless extenders, patch panels and peripherals are left out, and so is anything that
-          already has a cable. You check every cable before any is added.</p>
-        <div class="doc-actions">
-          <button class="btn btn--primary" type="submit">Work out the cables</button>
-        </div>
-        <p class="form-error" hidden></p>
-      </form>
-    </div>
+    <div id="cabling-suggest"><p class="hint">Working out the cables…</p></div>
   </div>
 </dialog>
