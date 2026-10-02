@@ -545,7 +545,7 @@ def test_wireless_networks_are_broadcast_by_wireless_gear(client, h, admin):
     assert '<div data-section="wifi" hidden>' in switch_form and '<div data-section="bridge" hidden>' in switch_form
     ext_form = client.get(f"/e/{ext['id']}/form").data.decode()
     assert '<div data-section="wifi">' in ext_form and '<div data-section="bridge" hidden>' in ext_form
-    assert "wifi=switch,patch_panel,other," in ext_form
+    assert "wifi=switch,patch_panel,moca,other," in ext_form
 
 
 def test_a_hypervisor_takes_the_address_of_the_server_it_runs_on(client, h, admin):

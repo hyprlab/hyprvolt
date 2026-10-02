@@ -47,7 +47,7 @@ FORM_FACTORS = (("rack", "Rack mount"), ("tower", "Tower"), ("mini", "Mini PC"),
                 ("sbc", "Single-board computer"), ("other", "Other"))
 NETWORK_KINDS = (("switch", "Switch"), ("router", "Router"), ("modem", "Modem"),
                  ("patch_panel", "Patch panel"), ("extender", "Wireless extender"), ("bridge", "Wireless bridge"),
-                 ("other", "Other"))
+                 ("moca", "MoCA adapter"), ("other", "Other"))
 #: Kinds of network gear with no wireless link to another: all but a bridge.
 NOT_BRIDGES = tuple(v for v, _ in NETWORK_KINDS if v != "bridge") + ("",)
 #: Kinds of network gear that can broadcast wireless networks (Network's
@@ -118,6 +118,8 @@ SETUP_HELP = {
         "A wireless extender repeats an access point's signal further out. An access point, an extender, a "
         "bridge, and a router or modem with Wi-Fi built in each tick the wireless networks it broadcasts, "
         "from those recorded in the Wireless networks step.",
+        "A MoCA adapter carries the network over the coaxial cable already in the walls, to a room with no "
+        "Ethernet. Add each adapter, one at each end of the coax, where it is.",
         "Public addresses belong to the internet connection, not to the device. Computers and storage come "
         "next, and cabling everything together is the last step.",
     ),
@@ -211,7 +213,7 @@ module = Module(
     setup=(
         SetupStep("gear", "Network gear", "The equipment that ties your network together. Start where the "
                   "internet comes in, with the modem and the router or firewall, then add your switches, access "
-                  "points, extenders and patch panels.", 60,
+                  "points, extenders, MoCA adapters and patch panels.", 60,
                   group="Equipment",
                   help=SETUP_HELP["gear"], plan="network gear",
                   kinds=(SetupKind("Modem", "network_device", {"f.kind": "modem"}),
@@ -221,6 +223,7 @@ module = Module(
                          SetupKind("Access point", "access_point"),
                          SetupKind("Wireless extender", "network_device", {"f.kind": "extender"}),
                          SetupKind("Wireless bridge", "network_device", {"f.kind": "bridge"}),
+                         SetupKind("MoCA adapter", "network_device", {"f.kind": "moca"}),
                          SetupKind("Patch panel", "network_device", {"f.kind": "patch_panel"})),
                   fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"),

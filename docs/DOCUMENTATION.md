@@ -176,7 +176,8 @@ connections. A network device of the kind Wireless bridge links two places
 over the air: each end is its own record, with its own location and IP
 address, and its Wireless link section names the bridge at the other end, a
 link that reads the same from both; the diagram draws it as a dotted line.
-A Wireless extender is network gear that repeats an access point's signal.
+A Wireless extender is network gear that repeats an access point's signal,
+and a MoCA adapter network gear that carries the network over coaxial cable.
 A wireless network is one Wi-Fi network name (SSID), with its security,
 bands, whether it is hidden, and the VLAN and subnet it puts devices on;
 its password belongs on its Secrets tab. The gear that broadcasts it (an
