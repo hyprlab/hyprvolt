@@ -250,7 +250,7 @@ module = Module(
                   kinds=(SetupKind("Workstation", "workstation"), SetupKind("Printer", "printer"),
                          SetupKind("IP phone", "ip_phone"), SetupKind("Peripheral", "peripheral")),
                   fields=(SetupField("name", placeholder="desk-pc"), SetupField("location_id"),
-                          SetupField("f.assigned_to"), SetupField("f.extension", placeholder="104"),
+                          SetupField("f.assigned_to"), SetupField("f.extension", placeholder="104", kinds=("IP phone",)),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"))),
         SetupStep("ups", "UPSes", "The battery backups that keep everything running through a power "
                   "outage, with their capacity, how long they last, and the equipment each one powers.", 105,

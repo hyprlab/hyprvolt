@@ -178,10 +178,11 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
                                                "f.extension": "104"})
     phone = entities(client, "ip_phone")[0]
     assert phone["fields"]["extension"] == "104" and phone["fields"]["assigned_to"] == "Ada"
-    # A printer has no Used by or Extension, a computer no Extension: their rows show those fields off.
+    # A printer has no Used by: its row shows that field off. Extension is only in an IP phone's row.
     page = client.get(f"/site-setup/endpoints?site={site['id']}").data.decode()
-    assert page.split('data-name="lp"')[1].split("</fieldset>")[0].count("disabled") == 2
-    assert page.split('data-name="desk-pc"')[1].split("</fieldset>")[0].count("disabled") == 1
+    rows = {n: page.split(f'data-name="{n}"')[1].split("</fieldset>")[0] for n in ("lp", "desk-pc", "phone1")}
+    assert rows["lp"].count("disabled") == 2     # Used by, and the hidden Extension
+    assert [f'data-when-is="2" hidden><span class="field-label">Extension' in rows[n] for n in rows] == [True, True, False]
     # Cables: from a device to a device, each cabled as a whole; its label changed.
     page = client.get(f"/site-setup/cables?site={site['id']}").data.decode()
     assert f'value="device:{pc["id"]}"' in page
