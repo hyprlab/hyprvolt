@@ -154,7 +154,9 @@ def columns(step, scope) -> list[dict]:
         col = {"name": sf.name, "label": sf.label, "kind": sf.kind, "placeholder": sf.placeholder,
                "required": False, "choices": None, "default": "", "newline": sf.newline}
         if sf.name == "name":
-            col.update(label=sf.label or "Name", kind="text", required=True)
+            # A row of kinds of which some have a hostname: "Name or hostname".
+            label = next((t.name_label for t in types if t.name_label != "Name"), "Name")
+            col.update(label=sf.label or label, kind="text", required=True)
         elif sf.name == "location_id":
             places = _places(scope)
             if not places:

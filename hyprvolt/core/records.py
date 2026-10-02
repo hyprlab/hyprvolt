@@ -383,7 +383,7 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
             raise Invalid("Give it a name.")
         if len(name) > 200:
             raise Invalid("Names are limited to 200 characters.")
-        note("name", LABELS["name"], entity.name, name)
+        note("name", etype.name_label, entity.name, name)
         entity.name = name
 
     if "slug" in data and (data.get("slug") or "").strip():
@@ -482,7 +482,7 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
             raise Invalid(f"{f.label} is required.")
         if name != entity.name:
             if not creating:
-                note("name", LABELS["name"], entity.name, name)
+                note("name", etype.name_label, entity.name, name)
             entity.name = name
         if entity.slug.startswith("~"):
             entity.slug = unique_slug(name)

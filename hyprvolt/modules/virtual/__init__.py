@@ -23,6 +23,8 @@ MACHINES = ("server", "workstation", "nas")
 #: Traits other modules look for: an IP address (Network), software
 #: installed and services run (Software, Services).
 ADDRESSABLE = ("addressable", "host", "tls")
+#: What answers on the network is often known by its hostname.
+HOSTNAME = "Name or hostname"
 #: A hypervisor is the operating system of the machine it runs on: an
 #: address recorded on that machine moves to it when given to it (Network).
 SYSTEM = ("takes_host_address",)
@@ -90,7 +92,7 @@ module = Module(
                    fields=(PLATFORM, VERSION, MANAGEMENT),
                    tabs=(Tab("guests", "Guests", views.cluster_tab, count=views.cluster_count),)),
         EntityType("hypervisor", "Hypervisor", "Hypervisors", detail=VirtualDetail, located_in=(), icon=HYPERVISOR,
-                   traits=ADDRESSABLE + SYSTEM,
+                   traits=ADDRESSABLE + SYSTEM, name_label=HOSTNAME,
                    fields=(PLATFORM, VERSION,
                            host("Runs on", MACHINES, card=True, list=True,
                                 help="The hardware it is installed on."),
@@ -98,14 +100,14 @@ module = Module(
                            MANAGEMENT),
                    tabs=(Tab("guests", "Guests", views.guests_tab, count=views.guest_count),)),
         EntityType("vm", "Virtual machine", "Virtual machines", detail=VirtualDetail, located_in=(), icon=VM,
-                   statuses=GUEST_STATUSES, traits=ADDRESSABLE, becomes=("lxc",),
+                   statuses=GUEST_STATUSES, traits=ADDRESSABLE, name_label=HOSTNAME, becomes=("lxc",),
                    fields=(host("Host", ("hypervisor",), card=True, list=True), OS,
                            Field("vmid", "VM ID", "integer", min=0, help="The hypervisor's number for it: 101."),
                            AUTOSTART,
                            Field("vcpus", "vCPUs", "integer", min=1, max=4096, card=True, group="Resources"),
                            MEMORY, DISK)),
         EntityType("lxc", "LXC container", "LXC containers", detail=VirtualDetail, located_in=(), icon=LXC,
-                   statuses=GUEST_STATUSES, traits=ADDRESSABLE, becomes=("vm",),
+                   statuses=GUEST_STATUSES, traits=ADDRESSABLE, name_label=HOSTNAME, becomes=("vm",),
                    fields=(host("Host", ("hypervisor",), card=True, list=True), OS,
                            Field("vmid", "Container ID", "integer", min=0, help="The hypervisor's number for it: 200."),
                            AUTOSTART,

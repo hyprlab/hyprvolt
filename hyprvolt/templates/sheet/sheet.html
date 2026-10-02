@@ -26,7 +26,7 @@
   {# The name, edited where it is shown: saved when the cursor leaves it. #}
   <div class="sheet-title-edit" data-field>
     <input class="sheet-title sheet-title-input" name="name" value="{{ entity.name }}" maxlength="200" required
-           autocomplete="off" aria-label="Name" data-save>
+           autocomplete="off" aria-label="{{ etype.name_label }}" data-save>
   </div>
   {% else %}
   <h1 class="sheet-title" data-live="title">{{ entity.name }}</h1>

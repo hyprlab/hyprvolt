@@ -92,6 +92,7 @@ class EntityType:
     traits: tuple = ()               # words other modules look for: ("rackmount",)
     proper: bool = False             # the label starts with a name: "Docker host"
     name_from: str = ""              # a field whose value is the name: an IP's address
+    name_label: str = "Name"         # the name's label: "Name or hostname" for what has one
     inactive: tuple = ("retired",)   # statuses that need no reminders
     check: Callable | None = None    # check(entity, detail): rules across fields
     overview: Callable | None = None # overview(entity) -> (html above, html below) the Overview

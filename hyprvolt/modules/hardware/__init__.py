@@ -77,6 +77,8 @@ PERIPHERAL = '<rect x="3" y="8" width="18" height="9" rx="1.2"/><path d="M6.5 11
 NET = ("addressable", "cabled", "supplied")
 RACK = ("rackmount",) + NET
 HOST = ("host", "tls")
+#: The name of what answers on the network, as it is usually called by it.
+HOSTNAME = "Name or hostname"
 
 
 KINDS = ("server", "network_device", "firewall", "access_point", "ups", "nas", "workstation", "printer",
@@ -88,9 +90,10 @@ def _extension(m):
     m.add_column("hardware_details", "extension", "VARCHAR(20)")
 
 
-def hardware(key, label, plural, icon, specs=(), traits=()):
+def hardware(key, label, plural, icon, specs=(), traits=(), name_label=HOSTNAME):
     # Any device can be made another kind: a server recorded as a NAS.
     return EntityType(key, label, plural, detail=HardwareDetail, statuses=STATUSES, icon=icon, traits=traits,
+                      name_label=name_label,
                       inactive=views.GONE, becomes=tuple(k for k in KINDS if k != key),
                       fields=IDENTITY + tuple(specs) + PURCHASE)
 
@@ -190,7 +193,8 @@ module = Module(
             Field("assigned_to", "Used by", list=True, group="Specs"),
             Field("extension", "Extension", list=True, card=True, group="Specs", help="The number it rings: 104."),
             FIRMWARE, POWER)),
-        hardware("peripheral", "Peripheral", "Peripherals", PERIPHERAL, traits=RACK, specs=(
+        # A monitor or a KVM has no hostname.
+        hardware("peripheral", "Peripheral", "Peripherals", PERIPHERAL, traits=RACK, name_label="Name", specs=(
             Field("category", "What it is", list=True, group="Specs",
                   help="A monitor, a KVM switch, a PDU, a dock."), POWER)),
     ),

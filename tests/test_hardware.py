@@ -36,6 +36,16 @@ def test_every_type_has_a_form(client, h, admin):
         assert ('name="s.rack.rack_id"' in form) == (key not in ("access_point", "workstation", "printer", "ip_phone")), key
 
 
+def test_what_answers_on_the_network_is_named_or_hostnamed(client, h, admin):
+    for key in ("server", "network_device", "ip_phone", "vm", "lxc", "hypervisor"):
+        assert '>Name or hostname <span class="req"' in client.get(f"/e/form?type={key}").data.decode(), key
+    for key in ("peripheral", "service", "container"):
+        assert '>Name <span class="req"' in client.get(f"/e/form?type={key}").data.decode(), key
+    client.post("/site-setup/site/rows", json={"values": {"name": "Home"}}, headers=h)
+    assert ">Name or hostname<" in client.get("/site-setup/endpoints").data.decode()
+    assert ">Name or hostname<" not in client.get("/site-setup/rooms").data.decode()
+
+
 def test_a_device_goes_in_a_rack_from_its_form(client, h, admin):
     site, building, room, rack = place(client, h)
     switch = make(client, h, "network_device", name="sw-core", location_id=room["id"], **{

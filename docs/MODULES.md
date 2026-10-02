@@ -127,6 +127,9 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
 - `name_from="address"` makes the record's name the shown value of one of
   its fields, and leaves the Name box out of the form: an IP address is
   named by its address.
+- `name_label` is what the Name box is called, in the form, the setup
+  guide, import and history: Hardware's and Virtual's machines use "Name or
+  hostname", and a guide step with any such kind uses it for its rows.
 - `check(entity, detail)` runs on every save after the fields are set, for
   rules that span fields or records: a gateway inside its subnet, a VLAN ID
   used once per network. It raises `Invalid` to refuse the save, and may

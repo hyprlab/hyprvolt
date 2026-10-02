@@ -12,7 +12,7 @@
   <div class="form-grid">
     {% if not etype.name_from %}
     <div class="field form-wide">
-      {{ head('ef-name', 'Name', 'What people call it. It is shown wherever the record appears, and search matches it first.', true) }}
+      {{ head('ef-name', etype.name_label, ('What people call it, or the hostname it answers to.' if etype.name_label != 'Name' else 'What people call it.') ~ ' It is shown wherever the record appears, and search matches it first.', true) }}
       <input id="ef-name" name="name" maxlength="200" required autocomplete="off" value="{{ entity.name if entity else name }}" autofocus aria-describedby="ef-name-help">
     </div>
     {% endif %}

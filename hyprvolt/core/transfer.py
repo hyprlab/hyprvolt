@@ -190,7 +190,7 @@ def targets(etype) -> list[tuple[str, str]]:
     """What a column can go into: (target, label)."""
     out = []
     if not etype.name_from:
-        out.append(("name", "Name"))
+        out.append(("name", etype.name_label))
     out += [("slug", "Slug"), ("status", "Status")]
     if etype.located_in != ():
         out.append(("location", "Location"))
