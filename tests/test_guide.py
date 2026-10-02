@@ -409,3 +409,17 @@ def test_a_server_ticked_as_running_a_hypervisor_makes_and_links_one(client, h, 
     got = change(client, h, "servers", srv["id"], "s.hypervisor.on", False, site["id"])
     assert [e["name"] for e in entities(client, "hypervisor")] == ["nas1"]
     assert got["notices"] == ["Deleted the hypervisor srv1."]
+
+
+def test_rows_are_grouped_by_kind_in_the_kinds_order(client, h, admin):
+    client.post("/site-setup/site/rows", json={"values": {"name": "Home"}}, headers=h)
+    for kind, name in (("3", "a-switch"), ("0", "z-modem"), ("3", "b-switch"), ("4", "ap1")):
+        resp = client.post("/site-setup/gear/rows", json={"values": {"_kind": kind, "name": name}}, headers=h)
+        assert resp.status_code == 200, resp.get_json()
+    page = client.get("/site-setup/gear").data.decode()
+    order = [page.index(s) for s in ('guide-kind">Modems<', 'data-name="z-modem"', 'guide-kind">Switches<',
+                                     'data-name="a-switch"', 'data-name="b-switch"', 'guide-kind">Access points<',
+                                     'data-name="ap1"', 'guide-kind">Add another<', "data-row-new")]
+    assert order == sorted(order)
+    # A step that isn't grouped has no headings.
+    assert "guide-kind" not in client.get("/site-setup/guests").data.decode()

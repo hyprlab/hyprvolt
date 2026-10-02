@@ -223,7 +223,7 @@ module = Module(
                   "internet comes in, with the modem and the router or firewall, then add your switches, access "
                   "points, extenders, MoCA adapters and patch panels.", 60,
                   group="Equipment",
-                  help=SETUP_HELP["gear"], plan="network gear",
+                  help=SETUP_HELP["gear"], plan="network gear", grouped=True,
                   kinds=(SetupKind("Modem", "network_device", {"f.kind": "modem"}),
                          SetupKind("Router", "network_device", {"f.kind": "router"}),
                          SetupKind("Firewall", "firewall"),
@@ -239,14 +239,15 @@ module = Module(
                                      kinds=("Modem", "Router", "Firewall")),
                           SetupField("s.bridge.other", "Other end", kinds=("Wireless bridge",)),
                           SetupField("s.networks.list", "Networks", kind="multi", newline=True,
-                                     kinds=("Modem", "Router", "Firewall", "Switch")),
+                                     kinds=("Modem", "Router", "Firewall", "Switch"),
+                                     placeholder="None recorded yet: add them in the VLANs and Subnets steps."),
                           SetupField("s.wifi.list", "Wireless networks", kind="multi", newline=True,
                                      kinds=("Modem", "Router", "Access point", "Wireless extender",
                                             "Wireless bridge")))),
         SetupStep("servers", "Servers and storage", "Physical machines that store and serve data. A server "
                   "that runs virtual machines is recorded here as hardware; its hypervisor is added in a later "
                   "step.", 70, group="Equipment",
-                  help=SETUP_HELP["servers"], plan="servers, storage",
+                  help=SETUP_HELP["servers"], plan="servers, storage", grouped=True,
                   kinds=(SetupKind("Server", "server"), SetupKind("NAS", "nas")),
                   fields=(SetupField("name", placeholder="srv1"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11",
@@ -261,7 +262,7 @@ module = Module(
                                      shown_when=("s.hypervisor.on", "1")))),
         SetupStep("endpoints", "Endpoints", "What people use at the edge of the network: computers, printers, "
                   "phones, cameras and other devices. Add them all here, one row each.", 100, group="Endpoints",
-                  help=SETUP_HELP["endpoints"], plan="endpoints",
+                  help=SETUP_HELP["endpoints"], plan="endpoints", grouped=True,
                   kinds=(SetupKind("Workstation", "workstation"), SetupKind("Printer", "printer"),
                          SetupKind("IP phone", "ip_phone"), SetupKind("IP camera", "ip_camera"),
                          SetupKind("Peripheral", "peripheral")),
@@ -275,7 +276,8 @@ module = Module(
                   fields=(SetupField("name", placeholder="ups1"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("f.capacity_va"), SetupField("f.runtime_min"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.10.30"),
-                          SetupField("s.powers.list", "Powers", kind="multi", newline=True))),
+                          SetupField("s.powers.list", "Powers", kind="multi", newline=True,
+                                     placeholder="No equipment recorded yet: add it in the steps before."))),
     ),
     seed=demo.seed,
 )

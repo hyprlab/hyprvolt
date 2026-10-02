@@ -386,7 +386,16 @@ def rows_of(step, cols, scope) -> list[dict]:
     if step.save is not None:
         return list(step.rows(scope)) if step.rows else []
     found = ([scope] if scope is not None else []) if step.scope else _found(step, scope)
-    return [_row(step, cols, e) for e in found]
+    rows = [_row(step, cols, e) for e in found]
+    kinds = _kinds(step)
+    if step.grouped and len(kinds) > 1:
+        # Under a heading for each kind, in the kinds' order: modems before
+        # routers before switches.
+        for r in rows:
+            r["group"] = kinds[int(r["values"].get("_kind") or 0)].heading()
+        order = {k.heading(): i for i, k in enumerate(kinds)}
+        rows.sort(key=lambda r: order[r["group"]])
+    return rows
 
 
 def _truthy(value) -> bool:

@@ -34,6 +34,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- In the setup guide's Network gear, Servers and storage, and Endpoints steps, the rows are grouped under a heading for each kind: modems, routers, firewalls, switches, access points and so on
 - Devices and machines on the network (servers, network gear, firewalls, access points, UPSes, NAS, workstations, printers, IP phones, IP cameras, hypervisors, virtual machines and LXC containers) call their name Name or hostname, in their form, the setup guide, import and history
 - In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - A hypervisor given the IP address recorded on the server it runs on takes it, with a message saying it moved, instead of refusing it. The setup guide's Servers and storage and Hypervisors help explains which address goes where (the management address on the hypervisor, the iDRAC, iLO or IPMI address on the server), and the Hypervisors step's column is now Management IP

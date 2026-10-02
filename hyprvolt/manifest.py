@@ -149,6 +149,16 @@ class SetupKind:
     label: str
     type: str
     values: dict = field(default_factory=dict)
+    plural: str = ""                 # its heading in a grouped step; made from the label if empty
+
+    def heading(self) -> str:
+        """The kind's rows' heading: "Switches", "Access points", "NAS"."""
+        if self.plural:
+            return self.plural
+        last = self.label.rsplit(" ", 1)[-1]
+        if last.isupper():
+            return self.label
+        return self.label + ("es" if self.label.endswith(("ch", "sh", "s", "x")) else "s")
 
 
 @dataclass(frozen=True)
@@ -163,7 +173,7 @@ class SetupField:
     label: str = ""
     kind: str = "text"               # text, number or select, where not from a Field; multi: a
                                      # section's choice of several, ticked (wireless networks)
-    placeholder: str = ""
+    placeholder: str = ""            # a multi's: what it says when there is nothing to tick
     types: tuple = ()
     choices: Callable | None = None
     newline: bool = False            # starts a new line of the row: download and upload, then the IP
@@ -205,6 +215,7 @@ class SetupStep:
     kinds: tuple = ()
     scope: bool = False
     tree: bool = False               # records that hold each other (buildings, rooms) as a tree
+    grouped: bool = False            # rows under a heading for each kind, in the kinds' order
     extra: Callable | None = None    # extra(scope) -> HTML above the rows: another way to fill the step
                                      # (Services' Import from Homepage)
     save: Callable | None = None

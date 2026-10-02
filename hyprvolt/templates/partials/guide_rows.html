@@ -52,7 +52,7 @@
   {% elif c.kind == 'multi' %}
   <div class="field guide-multi"{{ follows }}><span class="field-label">{{ c.label }}</span>
     {{ multi(c.name, v, c.choices, label=c.label, disabled=r and c.name in r.absent,
-             empty='None recorded yet: add them in the ' ~ c.label ~ ' step.') }}</div>
+             empty=c.placeholder or 'None recorded yet: add them in the ' ~ c.label ~ ' step.') }}</div>
   {% elif c.kind == 'check' %}
   <label class="check guide-check"{{ follows }}><input type="checkbox" name="{{ c.name }}" value="1" {{ 'checked' if v }} {{ 'disabled' if r and c.name in r.absent }}
     {%- if c.confirm_off %} data-confirm-off="{{ c.confirm_off[0] }}" data-confirm-text="{{ c.confirm_off[1] }}"{% endif %}
@@ -69,6 +69,9 @@
   {# Each row its own form, so a choice of radios (Dynamic or Static) is its
      own in every row, not one across the page. #}
   {% for r in rows %}
+  {% if r.group and (loop.first or loop.previtem.group != r.group) %}
+  <p class="kicker guide-kind">{{ r.group }}</p>
+  {% endif %}
   <form class="guide-row-form" data-row-form novalidate>
   <fieldset class="guide-row is-collapsed" data-row data-row-id="{{ r.id }}" data-name="{{ r.label }}"
             data-update="{{ url_for('guide.row_update', key=step.key, row_id=r.id, **site) }}"
@@ -92,6 +95,7 @@
   </form>
   {% endfor %}
   {% if new %}
+  {% if rows and rows[0].group %}<p class="kicker guide-kind">Add another</p>{% endif %}
   <form class="guide-row-form" data-row-form novalidate>
   <fieldset class="guide-row guide-row--new" data-row-new>
     <legend class="visually-hidden">A new one</legend>

@@ -303,6 +303,10 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
   its IP address switch, then the static fields.
 - `scope=True` marks the step whose record the steps after it are about
   (the site). Only Locations has one.
+- `grouped=True` puts a step's rows under a heading for each of its kinds,
+  in the kinds' order: Network gear lists modems, then routers, firewalls
+  and switches. The heading is the kind's label made plural ("Switches",
+  "NAS"), or its `plural`.
 - `tree=True` shows the step's records as a tree under the site instead of
   rows, each inside the place it is in (by the kinds' `located_in`), added,
   dragged to another level and deleted in place, each change saved at once
