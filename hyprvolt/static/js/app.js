@@ -1863,6 +1863,53 @@
   }, true);
   window.addEventListener("resize", function () { fitDiagrams(document); });
 
+  // [data-depmap]: the dependency diagram, whose records fold their branch
+  // away with [data-fold] (a "D:12" key) and open it again, and whose
+  // [data-fold-set] folds those listed (Collapse all) or none (Expand all).
+  // The server draws it again each time. The folds last while the record is
+  // open: the sheet sends them when it draws itself again, and they are
+  // forgotten when it closes or another record opens.
+  var depFolds = { id: null, keys: "" };
+  function foldQuery(id) {
+    return depFolds.id === String(id) && depFolds.keys ? "&fold=" + encodeURIComponent(depFolds.keys) : "";
+  }
+  function foldDiagram(map, keys, focusKey) {
+    var id = map.getAttribute("data-depmap");
+    depFolds = { id: id, keys: keys };
+    fetchHTML("/e/" + id + "/depmap?fold=" + encodeURIComponent(keys)).then(function (html) {
+      var box = document.createElement("div");
+      box.innerHTML = html;
+      var fresh = box.querySelector("[data-depmap]");
+      if (!fresh || !map.isConnected) return;
+      map.replaceWith(fresh);
+      fitDiagrams(fresh);
+      var again = (focusKey && fresh.querySelector('[data-fold="' + focusKey + '"]')) || fresh.querySelector("[data-fold-set]");
+      if (again) again.focus();
+    }).catch(toastError);
+  }
+  function foldFrom(el) {
+    var map = el.closest("[data-depmap]");
+    if (!map) return;
+    if (el.hasAttribute("data-fold-set")) { foldDiagram(map, el.getAttribute("data-fold-set")); return; }
+    var key = el.getAttribute("data-fold");
+    var keys = (map.getAttribute("data-folded") || "").split(",").filter(Boolean);
+    var at = keys.indexOf(key);
+    if (at === -1) keys.push(key); else keys.splice(at, 1);
+    foldDiagram(map, keys.join(","), key);
+  }
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest && e.target.closest("[data-depmap] [data-fold], [data-depmap] [data-fold-set]");
+    if (!el) return;
+    e.preventDefault();
+    foldFrom(el);
+  });
+  document.addEventListener("keydown", function (e) {
+    var el = e.target.closest && e.target.closest("[data-depmap] [data-fold]");
+    if (!el || (e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault();
+    foldFrom(el);
+  });
+
   // [data-views]: a choice of how to show something, remembered per browser.
   var VIEWS_KEY = "app-views";
   function storedViews() {
@@ -2157,7 +2204,8 @@
                            : !sheet.open || pos < 0 ? "new"
                            : current && current.id === id ? "replace" : "push");
     var before = sheet.scrollTop;
-    return fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview")).then(function (html) {
+    if (depFolds.id !== String(id)) depFolds = { id: null, keys: "" };
+    return fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview") + foldQuery(id)).then(function (html) {
       sheetArticle.innerHTML = html;
       applyViews(sheetArticle);
       var root = sheetArticle.querySelector(".sheet-content");
@@ -2349,6 +2397,7 @@
   if (sheet) {
     sheet.addEventListener("close", function () {
       current = null;
+      depFolds = { id: null, keys: "" };      // a record opens unfolded
       if (leaving === "closing") {
         leaving = null;         // Back closed it: the address has already moved
         pos = -1;
@@ -2557,7 +2606,7 @@
   }
   function refreshLive(id) {
     if (!current || current.id !== id) return;
-    fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(current.tab)).then(function (html) {
+    fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(current.tab) + foldQuery(id)).then(function (html) {
       if (!current || current.id !== id) return;
       var fresh = document.createElement("div");
       fresh.innerHTML = html;

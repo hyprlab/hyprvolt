@@ -147,9 +147,25 @@ def relationships_tab(entity: Entity) -> str:
     dependents = relations.walk(entity, "dependents")
     needs = relations.walk(entity, "dependencies")
     return render_template("sheet/relationships.html", entity=entity, grouped=grouped, derived=derived, kinds=kinds,
-                           diagram=Markup(depmap.draw(entity, needs, dependents)),
+                           diagram=Markup(depmap.draw(entity, needs, dependents, _folded())),
                            dependents=dependents, needs=needs,
                            n_dependents=relations.count(dependents), n_needs=relations.count(needs))
+
+
+def _folded() -> set[str]:
+    """The diagram's folded branches, "D:12,U:5", which app.js sends while
+    the record is open."""
+    return {k for k in (request.args.get("fold") or "").split(",") if k[:2] in ("D:", "U:") and k[2:].isdigit()}
+
+
+@bp.route("/e/<int:entity_id>/depmap")
+@role("viewer")
+def dependency_map(entity_id):
+    """The dependency diagram alone, drawn again with ``fold``'s branches
+    folded or opened."""
+    entity = entity_or_404(entity_id, deleted_ok=True)
+    return depmap.draw(entity, relations.walk(entity, "dependencies"), relations.walk(entity, "dependents"),
+                       _folded())
 
 
 def attachments_tab(entity: Entity) -> str:

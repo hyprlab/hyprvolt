@@ -582,7 +582,14 @@ opens as a drawing, and List and Diagram switch between that and two nested
 lists. In the drawing, the record sits in the middle, what it needs above
 it and what breaks below it, a row for each step further away. A record
 reached two ways is one box with two lines into it, and a loop is a dashed
-line. Any box opens its record. The choice is remembered in the browser.
+line. Any box opens its record. A record with more hanging from it has a −
+on the edge its branch leaves from (below it under the record, above it over
+it): choosing it, or Enter on it, folds the branch away and draws the rest
+again closer together, with a +N in its place saying how many records it
+hides, and choosing that shows them again. Collapse all, beside the zoom
+buttons, folds everything past the records next to this one, and Expand all
+opens it all again. The folds last while the record is open, through edits
+to it, and it opens unfolded next time. The choice is remembered in the browser.
 
 Every diagram (this one, the Neighborhood tab and the network diagram)
 opens with all of it showing. −, Fit and + above it zoom it, as does

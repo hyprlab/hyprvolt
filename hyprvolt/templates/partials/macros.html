@@ -43,10 +43,12 @@
 {# A server-drawn diagram in its zoomable frame (app.js, "Diagram zoom"): it
    opens fitted so all of it shows, and −, Fit and + (or Ctrl/⌘ and the
    wheel) zoom it. Call it with the <svg> inside:
-   {% call zoom_frame() %}<svg class="diagram">…</svg>{% endcall %} #}
-{% macro zoom_frame() -%}
+   {% call zoom_frame() %}<svg class="diagram">…</svg>{% endcall %}
+   ``tools`` is markup for more buttons before the zoom's. #}
+{% macro zoom_frame(tools='') -%}
 <div class="diagram-frame" data-zoom>
   <div class="diagram-tools" role="group" aria-label="Zoom">
+    {{ tools }}
     <button type="button" class="iconbtn iconbtn--sm" data-zoom-by="-1" aria-label="Zoom out" title="Zoom out">
       <svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
     <button type="button" class="btn btn--xs btn--ghost" data-zoom-fit title="Show all of it">Fit</button>

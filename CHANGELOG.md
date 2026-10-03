@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- The dependency diagram in a record's Relationships tab folds: the − on a record hides what hangs from it and draws the rest again, a +N in its place saying how many it hides, and Collapse all shows only the records next to this one. The folds last while the record is open
 - Cables count as dependencies: a device needs the network gear it is cabled to (through any patch panels), and gear the gear nearer the internet, so a switch's What breaks lists everything plugged into it and all that runs on those, and a maintenance window on it lists them under Also goes down. A UPS or PDU cabled to the network is managed over it and takes nothing down with the switch. A device's Relationships tab lists what it is cabled to, read-only, under Cabled to
 - Help, from the ? button at the foot of the sidebar or the ? key: a window like Settings that explains how records connect (places, links and cables), the difference between a link and a cable, which links carry a dependency, how What breaks is worked out, networks, power, records and the keyboard
 - The setup guide's Cables step draws the network diagram below the cables once there are any, and draws it again as each cable is added or deleted
