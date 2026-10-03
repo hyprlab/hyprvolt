@@ -1682,6 +1682,12 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .guide-row-summary { flex: 1; min-width: 0; font-size: 13.5px; color: var(--muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A row with a title of its own (a cable's two ends) gives it the room, and
+   its badge (the cable's label) lines up down the list. */
+.guide-row-title--full { flex: 0 1 auto; max-width: none; }
+.guide-row-badge { flex: none; min-width: 64px; max-width: 30%; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; text-align: center; color: var(--ink); }
+.guide-row-badge.is-empty { color: var(--faint); font-family: inherit; }
 .guide-row.is-collapsed { padding-block: 10px; }
 .guide-row.is-collapsed .guide-row-body { display: none; }
 .guide-row:not(.is-collapsed) .guide-row-summary { visibility: hidden; }

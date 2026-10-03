@@ -74,6 +74,7 @@
   {% endif %}
   <form class="guide-row-form" data-row-form novalidate>
   <fieldset class="guide-row is-collapsed" data-row data-row-id="{{ r.id }}" data-name="{{ r.label }}"
+            {%- if r.in_title %} data-in-title="{{ r.in_title|join(' ') }}"{% endif %}
             data-update="{{ url_for('guide.row_update', key=step.key, row_id=r.id, **site) }}"
             data-delete="{{ url_for('guide.row_delete', key=step.key, row_id=r.id, **site) }}">
     <legend class="visually-hidden">{{ r.label }}</legend>
@@ -81,7 +82,13 @@
       <button type="button" class="guide-row-toggle" data-row-toggle aria-expanded="false"
               aria-controls="{{ step.key }}-row-{{ r.id }}" title="Show or change it">
         <svg class="guide-row-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-        <span class="guide-row-title" data-row-title>{{ r.label }}</span>
+        {#- A row that isn't a record can fold to its own title and a badge
+            (a cable: its label, then its two ends), the columns those show
+            left out of the summary beside them. #}
+        {%- if r.badge %}{% set b = r['values'].get(r.badge) %}
+        <code class="slug guide-row-badge{{ ' is-empty' if not b }}" data-row-badge="{{ r.badge }}">{{ b or 'No label' }}</code>
+        {%- endif %}
+        <span class="guide-row-title{{ ' guide-row-title--full' if r.title }}" data-row-title>{{ r.title or r.label }}</span>
         <span class="guide-row-summary" data-row-summary></span>
       </button>
       <button type="button" class="iconbtn iconbtn--sm iconbtn--danger guide-remove" data-row-delete

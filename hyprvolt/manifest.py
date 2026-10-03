@@ -197,7 +197,9 @@ class SetupStep:
     the endpoints. Each row is a record of one of ``kinds``, edited and saved
     in place; or, with ``save``, ``save(values, scope, user)`` makes what the
     step is for (a cable), ``rows(scope)`` lists what is there as rows
-    ({"id", "label", "values", "text", "locked"}: locked columns show the
+    ({"id", "label", "values", "text", "locked"}, and to fold to something
+    other than the label, "title", "badge" (a column shown before it) and
+    "in_title" (columns left out of the summary): locked columns show the
     text instead of a control), ``update(id, values, user)`` changes one and
     ``delete(id)`` deletes one, returning its Undo ({"url", "body"}). ``scope``: the step
     chooses the site the steps after it are about. ``tree``: instead of rows,

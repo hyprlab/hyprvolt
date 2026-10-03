@@ -204,3 +204,17 @@ def test_a_cable_in_the_step_can_be_moved_to_another_end(client, h, admin):
     post(client, h, "/network/cables", device_id=pc["id"], to=f"port:{ports['Port 1']}")
     error = post(client, h, url, 400, name="to", value=f"port:{ports['Port 1']}")["error"]
     assert error == "sw1 Port 1 already has a cable, to pc1."
+
+
+def test_a_cable_row_folds_to_its_label_and_its_ends_in_label_order(client, h, admin):
+    client.post("/site-setup/site/rows", json={"values": {"name": "Home"}}, headers=h)
+    sw = make(client, h, "network_device", name="sw1", **{"f.kind": "switch"})
+    for name, label in (("pc-a", "20-10"), ("pc-b", "20-2"), ("pc-c", "")):
+        pc = make(client, h, "workstation", name=name)
+        post(client, h, "/network/cables", device_id=pc["id"], other_device_id=sw["id"], label=label)
+    page = client.get("/site-setup/cables").data.decode()
+    assert '<code class="slug guide-row-badge" data-row-badge="label">20-2</code>' in page
+    assert '<span class="guide-row-title guide-row-title--full" data-row-title>pc-b → sw1</span>' in page
+    assert '<code class="slug guide-row-badge is-empty" data-row-badge="label">No label</code>' in page
+    assert 'data-in-title="from to label"' in page
+    assert page.index("pc-b → sw1") < page.index("pc-a → sw1") < page.index("pc-c → sw1")

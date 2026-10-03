@@ -1552,7 +1552,12 @@
   function summarizeRow(row) {
     var body = row.querySelector(".guide-row-body"), out = row.querySelector("[data-row-summary]");
     if (!body || !out) return;
-    out.textContent = Array.prototype.map.call(body.children, fieldText).filter(Boolean).join(" · ");
+    // What the row's title and badge show already isn't said again.
+    var shown = (row.getAttribute("data-in-title") || "").split(" ");
+    out.textContent = Array.prototype.filter.call(body.children, function (item) {
+      var field = item.querySelector("[name]");
+      return !field || shown.indexOf(field.name) === -1;
+    }).map(fieldText).filter(Boolean).join(" · ");
   }
   function setRowOpen(row, open) {
     row.classList.toggle("is-collapsed", !open);
@@ -1668,6 +1673,11 @@
       // What was kept, as the server wrote it, unless the field is being typed in.
       if (data && data.value !== undefined && data.value !== null && el.type === "text" && document.activeElement !== el) {
         el.value = data.value;
+      }
+      var badge = row.querySelector("[data-row-badge]");
+      if (badge && badge.getAttribute("data-row-badge") === el.name) {
+        badge.textContent = el.value.trim() || "No label";
+        badge.classList.toggle("is-empty", !el.value.trim());
       }
       if (el.name === "name") {
         row.setAttribute("data-name", el.value.trim());

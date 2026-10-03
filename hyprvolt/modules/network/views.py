@@ -1,4 +1,5 @@
 """Network's tabs, JSON routes, sidebar filters and dashboard widget."""
+import re
 
 from flask import Blueprint, abort, jsonify, render_template, request
 
@@ -445,6 +446,14 @@ def _with_end(groups: list[dict], port: Port) -> list[dict]:
     return out
 
 
+def _label_order(cable: Cable) -> tuple:
+    """Cables in label order, numbers as numbers (20-2 before 20-10), the
+    unlabeled last, then by their ends."""
+    bits = tuple((0, int(b), "") if b.isdigit() else (1, 0, b.lower())
+                 for b in re.split(r"(\d+)", cable.label) if b)
+    return (not cable.label, bits, cable.a.label.lower(), cable.b.label.lower())
+
+
 def setup_rows(scope) -> list[dict]:
     """Every cable as a row: either end to change, and its label. Each
     row's choices are the free ends and its own."""
@@ -452,10 +461,12 @@ def setup_rows(scope) -> list[dict]:
     eager = (joinedload(Cable.a).joinedload(Port.device), joinedload(Cable.b).joinedload(Port.device))
     for c in Cable.query.options(*eager):
         if c.a.device.deleted_at is None and c.b.device.deleted_at is None:
+            # Folded: its label, then its two ends.
             out.append({"id": c.id, "label": f"the cable from {c.a.label} to {c.b.label}",
+                        "title": f"{c.a.label} → {c.b.label}", "badge": "label", "in_title": ("from", "to", "label"),
                         "values": {"from": _end_value(c.a), "to": _end_value(c.b), "label": c.label},
                         "choices": {"from": _with_end(free, c.a), "to": _with_end(free, c.b)},
-                        "text": {}, "locked": (), "absent": (), "sort": (c.a.label.lower(), c.b.label.lower())})
+                        "text": {}, "locked": (), "absent": (), "sort": _label_order(c)})
     return sorted(out, key=lambda r: r["sort"])
 
 

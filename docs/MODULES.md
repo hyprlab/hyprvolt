@@ -321,7 +321,10 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
 - A step that makes something other than records (Network's cables) has
   `save(values, scope, user)` instead of `kinds`, `rows(scope)` listing what
   is there as rows (`{"id", "label", "values", "text", "locked"}`; a locked
-  column shows its text rather than a control), `update(id, values, user)`
+  column shows its text rather than a control; `"title"`, `"badge"` and
+  `"in_title"` fold a row to its own title after the badge column's value,
+  leaving those columns out of its summary, as a cable is its label, then
+  its two ends), `update(id, values, user)`
   and `delete(id)` (returning its Undo), and `SetupField(..., choices=fn)`
   for its choices.
 - `extra(scope)` returns HTML shown above a step's rows: another way to
