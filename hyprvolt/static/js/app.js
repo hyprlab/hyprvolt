@@ -1812,7 +1812,40 @@
     // Keep the point under the pointer (or the middle) where it was.
     p.box.scrollLeft = px * scale - fx;
     p.box.scrollTop = py * scale - fy;
+    placePins(frame);
   }
+  // [data-pin] labels name the two sides of the line at the svg's
+  // data-divider: "above" just over it, "below" just under it, at the left of
+  // what shows. A box on the line (data-divider-clear: its left and right
+  // edges and half its height) pushes a label it would cover out past it.
+  // Scrolled past the line, the side in view keeps its label at the edge it
+  // went out by; the other side's is hidden.
+  function placePins(frame) {
+    var p = zoomParts(frame), pins = frame.querySelectorAll("[data-pin]");
+    if (!p || !pins.length || !p.svg.hasAttribute("data-divider")) return;
+    var scale = p.svg.getBoundingClientRect().width / p.natural;
+    var top = p.box.offsetTop + p.box.clientTop, high = p.box.clientHeight, left = 8;
+    var line = parseFloat(p.svg.getAttribute("data-divider")) * scale - p.box.scrollTop;
+    var clear = (p.svg.getAttribute("data-divider-clear") || "").split(" ").map(parseFloat);
+    var wide = Math.max.apply(null, Array.prototype.map.call(pins, function (pin) { return pin.offsetWidth; }));
+    // Both move together, so they stay the same distance from the line.
+    var covers = clear.length === 3 && clear[0] * scale - p.box.scrollLeft < left + wide + 8 &&
+                 clear[1] * scale - p.box.scrollLeft > left;
+    pins.forEach(function (pin) {
+      var h = pin.offsetHeight, gap = 6 + (covers ? clear[2] * scale : 0), edge = 6;
+      var above = pin.getAttribute("data-pin") === "above";
+      var y = above ? line - gap - h : line + gap;
+      var seen = above ? line > h + edge : line < high - h - edge;
+      y = Math.max(edge, Math.min(high - h - edge, y));
+      pin.style.top = (top + y) + "px";
+      pin.style.left = (p.box.offsetLeft + p.box.clientLeft + left) + "px";
+      pin.classList.toggle("is-placed", seen && scale > 0);
+    });
+  }
+  document.addEventListener("scroll", function (e) {
+    var box = e.target.closest && e.target.closest(".diagram-scroll");
+    if (box) placePins(box.closest("[data-zoom]"));
+  }, true);
   function fitDiagrams(root) {
     root.querySelectorAll("[data-zoom]").forEach(function (frame) {
       if (frame.offsetParent !== null && !frame.classList.contains("is-zoomed")) setZoom(frame, 0);

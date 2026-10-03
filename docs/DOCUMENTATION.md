@@ -580,7 +580,11 @@ ports, any patch panels and the cable labels; the cable is changed in the
 Cabling tab. The form for a new link opens from Add link. It
 opens as a drawing, and List and Diagram switch between that and two nested
 lists. In the drawing, the record sits in the middle, what it needs above
-it and what breaks below it, a row for each step further away. A record
+it and what breaks below it, a row for each step further away. A dashed
+line through the record divides the two, What it needs named just above it
+and What breaks if this goes down just below; the names keep their size and
+stay in sight however far the drawing is zoomed or scrolled, at the edge
+the line went out by once it is out of view. A record
 reached two ways is one box with two lines into it, and a loop is a dashed
 line. Any box opens its record. A record with more hanging from it has a −
 on the edge its branch leaves from (below it under the record, above it over

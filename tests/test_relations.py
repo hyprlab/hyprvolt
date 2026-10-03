@@ -125,6 +125,8 @@ def test_the_dependency_view_switches_to_a_diagram(client, h, admin):
     assert '<div data-view="list" hidden>' in tab and 'value="diagram" checked' in tab
     drawing = tab[tab.index('data-view="diagram"'):]
     assert "What it needs" in drawing and "What breaks if this goes down" in drawing
+    # A dashed line through the record divides the sides; their names are pinned beside it in the page.
+    assert 'class="diagram-divider"' in drawing and 'data-pin="above"' in drawing and 'data-pin="below"' in drawing
     # One box each, web reached both from pve1 and through db.
     for name in ("srv1", "pve1", "web", "db"):
         assert drawing.count(f">{name}</text>") == 1, name

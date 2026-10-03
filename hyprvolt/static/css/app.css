@@ -1245,7 +1245,6 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 .pickbtn.is-picked { color: var(--ink); font-weight: 600; }
 /* The dependency view's List and Diagram switch. */
 .deps-switch { display: flex; margin: 26px 0 12px; }
-.diagram-head { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; fill: var(--muted); }
 .deps { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin: 8px 0 10px; }
 @media (max-width: 700px) { .deps { grid-template-columns: 1fr; } }
 .deptree { list-style: none; margin: 0; padding: 0; font-size: 14px; }
@@ -1807,6 +1806,18 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 .diagram-tools .iconbtn[disabled] { opacity: .35; cursor: default; background: none; }
 .diagram-frame.is-zoomed .diagram-scroll { max-height: min(72vh, 720px); cursor: grab; }
 .diagram-scroll.is-dragging { cursor: grabbing; user-select: none; }
+/* A dashed line across a diagram, and the names of its two sides pinned in
+   the page beside it (app.js, placePins): their size and place stay put
+   however far the drawing is zoomed or scrolled. */
+.diagram-frame { position: relative; }
+.diagram-divider { fill: none; stroke: var(--line-strong); stroke-width: 1.2; stroke-dasharray: 2 5; stroke-linecap: round; }
+.diagram-pin {
+  position: absolute; left: 9px; top: 0; z-index: 1; pointer-events: none; visibility: hidden;
+  padding: 2px 7px; border-radius: 6px; background: color-mix(in srgb, var(--surface) 88%, transparent);
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  white-space: nowrap;
+}
+.diagram-pin.is-placed { visibility: visible; }
 .diagram-node rect { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; transition: stroke .15s, fill .15s; }
 .diagram-node:hover rect, .diagram-node:focus-visible rect { stroke: var(--accent); fill: var(--wash); }
 .diagram-node:focus-visible { outline: none; }

@@ -44,8 +44,10 @@
    opens fitted so all of it shows, and −, Fit and + (or Ctrl/⌘ and the
    wheel) zoom it. Call it with the <svg> inside:
    {% call zoom_frame() %}<svg class="diagram">…</svg>{% endcall %}
-   ``tools`` is markup for more buttons before the zoom's. #}
-{% macro zoom_frame(tools='') -%}
+   ``tools`` is markup for more buttons before the zoom's; ``pinned``, for
+   [data-pin] labels over the drawing beside the line its svg's
+   data-divider (a y in its own units) draws: "above" or "below" it. #}
+{% macro zoom_frame(tools='', pinned='') -%}
 <div class="diagram-frame" data-zoom>
   <div class="diagram-tools" role="group" aria-label="Zoom">
     {{ tools }}
@@ -56,6 +58,7 @@
       <svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></button>
   </div>
   <div class="diagram-scroll">{{ caller() }}</div>
+  {{ pinned }}
 </div>
 {%- endmacro %}
 

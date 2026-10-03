@@ -13,7 +13,6 @@ from . import present, relations
 
 NODE_W, NODE_H = 164, 48
 MARGIN = 20
-HEAD = 28          # a band for a side's heading
 GAP_X = 24
 GAP_Y = 64         # between rows: room for the lines and their labels
 
@@ -106,20 +105,19 @@ def draw(entity, needs: list[dict], dependents: list[dict], folded=frozenset()) 
     widest = max([len(r) for r in list(up.values()) + list(down.values())] + [1])
     width = max(widest * NODE_W + (widest - 1) * GAP_X, 3 * NODE_W + 2 * GAP_X) + 2 * MARGIN
 
-    # Each row's top edge, with a heading band above each side.
-    tops, y, heads = {}, MARGIN, []
+    # Each row's top edge. A dashed line through the record divides the two
+    # sides; their names are pinned beside it in the page (app.js), so they
+    # stay readable however far it is zoomed or scrolled.
+    tops, y = {}, MARGIN
     if n_up:
-        heads.append(("What it needs", y + 14))
-        y += HEAD
         for depth in range(n_up, 0, -1):
             tops[("U", depth)] = y
             y += NODE_H + GAP_Y
     tops[("", 0)] = y
+    divider = y + NODE_H / 2
     y += NODE_H
     if n_down:
-        # The heading just under the record; the first row a line's length below.
-        heads.append(("What breaks if this goes down", y + 32))
-        y += HEAD + GAP_Y
+        y += GAP_Y
         for depth in range(1, n_down + 1):
             tops[("D", depth)] = y
             y += NODE_H + GAP_Y
@@ -207,7 +205,9 @@ def draw(entity, needs: list[dict], dependents: list[dict], folded=frozenset()) 
         x, y = boxes[(side, int(eid))]
         folds.append({"key": key, "x": x + NODE_W / 2, "y": y + (NODE_H if side == "D" else 0),
                       "hidden": hidden, "name": views[int(eid)].name, "side": side})
-    return render_template("sheet/depmap.html", entity=entity, nodes=nodes, links=links, heads=heads, folds=folds,
+    return render_template("sheet/depmap.html", entity=entity, nodes=nodes, links=links, folds=folds,
+                           divider=divider, above=bool(n_up), below=bool(n_down),
+                           record=(boxes[("", entity.id)][0], boxes[("", entity.id)][0] + NODE_W, NODE_H / 2),
                            every=every, folded=sorted(k for k, n in toggles.items() if n), state=sorted(folded),
                            width=width, height=height, w=NODE_W, h=NODE_H, margin=MARGIN,
                            truncated=_truncated(needs) or _truncated(dependents))
