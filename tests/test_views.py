@@ -84,6 +84,12 @@ def test_viewers_get_no_form_and_no_edit_buttons(client, h, admin, viewer):
     assert "linkform" not in sheet
 
 
+def test_the_link_form_waits_behind_add_link(client, h, admin):
+    g = make(client, h, name="Blue box")
+    sheet = client.get(f"/e/{g['id']}/sheet?tab=relationships").data.decode()
+    assert f'data-show="linkform-{g["id"]}"' in sheet and f'id="linkform-{g["id"]}" hidden' in sheet
+
+
 def test_a_deleted_record_shows_how_to_get_it_back(client, h, admin):
     g = make(client, h, name="Blue box")
     client.post(f"/api/entities/{g['id']}/delete", headers=h)

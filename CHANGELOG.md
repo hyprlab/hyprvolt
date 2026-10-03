@@ -37,6 +37,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- A record's Relationships tab keeps the form for a new link folded behind an Add link button, with Cancel to fold it away again
 - In the setup guide's Cables step, a folded cable reads as its label, then its two ends (1-01 AirPort-Kepler → LAN Switch), in label order, instead of repeating the ends twice
 - A cable in the setup guide's Cables step can be moved: either end is a choice in its row, offering the free ports and devices and its own, and the cable keeps its label, color and length
 - Choosing a cable's ends, in the setup guide's Cables step, Suggest cables and a device's Cabling tab, lists the devices grouped by kind (modems, routers, firewalls, switches and so on, then servers and endpoints), and then each device with its ports recorded

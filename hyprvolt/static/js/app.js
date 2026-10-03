@@ -973,6 +973,9 @@
   //   [data-fill='{"a": 1}']     sets fields of its form (or data-fill-form)
   //   [data-reveal="/url"]       posts to url and shows its value in the
   //                              element named by data-reveal-into; again hides it
+  //   [data-show="id"]           shows the hidden element with that id (a form
+  //                              folded behind an Add button) in its place;
+  //                              [data-hide="id"] folds it away again
   //   [data-copy="text"]         copies the text; [data-copy-url] posts first
   //                              and copies the answer's value
   //   input[data-autosubmit]     submits its form when it changes
@@ -1991,6 +1994,24 @@
           else pick.focus();
         }
       });
+      return;
+    }
+    var show = e.target.closest("[data-show], [data-hide]");
+    if (show) {
+      e.preventDefault();
+      var opening = show.hasAttribute("data-show");
+      var id = show.getAttribute(opening ? "data-show" : "data-hide");
+      var shown = document.getElementById(id);
+      if (!shown) return;
+      shown.hidden = !opening;
+      document.querySelectorAll('[data-show="' + id + '"]').forEach(function (b) { b.hidden = opening; });
+      if (opening) {
+        var first = shown.querySelector("select, input:not([type=hidden]), textarea, button");
+        if (first) first.focus();
+      } else {
+        var back = document.querySelector('[data-show="' + id + '"]');
+        if (back) back.focus();
+      }
       return;
     }
     var reveal = e.target.closest("[data-reveal]");

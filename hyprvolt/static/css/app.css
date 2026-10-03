@@ -1209,6 +1209,9 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
   margin: 20px 0 26px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
 }
 .linkform .form-error { grid-column: 1 / -1; }
+.linkform-actions { display: flex; gap: 8px; }
+.linkform-open { margin: 16px 0 22px; }
+.linkform-open svg { width: 16px; height: 16px; }
 @media (max-width: 700px) { .linkform { grid-template-columns: 1fr; } }
 /* A button that stands in for a field: it opens the palette to choose a record. */
 .pickbtn {

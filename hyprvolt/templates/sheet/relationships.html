@@ -26,11 +26,14 @@
   {% endfor %}
 </div>
 {% else %}
-<p class="hint">Not linked to anything yet.{% if current_user.can_edit %} Say what it runs on, depends on or connects to below.{% endif %}</p>
+<p class="hint">Not linked to anything yet.{% if current_user.can_edit %} Add a link to say what it runs on, depends on or connects to.{% endif %}</p>
 {% endif %}
 
 {% if current_user.can_edit %}
-<form class="linkform" data-api="/api/relationships" data-then="sheet" data-done="Linked">
+{# Folded behind Add link until it is wanted; Cancel folds it again. #}
+<button type="button" class="btn btn--ghost linkform-open" data-show="linkform-{{ entity.id }}">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add link</button>
+<form class="linkform" id="linkform-{{ entity.id }}" hidden data-api="/api/relationships" data-then="sheet" data-done="Linked">
   <input type="hidden" name="entity_id" value="{{ entity.id }}">
   <input type="hidden" name="direction" value="out">
   <input type="hidden" name="other_id" value="">
@@ -44,7 +47,10 @@
     </button>
   </div>
   <label class="field linkform-note"><span class="field-label">Note</span><input name="note" maxlength="300" placeholder="Optional"></label>
-  <button class="btn btn--primary" type="submit">Link</button>
+  <div class="linkform-actions">
+    <button class="btn btn--ghost" type="button" data-hide="linkform-{{ entity.id }}">Cancel</button>
+    <button class="btn btn--primary" type="submit">Link</button>
+  </div>
   <p class="form-error" hidden></p>
 </form>
 {% endif %}

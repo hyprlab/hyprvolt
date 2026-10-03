@@ -407,6 +407,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `input[data-autosubmit]` | Submits its form when it changes |
 | `select[data-go]` | Goes to the page its chosen option's value names |
 | `[data-print]` | Prints the page; print styles hide the shell |
+| `[data-show="id"]`, `[data-hide="id"]` | Shows the hidden element with that id in place of the button, and focuses its first field; `data-hide` hides it again and brings the button back (the Relationships tab's Add link) |
 | `[data-reveal="/url"]`, `data-reveal-into="id"` | Posts to the URL and shows the answer's `value` in that element, until a second click or 30 seconds (the vault's Show); the element's `data-mask` is what it shows otherwise |
 | `[data-copy="text"]`, `[data-copy-url="/url"]` | Copies the text, or posts to the URL and copies the answer's `value` |
 | `[data-autosave="/url"]` with `[data-save]` controls, `[data-save-group]`, `[data-prose]`, `data-live="key"` | Editing in place (the core's Overview uses it): a `[data-save]` control posts `{name: value}` to the container's URL when it changes, a `[data-save-group]` posts all of its fields together, and the parts marked `data-live` are redrawn from the server after a save. `[data-prose]` holds long text shown formatted until its `[data-prose-edit]` button |
