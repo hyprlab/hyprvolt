@@ -5,7 +5,7 @@
 {% call zoom_frame() %}
 <svg class="diagram diagram--fit" width="{{ width }}" height="{{ height }}" viewBox="0 0 {{ width }} {{ height }}" role="img" aria-label="{{ entity.name }} and what it is linked to">
   {% for side in (left, right) %}{% for n in side %}
-  <g class="diagram-link"><path d="{{ n.path }}"/>
+  <g class="diagram-link"><path class="diagram-link-hit" d="{{ n.path }}"/><path d="{{ n.path }}"/>
     <text x="{{ n.lx|round(1) }}" y="{{ n.ly|round(1) }}" text-anchor="{{ n.anchor }}">{{ n.label }}</text></g>
   {% endfor %}{% endfor %}
   {% for side in (left, right) %}{% for n in side %}

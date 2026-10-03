@@ -18,7 +18,7 @@
      data-divider="{{ divider }}" data-divider-clear="{{ record|join(' ') }}" aria-label="What {{ entity.name }} needs, and what breaks if it goes down">
   <path class="diagram-divider" d="M0,{{ divider }}H{{ width }}"/>
   {% for l in links %}
-  <g class="diagram-link{{ ' diagram-link--loose' if l.loop }}"><path d="{{ l.path }}"/>
+  <g class="diagram-link{{ ' diagram-link--loose' if l.loop }}"><path class="diagram-link-hit" d="{{ l.path }}"/><path d="{{ l.path }}"/>
     <text x="{{ l.lx|round(1) }}" y="{{ l.ly|round(1) }}" text-anchor="{{ l.anchor }}">{{ l.label }}</text></g>
   {% endfor %}
   {% for n in nodes %}

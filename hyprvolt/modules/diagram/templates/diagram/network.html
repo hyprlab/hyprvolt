@@ -8,7 +8,7 @@
   {% for e in edges %}
   <g class="diagram-link{{ ' diagram-link--loose' if not e.cabled }}{{ ' diagram-link--' ~ e.kind if e.kind }}">
     <title>{{ e.title(by_id) }}</title>
-    <path d="{{ e.path }}"/>
+    <path class="diagram-link-hit" d="{{ e.path }}"/><path d="{{ e.path }}"/>
     {% if e.vlans or e.via or e.coax %}<text x="{{ e.mid[0]|round(1) }}" y="{{ e.mid[1]|round(1) }}" text-anchor="middle">{{ e.vlans or ('via ' ~ e.via|join(', ') if e.via else 'over coax') }}</text>{% endif %}
   </g>
   {% endfor %}

@@ -1831,6 +1831,11 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 .diagram-link--loose path { stroke-dasharray: 5 4; }
 .diagram-link--wireless path { stroke-dasharray: 1.5 5; stroke-linecap: round; stroke-width: 2.4; }
 .diagram-link--internet path { stroke-width: 3; }
+/* An invisible wider copy of each line under it: what the pointer hovers,
+   the same 16 px on screen at any zoom. */
+.diagram-link path.diagram-link-hit, .diagram-link:hover path.diagram-link-hit {
+  stroke: transparent; stroke-width: 16; stroke-dasharray: none; vector-effect: non-scaling-stroke; pointer-events: stroke;
+}
 .diagram-link text { font-size: 10.5px; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 .diagram-legend { margin: 0 0 12px; max-width: 72ch; }
 /* A record's fold button on the edge its branch leaves from: − open, a
