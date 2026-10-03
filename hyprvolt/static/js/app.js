@@ -1590,6 +1590,7 @@
       var fresh = holder.querySelector("[data-rows]");
       box.replaceWith(fresh);
       initRows(fresh);
+      fitDiagrams(fresh);   // a step's diagram below its rows (the cables')
       if (then) then(fresh);
       return fresh;
     });

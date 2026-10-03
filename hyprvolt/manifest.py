@@ -223,6 +223,8 @@ class SetupStep:
     joined: Callable | None = None   # joined(entity) -> records shown in its row, not their own,
                                      # and deleted with it: a MoCA adapter's far end, in the pair's
     extra: Callable | None = None    # extra(scope) -> HTML above the rows: another way to fill the step
+    after: Callable | None = None    # after(scope) -> HTML below the rows, once there are any, drawn
+                                     # again with them: the cables' network diagram
                                      # (Services' Import from Homepage)
     save: Callable | None = None
     rows: Callable | None = None

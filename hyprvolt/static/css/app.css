@@ -1657,6 +1657,7 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 /* A grouped step's heading for each kind of row (SetupStep.grouped). */
 .guide-kind { margin: 12px 2px -2px; }
 .guide-kind:first-child { margin-top: 0; }
+.guide-after { margin-top: 18px; }
 .guide-row {
   display: flex; flex-direction: column; gap: 10px; margin: 0; min-width: 0;
   padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);

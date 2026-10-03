@@ -303,6 +303,8 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
   its IP address switch, then the static fields.
 - `scope=True` marks the step whose record the steps after it are about
   (the site). Only Locations has one.
+- `after=fn` puts the HTML `fn(scope)` returns below a step's rows once
+  there are any, drawn again with them: the Cables step's network diagram.
 - `joined=fn` shows the records `fn(entity)` gives in that entity's row
   rather than their own, and deletes them with it (one Undo brings all
   back): Hardware's MoCA pair is one row, the far adapter made and moved

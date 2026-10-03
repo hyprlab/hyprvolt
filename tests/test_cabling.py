@@ -165,3 +165,15 @@ def test_the_ends_to_choose_are_grouped_by_kind(client, h, admin):
     page = client.get("/site-setup/cables").data.decode().split("data-row-new")[1]
     groups = re.findall(r'<optgroup label="([^"]+)"', page.split('name="to"')[0])
     assert groups == ["Modems", "Switches", "Servers", "UPSes", "sw-core ports"]
+
+
+def test_the_cables_step_draws_the_network_once_there_are_cables(client, h, admin):
+    client.post("/site-setup/site/rows", json={"values": {"name": "Home"}}, headers=h)
+    sw = make(client, h, "network_device", name="sw1", **{"f.kind": "switch"})
+    pc = make(client, h, "workstation", name="pc1")
+    assert "The network so far" not in client.get("/site-setup/cables").data.decode()
+    post(client, h, "/network/cables", device_id=pc["id"], other_device_id=sw["id"])
+    page = client.get("/site-setup/cables").data.decode()
+    assert "The network so far" in page and 'aria-label="Network diagram"' in page and "data-zoom" in page
+    # Drawn again with the rows, as a cable is added or deleted.
+    assert 'aria-label="Network diagram"' in client.get("/site-setup/cables/rows").data.decode()

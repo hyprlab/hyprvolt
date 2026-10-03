@@ -13,6 +13,7 @@ and so is a device that already has a cable.
 """
 from flask import jsonify, render_template, request
 from flask_login import current_user
+from markupsafe import Markup
 
 from hyprvolt.core import guide, records
 from hyprvolt.core.fields import Invalid
@@ -306,6 +307,17 @@ def setup_extra(scope) -> str:
 def _site(form):
     site = records.live(int(form["site"])) if str(form.get("site") or "").isdigit() else None
     return site if site is not None and registry().type(site.type) in registry().location_types() else None
+
+
+def setup_after(scope) -> str:
+    """Below the Cables step's rows: the network diagram they draw, once
+    there are cables, when Diagram is on."""
+    reg = registry()
+    module = reg.module("diagram") if reg.is_enabled("diagram") else None
+    page = next((p for p in module.pages if p.key == "network"), None) if module is not None else None
+    if page is None:
+        return ""
+    return render_template("network/cabling_diagram.html", diagram=Markup(page.render()))
 
 
 @bp.route("/cables/label", methods=["POST"])

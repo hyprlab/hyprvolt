@@ -333,7 +333,7 @@ module = Module(
                   group="Endpoints",
                   help=SETUP_HELP["cables"], plan="cables",
                   save=views.setup_cable, rows=views.setup_rows, update=views.setup_update,
-                  delete=views.setup_delete, extra=cabling.setup_extra,
+                  delete=views.setup_delete, extra=cabling.setup_extra, after=cabling.setup_after,
                   fields=(SetupField("from", "From", choices=views.setup_ends),
                           SetupField("to", "To", choices=views.setup_ends),
                           SetupField("label", "Label", placeholder="Automatic"))),

@@ -495,7 +495,9 @@ def _new_hidden(step, cols) -> set:
 
 def _rows_html(step, scope) -> str:
     cols = columns(step, scope)
-    return render_template("partials/guide_rows.html", step=step, cols=cols, rows=rows_of(step, cols, scope),
+    rows = rows_of(step, cols, scope)
+    after = Markup(step.after(scope)) if step.after is not None and rows else ""
+    return render_template("partials/guide_rows.html", step=step, cols=cols, rows=rows, after=after,
                            scope=scope, new=not (step.scope and scope is not None), new_hidden=_new_hidden(step, cols),
                            site={"site": scope.id} if scope is not None else {})
 
