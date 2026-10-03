@@ -567,15 +567,15 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .req { color: var(--danger); }
 @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } .form-check { padding-top: 0; } }
 
-/* ————— Settings ————— */
+/* ————— Settings, and Help (.modal--rail) ————— */
 /* Two panes: a rail of sections on the left, styled like the app's own
    sidebar, and the chosen section on the right. The window has a fixed size,
    so moving between sections never resizes it; each pane scrolls on its own. */
-#settings-modal {
+.modal--rail {
   width: min(880px, calc(100vw - 32px));
   overflow: hidden;
 }
-#settings-modal[open] { display: flex; height: min(660px, calc(100dvh - 48px)); }
+.modal--rail[open] { display: flex; height: min(660px, calc(100dvh - 48px)); }
 .settings {
   display: grid; grid-template-columns: 224px minmax(0, 1fr);
   flex: 1; min-height: 0; width: 100%;
@@ -628,7 +628,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 @media (max-width: 700px) {
   /* Phones: full screen, one pane at a time. The list of sections comes
      first; choosing one slides it in, and Back (or Escape) returns. */
-  #settings-modal[open] {
+  .modal--rail[open] {
     width: 100vw; max-width: 100vw;
     height: 100dvh; max-height: 100dvh;
     margin: 0; border: 0; border-radius: 0;
@@ -642,10 +642,30 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
   .settings-navitem-chev { display: block; width: 16px; height: 16px; color: var(--faint); }
   .settings-navitem.is-active { background: none; box-shadow: none; font-weight: 500; }
   .settings-main { display: none; }
-  #settings-modal.is-showing-pane .settings-nav { display: none; }
-  #settings-modal.is-showing-pane .settings-main { display: flex; animation: pane-in .22s cubic-bezier(.2, .8, .3, 1) both; }
+  .modal--rail.is-showing-pane .settings-nav { display: none; }
+  .modal--rail.is-showing-pane .settings-main { display: flex; animation: pane-in .22s cubic-bezier(.2, .8, .3, 1) both; }
   .settings-head { padding-left: 12px; }
   .settings-pane.is-active { padding: 20px 18px 28px; }
+}
+/* Help's panes: prose under small headings, and plain tables. */
+.help { font-size: 14px; line-height: 1.6; color: var(--ink); }
+.help p, .help ul { color: var(--muted); }
+.help p + p { margin-top: 10px; }
+.help .help-lead { color: var(--ink); font-size: 15px; }
+.help h5 { margin: 22px 0 6px; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+.help em { font-style: normal; color: var(--ink); font-weight: 600; }
+.help-list { margin: 8px 0 10px; padding-left: 18px; list-style: disc; }
+.help-list li + li { margin-top: 6px; }
+.help-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; line-height: 1.45; }
+.help-table th, .help-table td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.help-table thead th { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+.help-table tbody th { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.help-table td { color: var(--muted); }
+.help-table .faint { color: var(--faint); }
+.help-table--keys td:first-child { width: 34%; white-space: nowrap; }
+.help kbd {
+  display: inline-block; min-width: 22px; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 6px;
+  background: var(--panel); font: 600 12px/1.5 var(--mono); color: var(--ink); text-align: center;
 }
 @keyframes pane-in { from { transform: translateX(24px); opacity: 0; } }
 .setting-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }

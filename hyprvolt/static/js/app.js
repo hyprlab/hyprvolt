@@ -146,17 +146,16 @@
   });
 
   /* ————— Dialogs ————— */
-  /* The settings window: a rail of sections and one pane at a time. On a
-     phone only one of the two shows, and .is-showing-pane says which. */
-  var settingsModal = document.getElementById("settings-modal");
+  /* Rail windows (.modal--rail: Settings, Help): a rail of sections and one
+     pane at a time. On a phone only one of the two shows, and
+     .is-showing-pane says which. */
   var narrow = window.matchMedia("(max-width: 700px)");
-  function settingsItems() {
-    return settingsModal ? Array.prototype.slice.call(settingsModal.querySelectorAll(".settings-navitem")) : [];
+  function railItems(d) {
+    return Array.prototype.slice.call(d.querySelectorAll(".settings-navitem"));
   }
-  function showSettingsSection(name, focusItem) {
-    if (!settingsModal) return;
+  function showRailSection(d, name, focusItem) {
     var chosen = null;
-    settingsItems().forEach(function (item) {
+    railItems(d).forEach(function (item) {
       var on = item.getAttribute("data-section") === name;
       item.classList.toggle("is-active", on);
       item.setAttribute("aria-selected", on ? "true" : "false");
@@ -164,30 +163,28 @@
       if (on) chosen = item;
     });
     if (!chosen) return;
-    settingsModal.querySelectorAll(".settings-pane").forEach(function (pane) {
+    d.querySelectorAll(".settings-pane").forEach(function (pane) {
       var on = pane.getAttribute("data-pane") === name;
       if (on && !pane.classList.contains("is-active")) pane.scrollTop = 0;
       pane.classList.toggle("is-active", on);
     });
-    document.getElementById("settings-section-title").textContent =
-      chosen.querySelector("span").textContent;
-    settingsModal.classList.add("is-showing-pane");
+    d.querySelector(".settings-head-title").textContent = chosen.querySelector("span").textContent;
+    d.classList.add("is-showing-pane");
     if (focusItem) chosen.focus();
   }
-  function showSettingsList() {
-    if (!settingsModal) return;
-    settingsModal.classList.remove("is-showing-pane");
-    var active = settingsModal.querySelector(".settings-navitem.is-active");
+  function showRailList(d) {
+    d.classList.remove("is-showing-pane");
+    var active = d.querySelector(".settings-navitem.is-active");
     if (active) active.focus();
   }
 
   function openDialog(id, section) {
     var dialog = document.getElementById(id);
     if (!dialog || dialog.open) return;
-    if (id === "settings-modal") {
+    if (dialog.classList.contains("modal--rail")) {
       // A named section opens straight to it. Otherwise the window reopens
       // where it was left, except on a phone, where it starts at the list.
-      if (section) showSettingsSection(section);
+      if (section) showRailSection(dialog, section);
       else if (narrow.matches) dialog.classList.remove("is-showing-pane");
     }
     setSidebar(false);
@@ -197,7 +194,7 @@
   // paging) open their dialog too.
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-open]");
-    if (btn) openDialog(btn.getAttribute("data-open"), btn.getAttribute("data-settings-section"));
+    if (btn) openDialog(btn.getAttribute("data-open"), btn.getAttribute("data-open-section"));
   });
 
   function prefersReducedMotion() {
@@ -281,35 +278,35 @@
     }
   });
 
-  /* ————— Settings ————— */
-  if (settingsModal) {
-    settingsItems().forEach(function (item) {
+  /* ————— Rail windows: Settings, Help ————— */
+  document.querySelectorAll(".modal--rail").forEach(function (d) {
+    railItems(d).forEach(function (item) {
       item.addEventListener("click", function () {
-        showSettingsSection(item.getAttribute("data-section"));
+        showRailSection(d, item.getAttribute("data-section"));
       });
     });
     // Arrow keys move through the rail and select as they go (the WAI-ARIA
     // vertical tab pattern); Home and End jump to the ends.
-    settingsModal.querySelector(".settings-nav").addEventListener("keydown", function (e) {
-      var items = settingsItems();
+    d.querySelector(".settings-nav").addEventListener("keydown", function (e) {
+      var items = railItems(d);
       var at = items.indexOf(document.activeElement);
       if (at === -1) return;
       var next = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[e.key];
       if (next === undefined) return;
       e.preventDefault();
       next = (next + items.length) % items.length;
-      showSettingsSection(items[next].getAttribute("data-section"), true);
-      if (narrow.matches) settingsModal.classList.remove("is-showing-pane");
+      showRailSection(d, items[next].getAttribute("data-section"), true);
+      if (narrow.matches) d.classList.remove("is-showing-pane");
     });
-    settingsModal.querySelector(".settings-back").addEventListener("click", showSettingsList);
+    d.querySelector(".settings-back").addEventListener("click", function () { showRailList(d); });
     // On a phone, Escape inside a section goes back to the list first.
-    settingsModal.addEventListener("cancel", function (e) {
-      if (narrow.matches && settingsModal.classList.contains("is-showing-pane")) {
+    d.addEventListener("cancel", function (e) {
+      if (narrow.matches && d.classList.contains("is-showing-pane")) {
         e.preventDefault();
-        showSettingsList();
+        showRailList(d);
       }
     });
-  }
+  });
   document.querySelectorAll('input[name="view_mode"]').forEach(function (radio) {
     radio.addEventListener("change", function () {
       api("/settings", { view_mode: radio.value })
@@ -2738,6 +2735,7 @@
       var newBtn = document.getElementById("new-btn");
       if (newBtn) { e.preventDefault(); newBtn.click(); }
     } else if (e.key === "/") { e.preventDefault(); openPalette(); }
+    else if (e.key === "?") { e.preventDefault(); openDialog("help-modal"); }
   });
 
   /* ————— Search palette (Ctrl/Cmd+K) ————— */
@@ -2988,8 +2986,9 @@
   try { sessionStorage.removeItem(RESTORE_KEY); } catch (_) {}
   if (!reloaded || !remembered || remembered.path !== location.pathname) remembered = null;
 
-  var dialogMemory = {
-    "settings-modal": {
+  // A rail window comes back at the section, and the place in it, it was left at.
+  function railMemory(id) {
+    return {
       save: function (d) {
         var active = d.querySelector(".settings-navitem.is-active");
         var pane = d.querySelector(".settings-pane.is-active");
@@ -3000,12 +2999,16 @@
         };
       },
       restore: function (d, s) {
-        openDialog("settings-modal", s.section);
+        openDialog(id, s.section);
         if (narrow.matches && !s.pane) d.classList.remove("is-showing-pane");
         var pane = d.querySelector(".settings-pane.is-active");
         if (pane) requestAnimationFrame(function () { pane.scrollTop = s.scroll || 0; });
       }
-    },
+    };
+  }
+  var dialogMemory = {
+    "settings-modal": railMemory("settings-modal"),
+    "help-modal": railMemory("help-modal"),
     "entity-modal": {
       save: function () {
         var form = formSlot && formSlot.querySelector("form");

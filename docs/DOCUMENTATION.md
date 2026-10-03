@@ -786,6 +786,7 @@ its database, without signing in. The image's `HEALTHCHECK` uses it, so
 | Back, Forward (the browser's, or ‹ › in the record's bar) | a record | The records opened one from another: a link, a page's Next, `j` and `k`. Back from the first one closes it |
 | `1` to `9`, ↑ ↓ (← → on a narrow screen) | a record | Scroll to its sections |
 | `e`, `a`, `c` | a record | Edit (the cursor in its first field), archive or unarchive, copy its link |
+| `?` | a page | Help: how records, links and cables connect, and what follows from them |
 | Esc | a dialog | Close it |
 
 ## Troubleshooting

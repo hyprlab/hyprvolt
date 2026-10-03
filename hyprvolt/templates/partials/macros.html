@@ -56,3 +56,16 @@
   <div class="diagram-scroll">{{ caller() }}</div>
 </div>
 {%- endmacro %}
+
+{# One section in a rail window's rail (.modal--rail: Settings, Help). Its
+   id is "<prefix>-tab-<id>" and its pane's "<prefix>-<id>"; app.js shows
+   the pane whose data-pane is the item's data-section. #}
+{% macro rail_item(prefix, id, label, icon, active=false) -%}
+  <button type="button" class="settings-navitem {{ 'is-active' if active }}" role="tab"
+          id="{{ prefix }}-tab-{{ id }}" data-section="{{ id }}" aria-controls="{{ prefix }}-{{ id }}"
+          aria-selected="{{ 'true' if active else 'false' }}" tabindex="{{ '0' if active else '-1' }}">
+    <svg viewBox="0 0 24 24">{{ icon|safe }}</svg>
+    <span>{{ label }}</span>
+    <svg class="settings-navitem-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>
+  </button>
+{%- endmacro %}

@@ -80,9 +80,19 @@ def context(active_module=None, active_type=None, active_filter=None, active_tag
         "new_menu": new_menu(),
         "site_guide": current_user.can_edit and bool(reg.setup_steps()),
         "list_pages": [(m, p) for m in reg.enabled_modules() for p in m.pages if p.from_list],
+        "help": help_context(reg),
         "module_panes": [(m, m.settings_pane) for m in reg.enabled_modules()
                          if m.settings_pane and (current_user.is_admin or not m.settings_pane.admin)],
     }
+
+
+def help_context(reg) -> dict:
+    """What the Help window needs: the modules turned on, and the kinds of
+    link they and the core have, in that order."""
+    from .relations import CORE_KINDS
+    modules = reg.enabled_modules()
+    kinds = list(CORE_KINDS) + [k for m in modules for k in m.relation_kinds]
+    return {"modules": {m.id for m in modules}, "kinds": kinds}
 
 
 def new_menu() -> list[dict]:

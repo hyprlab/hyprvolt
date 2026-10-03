@@ -134,3 +134,12 @@ def test_an_account_can_see_one_section_at_a_time(client, h, admin):
     assert 'id="record-scroll" >' in client.get("/").get_data(as_text=True)
     client.post("/settings", json={"record_scroll": True}, headers=h)
     assert client.get(f"/e/{g['id']}/sheet").data.decode().count('data-panel="') == 7
+
+
+def test_help_explains_links_and_cables_from_the_registry(client, h, admin):
+    page = client.get("/").data.decode()
+    assert 'id="help-modal"' in page and 'data-open="help-modal"' in page
+    assert 'data-pane="versus"' in page and "Do I link what is cabled?" in page
+    # The kinds of link come from the core and the modules turned on, with which carry a dependency.
+    assert "<tr><td>runs on</td><td>runs</td><td>Yes</td></tr>" in page
+    assert "<tr><td>comes in at</td><td>brings in</td><td>Yes</td></tr>" in page
