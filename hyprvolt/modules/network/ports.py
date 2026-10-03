@@ -400,9 +400,10 @@ def _device_end(device: Entity) -> Port:
     return port
 
 
-def connect(port: Port | Entity, other: Port | Entity, data: dict, user=None) -> Cable:
-    """Cable two ends, each a port or a device whose ports aren't recorded
-    (which gets a port with no name for it)."""
+def _check(port: Port | Entity, other: Port | Entity, kept: Port | None = None) -> None:
+    """That two ends can be cabled: each a free port, or a device cabled as
+    a whole with a port to spare. ``kept`` is the end of a cable being moved
+    that stays, with its cable."""
     ends = [port, other]
     for end in ends:
         if isinstance(end, Entity) and records_ports(end.id):
@@ -423,9 +424,16 @@ def connect(port: Port | Entity, other: Port | Entity, data: dict, user=None) ->
         if port.pair_id == other.id:
             raise Invalid("Those two are the front and rear of the same patch panel port.")
     for p in named:
-        existing = cable_of(p)
+        existing = cable_of(p) if p is not kept else None
         if existing is not None:
             raise Invalid(f"{p.label} already has a cable, to {existing.other(p).label}.")
+
+
+def connect(port: Port | Entity, other: Port | Entity, data: dict, user=None) -> Cable:
+    """Cable two ends, each a port or a device whose ports aren't recorded
+    (which gets a port with no name for it)."""
+    _check(port, other)
+    ends = [port, other]
     length = data.get("length_m")
     try:
         length = float(length) if length not in (None, "") else None
@@ -461,6 +469,35 @@ def relabel(cable: Cable, label, user=None) -> None:
     for p, o in ((cable.a, cable.b), (cable.b, cable.a)):
         records.audit(p.device, "edited a cable", [{"field": "cable", "label": f"{p.name or 'Cable'} to {o.label}",
                                                      "old": old, "new": new}], user)
+
+
+def move_end(cable: Cable, side: str, new: Port | Entity, user=None) -> bool:
+    """Move one end of a cable (``side`` "a" or "b") to another port or
+    device; the cable keeps its label, color and length. False when that is
+    where it is already."""
+    old = cable.a if side == "a" else cable.b
+    keep = cable.other(old)
+    if (new.id == old.device_id and not old.name) if isinstance(new, Entity) else new.id == old.id:
+        return False
+    _check(new, keep, kept=keep)
+    end = _device_end(new) if isinstance(new, Entity) else new
+    was = old.label
+    if side == "a":
+        cable.a_id = end.id
+    else:
+        cable.b_id = end.id
+    db.session.flush()
+    db.session.expire(cable, ["a", "b"])
+    if not old.name:
+        db.session.delete(old)
+        db.session.flush()
+    records.audit(old.device, "uncabled", [{"field": "cable", "label": old.name or "Cable", "old": keep.label,
+                                            "new": ""}], user)
+    records.audit(end.device, "cabled", [{"field": "cable", "label": end.name or "Cable", "old": "",
+                                          "new": keep.label}], user)
+    records.audit(keep.device, "recabled", [{"field": "cable", "label": keep.name or "Cable", "old": was,
+                                             "new": end.label}], user)
+    return True
 
 
 def disconnect(cable: Cable) -> dict:

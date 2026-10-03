@@ -177,3 +177,30 @@ def test_the_cables_step_draws_the_network_once_there_are_cables(client, h, admi
     assert "The network so far" in page and 'aria-label="Network diagram"' in page and "data-zoom" in page
     # Drawn again with the rows, as a cable is added or deleted.
     assert 'aria-label="Network diagram"' in client.get("/site-setup/cables/rows").data.decode()
+
+
+def test_a_cable_in_the_step_can_be_moved_to_another_end(client, h, admin):
+    client.post("/site-setup/site/rows", json={"values": {"name": "Home"}}, headers=h)
+    sw = make(client, h, "network_device", name="sw1", **{"f.kind": "switch"})
+    post(client, h, f"/network/devices/{sw['id']}/ports", prefix="Port ", first=1, last=2)
+    ports = {p["name"]: p["id"] for p in client.get(f"/network/devices/{sw['id']}/ports").get_json()["ports"]}
+    pc = make(client, h, "workstation", name="pc1")
+    laptop = make(client, h, "workstation", name="laptop")
+    post(client, h, "/site-setup/cables/rows",
+         values={"from": f"device:{pc['id']}", "to": f"port:{ports['Port 1']}", "label": "C1"})
+    cable = client.get(f"/network/devices/{pc['id']}/ports").get_json()["ports"][0]["cable"]
+    # Its row has both ends to choose, its own among them though taken.
+    page = client.get("/site-setup/cables").data.decode()
+    row = page.split(f'data-row-id="{cable["id"]}"')[1].split("</fieldset>")[0]
+    assert f'<option value="port:{ports["Port 1"]}" selected' in row and f'value="port:{ports["Port 2"]}"' in row
+    # Another port at one end, another device at the other: the same cable, its label kept.
+    url = f"/site-setup/cables/rows/{cable['id']}"
+    post(client, h, url, name="to", value=f"port:{ports['Port 2']}")
+    post(client, h, url, name="from", value=f"device:{laptop['id']}")
+    moved = client.get(f"/network/devices/{laptop['id']}/ports").get_json()["ports"][0]["cable"]
+    assert moved["id"] == cable["id"] and moved["to"] == "sw1 Port 2" and moved["label"] == "C1"
+    assert client.get(f"/network/devices/{pc['id']}/ports").get_json()["ports"] == []
+    # Onto a port that has a cable already: refused, saying so.
+    post(client, h, "/network/cables", device_id=pc["id"], to=f"port:{ports['Port 1']}")
+    error = post(client, h, url, 400, name="to", value=f"port:{ports['Port 1']}")["error"]
+    assert error == "sw1 Port 1 already has a cable, to pc1."

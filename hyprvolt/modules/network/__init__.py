@@ -181,7 +181,7 @@ SETUP_HELP = {
         "(Record each port, on its Cabling tab), as a switch or patch panel usually is; then its free ports "
         "are offered here.",
         "Cables draw the network diagram, and a trace follows a port through patch panels to the far end. To "
-        "move a cable, delete it and connect it again.",
+        "move a cable, choose another From or To in its row: it keeps its label.",
         "A cable left without a label is given one from its network: the VLAN's number, or the subnet's "
         "third number with no VLAN, and a running number, so 20-03 is the third cable on VLAN 20. A cable "
         "between two pieces of network gear is an uplink, UP-01, and from the modem, WAN-01.",

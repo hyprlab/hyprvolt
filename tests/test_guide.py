@@ -198,9 +198,8 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     assert cable["to"] == "sw1" and cable["label"] == "C1"
     change(client, h, "cables", cable["id"], "label", "C9", site["id"])
     page = client.get(f"/site-setup/cables?site={site['id']}").data.decode()
-    assert 'class="guide-locked-text">desk-pc</span>' in page and 'value="C9"' in page
-    assert "delete it and connect it again" in change(client, h, "cables", cable["id"], "from", "x", site["id"],
-                                                      status=400)["error"]
+    assert f'<option value="device:{pc["id"]}" selected' in page and 'value="C9"' in page
+    assert "Choose both ends" in change(client, h, "cables", cable["id"], "from", "x", site["id"], status=400)["error"]
     done = client.get(f"/site-setup/done?site={site['id']}").data.decode()
     assert "Home is written down" in done and "2 recorded" in done
 

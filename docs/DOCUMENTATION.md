@@ -522,8 +522,10 @@ Back, the steps down the side and Exit setup do the same. On the first step,
 the Site choice picks another site, or a new one; the guide can be run again
 to add what was left out, or for another site.
 
-Once the site has a cable, the Cables step draws the network diagram below
-its rows, drawn again as each cable is added or deleted. The Cables step's
+Each cable in the Cables step can be moved: choose another From or To in
+its row (a free port, or a device with a port to spare) and the cable keeps
+its label, color and length. Once the site has a cable, the Cables step
+draws the network diagram below its rows, drawn again as each cable is added or deleted. The Cables step's
 Suggest cables works the cabling out from the steps before. Each modem goes to the gateway (a firewall, otherwise a router), the
 gateway to the core switch (the switch nearest it, by rack, room and
 building), and each other switch to the core. A pair of MoCA adapters, or

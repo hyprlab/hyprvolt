@@ -424,16 +424,39 @@ def setup_cable(values, scope, user) -> None:
     ports.connect(a, b, {"label": label}, user)
 
 
+def _end_value(port: Port) -> str:
+    return f"port:{port.id}" if port.name else f"device:{port.device_id}"
+
+
+def _with_end(groups: list[dict], port: Port) -> list[dict]:
+    """The ends to choose from, with this cable's own end among them (it is
+    taken, so not one of the free ones), in its group."""
+    value = _end_value(port)
+    if any(value == v for g in groups for v, _ in g["options"]):
+        return groups
+    label = f"{port.device.name} ports" if port.name else ports.group_label(ports.group_of(port.device))
+    out = [dict(g, options=list(g["options"])) for g in groups]
+    group = next((g for g in out if g["label"] == label), None)
+    if group is None:
+        group = {"label": label, "options": []}
+        out.append(group)
+    group["options"].append((value, port.label))
+    group["options"].sort(key=lambda o: o[1].lower())
+    return out
+
+
 def setup_rows(scope) -> list[dict]:
-    """Every cable as a row: its ends as text, its label to change."""
-    out = []
+    """Every cable as a row: either end to change, and its label. Each
+    row's choices are the free ends and its own."""
+    out, free = [], setup_ends(scope)
     eager = (joinedload(Cable.a).joinedload(Port.device), joinedload(Cable.b).joinedload(Port.device))
     for c in Cable.query.options(*eager):
         if c.a.device.deleted_at is None and c.b.device.deleted_at is None:
             out.append({"id": c.id, "label": f"the cable from {c.a.label} to {c.b.label}",
-                        "values": {"label": c.label}, "text": {"from": c.a.label, "to": c.b.label},
-                        "locked": ("from", "to"), "absent": ()})
-    return sorted(out, key=lambda r: (r["text"]["from"].lower(), r["text"]["to"].lower()))
+                        "values": {"from": _end_value(c.a), "to": _end_value(c.b), "label": c.label},
+                        "choices": {"from": _with_end(free, c.a), "to": _with_end(free, c.b)},
+                        "text": {}, "locked": (), "absent": (), "sort": (c.a.label.lower(), c.b.label.lower())})
+    return sorted(out, key=lambda r: r["sort"])
 
 
 def _setup_cable_or_404(cable_id) -> Cable:
@@ -444,9 +467,13 @@ def _setup_cable_or_404(cable_id) -> Cable:
 
 
 def setup_update(cable_id, values, user) -> None:
-    if "label" not in values:
-        raise Invalid("Only a cable's label can be changed here; delete it and connect it again to move it.")
-    ports.relabel(_setup_cable_or_404(cable_id), values["label"], user)
+    """A cable's label, or either end moved to another port or device."""
+    cable = _setup_cable_or_404(cable_id)
+    if "label" in values:
+        ports.relabel(cable, values["label"], user)
+    for name, side in (("from", "a"), ("to", "b")):
+        if name in values:
+            ports.move_end(cable, side, _setup_end(values[name]), user)
 
 
 def setup_delete(cable_id) -> dict:

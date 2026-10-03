@@ -1674,8 +1674,12 @@
         var title = row.querySelector("[data-row-title]");
         if (title) title.textContent = el.value.trim();
       }
-      // Another kind can have other fields (a printer has no Used by).
-      if (el.name === "_kind") redrawRows(rowsOf(row));
+      // Another kind can have other fields (a printer has no Used by); in
+      // rows that aren't records (cables, [data-redraw]), another choice
+      // changes what the others offer, and the diagram below them.
+      if (el.name === "_kind" || (el.tagName === "SELECT" && rowsOf(row).hasAttribute("data-redraw"))) {
+        redrawRows(rowsOf(row));
+      }
     }, function (err) {
       row.classList.remove("is-saving");
       el.setAttribute("aria-invalid", "true");

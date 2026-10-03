@@ -12,7 +12,7 @@
     {%- else %}<option value="{{ c[0] }}" {{ 'selected' if c[0]|string == v|string }}>{{ c[1] }}</option>{% endif %}
   {%- endfor %}
 {%- endmacro %}
-{% macro control(c, v, off=false, fresh=false) %}
+{% macro control(c, v, off=false, fresh=false, choices=none) %}
   {% if c.kind == 'speed' %}
   {{ speed(c.name, v if v != '' else none, label=c.label, disabled=off) }}
   {% elif c.kind == 'cidr' %}
@@ -22,7 +22,7 @@
   {% elif c.kind == 'select' %}
   <select name="{{ c.name }}" {{ 'disabled' if off }}>
     {% if not c.required %}<option value="">{{ '—' if off else 'Not set' }}</option>{% endif %}
-    {% if not off %}{{ choice_options(c.choices, v) }}{% endif %}
+    {% if not off %}{{ choice_options(choices or c.choices, v) }}{% endif %}
   </select>
   {% else %}
   <input type="{{ 'number' if c.kind == 'number' else 'text' }}" name="{{ c.name }}" value="{{ v }}"
@@ -60,11 +60,11 @@
     {%- if why %} data-confirm-blocked="{{ why[0] }}" data-confirm-blocked-text="{{ why[1] }}"{% endif %}><span>{{ c.label }}</span></label>
   {% else %}
   <label class="field {{ 'guide-wide' if c.name == 'name' }}{{ ' guide-joined' if c.kind in ('cidr', 'iprange') }}"{{ follows }}><span class="field-label"{{ relabel }}>{{ label }}</span>
-    {{ control(c, v, r and c.name in r.absent, not r) }}</label>
+    {{ control(c, v, r and c.name in r.absent, not r, choices=(r.choices or {}).get(c.name) if r else none) }}</label>
   {% endif %}
   {% endfor %}
 {% endmacro %}
-<div class="guide-rows" data-rows data-rows-url="{{ url_for('guide.rows_part', key=step.key, **site) }}"
+<div class="guide-rows" data-rows{{ ' data-redraw' if step.save }} data-rows-url="{{ url_for('guide.rows_part', key=step.key, **site) }}"
      data-create="{{ url_for('guide.row_create', key=step.key, **site) }}">
   {# Each row its own form, so a choice of radios (Dynamic or Static) is its
      own in every row, not one across the page. #}
