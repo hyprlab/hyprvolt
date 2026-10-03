@@ -3,7 +3,9 @@
 A kind reads from source to target ("vm1 runs on pve1") and back again with
 its reverse label ("pve1 runs vm1"). Its ``impact`` says which end stops
 working when the other goes down; the walk follows only those, which is what
-answers "what breaks if this goes down?".
+answers "what breaks if this goes down?". It follows as well the
+dependencies modules work out from what they record (``impact_edges``):
+Network's, from the cables.
 """
 from ..manifest import RelationKind
 from ..models import db
@@ -162,6 +164,19 @@ def for_entity(entity) -> list[dict]:
     return sorted(out, key=lambda r: (r["label"], r["other"].name.lower()))
 
 
+def derived(entity) -> list[dict]:
+    """Links modules work out rather than record (the devices a device is
+    cabled to), read-only: [{"other", "label", "sub", "note"}], each other
+    end one the reader may see."""
+    from ..registry import current as registry
+    visible = visible_ids()
+    out = []
+    for module in registry().enabled_modules():
+        if module.derived_links:
+            out += [d for d in module.derived_links(entity) if d["other"].id in visible]
+    return out
+
+
 def _edges(direction: str) -> dict[int, list[tuple[int, str]]]:
     """Adjacency for the walk. "dependencies": X -> what X needs.
     "dependents": X -> what needs X."""
@@ -172,6 +187,14 @@ def _edges(direction: str) -> dict[int, list[tuple[int, str]]]:
     impactful = [k for k in kinds.values() if k.impact != "none"]
     rows = Relationship.query.filter(Relationship.kind.in_([k.key for k in impactful])).all()
     edges: dict[int, list[tuple[int, str]]] = {}
+    pairs: set[tuple[int, int]] = set()
+
+    def add(needs, needed, forward, backward):
+        pairs.add((needs, needed))
+        if direction == "dependencies":
+            edges.setdefault(needs, []).append((needed, forward))
+        else:
+            edges.setdefault(needed, []).append((needs, backward))
     for rel in rows:
         if rel.source_id not in visible or rel.target_id not in visible:
             continue
@@ -181,10 +204,13 @@ def _edges(direction: str) -> dict[int, list[tuple[int, str]]]:
             needs, needed, forward, backward = rel.source_id, rel.target_id, kind.label, kind.reverse
         else:
             needs, needed, forward, backward = rel.target_id, rel.source_id, kind.reverse, kind.label
-        if direction == "dependencies":
-            edges.setdefault(needs, []).append((needed, forward))
-        else:
-            edges.setdefault(needed, []).append((needs, backward))
+        add(needs, needed, forward, backward)
+    # Dependencies modules work out rather than record (Network's cables),
+    # unless a link says the same already.
+    for module in registry().enabled_modules():
+        for needs, needed, forward, backward in (module.impact_edges() if module.impact_edges else ()):
+            if needs in visible and needed in visible and (needs, needed) not in pairs:
+                add(needs, needed, forward, backward)
     return edges
 
 

@@ -1,6 +1,22 @@
 {% from "partials/macros.html" import dep_tree, entity_link %}
-{% if grouped %}
+{% if grouped or derived %}
 <div class="rel-groups">
+  {% for g in derived %}
+  <div class="rel-group">
+    <p class="setting-label">{{ g.label }}</p>
+    {% if g.note %}<p class="hint">{{ g.note }}</p>{% endif %}
+    <ul class="manage-list">
+      {% for r in g['items'] %}
+      <li class="manage-item">
+        <div class="manage-meta">
+          <span class="manage-title">{{ entity_link(r.other.id, r.other.name) }}</span>
+          <span class="manage-sub">{{ r.view.type_label }}{% if r.view.path %} · {{ r.view.path }}{% endif %}{% if r.sub %} · {{ r.sub }}{% endif %}</span>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
   {% for g in grouped %}
   <div class="rel-group">
     <p class="setting-label">{{ g.label }}</p>
@@ -76,6 +92,6 @@
     {% if needs %}{{ dep_tree(needs) }}{% else %}<p class="hint">It depends on nothing documented here.</p>{% endif %}
   </section>
 </div>
-<p class="hint">Followed through links that carry a dependency: runs on, hosted by, depends on, installed on, powered by.</p>
+<p class="hint">Followed through links that carry a dependency (runs on, hosted by, depends on, installed on, powered by) and through cables: a device needs the network gear it is cabled to, and gear the gear nearer the internet.</p>
 </div>
 {% if diagram %}<div data-view="diagram">{{ diagram }}</div>{% endif %}

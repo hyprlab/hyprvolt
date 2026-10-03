@@ -17,7 +17,7 @@ from hyprvolt.manifest import (EntityType, Field, FormSection, ListFilter, Modul
                                Step, Tab, Widget)
 from hyprvolt.models import db
 
-from . import addresses, cabling, demo, dns, ports, views
+from . import addresses, cabling, demo, dns, impact, ports, views
 from .models import Cable, DnsRecord, NetworkDetail, Port, PortsRecorded
 
 NETWORK_KINDS = (("lan", "Local network"), ("wan", "Internet connection"), ("vpn", "VPN"), ("other", "Other"))
@@ -293,6 +293,8 @@ module = Module(
                                choices=views.networks_choices),
                    FormSection("carriers", "Carried by", views.carriers_form, views.carriers_save,
                                when=views.is_segment, values=views.carriers_values, choices=views.carriers_choices)),
+    impact_edges=impact.impact_edges,
+    derived_links=impact.derived_links,
     relation_kinds=(RelationKind("comes_in_at", "comes in at", "brings in", impact="source"),
                     RelationKind("broadcast_by", "is broadcast by", "broadcasts", impact="source"),
                     RelationKind("carried_by", "is carried by", "carries", impact="source")),

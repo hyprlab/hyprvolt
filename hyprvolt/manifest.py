@@ -339,6 +339,8 @@ class Module:
     jobs: tuple = ()
     settings_pane: Pane | None = None
     relation_kinds: tuple = ()
+    impact_edges: Callable | None = None   # impact_edges() -> [(needs id, needed id, label, reverse)]: dependencies worked out, not recorded
+    derived_links: Callable | None = None  # derived_links(entity) -> [{"other", "label", "sub", "note"}]: read-only, in Relationships
     sheet_tabs: tuple = ()           # tabs on any module's entities; use Tab.when
     form_sections: tuple = ()        # form sections on any module's types
     before_retype: Callable | None = None  # before_retype(entity, old, new) on any type change; raise Invalid to refuse

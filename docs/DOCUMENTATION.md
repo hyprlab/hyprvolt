@@ -565,7 +565,19 @@ that one alone.
 
 A record's Relationships tab ends with its dependency view: what breaks if
 it goes down, and what it needs, followed through the links that carry a
-dependency (runs on, hosted by, depends on, installed on, powered by). It
+dependency (runs on, hosted by, depends on, installed on, powered by) and
+through the cables. A device cabled to network gear (a switch, router,
+firewall, modem or MoCA adapter) needs it, through any patch panels on the
+way; between two pieces of gear, the one further from where the internet
+comes in needs the nearer one (an edge switch the core, the core the
+firewall), and at the same distance neither needs the other. The far end
+of a MoCA or wireless bridge pair needs the near end. A UPS or a peripheral
+cabled to the network is managed over it and goes on working without it,
+so its cable makes it need nothing. None of this is stored: it follows the
+cables as they are, and a link that says the same is shown once. The tab
+lists the devices a device is cabled to under Cabled to, read-only, with the
+ports, any patch panels and the cable labels; the cable is changed in the
+Cabling tab. The form for a new link opens from Add link. It
 opens as a drawing, and List and Diagram switch between that and two nested
 lists. In the drawing, the record sits in the middle, what it needs above
 it and what breaks below it, a row for each step further away. A record

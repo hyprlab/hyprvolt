@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- Cables count as dependencies: a device needs the network gear it is cabled to (through any patch panels), and gear the gear nearer the internet, so a switch's What breaks lists everything plugged into it and all that runs on those, and a maintenance window on it lists them under Also goes down. A UPS or PDU cabled to the network is managed over it and takes nothing down with the switch. A device's Relationships tab lists what it is cabled to, read-only, under Cabled to
 - The setup guide's Cables step draws the network diagram below the cables once there are any, and draws it again as each cable is added or deleted
 - Cables in the setup guide are labeled by the network they are on: a cable added in the Cables step without a label gets one such as 20-03 (the third on VLAN 20, or on a subnet like 192.168.20.0/24 with no VLAN), UP-01 for an uplink between network gear and WAN-01 from the modem. Suggest cables fills the labels in, and Label the unlabeled cables labels the ones that have none
 - A switch, router or firewall's number of ports, optional, can be set in the setup guide's Network gear step as well as its form, and a device cabled as a whole takes no more cables than its ports: its Cabling tab shows how many are cabled, a full one isn't offered for another cable, and Suggest cables stops at it

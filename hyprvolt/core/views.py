@@ -37,7 +37,7 @@ def tabs_for(entity: Entity) -> list[SheetTab]:
     if etype:
         out += [SheetTab(t.key, t.label, t.render, t.count(entity) if t.count else None) for t in etype.tabs
                 if t.when is None or t.when(entity)]
-    rels = relations.for_entity(entity)
+    rels = relations.for_entity(entity) + relations.derived(entity)
     out.append(SheetTab("relationships", "Relationships", relationships_tab, len(rels)))
     extensions = [(m, t) for m in reg.enabled_modules() for t in m.sheet_tabs if t.when is None or t.when(entity)]
     out += [SheetTab(t.key, t.label, t.render, t.count(entity) if t.count else None) for m, t in extensions if m.core]
@@ -133,6 +133,12 @@ def relationships_tab(entity: Entity) -> str:
         if not grouped or grouped[-1]["label"] != r["label"]:
             grouped.append({"label": r["label"], "items": []})
         grouped[-1]["items"].append({**r, "view": present.View(r["other"])})
+    # Worked out from other records (cables), changed where those are.
+    derived: list[dict] = []
+    for d in sorted(relations.derived(entity), key=lambda d: d["label"]):
+        if not derived or derived[-1]["label"] != d["label"]:
+            derived.append({"label": d["label"], "note": d.get("note", ""), "items": []})
+        derived[-1]["items"].append({**d, "view": present.View(d["other"])})
     kinds = []
     for k in registry().kinds.values():
         kinds.append((f"{k.key}:out", k.label))
@@ -140,7 +146,7 @@ def relationships_tab(entity: Entity) -> str:
             kinds.append((f"{k.key}:in", k.reverse))
     dependents = relations.walk(entity, "dependents")
     needs = relations.walk(entity, "dependencies")
-    return render_template("sheet/relationships.html", entity=entity, grouped=grouped, kinds=kinds,
+    return render_template("sheet/relationships.html", entity=entity, grouped=grouped, derived=derived, kinds=kinds,
                            diagram=Markup(depmap.draw(entity, needs, dependents)),
                            dependents=dependents, needs=needs,
                            n_dependents=relations.count(dependents), n_needs=relations.count(needs))
