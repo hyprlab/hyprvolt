@@ -16,7 +16,8 @@
 {% call zoom_frame(tools, pinned) %}
 <svg class="diagram diagram--fit" width="{{ width }}" height="{{ height }}" viewBox="0 0 {{ width }} {{ height }}" role="img"
      data-divider="{{ divider }}" data-divider-clear="{{ record|join(' ') }}" aria-label="What {{ entity.name }} needs, and what breaks if it goes down">
-  <path class="diagram-divider" d="M0,{{ divider }}H{{ width }}"/>
+  {# Broken off at the record's box, which it would show through. #}
+  <path class="diagram-divider" d="M0,{{ divider }}H{{ (record[0] - 6)|round(1) }}M{{ (record[1] + 6)|round(1) }},{{ divider }}H{{ width }}"/>
   {% for l in links %}
   <g class="diagram-link{{ ' diagram-link--loose' if l.loop }}"><path class="diagram-link-hit" d="{{ l.path }}"/><path d="{{ l.path }}"/>
     <text x="{{ l.lx|round(1) }}" y="{{ l.ly|round(1) }}" text-anchor="{{ l.anchor }}">{{ l.label }}</text></g>
