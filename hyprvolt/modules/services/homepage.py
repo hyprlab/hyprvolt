@@ -48,6 +48,7 @@ KIND_WORDS = {
               "audiobookshelf", "kavita", "komga", "calibre", "calibreweb", "tdarr", "unmanic"),
     "nvr": ("frigate", "blueiris", "shinobi", "zoneminder", "agentdvr", "scrypted"),
     "dhcp": ("kea", "dnsmasq", "dhcp"),
+    "ddns": ("ddclient", "ddnsupdater", "inadyn", "duckdns", "noip", "ddns"),
     "dns": ("pihole", "adguard", "adguardhome", "technitium", "unbound", "bind9", "powerdns"),
     "tunnel": ("cloudflared", "ngrok", "pangolin"),
     "proxy": ("traefik", "npm", "nginxproxymanager", "caddy", "swag", "nginx", "zoraxy"),
