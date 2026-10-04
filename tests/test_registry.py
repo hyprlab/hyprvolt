@@ -139,6 +139,16 @@ def test_a_ref_field_must_point_at_a_known_type():
     assert "spaceship" in reg.errors["tools"]
 
 
+def test_a_select_groups_only_options_it_has():
+    sizes = (("s", "Small"), ("m", "Medium"), ("l", "Large"))
+    good = Field("size", "Size", "select", options=sizes, groups=(("Little", ("s", "m")),))
+    assert good.choices() == [{"label": "Little", "options": [("s", "Small"), ("m", "Medium")]}, ("l", "Large")]
+    bad = Field("size", "Size", "select", options=sizes, groups=(("Huge", ("xl",)),))
+    found = problems(Module(id="tools", name="Tools", types=(
+        EntityType("tool", "Tool", "Tools", detail=ToolDetail, fields=(bad,)),)))
+    assert any("groups its options" in p for p in found)
+
+
 def test_a_ref_may_name_a_trait_instead_of_types(app):
     reg = app.extensions[reg_mod.EXTENSION]
     f = Field("owner", "Owner", "ref", trait="sticky")

@@ -36,6 +36,8 @@ class Field:
     required: bool = False
     default: Any = None
     options: tuple = ()              # select: ((value, label), ...)
+    groups: tuple = ()               # select: ((heading, (value, ...)), ...): its options under
+                                     # headings in the list; any left out follow them
     types: tuple = ()                # ref: entity types it may point at
     trait: str = ""                  # ref: or any type with this trait
     relation: str = ""               # ref: kept as a link of this kind, not a column
@@ -59,6 +61,16 @@ class Field:
     hides: tuple = ()                # select: form sections (their keys) hidden while
     hides_when: tuple = ()           # its value is one of these: a tower has no rack position;
                                      # or (key, values) pairs, a section hidden for values of its own
+
+    def choices(self) -> list:
+        """A select's options as its list shows them: each group as
+        {"label", "options"}, then the options in no group, as (value, label)."""
+        if not self.groups:
+            return list(self.options)
+        labels = dict(self.options)
+        grouped = {v for _, values in self.groups for v in values}
+        return ([{"label": heading, "options": [(v, labels[v]) for v in values]} for heading, values in self.groups]
+                + [o for o in self.options if o[0] not in grouped])
 
     def hide_rules(self) -> tuple:
         """Each section it hides, with the values it is hidden for."""

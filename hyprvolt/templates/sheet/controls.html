@@ -127,7 +127,11 @@
   <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}
           {%- if f.hides %} data-hides="{% for k, when in f.hide_rules() %}{{ ' ' if not loop.first }}{{ k }}={{ when|join(',') }}{% endfor %}"{% endif %}>
     {% if not f.required %}<option value="" data-none>Not set</option>{% endif %}
-    {% for value, label in f.options %}<option value="{{ value }}" {{ 'selected' if v == value }}>{{ label }}</option>{% endfor %}
+    {% for c in f.choices() %}
+      {%- if c is mapping %}<optgroup label="{{ c.label }}">
+        {%- for value, label in c.options %}<option value="{{ value }}" {{ 'selected' if v == value }}>{{ label }}</option>{% endfor %}</optgroup>
+      {%- else %}<option value="{{ c[0] }}" {{ 'selected' if v == c[0] }}>{{ c[1] }}</option>{% endif %}
+    {%- endfor %}
   </select>
 {% elif f.kind == 'ref' %}
   <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>

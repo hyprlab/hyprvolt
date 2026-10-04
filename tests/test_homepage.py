@@ -120,7 +120,7 @@ def test_the_reviewed_services_are_imported(client, h, admin):
                 for e in client.get("/api/entities?type=service").get_json()["entities"]}
     assert set(services) == {"Sonarr", "Jellyfin", "AdGuard Home", "Grafana"}
     sonarr = services["Sonarr"]
-    assert sonarr["fields"]["host"] == lab["sonarr"]["id"] and sonarr["fields"]["kind"] == "media"
+    assert sonarr["fields"]["host"] == lab["sonarr"]["id"] and sonarr["fields"]["kind"] == "downloads"
     assert sonarr["fields"]["url"] == "https://sonarr.example.com" and sonarr["fields"]["ports"] == "8989/tcp"
     assert sonarr["notes"] == "Series" and [t for t in sonarr["tags"]] == ["Media"]
     assert services["AdGuard Home"]["fields"]["kind"] == "dns"

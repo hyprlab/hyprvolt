@@ -183,7 +183,7 @@ def columns(step, scope) -> list[dict]:
                 col["when"] = ("f." + f.shown_when[0], F.when_value(f.shown_when[1]))
             col["required"] = f.required and all(any(x.key == f.key for x in t.fields) for t in types)
             if f.kind == "select":
-                col.update(kind="select", choices=list(f.options))
+                col.update(kind="select", choices=f.choices())
             elif f.kind == "ref":
                 col.update(kind="select", choices=_field_choices(fields))
             elif f.kind in ("speed", "cidr", "iprange"):

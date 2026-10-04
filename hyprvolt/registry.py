@@ -419,6 +419,9 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
             p.append(f"{where} has the unknown kind {f.kind!r}")
         if f.kind == "select" and not f.options:
             p.append(f"{where} is a select with no options")
+        if f.groups and (f.kind != "select" or not {v for _, values in f.groups for v in values}
+                         <= {v for v, _ in f.options}):
+            p.append(f"{where} groups its options, so it must be a select and group only options it has")
         if f.kind == "ref" and not f.types and not f.trait:
             p.append(f"{where} is a ref that names no types and no trait")
         if f.remind is not None and (not callable(f.remind) or not f.expires):

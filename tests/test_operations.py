@@ -116,6 +116,17 @@ def test_a_service_runs_on_a_host_and_depends_on_its_domain(client, h, admin):
     assert "docker1 · Virtual machine" in form and ">example.net</option>" in form and "Home · Site" not in form
 
 
+def test_a_service_kind_is_chosen_under_its_heading(client, h, admin):
+    form = client.get("/e/form?type=service").data.decode()
+    network = form.split('<optgroup label="Network">')[1].split("</optgroup>")[0]
+    assert '<option value="dhcp" >DHCP</option>' in network and ">Reverse proxy<" in network
+    assert form.index('label="Apps"') < form.index('<option value="other" >Other</option>')
+    dhcp = make(client, h, "service", name="Kea", **{"f.kind": "dhcp"})
+    assert client.get(f"/api/entities/{dhcp['id']}").get_json()["entity"]["fields"]["kind"] == "dhcp"
+    # The New record window finds it by the kind.
+    assert 'data-kind-type="service" data-kind="dhcp"' in client.get("/").data.decode()
+
+
 def test_services_that_matter_show_on_the_dashboard(client, h, admin):
     make(client, h, "service", name="DNS", **{"f.criticality": "critical"})
     make(client, h, "service", name="Backups", status="degraded", **{"f.criticality": "low"})

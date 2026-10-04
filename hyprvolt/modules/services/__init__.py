@@ -15,9 +15,33 @@ from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Page, Setup
 from . import demo, homepage, views
 from .models import ServiceDetail
 
-KINDS = (("web", "Web app"), ("files", "File sharing"), ("mail", "Mail"), ("dns", "DNS"), ("vpn", "VPN"),
-         ("proxy", "Reverse proxy"), ("database", "Database"), ("monitoring", "Monitoring"),
-         ("backup", "Backup"), ("media", "Media"), ("automation", "Automation"), ("other", "Other"))
+#: What a service is, under headings in the list (KIND_GROUPS); Other last.
+KINDS = (
+    ("dhcp", "DHCP"), ("dns", "DNS"), ("vpn", "VPN"), ("proxy", "Reverse proxy"),
+    ("loadbalancer", "Load balancer"), ("routing", "Routing and firewall"), ("tunnel", "Tunnel"),
+    ("controller", "Network controller"), ("ntp", "Time (NTP)"),
+    ("directory", "Directory (LDAP)"), ("sso", "Single sign-on"), ("passwords", "Password manager"),
+    ("ca", "Certificate authority"), ("security", "Security monitoring"),
+    ("monitoring", "Monitoring"), ("logging", "Logging"), ("backup", "Backup"),
+    ("containers", "Container management"), ("git", "Code hosting"), ("cicd", "CI/CD"),
+    ("registry", "Image registry"), ("automation", "Automation"), ("broker", "Message broker"),
+    ("files", "File sharing"), ("objects", "Object storage"), ("database", "Database"),
+    ("documents", "Document management"),
+    ("web", "Web app"), ("dashboard", "Dashboard"), ("mail", "Mail"), ("chat", "Chat"), ("wiki", "Wiki"),
+    ("media", "Media"), ("downloads", "Downloads"), ("photos", "Photos"), ("smarthome", "Home automation"),
+    ("nvr", "Cameras (NVR)"), ("pbx", "Phone system (PBX)"), ("print", "Printing"),
+    ("remote", "Remote access"), ("ai", "AI"), ("games", "Game server"),
+    ("other", "Other"),
+)
+KIND_GROUPS = (
+    ("Network", ("dhcp", "dns", "vpn", "proxy", "loadbalancer", "routing", "tunnel", "controller", "ntp")),
+    ("Security and identity", ("directory", "sso", "passwords", "ca", "security")),
+    ("Operations", ("monitoring", "logging", "backup", "containers", "git", "cicd", "registry", "automation",
+                    "broker")),
+    ("Storage and data", ("files", "objects", "database", "documents")),
+    ("Apps", ("web", "dashboard", "mail", "chat", "wiki", "media", "downloads", "photos", "smarthome", "nvr",
+              "pbx", "print", "remote", "ai", "games")),
+)
 CRITICALITY = (("low", "Low"), ("normal", "Normal"), ("high", "High"), ("critical", "Critical"))
 STATUSES = (("running", "Running"), ("degraded", "Degraded"), ("down", "Down"), ("planned", "Planned"),
             ("retired", "Retired"))
@@ -51,7 +75,7 @@ module = Module(
     types=(
         EntityType("service", "Service", "Services", detail=ServiceDetail, located_in=(), icon=ICON,
                    statuses=STATUSES, traits=("supplied", "tls"),
-                   fields=(Field("kind", "Kind", "select", options=KINDS, list=True),
+                   fields=(Field("kind", "Kind", "select", options=KINDS, groups=KIND_GROUPS, list=True),
                            Field("url", "Address", "url", card=True, help="Where people reach it."),
                            Field("host", "Runs on", "ref", trait="host", relation="runs_on", card=True, list=True,
                                  help="A server, VM, container or stack. More than one: link the rest in "

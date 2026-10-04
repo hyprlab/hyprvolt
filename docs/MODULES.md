@@ -167,7 +167,7 @@ and a `kind`:
 | `integer`, `number` | int, float, with `min` and `max` | the value and its `unit` |
 | `date` | a date | `2026-09-25` |
 | `datetime` | a date and time, stored in UTC; typed and shown in the instance's time zone (`core/clock.py`) | `2026-10-03 22:00` |
-| `select` | one of `options`, as (value, label) pairs | its label |
+| `select` | one of `options`, as (value, label) pairs; `groups`, optional, puts them under headings in the list: `(("Network", ("dhcp", "dns")), ...)`, any left out after them | its label |
 | `boolean` | true or false | Yes or No |
 | `ref` | the id of a record of one of `types` or of any type with `trait`, or a relationship (below) | a link to it |
 | `ip` | an IPv4 or IPv6 address, in its short form | the address |
