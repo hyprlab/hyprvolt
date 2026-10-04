@@ -282,14 +282,20 @@ def _preset(f):
     return raw
 
 
-def _ref_choices(f, entity=None) -> list[tuple[int, str]]:
+def _ref_choices(f, entity=None) -> list:
+    """The records a ref field can point at, by name: (id, name), or with
+    several kinds of record (a service's Runs on), each kind under its
+    heading as {"label", "options"}, in the order the modules list them."""
     reg = registry()
     keys = [k for k in reg.ref_types(f) if k in reg.enabled_type_keys()]
-    rows = Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name).all()
-    # Several kinds of record in one list: say which each is.
-    def label(e):
-        return f"{e.name} · {reg.type(e.type).label}" if len(keys) > 1 else e.name
-    return [(e.id, label(e)) for e in rows if entity is None or e.id != entity.id]
+    rows = [e for e in Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name)
+            if entity is None or e.id != entity.id]
+    if len(keys) <= 1:
+        return [(e.id, e.name) for e in rows]
+    by_type = {}
+    for e in rows:
+        by_type.setdefault(e.type, []).append((e.id, e.name))
+    return [{"label": reg.type(k).plural, "options": by_type[k]} for k in keys if k in by_type]
 
 
 @bp.route("/e/form")

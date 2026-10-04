@@ -1,5 +1,6 @@
 """Software, Services, and Contacts and vendors: installations and seats,
 services and what they run on, suppliers and contracts."""
+import re
 from datetime import date, timedelta
 
 from .conftest import make
@@ -113,7 +114,10 @@ def test_a_service_runs_on_a_host_and_depends_on_its_domain(client, h, admin):
     assert "Website" in tree_names(client.get(f"/api/entities/{server['id']}/dependencies").get_json()["tree"])
     assert "Website" in tree_names(client.get(f"/api/entities/{domain['id']}/dependencies").get_json()["tree"])
     form = client.get("/e/form?type=service").data.decode()
-    assert "docker1 · Virtual machine" in form and ">example.net</option>" in form and "Home · Site" not in form
+    # Runs on lists each kind of host under its own heading.
+    runs_on = form.split('name="f.host"')[1].split("</select>")[0]
+    assert re.search(r'<optgroup label="Virtual machines"><option value="\d+" >docker1</option>', runs_on)
+    assert ">example.net</option>" in form and ">Home<" not in runs_on
 
 
 def test_a_service_kind_is_chosen_under_its_heading(client, h, admin):

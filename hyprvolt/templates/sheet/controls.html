@@ -136,7 +136,11 @@
 {% elif f.kind == 'ref' %}
   <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>
     <option value="" data-none>Not set</option>
-    {% for rid, label in item.choices %}<option value="{{ rid }}" {{ 'selected' if v == rid }}>{{ label }}</option>{% endfor %}
+    {% for c in item.choices %}
+      {%- if c is mapping %}<optgroup label="{{ c.label }}">
+        {%- for rid, label in c.options %}<option value="{{ rid }}" {{ 'selected' if v == rid }}>{{ label }}</option>{% endfor %}</optgroup>
+      {%- else %}<option value="{{ c[0] }}" {{ 'selected' if v == c[0] }}>{{ c[1] }}</option>{% endif %}
+    {%- endfor %}
   </select>
 {% elif f.kind == 'speed' %}
   {{ speed(item.name, v, id, f.help, f.label, save, cls) }}

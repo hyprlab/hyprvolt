@@ -1,6 +1,7 @@
 """The Network module: subnets, VLANs and IP addresses with their checks,
 the addresses section and tab on other records, the subnet view, ports and
 cables with tracing, DNS records, search, filters and roles."""
+import re
 from datetime import date, timedelta
 
 from .conftest import make, section
@@ -76,7 +77,9 @@ def test_an_ip_address_is_named_by_its_address(client, h, admin):
     form = client.get("/e/form?type=ip_address").data.decode()
     assert 'name="name"' not in form and 'name="f.address"' in form and "Made from the address" in form
     choices = client.get("/e/form?type=ip_address").data.decode()
-    assert "docker1 · Virtual machine" in choices and "srv1 · Server" in choices and "Home · Site" not in choices
+    assert re.search(r'<optgroup label="Virtual machines"><option value="\d+" >docker1</option>', choices)
+    assert re.search(r'<optgroup label="Servers"><option value="\d+" >srv1</option>', choices)
+    assert ">Home</option>" not in choices
 
 
 # ———— The addresses section and tab ————
