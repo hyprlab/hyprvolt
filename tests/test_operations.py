@@ -124,7 +124,7 @@ def test_a_service_kind_is_chosen_under_its_heading(client, h, admin):
     form = client.get("/e/form?type=service").data.decode()
     network = form.split('<optgroup label="Network">')[1].split("</optgroup>")[0]
     assert '<option value="dhcp" >DHCP</option>' in network and ">Reverse proxy<" in network
-    assert '<option value="ddns" >Dynamic DNS</option>' in network
+    assert '<option value="ddns" >Dynamic DNS</option>' in network and '<option value="adblock" >Ad blocking</option>' in network
     assert form.index('label="Apps"') < form.index('<option value="other" >Other</option>')
     dhcp = make(client, h, "service", name="Kea", **{"f.kind": "dhcp"})
     assert client.get(f"/api/entities/{dhcp['id']}").get_json()["entity"]["fields"]["kind"] == "dhcp"

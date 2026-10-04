@@ -17,7 +17,7 @@ from .models import ServiceDetail
 
 #: What a service is, under headings in the list (KIND_GROUPS); Other last.
 KINDS = (
-    ("dhcp", "DHCP"), ("dns", "DNS"), ("ddns", "Dynamic DNS"), ("vpn", "VPN"), ("proxy", "Reverse proxy"),
+    ("dhcp", "DHCP"), ("dns", "DNS"), ("ddns", "Dynamic DNS"), ("adblock", "Ad blocking"), ("vpn", "VPN"), ("proxy", "Reverse proxy"),
     ("loadbalancer", "Load balancer"), ("routing", "Routing and firewall"), ("tunnel", "Tunnel"),
     ("controller", "Network controller"), ("ntp", "Time (NTP)"),
     ("directory", "Directory (LDAP)"), ("sso", "Single sign-on"), ("passwords", "Password manager"),
@@ -34,7 +34,7 @@ KINDS = (
     ("other", "Other"),
 )
 KIND_GROUPS = (
-    ("Network", ("dhcp", "dns", "ddns", "vpn", "proxy", "loadbalancer", "routing", "tunnel", "controller", "ntp")),
+    ("Network", ("dhcp", "dns", "ddns", "adblock", "vpn", "proxy", "loadbalancer", "routing", "tunnel", "controller", "ntp")),
     ("Security and identity", ("directory", "sso", "passwords", "ca", "security")),
     ("Operations", ("monitoring", "logging", "backup", "containers", "git", "cicd", "registry", "automation",
                     "broker")),

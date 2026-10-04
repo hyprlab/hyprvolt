@@ -123,7 +123,7 @@ def test_the_reviewed_services_are_imported(client, h, admin):
     assert sonarr["fields"]["host"] == lab["sonarr"]["id"] and sonarr["fields"]["kind"] == "downloads"
     assert sonarr["fields"]["url"] == "https://sonarr.example.com" and sonarr["fields"]["ports"] == "8989/tcp"
     assert sonarr["notes"] == "Series" and [t for t in sonarr["tags"]] == ["Media"]
-    assert services["AdGuard Home"]["fields"]["kind"] == "dns"
+    assert services["AdGuard Home"]["fields"]["kind"] == "adblock"
     assert services["Jellyfin"]["fields"]["host"] == lab["vm"]["id"]     # the recorded one, updated
     assert services["Grafana"]["fields"]["url"] in (None, "")             # {{HOMEPAGE_VAR_...}} isn't a link
     # Sonarr now runs on its container: the container's dependents include it.
