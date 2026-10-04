@@ -54,17 +54,17 @@ def test_a_window_lists_what_goes_down_with_it(client, h, admin):
     host = make(client, h, "hypervisor", name="pve1")
     vm = make(client, h, "vm", name="docker1", **{"f.host": host["id"]})
     service = make(client, h, "service", name="Jellyfin", **{"f.host": vm["id"]})
-    w = make(client, h, "maintenance", name="Upgrade", **{"f.starts": "2030-10-03T22:00", "f.ends": "2030-10-04T01:00"})
+    w = make(client, h, "maintenance", name="Kernel upgrade", **{"f.starts": "2030-10-03T22:00", "f.ends": "2030-10-04T01:00"})
     link(client, h, w, host)
     tab = client.get(f"/e/{w['id']}/sheet?tab=impact").data.decode()
     assert ">pve1</a>" in tab and ">docker1</a>" in tab and ">Jellyfin</a>" in tab and "runs 3 hours" in tab
     # The link carries no dependency: the host doesn't need the window.
     needs = client.get(f"/api/entities/{host['id']}/dependencies?direction=dependencies").get_json()["tree"]
-    assert "Upgrade" not in str(needs)
+    assert "Kernel upgrade" not in str(needs)
     client.post(f"/api/entities/{w['id']}", json={"f.impact": "none"}, headers=h)
     assert ">docker1</a>" not in client.get(f"/e/{w['id']}/sheet?tab=impact").data.decode()
-    assert ">Upgrade<" in client.get("/maintenance?f=upcoming&view=list").data.decode()
-    assert ">Upgrade<" not in client.get("/maintenance?f=now&view=list").data.decode()
+    assert ">Kernel upgrade<" in client.get("/maintenance?f=upcoming&view=list").data.decode()
+    assert ">Kernel upgrade<" not in client.get("/maintenance?f=now&view=list").data.decode()
 
 
 def test_a_window_under_way_is_shown_on_the_dashboard(client, h, admin):

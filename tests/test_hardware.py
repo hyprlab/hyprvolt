@@ -142,8 +142,8 @@ def test_wireless_bridges_link_two_places_each_with_its_own_address(client, h, a
     # Only a bridge is offered, and a switch has no Wireless link section.
     bad = client.post(f"/api/entities/{a['id']}", json={"s.bridge.other": switch["id"]}, headers=h)
     assert bad.status_code == 400 and "wireless bridge that exists" in bad.get_json()["error"]
-    assert '<div data-section="bridge" hidden>' in client.get(f"/e/{switch['id']}/form").data.decode()
-    assert '<div data-section="bridge">' in form_b
+    assert 'data-section="bridge" hidden>' in client.get(f"/e/{switch['id']}/form").data.decode()
+    assert 'data-section="bridge">' in form_b
     # Unlinked from the other end.
     client.post(f"/api/entities/{b['id']}", json={"s.bridge.other": ""}, headers=h)
     assert 'Not linked</option>' in client.get(f"/e/{a['id']}/form").data.decode()

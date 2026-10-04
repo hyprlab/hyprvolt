@@ -279,7 +279,8 @@
   });
 
   /* ————— Rail windows: Settings, Help ————— */
-  document.querySelectorAll(".modal--rail").forEach(function (d) {
+  // (The New record window's rail is its steps: see "The New record window".)
+  document.querySelectorAll(".modal--rail:not(.modal--steps)").forEach(function (d) {
     railItems(d).forEach(function (item) {
       item.addEventListener("click", function () {
         showRailSection(d, item.getAttribute("data-section"));
@@ -812,8 +813,8 @@
   }
 
   /* ————— The record form ————— */
-  // One dialog for every type: the form inside is the server's, built from
-  // the type's field schema (sheet/form.html), fetched each time it opens.
+  // One form for every type: the server's, built from the type's field
+  // schema (sheet/form.html), fetched into the New record window each time.
   var entityModal = document.getElementById("entity-modal");
   var formSlot = document.getElementById("entity-form-slot");
   var formSource = null;
@@ -835,15 +836,6 @@
       document.getElementById("entity-modal-title").textContent = form.getAttribute("data-title");
       return form;
     });
-  }
-
-  function openEntityForm(url) {
-    if (!entityModal) return;
-    loadForm(url).then(function (form) {
-      if (!entityModal.open) entityModal.showModal();
-      var first = form.querySelector("[autofocus]");
-      if (first) first.focus();
-    }).catch(toastError);
   }
 
   function formData(form) {
@@ -910,10 +902,16 @@
       var form = e.target.closest("#entity-form");
       if (!form) return;
       e.preventDefault();
-      var errEl = form.querySelector(".form-error");
-      var btn = form.querySelector("button[type=submit]");
+      var errEl = form.querySelector(".form-error") || newError;
+      var btn = form.querySelector("button[type=submit]") || newCreate;
       var id = form.getAttribute("data-id");
       errEl.hidden = true;
+      // Something required left empty on a step not in view: that step, and say so.
+      if (!id) {
+        var gap = null;
+        formSteps().some(function (step) { gap = stepGap(step); if (gap) showStep(step.name); return gap; });
+        if (gap) { flagGap(gap); return; }
+      }
       setBusy(btn, true);
       api(id ? "/api/entities/" + id : "/api/entities", formData(form)).then(function (data) {
         entityModal.close();   // saved: the page that follows shows the record, not the form
@@ -931,12 +929,269 @@
     });
   }
 
+  /* ————— The New record window ————— */
+  // A rail of steps: what kind of record first, found by searching or
+  // chosen from the list, then the parts of its form (data-step), one at a
+  // time. Back and Next walk them, the rail jumps to any, and Create saves
+  // from whichever is showing. A record started from somewhere that
+  // decides its kind and more (a VM from its host's sheet) skips the first.
+  var newSteps = document.getElementById("newrec-steps");
+  var newKinds = document.getElementById("newrec-kinds");
+  var newQuery = document.getElementById("newrec-q");
+  var newList = document.getElementById("newrec-list");
+  var newNone = document.getElementById("newrec-none");
+  var newFoot = document.getElementById("newrec-foot");
+  var newError = document.getElementById("entity-error");
+  var newBack = document.getElementById("newrec-back");
+  var newNext = document.getElementById("newrec-next");
+  var newCreate = document.getElementById("newrec-create");
+  var KIND_STEP = "Kind";
+  // params: what the form is opened with besides its type (a location, a
+  // record to attach to); fixed: no Kind step; chosen: the kind picked.
+  var wiz = { params: "", fixed: false, step: KIND_STEP, chosen: null };
+
+  // The form's steps: its data-step parts, an unnamed one joined to the
+  // one before, and one hidden by a choice (a tower's rack position) left out.
+  function formSteps() {
+    var form = formSlot && formSlot.querySelector("form"), out = [];
+    if (!form) return out;
+    form.querySelectorAll("[data-step]").forEach(function (el) {
+      var name = el.getAttribute("data-step");
+      if (!name && out.length) { out[out.length - 1].els.push(el); return; }
+      if (!el.hidden) out.push({ name: name || "Details", els: [el] });
+    });
+    return out;
+  }
+  function allSteps() {
+    var steps = formSteps();
+    if (!wiz.fixed) steps.unshift({ name: KIND_STEP, kind: true, els: [] });
+    return steps;
+  }
+
+  function stepFields(step) {
+    var out = [];
+    step.els.forEach(function (el) {
+      el.querySelectorAll("input:not([type=hidden]), select, textarea").forEach(function (f) {
+        if (!f.disabled && !f.closest("[hidden]")) out.push(f);
+      });
+    });
+    return out;
+  }
+  // A required field of the step left empty, or null.
+  function stepGap(step) {
+    var gap = null;
+    stepFields(step).some(function (f) { if (f.required && !f.value.trim()) gap = f; return gap; });
+    return gap;
+  }
+  function flagGap(field) {
+    var label = field.id && formSlot.querySelector('label[for="' + field.id + '"]');
+    var text = label ? label.firstChild.textContent.trim() : "";
+    newError.textContent = field.name === "name" ? "Give it a name." : (text || "This field") + " can't be left empty.";
+    newError.hidden = false;
+    field.focus();
+  }
+
+  function showStep(name, focus) {
+    var steps = allSteps(), at = 0;
+    steps.forEach(function (s, i) { if (s.name === name) at = i; });
+    var step = steps[at], form = formSlot.querySelector("form");
+    var moved = wiz.step !== step.name;
+    wiz.step = step.name;
+    newSteps.innerHTML = "";
+    steps.forEach(function (s, i) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "settings-navitem newrec-step" + (i === at ? " is-active" : "") + (i < at ? " is-past" : "");
+      b.setAttribute("data-step-go", s.name);
+      if (i === at) b.setAttribute("aria-current", "step");
+      var num = document.createElement("span");
+      num.className = "guide-num";
+      if (i < at) num.innerHTML = '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+      else num.textContent = String(i + 1);
+      var label = document.createElement("span");
+      label.textContent = s.name;
+      b.appendChild(num);
+      b.appendChild(label);
+      li.appendChild(b);
+      newSteps.appendChild(li);
+    });
+    newKinds.classList.toggle("is-active", !!step.kind);
+    formSlot.classList.toggle("is-active", !step.kind);
+    formSlot.querySelectorAll("[data-step]").forEach(function (el) {
+      el.classList.toggle("is-current", step.els.indexOf(el) !== -1);
+    });
+    if (moved) { formSlot.scrollTop = 0; newError.hidden = true; }
+    // Back at the kinds after choosing one: all of them, the choice marked.
+    if (moved && step.kind && wiz.chosen) { newQuery.value = ""; filterKinds(); }
+    document.getElementById("newrec-title").textContent = step.kind ? "What are you adding?" : step.name;
+    document.getElementById("newrec-count").textContent = steps.length > 1 ? "Step " + (at + 1) + " of " + steps.length : "";
+    var last = at === steps.length - 1;
+    newFoot.hidden = !form;
+    newBack.hidden = at === 0;
+    newNext.hidden = last;
+    newCreate.classList.toggle("btn--primary", last);
+    newCreate.classList.toggle("btn--ghost", !last);
+    if (!focus) return;
+    if (step.kind) { newQuery.focus(); return; }
+    var first = stepFields(step)[0];
+    if (first) first.focus({ preventScroll: true });
+  }
+  function stepBy(delta) {
+    var steps = allSteps(), at = 0;
+    steps.forEach(function (s, i) { if (s.name === wiz.step) at = i; });
+    if (delta > 0) {
+      var gap = stepGap(steps[at]);
+      if (gap) { flagGap(gap); return; }
+    }
+    var to = steps[Math.max(0, Math.min(steps.length - 1, at + delta))];
+    showStep(to.name, true);
+  }
+
+  // The kinds: all of them, grouped, until something is typed; then the
+  // ones that match, best first, the kinds a type comes in among them.
+  function kindOptions(visible) {
+    var all = Array.prototype.slice.call(newList.querySelectorAll(".newrec-kind"));
+    if (!visible) return all;
+    return all.filter(function (o) { return !o.hidden; }).sort(function (a, b) {
+      return (parseInt(a.style.order, 10) || 0) - (parseInt(b.style.order, 10) || 0) || all.indexOf(a) - all.indexOf(b);
+    });
+  }
+  function kindRank(opt, q) {
+    var label = opt.getAttribute("data-label").toLowerCase();
+    var words = opt.getAttribute("data-words").toLowerCase().split(/[\s-]+/);
+    var typed = q.split(/\s+/);
+    var starts = function (list) {
+      return typed.every(function (t) { return list.some(function (w) { return w.indexOf(t) === 0; }); });
+    };
+    if (label === q) return 1;
+    if (label.indexOf(q) === 0) return 2;
+    if (starts(label.split(/[\s-]+/))) return 3;
+    if (starts(words)) return 4;
+    return opt.getAttribute("data-words").toLowerCase().indexOf(q) !== -1 ? 5 : -1;
+  }
+  function filterKinds() {
+    var q = newQuery.value.trim().toLowerCase();
+    newList.classList.toggle("is-searching", !!q);
+    kindOptions().forEach(function (opt) {
+      var rank = q ? kindRank(opt, q) : (opt.hasAttribute("data-preset") ? -1 : 0);
+      opt.hidden = rank < 0;
+      opt.style.order = rank > 0 ? String(rank) : "";
+    });
+    var shown = kindOptions(true);
+    newNone.hidden = shown.length > 0;
+    markKind(shown[0] || null, q ? null : wiz.chosen);
+  }
+  // The one Enter picks: the best match, or the kind already chosen.
+  function markKind(opt, chosen) {
+    if (chosen) {
+      opt = kindOptions(true).filter(function (o) {
+        return o.getAttribute("data-pick") === chosen.type && (o.getAttribute("data-kind") || "") === (chosen.kind || "");
+      })[0] || opt;
+    }
+    kindOptions().forEach(function (o) {
+      o.classList.toggle("is-active", o === opt);
+      o.setAttribute("aria-selected", o === opt ? "true" : "false");
+    });
+    if (opt) {
+      newQuery.setAttribute("aria-activedescendant", opt.id);
+      if (newKinds.classList.contains("is-active")) opt.scrollIntoView({ block: "nearest" });
+    } else newQuery.removeAttribute("aria-activedescendant");
+  }
+
+  // The form for a kind, with what was typed for another kind carried over.
+  function chooseKind(type, kind, text) {
+    var params = new URLSearchParams(wiz.params);
+    params.set("type", type);
+    if (kind) params.set("f.kind", kind);
+    var old = formSlot.querySelector("form"), values = old ? formData(old) : null;
+    if (values) { delete values.type; if (kind) delete values["f.kind"]; }
+    return loadForm("/e/form?" + params.toString()).then(function (form) {
+      if (values) fillForm(form, values);
+      form.querySelectorAll("select[data-hides]").forEach(showSections);
+      wiz.chosen = { type: type, kind: kind || "", text: text || "" };
+      if (text) document.getElementById("entity-modal-title").textContent = "New " + text;
+      return form;
+    });
+  }
+  function pickKind(opt) {
+    if (!opt) return;
+    chooseKind(opt.getAttribute("data-pick"), opt.getAttribute("data-kind"), opt.getAttribute("data-text")).then(function () {
+      showStep(allSteps()[1].name, true);
+    }).catch(toastError);
+  }
+
+  // opts: {type, kind, params (a query string), fixed}
+  function openNewRecord(opts) {
+    if (!entityModal) return;
+    wiz = { params: opts.params || "", fixed: !!(opts.fixed && opts.type), step: KIND_STEP, chosen: null };
+    formSlot.innerHTML = "";
+    formSource = null;
+    document.getElementById("entity-modal-title").textContent = "New record";
+    newQuery.value = "";
+    newError.hidden = true;
+    setBusy(newCreate, false);
+    filterKinds();
+    var ready = Promise.resolve();
+    if (opts.type) {
+      var opt = newList.querySelector('.newrec-kind[data-pick="' + opts.type + '"]:not([data-preset])');
+      ready = chooseKind(opts.type, opts.kind, opt && opt.getAttribute("data-text"));
+    }
+    ready.then(function () {
+      setSidebar(false);
+      if (!entityModal.open) entityModal.showModal();
+      showStep(opts.type ? allSteps()[wiz.fixed ? 0 : 1].name : KIND_STEP, true);
+    }).catch(toastError);
+  }
+
+  if (entityModal && newList) {
+    newQuery.addEventListener("input", filterKinds);
+    newQuery.addEventListener("keydown", function (e) {
+      var shown = kindOptions(true), at = shown.indexOf(newList.querySelector(".newrec-kind.is-active"));
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        var to = at + (e.key === "ArrowDown" ? 1 : -1);
+        if (shown.length) markKind(shown[(to + shown.length) % shown.length]);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        pickKind(shown[at] || shown[0]);
+      }
+    });
+    newList.addEventListener("click", function (e) {
+      pickKind(e.target.closest(".newrec-kind"));
+    });
+    newSteps.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-step-go]");
+      if (b) showStep(b.getAttribute("data-step-go"), true);
+    });
+    newBack.addEventListener("click", function () { stepBy(-1); });
+    newNext.addEventListener("click", function () { stepBy(1); });
+    // Enter in a field goes on to the next step, and on the last creates.
+    entityModal.addEventListener("keydown", function (e) {
+      var el = e.target;
+      if (e.key !== "Enter" || e.defaultPrevented || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!formSlot.contains(el) || el.tagName === "TEXTAREA" || el.tagName === "BUTTON") return;
+      e.preventDefault();
+      if (newNext.hidden) newCreate.click(); else stepBy(1);
+    });
+    // A choice that hides a part (a tower: no rack position) changes the steps.
+    document.addEventListener("change", function (e) {
+      if (entityModal.open && formSlot.contains(e.target)) showStep(wiz.step);
+    });
+  }
+
   document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-new-record]")) {
+      e.preventDefault();
+      var where = entityModal && entityModal.getAttribute("data-location");
+      openNewRecord({ params: where ? "location_id=" + where : "" });
+      return;
+    }
     var btn = e.target.closest("[data-new-type]");
     if (!btn) return;
     e.preventDefault();
     closeMenus();
-    var params = new URLSearchParams({ type: btn.getAttribute("data-new-type") });
+    var params = new URLSearchParams();
     if (btn.getAttribute("data-new-location")) params.set("location_id", btn.getAttribute("data-new-location"));
     if (btn.getAttribute("data-new-attach")) params.set("attach_to", btn.getAttribute("data-new-attach"));
     // data-new-link="affects:12": the new record is linked to record 12.
@@ -949,8 +1204,10 @@
         Object.keys(values).forEach(function (key) { params.set("f." + key, values[key]); });
       } catch (err) { /* a template mistake; open the form without them */ }
     }
-    setSidebar(false);
-    openEntityForm("/e/form?" + params.toString());
+    // Started from a record (attached, linked or filled in for it), the
+    // kind is settled; from a list or the dashboard it can still change.
+    openNewRecord({ type: btn.getAttribute("data-new-type"), params: params.toString(),
+                    fixed: !!(btn.getAttribute("data-new-attach") || btn.getAttribute("data-new-link") || preset) });
   });
 
   /* ————— Small behaviors templates ask for with data-* ————— */
@@ -3094,13 +3351,23 @@
     "entity-modal": {
       save: function () {
         var form = formSlot && formSlot.querySelector("form");
-        return form ? { src: formSource, values: formData(form) } : null;
+        return { src: form ? formSource : null, values: form ? formData(form) : null, wiz: wiz, q: newQuery.value };
       },
       restore: function (d, s) {
-        if (!s || !s.src) return;
+        if (!s) return;
+        if (!s.src) {
+          openNewRecord({ params: s.wiz && s.wiz.params });
+          newQuery.value = s.q || "";
+          filterKinds();
+          return;
+        }
         loadForm(s.src).then(function (form) {   // the form fresh, then the draft back in
           fillForm(form, s.values);
+          form.querySelectorAll("select[data-hides]").forEach(showSections);
+          wiz = s.wiz;
+          if (wiz.chosen && wiz.chosen.text) document.getElementById("entity-modal-title").textContent = "New " + wiz.chosen.text;
           d.showModal();
+          showStep(wiz.step, true);
         }).catch(toastError);
       }
     },

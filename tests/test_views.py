@@ -22,15 +22,21 @@ def test_a_module_list_and_its_sidebar(client, h, admin):
     assert client.get("/nosuchmodule").status_code == 404
 
 
-def test_the_new_menu_offers_every_enabled_module_on_every_page(client, h, admin):
+def test_the_new_record_window_offers_every_enabled_module_on_every_page(client, h, admin):
     def offered(url):
         page = client.get(url).data.decode()
-        menu = page.split('id="new-menu"')[1].split("</div>\n        </div>")[0]
-        return set(re.findall(r'data-new-type="([a-z_]+)"', menu))
+        kinds = page.split('id="newrec-list"')[1].split('id="newrec-none"')[0]
+        return set(re.findall(r'data-pick="([a-z_]+)"', kinds))
     everything = offered("/")
     assert {"server", "vm", "subnet", "vendor", "document"} <= everything
     for url in ("/network", "/hardware?view=list", "/contacts"):
         assert offered(url) == everything, url
+    page = client.get("/").data.decode()
+    assert 'id="new-btn" data-new-record' in page and 'id="new-menu"' not in page
+    # The kinds a type comes in are found too, and start its form with the kind chosen.
+    assert 'data-pick="network_device" data-kind="switch" data-label="Switch" data-text="switch"' in page
+    assert 'data-pick="service" data-kind="dns" data-label="DNS" data-text="DNS"' in page
+    assert 'data-kind="other"' not in page
     client.post("/admin/modules/contacts", json={"enabled": False}, headers=h)
     assert "vendor" not in offered("/network")
 
@@ -73,6 +79,18 @@ def test_the_form_follows_the_schema(client, h, admin):
     assert client.get("/e/form?type=nothing").status_code == 404
 
 
+def test_a_new_records_form_comes_in_steps(client, h, admin):
+    body = client.get("/e/form?type=server&f.kind=tower").data.decode()
+    steps = re.findall(r'data-step="([^"]*)"', body)
+    assert steps[:4] == ["Basics", "", "Specs", "Purchase"] and steps[-1] == "Notes"
+    assert 'data-step="Rack position" data-section="rack" hidden' in body
+    assert '<option value="tower" selected>' in body
+    # The window has the error and Create; an edit's form keeps its own.
+    assert 'type="submit"' not in body
+    g = make(client, h, name="Blue box")
+    assert 'type="submit"' in client.get(f"/e/{g['id']}/form").data.decode()
+
+
 def test_viewers_get_no_form_and_no_edit_buttons(client, h, admin, viewer):
     g = make(client, h, name="Blue box")
     other, _ = viewer
@@ -80,6 +98,7 @@ def test_viewers_get_no_form_and_no_edit_buttons(client, h, admin, viewer):
     assert other.get("/e/form?type=gadget").status_code == 403
     page = other.get("/example").data.decode()
     assert 'id="sheet-edit"' not in page and 'id="sheet-delete"' not in page and "data-new-type" not in page
+    assert 'id="entity-modal"' not in page
     sheet = other.get(f"/e/{g['id']}/sheet?tab=relationships").data.decode()
     assert "linkform" not in sheet
 

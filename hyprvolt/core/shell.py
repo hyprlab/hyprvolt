@@ -100,4 +100,15 @@ def new_menu() -> list[dict]:
     the sidebar's order, whichever page it is on."""
     if not current_user.can_edit:
         return []
-    return [{"module": m, "types": list(m.types)} for m in registry().enabled_modules() if m.types]
+    return [{"module": m, "types": list(m.types), "presets": [p for t in m.types for p in kind_presets(t)]}
+            for m in registry().enabled_modules() if m.types]
+
+
+def kind_presets(etype) -> list[tuple]:
+    """The kinds a type comes in, from its "kind" choice, so the New record
+    window finds a network device by "switch": (type, value, label), with
+    "Other" left out."""
+    field = next((f for f in etype.fields if f.key == "kind" and f.kind == "select"), None)
+    if field is None:
+        return []
+    return [(etype, value, label) for value, label in field.options if value and value != "other"]

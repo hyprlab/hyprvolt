@@ -474,8 +474,8 @@ so in `notices`, a list of sentences, beside the record.
 ## Setting up a site
 
 A new install goes from the setup wizard straight into a guide that
-documents a site a step at a time; New > Set up a site, step by step (and
-the empty dashboard) opens it again later. Its first page says what it
+documents a site a step at a time; Set up a site, step by step, at the foot
+of the New record window (and the empty dashboard), opens it again later. Its first page says what it
 covers, in five parts: the place (the site, its buildings and rooms,
 racks, and the vendors it deals with), the network (the internet
 connection, VLANs, subnets, wireless networks), the equipment (network gear, servers and storage),
@@ -609,7 +609,23 @@ can't be saved (a required field left empty, a number out of range) says why
 under the field and keeps what was typed; closing the record then keeps it
 open once, and closing it again discards the change. Notes and other long
 text show formatted, with an Edit button that opens them as Markdown. `e`
-puts the cursor in the first field. New records are made in the form.
+puts the cursor in the first field.
+
+New records are made in the New record window, from New at the top of the
+page or the `n` key. It starts with what kind of record: type to search
+(by name, plural or module, and by the kinds a type comes in, so "switch"
+finds a network device with Switch chosen and "dns" a DNS service), or
+choose from the list, grouped by module; the arrow keys and Enter pick
+too. The form follows a step at a time down the rail: Basics (the name,
+status, location and tags, and the type's own main fields), then each
+group of fields, custom fields, each section other modules add (Rack
+position, IP addresses) and Notes. Next and Enter go on, Back and the rail
+go anywhere, and Create saves from any step; a required field left empty
+brings its step back with the reason. A choice that rules a section out
+(a tower has no rack position) takes its step away. Going back to the kind
+and choosing another keeps what was typed. A New button on a record (a VLAN
+on its network, a contract on its vendor) opens the window at Basics, the
+kind and the link to that record already settled.
 
 Deleting a record, a link or a file can be undone from the message that
 follows. A deleted record then waits under Recently deleted, where it can
@@ -792,7 +808,7 @@ its database, without signing in. The image's `HEALTHCHECK` uses it, so
 | Key | Where | What it does |
 | --- | --- | --- |
 | Ctrl K, ⌘K or `/` | anywhere | Search |
-| `n` | a page | New record: the menu of every kind of record, grouped by module in the sidebar's order |
+| `n` | a page | New record: the window that searches every kind of record, then walks through its form |
 | `j`, `k` | a record | Next, previous in the list |
 | Back, Forward (the browser's, or ‹ › in the record's bar) | a record | The records opened one from another: a link, a page's Next, `j` and `k`. Back from the first one closes it |
 | `1` to `9`, ↑ ↓ (← → on a narrow screen) | a record | Scroll to its sections |

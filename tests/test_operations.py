@@ -5,6 +5,12 @@ from datetime import date, timedelta
 from .conftest import make
 
 
+def listed(client, url):
+    """A page without the New record window, whose kinds (DNS, Lease) would
+    match a record's name."""
+    return client.get(url).data.decode().split('id="entity-modal"')[0]
+
+
 def post(client, h, url, status=200, **body):
     resp = client.post(url, json=body, headers=h)
     assert resp.status_code == status, resp.get_json()
@@ -116,8 +122,8 @@ def test_services_that_matter_show_on_the_dashboard(client, h, admin):
     make(client, h, "service", name="Grafana")
     card = client.get("/").data.decode().split('<p class="setting-label">Services</p>')[1].split("</section>")[0]
     assert card.index(">Backups<") < card.index(">DNS<") and ">Grafana<" not in card and "Degraded" in card
-    assert ">DNS<" in client.get("/services?f=important&view=list").data.decode()
-    trouble = client.get("/services?f=trouble&view=list").data.decode()
+    assert ">DNS<" in listed(client, "/services?f=important&view=list")
+    trouble = listed(client, "/services?f=trouble&view=list")
     assert ">Backups<" in trouble and ">DNS<" not in trouble
 
 
@@ -171,7 +177,7 @@ def test_contracts_say_when_they_end(client, h, admin):
     make(client, h, "contract", name="Lease", **{"f.ends": (date.today() + timedelta(days=400)).isoformat()})
     tab = client.get(f"/e/{soon['id']}/sheet?tab=covers").data.decode()
     assert "Renews in 40 days" in tab and "Notice is due by " + (date.today() + timedelta(days=10)).isoformat() in tab
-    due = client.get("/contacts?f=ending&view=list").data.decode()
+    due = listed(client, "/contacts?f=ending&view=list")
     assert ">Internet<" in due and ">Lease<" not in due
 
 

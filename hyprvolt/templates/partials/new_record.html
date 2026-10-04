@@ -1,0 +1,79 @@
+{# The New record window: what kind of record, searched for or chosen from
+   the list, then the record form a step at a time. The steps after the
+   first are the form's parts (data-step in sheet/form.html, fetched per
+   type into #entity-form-slot); app.js puts them down the rail. A kind
+   that comes in kinds of its own (a network device: switch, router) is
+   found by those too, and starts the form with it chosen. #}
+{% from "partials/macros.html" import type_icon %}
+<dialog class="modal modal--rail modal--steps" id="entity-modal" aria-labelledby="entity-modal-title"
+        data-location="{{ location_entity.id if location_entity else '' }}">
+  <div class="settings">
+    <aside class="settings-nav">
+      <div class="settings-nav-head">
+        <h3 class="settings-nav-title" id="entity-modal-title">New record</h3>
+      </div>
+      <ol class="settings-nav-list newrec-steps" id="newrec-steps" aria-label="Steps"></ol>
+      {% if site_guide %}
+      <div class="settings-nav-foot">
+        <a class="settings-navitem" href="{{ url_for('guide.start') }}">
+          <svg viewBox="0 0 24 24"><path d="M5 19.5V5.5M5 5.5h11l-2 3.5 2 3.5H5"/></svg><span>Set up a site, step by step</span>
+        </a>
+      </div>
+      {% endif %}
+    </aside>
+
+    <div class="settings-main">
+      <header class="settings-head">
+        <h4 class="settings-head-title" id="newrec-title">What are you adding?</h4>
+        <span class="newrec-count" id="newrec-count"></span>
+        <button class="iconbtn" data-close aria-label="Close" title="Close (Esc)">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+
+      <section class="settings-pane newrec-kinds is-active" id="newrec-kinds">
+        <div class="palette-inputrow newrec-search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+          <input id="newrec-q" type="search" placeholder="Search: a switch, a VM, a domain…" autocomplete="off" spellcheck="false"
+                 role="combobox" aria-expanded="true" aria-controls="newrec-list" aria-autocomplete="list" aria-label="Search the kinds of record">
+        </div>
+        <div class="newrec-list" id="newrec-list" role="listbox" aria-label="Kinds of record">
+          {% for group in new_menu %}
+          <p class="palette-label newrec-group" data-group="{{ group.module.id }}">{{ group.module.name }}</p>
+          {% for t in group.types %}
+          <div class="palette-item newrec-kind" role="option" id="newrec-{{ t.key }}" aria-selected="false"
+               data-group="{{ group.module.id }}" data-pick="{{ t.key }}" data-label="{{ t.label }}" data-text="{{ t.text() }}"
+               data-words="{{ t.label }} {{ t.plural }} {{ t.key|replace('_', ' ') }} {{ group.module.name }}">
+            {{ type_icon(t.icon or group.module.icon) }}<span class="palette-item-title">{{ t.label }}</span>
+          </div>
+          {% endfor %}
+          {% for t, value, label in group.presets %}
+          <div class="palette-item newrec-kind" role="option" id="newrec-{{ t.key }}-{{ value }}" aria-selected="false" hidden data-preset
+               data-group="{{ group.module.id }}" data-pick="{{ t.key }}" data-kind="{{ value }}" data-label="{{ label }}" data-text="{{ label if label[:2].isupper() else label[0]|lower ~ label[1:] }}"
+               data-words="{{ label }}">
+            {{ type_icon(t.icon or group.module.icon) }}<span class="palette-item-title">{{ label }}</span>
+            <span class="palette-item-meta">{{ t.label }}</span>
+          </div>
+          {% endfor %}
+          {% endfor %}
+        </div>
+        <p class="palette-empty" id="newrec-none" hidden>No kind of record matches that. Clear the search to see them all.</p>
+      </section>
+
+      <section class="settings-pane newrec-form" id="entity-form-slot"></section>
+
+      <footer class="newrec-foot" id="newrec-foot" hidden>
+        <p class="form-error" id="entity-error" hidden></p>
+        <div class="newrec-nav">
+          <button type="button" class="btn btn--ghost" id="newrec-back">Back</button>
+          <span class="newrec-nav-go">
+            <button type="submit" class="btn btn--ghost" id="newrec-create" form="entity-form">
+              <span class="btn-label">Create</span><span class="btn-busy" hidden>Saving…</span>
+            </button>
+            <button type="button" class="btn btn--primary" id="newrec-next">Next</button>
+          </span>
+        </div>
+      </footer>
+    </div>
+  </div>
+</dialog>

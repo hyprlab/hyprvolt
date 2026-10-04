@@ -72,29 +72,10 @@
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         </button>
         {% else %}
-        <div class="menu" id="new-menu">
-          <button class="menubtn menubtn--icon" aria-haspopup="true" aria-expanded="false" title="New (n)" id="new-btn">
-            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            <span class="menubtn-label">New</span>
-            <svg class="chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
-          </button>
-          <div class="menupop menupop--scroll" role="menu" hidden>
-            {% if site_guide %}
-            <a class="menuopt" role="menuitem" href="{{ url_for('guide.start') }}">
-              <svg viewBox="0 0 24 24"><path d="M5 19.5V5.5M5 5.5h11l-2 3.5 2 3.5H5"/></svg><span>Set up a site, step by step</span>
-            </a>
-            {% endif %}
-            {% for group in new_menu %}
-            {% if new_menu|length > 1 %}<p class="menupop-head">{{ group.module.name }}</p>{% endif %}
-            {% for t in group.types %}
-            <button type="button" class="menuopt" role="menuitem" data-new-type="{{ t.key }}"
-                    {% if location_entity %}data-new-location="{{ location_entity.id }}"{% endif %}>
-              {{ type_icon(t.icon or group.module.icon) }}<span>{{ t.label }}</span>
-            </button>
-            {% endfor %}
-            {% endfor %}
-          </div>
-        </div>
+        <button class="menubtn menubtn--icon" id="new-btn" data-new-record title="New record (n)">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          <span class="menubtn-label">New</span>
+        </button>
         {% endif %}
         {% endif %}
 
@@ -164,17 +145,8 @@
   </main>
 </div>
 
-<!-- ————— New / edit record ————— -->
-{# The form inside is fetched per type (core/views.py, sheet/form.html). #}
-<dialog class="modal modal--wide" id="entity-modal" aria-labelledby="entity-modal-title">
-  <div class="modal-head">
-    <h3 id="entity-modal-title">New record</h3>
-    <button class="iconbtn" data-close aria-label="Close">
-      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-  </div>
-  <div class="modal-body" id="entity-form-slot"></div>
-</dialog>
+<!-- ————— New record ————— -->
+{% if current_user.can_edit %}{% include "partials/new_record.html" %}{% endif %}
 
 {% if page == 'list' and current_user.can_edit %}
 {# Importing a CSV: choose the file here; the column matching and the check

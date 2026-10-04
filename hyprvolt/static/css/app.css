@@ -555,8 +555,6 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .confirm-text { font-size: 14.5px; color: var(--muted); line-height: 1.5; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 /* The record form: two columns of fields, long text across both. */
-#entity-modal { width: min(720px, calc(100vw - 32px)); }
-#entity-modal[open] { max-height: calc(100dvh - 48px); overflow-y: auto; }
 .entity-form { display: flex; flex-direction: column; gap: 12px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; align-items: start; }
 .form-wide { grid-column: 1 / -1; }
@@ -666,6 +664,46 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .help kbd {
   display: inline-block; min-width: 22px; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 6px;
   background: var(--panel); font: 600 12px/1.5 var(--mono); color: var(--ink); text-align: center;
+}
+/* The New record window (.modal--steps): its rail is the steps, numbered
+   as the site guide numbers its own; the kinds are searched at the top of
+   the first, and Back, Next and Create stay at the foot of every one. */
+.newrec-steps { list-style: none; margin: 0; padding: 0; }
+.newrec-step .guide-num { flex: none; }
+.newrec-step.is-past .guide-num { border-color: transparent; background: var(--selected); color: var(--ink); }
+.newrec-step.is-active .guide-num { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.modal--steps .settings-nav-foot .settings-navitem span { white-space: normal; }
+.newrec-count { display: none; font-size: 12px; font-weight: 650; color: var(--faint); white-space: nowrap; }
+.settings-pane.newrec-kinds.is-active { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.newrec-search { flex: none; padding: 12px 26px; border-bottom: 1px solid var(--line); }
+.newrec-search input::-webkit-search-cancel-button { display: none; }
+.newrec-list {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; align-content: start; padding: 8px 18px 18px;
+}
+.newrec-group { grid-column: 1 / -1; padding-top: 12px; }
+.newrec-list.is-searching .newrec-group { display: none; }
+.newrec-list.is-searching { padding-top: 12px; }
+.newrec-kind svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+.newrec-kind:hover { background: var(--hover); }
+.newrec-kind.is-active svg { color: var(--ink); }
+.newrec-kind[hidden] { display: none; }
+.entity-form [data-step]:not([data-section]) { display: contents; }
+.newrec-form .entity-form [data-step] { display: none; }
+.newrec-form .entity-form [data-step].is-current { display: flex; flex-direction: column; gap: 12px; }
+.newrec-form .entity-form [data-step][hidden] { display: none; }
+.newrec-form [data-step]:not([data-step=""]) > .setting-label:first-child { display: none; }
+.newrec-foot { flex: none; padding: 12px 26px 14px; border-top: 1px solid var(--line); }
+.newrec-foot .form-error { margin-bottom: 10px; }
+.newrec-nav { display: flex; justify-content: space-between; gap: 10px; }
+.newrec-nav-go { display: flex; gap: 10px; margin-left: auto; }
+@media (max-width: 700px) {
+  /* Phones: the steps one at a time, without the rail. */
+  .modal--steps .settings-nav { display: none; }
+  .modal--steps .settings-main { display: flex; }
+  .newrec-count { display: inline; }
+  .newrec-list { grid-template-columns: minmax(0, 1fr); padding: 6px 10px 14px; }
+  .newrec-search, .newrec-foot { padding-left: 18px; padding-right: 18px; }
 }
 @keyframes pane-in { from { transform: translateX(24px); opacity: 0; } }
 .setting-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }

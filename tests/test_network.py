@@ -542,9 +542,9 @@ def test_wireless_networks_are_broadcast_by_wireless_gear(client, h, admin):
     bad = client.post(f"/api/entities/{home['id']}", json={"s.broadcast.list": str(switch["id"])}, headers=h)
     assert bad.status_code == 400 and "wireless gear that exists" in bad.get_json()["error"]
     switch_form = client.get(f"/e/{switch['id']}/form").data.decode()
-    assert '<div data-section="wifi" hidden>' in switch_form and '<div data-section="bridge" hidden>' in switch_form
+    assert 'data-section="wifi" hidden>' in switch_form and 'data-section="bridge" hidden>' in switch_form
     ext_form = client.get(f"/e/{ext['id']}/form").data.decode()
-    assert '<div data-section="wifi">' in ext_form and '<div data-section="bridge" hidden>' in ext_form
+    assert 'data-section="wifi">' in ext_form and 'data-section="bridge" hidden>' in ext_form
     assert "wifi=switch,patch_panel,moca,other," in ext_form
 
 
@@ -587,7 +587,7 @@ def test_switches_routers_and_firewalls_carry_vlans_and_subnets(client, h, admin
     assert "a switch, router or firewall" in post(client, h, f"/api/entities/{lab['id']}", 400,
                                                   **{"s.carriers.list": str(ap["id"])})["error"]
     panel = make(client, h, "network_device", name="pp1", **{"f.kind": "patch_panel"})
-    assert '<div data-section="networks" hidden>' in client.get(f"/e/{panel['id']}/form").data.decode()
+    assert 'data-section="networks" hidden>' in client.get(f"/e/{panel['id']}/form").data.decode()
     # A switch that fails takes the networks it carries with it.
     tree = client.get(f"/api/entities/{sw['id']}/dependencies?direction=dependents").get_json()["tree"]
     assert {n["name"] for n in tree} == {"IoT", "Lab"}
@@ -618,7 +618,7 @@ def test_a_pair_of_moca_adapters_works_like_one_cable(client, h, admin):
     # The link reads the same from both ends.
     form = client.get(f"/e/{near['id']}/form").data.decode()
     assert f'<option value="{far["id"]}" selected>moca-den</option>' in form
-    assert '<div data-section="moca" hidden>' in client.get(f"/e/{sw['id']}/form").data.decode()
+    assert 'data-section="moca" hidden>' in client.get(f"/e/{sw['id']}/form").data.decode()
     assert "Choose a MoCA adapter that exists" in post(client, h, f"/api/entities/{far['id']}", 400,
                                                          **{"s.moca.other": sw["id"]})["error"]
     post(client, h, "/network/cables", device_id=near["id"], other_device_id=sw["id"])

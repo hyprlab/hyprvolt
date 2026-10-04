@@ -40,7 +40,8 @@ With nothing more, gadgets get:
 
 - a page at `/example` with cards and a list, sorting, paging, and a place in
   the sidebar with a live count
-- the New menu and one form, built from the fields
+- a place in the New record window, found by label, plural and kinds,
+  and one form, built from the fields, walked through a step per group
 - the detail sheet with Overview, Relationships, Documents, Attachments and
   History, a `?open=<id>` link and keyboard navigation
 - a name, slug, status, location, tags and Markdown notes, which every record
@@ -353,7 +354,8 @@ FormSection("rack", "Rack position", render=rack_form, save=rack_save,
 
 - `render(etype, entity)` returns the fields' HTML, from a template. Each
   input is named `s.<key>.<name>`: `s.rack.position_u`. `entity` is None in
-  a new record's form.
+  a new record's form, where the section is a step of its own, named by its
+  label.
 - `save(entity, values, user)` runs inside `records.create` and
   `records.update`, after the record's own fields, whenever the data names the
   section. `values` is `{"position_u": "12", ...}`. It checks them, raising
@@ -399,7 +401,7 @@ Instead of scripts, a template asks `app.js` for behavior with attributes:
 | `data-done="Message"` | The toast; with Undo when the response has `undo`. An answer's own `message` takes its place |
 | `[data-pick]`, `data-pick-types`, `data-pick-into` | Opens the palette to choose a record; its id goes into the form field named by `data-pick-into` (`other_id` by default) and its name into `[data-pick-label]`. `data-pick-exclude="id"` leaves a record out; `data-pick-submit` submits the form once one is chosen |
 | `[data-fill='{"field": value}']`, `data-fill-form="id"` | Fills fields of a form and shows it; the field marked `data-fill-focus` gets the focus |
-| `[data-new-type="rack"]`, `data-new-location`, `data-new-attach`, `data-new-link="affects:12"`, `data-new-name`, `data-new-fields='{"host": 12}'` | Opens the form for a new record, placed somewhere, attached as a document, linked to a record once saved (new record, kind, that record), with a name, or with fields filled in |
+| `[data-new-type="rack"]`, `data-new-location`, `data-new-attach`, `data-new-link="affects:12"`, `data-new-name`, `data-new-fields='{"host": 12}'` | Opens the New record window at the form for a new record (at Basics, the kind settled when attached, linked or filled in), placed somewhere, attached as a document, linked to a record once saved (new record, kind, that record), with a name, or with fields filled in |
 | `[data-open="dialog-id"]`, `[data-close]` | Opens a dialog; closes the one it is in |
 | `form.dropzone` | Files dropped on it go in through its file input and the form is submitted |
 | `[data-zoom]` (`zoom_frame()` in partials/macros.html, around an `svg.diagram`) | The drawing opens fitted so all of it shows (never larger than drawn); its −, Fit and + buttons, or Ctrl/⌘ and the wheel (a trackpad's pinch), zoom it about the pointer, and zoomed in a mouse drags it around. Every diagram in the app uses it |

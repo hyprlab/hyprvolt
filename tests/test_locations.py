@@ -168,9 +168,9 @@ def test_a_tower_server_has_no_rack_position_section(client, h, admin):
     for entity, hidden in ((tower, True), (racked, False)):
         for url in (f"/e/{entity['id']}/form", f"/e/{entity['id']}/sheet"):
             page = client.get(url).data.decode()
-            assert ('<div data-section="rack" hidden>' in page) is hidden, url
+            assert ('data-section="rack" hidden>' in page) is hidden, url
             assert 'data-hides="rack=tower"' in page
-    assert '<div data-section="rack">' in client.get("/e/form?type=server").data.decode()
+    assert 'data-section="rack">' in client.get("/e/form?type=server").data.decode()
 
 
 def test_the_rack_position_is_checked(client, h, admin):

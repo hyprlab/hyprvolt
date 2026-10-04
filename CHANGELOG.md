@@ -40,6 +40,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- New opens a New record window instead of a menu: type to find the kind of record (a switch, a VM, a domain, and the kinds a type comes in, such as Switch or Mini PC) or choose it from the list, then the form walks through a step at a time (Basics, each group of fields, each section, Notes) with Back, Next and Create on every step. New buttons on a record open it at Basics with the kind settled
 - The lines in the network diagram, the Neighborhood and the dependency diagram are easier to point at: each reacts to the pointer within 8 px either side, at any zoom, so a cable's ports and VLANs show without having to land on a thin line
 - The dependency diagram has a dashed line through the record dividing What it needs from What breaks if this goes down, and the two names stay beside it, readable and in sight, however far it is zoomed or scrolled
 - A record's Relationships tab keeps the form for a new link folded behind an Add link button, with Cancel to fold it away again
