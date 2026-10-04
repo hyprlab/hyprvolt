@@ -1,5 +1,5 @@
 {# A window's times and what it takes down, or what a change touched. #}
-{% from "partials/macros.html" import entity_link %}
+{% from "partials/macros.html" import entity_link, record_pick %}
 {% if window and d and d.starts and d.ends %}
 <p class="hint">
   {%- if entity.status == 'canceled' %}Canceled. It was to run from {{ d.starts|local }} to {{ d.ends|local }}.
@@ -38,12 +38,9 @@
   <input type="hidden" name="direction" value="out">
   <input type="hidden" name="kind" value="affects">
   <input type="hidden" name="other_id" value="">
-  <div class="field"><span class="field-label">Add a record</span>
-    <button type="button" class="pickbtn" data-pick data-pick-submit data-pick-exclude="{{ entity.id }}">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-      <span data-pick-label>Choose…</span>
-    </button>
-  </div>
+  <label class="field"><span class="field-label">Add a record</span>
+    {{ record_pick(exclude=entity.id, submit=true) }}
+  </label>
   <p class="form-error" hidden></p>
 </form>
 {% endif %}

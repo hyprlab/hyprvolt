@@ -74,3 +74,19 @@
     <svg class="settings-navitem-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>
   </button>
 {%- endmacro %}
+
+{# A field that finds a record as it is typed in (app.js, input[data-pick]):
+   the records that match drop down under it, and the one chosen puts its id
+   in the form's field named by into. submit sends the form once one is
+   chosen; exclude leaves a record out; types limits the kinds. #}
+{% macro record_pick(into='other_id', exclude='', submit=false, types='', placeholder='Type to search…') -%}
+<span class="recpick">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+  <input type="text" data-pick data-pick-into="{{ into }}"
+         {%- if exclude %} data-pick-exclude="{{ exclude }}"{% endif %}
+         {%- if types %} data-pick-types="{{ types }}"{% endif %}
+         {%- if submit %} data-pick-submit{% endif %}
+         placeholder="{{ placeholder }}" autocomplete="off" spellcheck="false"
+         role="combobox" aria-autocomplete="list" aria-expanded="false">
+</span>
+{%- endmacro %}

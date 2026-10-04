@@ -26,7 +26,7 @@ def test_the_new_record_window_offers_every_enabled_module_on_every_page(client,
     def offered(url):
         page = client.get(url).data.decode()
         kinds = page.split('id="newrec-list"')[1].split('id="newrec-none"')[0]
-        return set(re.findall(r'data-pick="([a-z_]+)"', kinds))
+        return set(re.findall(r'data-kind-type="([a-z_]+)"', kinds))
     everything = offered("/")
     assert {"server", "vm", "subnet", "vendor", "document"} <= everything
     for url in ("/network", "/hardware?view=list", "/contacts"):
@@ -34,8 +34,8 @@ def test_the_new_record_window_offers_every_enabled_module_on_every_page(client,
     page = client.get("/").data.decode()
     assert 'id="new-btn" data-new-record' in page and 'id="new-menu"' not in page
     # The kinds a type comes in are found too, and start its form with the kind chosen.
-    assert 'data-pick="network_device" data-kind="switch" data-label="Switch" data-text="switch"' in page
-    assert 'data-pick="service" data-kind="dns" data-label="DNS" data-text="DNS"' in page
+    assert 'data-kind-type="network_device" data-kind="switch" data-label="Switch" data-text="switch"' in page
+    assert 'data-kind-type="service" data-kind="dns" data-label="DNS" data-text="DNS"' in page
     assert 'data-kind="other"' not in page
     client.post("/admin/modules/contacts", json={"enabled": False}, headers=h)
     assert "vendor" not in offered("/network")
@@ -107,6 +107,9 @@ def test_the_link_form_waits_behind_add_link(client, h, admin):
     g = make(client, h, name="Blue box")
     sheet = client.get(f"/e/{g['id']}/sheet?tab=relationships").data.decode()
     assert f'data-show="linkform-{g["id"]}"' in sheet and f'id="linkform-{g["id"]}" hidden' in sheet
+    # The record is found by typing in the field, not in the search window.
+    assert f'<input type="text" data-pick data-pick-into="other_id" data-pick-exclude="{g["id"]}"' in sheet
+    assert "pickbtn" not in sheet
 
 
 def test_a_deleted_record_shows_how_to_get_it_back(client, h, admin):

@@ -1086,7 +1086,7 @@
   function markKind(opt, chosen) {
     if (chosen) {
       opt = kindOptions(true).filter(function (o) {
-        return o.getAttribute("data-pick") === chosen.type && (o.getAttribute("data-kind") || "") === (chosen.kind || "");
+        return o.getAttribute("data-kind-type") === chosen.type && (o.getAttribute("data-kind") || "") === (chosen.kind || "");
       })[0] || opt;
     }
     kindOptions().forEach(function (o) {
@@ -1116,7 +1116,7 @@
   }
   function pickKind(opt) {
     if (!opt) return;
-    chooseKind(opt.getAttribute("data-pick"), opt.getAttribute("data-kind"), opt.getAttribute("data-text")).then(function () {
+    chooseKind(opt.getAttribute("data-kind-type"), opt.getAttribute("data-kind"), opt.getAttribute("data-text")).then(function () {
       showStep(allSteps()[1].name, true);
     }).catch(toastError);
   }
@@ -1134,7 +1134,7 @@
     filterKinds();
     var ready = Promise.resolve();
     if (opts.type) {
-      var opt = newList.querySelector('.newrec-kind[data-pick="' + opts.type + '"]:not([data-preset])');
+      var opt = newList.querySelector('.newrec-kind[data-kind-type="' + opts.type + '"]:not([data-preset])');
       ready = chooseKind(opts.type, opts.kind, opt && opt.getAttribute("data-text"));
     }
     ready.then(function () {
@@ -1222,8 +1222,9 @@
   //   data-done="Message"        the toast, with Undo when the answer has one
   //   data-confirm="Question?"   asks first, in #confirm-modal; data-confirm-text
   //                              explains, data-confirm-go names the button
-  //   [data-pick]                chooses a record in the palette; its id goes
-  //                              into the form's data-pick-into field (other_id)
+  //   input[data-pick]           finds a record as it is typed in, in a list
+  //                              under it; the chosen one's id goes into the
+  //                              form's data-pick-into field (other_id)
   //   [data-fill='{"a": 1}']     sets fields of its form (or data-fill-form)
   //   [data-reveal="/url"]       posts to url and shows its value in the
   //                              element named by data-reveal-into; again hides it
@@ -1697,6 +1698,157 @@
       e.preventDefault();
       e.stopPropagation();
       suggestClose();
+    }
+  }, true);
+
+  // A field that finds a record as it is typed in (input[data-pick]; the
+  // record_pick macro): the records that match drop down under it, grouped
+  // by module, picked with a click or with the arrow keys and Enter. The
+  // chosen one's id goes into the form's field named by data-pick-into
+  // (other_id), its name stays in the field; typing again clears the
+  // choice. data-pick-types limits the kinds, data-pick-exclude leaves one
+  // out, data-pick-submit sends the form once one is chosen.
+  var pickPop = null, pickFor = null, pickItems = [], pickAt = -1, pickTimer = null, pickSeq = 0;
+  function pickField(input) {
+    return input.form && input.form.elements[input.getAttribute("data-pick-into") || "other_id"];
+  }
+  function pickClose() {
+    clearTimeout(pickTimer);
+    pickSeq++;
+    if (pickPop) pickPop.hidden = true;
+    if (pickFor) {
+      pickFor.setAttribute("aria-expanded", "false");
+      pickFor.removeAttribute("aria-activedescendant");
+    }
+    pickFor = null;
+    pickAt = -1;
+  }
+  function pickMark(n) {
+    pickAt = n;
+    pickItems.forEach(function (el, i) { el.classList.toggle("is-current", i === n); });
+    if (n >= 0 && pickItems[n]) {
+      pickFor.setAttribute("aria-activedescendant", pickItems[n].id);
+      pickItems[n].scrollIntoView({ block: "nearest" });
+    } else if (pickFor) pickFor.removeAttribute("aria-activedescendant");
+  }
+  function pickShow(input, groups, note) {
+    if (!pickPop) {
+      pickPop = document.createElement("div");
+      pickPop.className = "menupop menupop--scroll suggest-pop pick-pop";
+      pickPop.id = "pick-pop";
+      pickPop.setAttribute("role", "listbox");
+      // Picking keeps the focus in the field.
+      pickPop.addEventListener("mousedown", function (e) { e.preventDefault(); });
+      pickPop.addEventListener("click", function (e) {
+        e.preventDefault();          // inside the field's label: not a click on the field too
+        var opt = e.target.closest("[data-pick-id]");
+        if (opt) pickChoose(opt);
+      });
+    }
+    pickPop.textContent = "";
+    pickItems = [];
+    groups.forEach(function (g) {
+      if (!g.items.length) return;
+      var head = document.createElement("p");
+      head.className = "menupop-head";
+      head.textContent = g.label;
+      pickPop.appendChild(head);
+      g.items.forEach(function (r) {
+        var el = document.createElement("div");
+        el.className = "menuopt pick-opt" + (r.archived ? " is-done" : "");
+        el.id = "pick-" + pickItems.length;
+        el.setAttribute("role", "option");
+        el.setAttribute("data-pick-id", r.id);
+        el.setAttribute("data-pick-title", r.title);
+        var title = document.createElement("span");
+        title.className = "pick-opt-title";
+        title.textContent = r.title;
+        var meta = document.createElement("span");
+        meta.className = "pick-opt-meta";
+        meta.textContent = r.meta || "";
+        el.appendChild(title);
+        el.appendChild(meta);
+        pickPop.appendChild(el);
+        pickItems.push(el);
+      });
+    });
+    if (note) {
+      var p = document.createElement("p");
+      p.className = "menupop-head pick-note";
+      p.textContent = note;
+      pickPop.appendChild(p);
+    }
+    var holder = input.parentNode;
+    holder.classList.add("has-suggest");
+    if (pickPop.parentNode !== holder) input.insertAdjacentElement("afterend", pickPop);
+    pickFor = input;
+    input.setAttribute("aria-controls", "pick-pop");
+    input.setAttribute("aria-expanded", "true");
+    pickPop.hidden = false;
+    pickMark(pickItems.length ? 0 : -1);
+  }
+  function pickSearch(input) {
+    var q = input.value.trim();
+    clearTimeout(pickTimer);
+    if (q.length < 2) {
+      if (q) pickShow(input, [], "Keep typing: two letters or more");
+      else pickClose();
+      return;
+    }
+    var url = "/search?pick=1&q=" + encodeURIComponent(q);
+    if (input.getAttribute("data-pick-types")) url += "&types=" + encodeURIComponent(input.getAttribute("data-pick-types"));
+    if (input.getAttribute("data-pick-exclude")) url += "&exclude=" + encodeURIComponent(input.getAttribute("data-pick-exclude"));
+    // Debounced, and sequenced so a slow answer to an old query never
+    // replaces the answer to the current one.
+    pickTimer = setTimeout(function () {
+      var seq = ++pickSeq;
+      get(url).then(function (data) {
+        if (seq !== pickSeq || document.activeElement !== input) return;
+        var groups = data.groups || [];
+        var found = groups.some(function (g) { return g.items.length; });
+        pickShow(input, groups, found ? "" : "No record matches “" + q + "”");
+      }).catch(function () {});
+    }, 150);
+  }
+  function pickChoose(opt) {
+    var input = pickFor;
+    if (!input) return;
+    var field = pickField(input);
+    if (field) field.value = opt.getAttribute("data-pick-id");
+    input.value = opt.getAttribute("data-pick-title");
+    input.classList.add("is-picked");
+    pickClose();
+    if (input.hasAttribute("data-pick-submit") && input.form) submitApiForm(input.form);
+  }
+  document.addEventListener("input", function (e) {
+    var input = e.target;
+    if (!input.matches || !input.matches("input[data-pick]")) return;
+    var field = pickField(input);
+    if (field) field.value = "";      // typed again: no longer the one chosen
+    input.classList.remove("is-picked");
+    pickSearch(input);
+  });
+  document.addEventListener("focusout", function (e) {
+    if (pickFor && e.target === pickFor) pickClose();
+  });
+  // Before a form's Enter (send it) and a dialog's Escape (close it).
+  document.addEventListener("keydown", function (e) {
+    var input = e.target;
+    if (!input.matches || !input.matches("input[data-pick]")) return;
+    var open = pickFor === input && pickPop && !pickPop.hidden;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!open) { pickSearch(input); return; }
+      var n = pickAt + (e.key === "ArrowDown" ? 1 : -1);
+      pickMark(Math.max(0, Math.min(pickItems.length - 1, n)));
+    } else if (e.key === "Enter" && open && pickAt >= 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      pickChoose(pickItems[pickAt]);
+    } else if (e.key === "Escape" && open) {
+      e.preventDefault();
+      e.stopPropagation();
+      pickClose();
     }
   }, true);
 
@@ -2309,24 +2461,6 @@
           btn.disabled = false;
           afterAction(btn, data);
         }).catch(function (err) { btn.disabled = false; toastError(err); });
-      });
-      return;
-    }
-    var pick = e.target.closest("[data-pick]");
-    if (pick) {
-      e.preventDefault();
-      var form = pick.closest("form");
-      openPalette({
-        types: pick.getAttribute("data-pick-types") || "",
-        exclude: pick.getAttribute("data-pick-exclude") || "",
-        pick: function (item) {
-          var field = form && form.elements[pick.getAttribute("data-pick-into") || "other_id"];
-          if (field) field.value = item.id;
-          var label = pick.querySelector("[data-pick-label]");
-          if (label) { label.textContent = item.title; pick.classList.add("is-picked"); }
-          if (pick.hasAttribute("data-pick-submit") && form) submitApiForm(form);
-          else pick.focus();
-        }
       });
       return;
     }
@@ -3078,8 +3212,6 @@
   });
 
   /* ————— Search palette (Ctrl/Cmd+K) ————— */
-  // Also the record picker: openPalette({pick: fn}) hands the chosen record
-  // to fn instead of opening it, which is how links are made.
   var palette = document.getElementById("search-modal");
   var searchInput = document.getElementById("search-input");
   var searchResults = document.getElementById("search-results");
@@ -3087,18 +3219,13 @@
   var searchSeq = 0;
   var activeIndex = -1;
   var paletteItems = [];
-  var picking = null;
 
   var kbd = document.getElementById("search-kbd");
   if (kbd && /Mac|iPhone|iPad/.test(navigator.platform)) kbd.textContent = "⌘K";
 
-  function openPalette(opts) {
+  function openPalette() {
     if (!palette || palette.open) return;
-    picking = opts && opts.pick ? opts : null;
     searchInput.value = "";
-    searchInput.placeholder = picking ? "Find the record to link…" : "Search everything…";
-    // A half-made link isn't worth bringing back after a reload.
-    if (picking) palette.setAttribute("data-restore", "off"); else palette.removeAttribute("data-restore");
     searchResults.hidden = true;
     searchResults.textContent = "";
     activeIndex = -1;
@@ -3106,7 +3233,6 @@
     palette.showModal();
     searchInput.focus();
   }
-  if (palette) palette.addEventListener("close", function () { picking = null; });
   var searchBtn = document.getElementById("search-btn");
   if (searchBtn) searchBtn.addEventListener("click", function () { openPalette(); });
 
@@ -3135,10 +3261,8 @@
       activeIndex = -1;
       return;
     }
-    if (!picking) {
-      groups = groups.concat([{ label: "", items: [{ url: "/all?q=" + encodeURIComponent(query),
-        title: "Every record matching “" + query + "”", meta: "as a list", all: true }] }]);
-    }
+    groups = groups.concat([{ label: "", items: [{ url: "/all?q=" + encodeURIComponent(query),
+      title: "Every record matching “" + query + "”", meta: "as a list", all: true }] }]);
     groups.forEach(function (group) {
       if (group.label) {
         var label = document.createElement("p");
@@ -3179,9 +3303,7 @@
   function choose(i) {
     var item = paletteItems[i === undefined ? activeIndex : i];
     if (!item) return;
-    var pick = picking && picking.pick;
     palette.close();
-    if (pick) { pick(item); return; }
     if (item.id) openEntity(item.id);
     else if (item.url) location.href = item.url;
   }
@@ -3192,11 +3314,6 @@
       clearTimeout(searchTimer);
       if (query.length < 2) { searchResults.hidden = true; return; }
       var url = "/search?q=" + encodeURIComponent(query);
-      if (picking) {
-        url += "&pick=1";
-        if (picking.types) url += "&types=" + encodeURIComponent(picking.types);
-        if (picking.exclude) url += "&exclude=" + encodeURIComponent(picking.exclude);
-      }
       // Debounced, and sequenced so a slow answer to an old query never
       // replaces the answer to the current one.
       searchTimer = setTimeout(function () {

@@ -42,14 +42,14 @@
           <p class="palette-label newrec-group" data-group="{{ group.module.id }}">{{ group.module.name }}</p>
           {% for t in group.types %}
           <div class="palette-item newrec-kind" role="option" id="newrec-{{ t.key }}" aria-selected="false"
-               data-group="{{ group.module.id }}" data-pick="{{ t.key }}" data-label="{{ t.label }}" data-text="{{ t.text() }}"
+               data-group="{{ group.module.id }}" data-kind-type="{{ t.key }}" data-label="{{ t.label }}" data-text="{{ t.text() }}"
                data-words="{{ t.label }} {{ t.plural }} {{ t.key|replace('_', ' ') }} {{ group.module.name }}">
             {{ type_icon(t.icon or group.module.icon) }}<span class="palette-item-title">{{ t.label }}</span>
           </div>
           {% endfor %}
           {% for t, value, label in group.presets %}
           <div class="palette-item newrec-kind" role="option" id="newrec-{{ t.key }}-{{ value }}" aria-selected="false" hidden data-preset
-               data-group="{{ group.module.id }}" data-pick="{{ t.key }}" data-kind="{{ value }}" data-label="{{ label }}" data-text="{{ label if label[:2].isupper() else label[0]|lower ~ label[1:] }}"
+               data-group="{{ group.module.id }}" data-kind-type="{{ t.key }}" data-kind="{{ value }}" data-label="{{ label }}" data-text="{{ label if label[:2].isupper() else label[0]|lower ~ label[1:] }}"
                data-words="{{ label }}">
             {{ type_icon(t.icon or group.module.icon) }}<span class="palette-item-title">{{ label }}</span>
             <span class="palette-item-meta">{{ t.label }}</span>

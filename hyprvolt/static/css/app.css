@@ -1271,16 +1271,22 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 .linkform-open { margin: 16px 0 22px; }
 .linkform-open svg { width: 16px; height: 16px; }
 @media (max-width: 700px) { .linkform { grid-template-columns: 1fr; } }
-/* A button that stands in for a field: it opens the palette to choose a record. */
-.pickbtn {
-  display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px;
-  background: var(--field); border: 1px solid var(--line); border-radius: var(--radius-sm);
-  color: var(--faint); text-align: left;
+/* A field that finds a record as it is typed in (record_pick): a search
+   icon inside it, and the records that match under it, each with its kind
+   and place. */
+.recpick { position: relative; display: block; }
+.recpick > svg {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--faint); pointer-events: none;
 }
-.pickbtn svg { width: 16px; height: 16px; }
-.pickbtn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pickbtn:hover, .pickbtn:focus-visible { border-color: var(--accent); }
-.pickbtn.is-picked { color: var(--ink); font-weight: 600; }
+.field .recpick input { padding-left: 36px; }
+.field .recpick input.is-picked { font-weight: 600; }
+.pick-pop { width: max(100%, 300px); }
+.pick-opt { display: flex; flex-direction: column; align-items: stretch; gap: 1px; text-align: left; }
+.pick-opt-title, .pick-opt-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-opt-meta { font-size: 11.5px; font-weight: 550; color: var(--faint); }
+.pick-opt.is-done .pick-opt-title { color: var(--muted); }
+.pick-note { font-weight: 550; letter-spacing: 0; text-transform: none; font-size: 12.5px; }
 /* The dependency view's List and Diagram switch. */
 .deps-switch { display: flex; margin: 26px 0 12px; }
 .deps { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin: 8px 0 10px; }
