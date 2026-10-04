@@ -127,6 +127,16 @@ def test_a_service_kind_is_chosen_under_its_heading(client, h, admin):
     assert 'data-kind-type="service" data-kind="dhcp"' in client.get("/").data.decode()
 
 
+def test_a_service_address_can_be_an_ip_address_or_hostname(client, h, admin):
+    for address in ("192.168.1.1", "192.168.1.1:67", "[fd00::1]:53", "router.lab:8443/admin", "https://dhcp.lab"):
+        made = make(client, h, "service", name=f"DHCP {address}", **{"f.kind": "dhcp", "f.url": address})
+        assert client.get(f"/api/entities/{made['id']}").get_json()["entity"]["fields"]["url"] == address
+    bad = client.post("/api/entities", json={"type": "service", "name": "X", "f.url": "not an address"}, headers=h)
+    assert bad.status_code == 400 and "IP address or hostname" in bad.get_json()["error"]
+    gopher = client.post("/api/entities", json={"type": "service", "name": "Y", "f.url": "gopher://x"}, headers=h)
+    assert gopher.status_code == 400
+
+
 def test_services_that_matter_show_on_the_dashboard(client, h, admin):
     make(client, h, "service", name="DNS", **{"f.criticality": "critical"})
     make(client, h, "service", name="Backups", status="degraded", **{"f.criticality": "low"})

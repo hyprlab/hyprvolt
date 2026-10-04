@@ -41,6 +41,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- An address field (a service's Address, a VM's Management, a vendor's Website) takes a bare IP address or hostname, with a port and a path if any, such as 192.168.1.1 for DHCP on the router, as well as a full address with https:// or another scheme. Only web addresses become links
 - Choosing a record for a link, a rack mount or a maintenance window's impact is typed in the field itself: the records that match drop down under it as you type, picked with a click or the arrow keys and Enter, instead of the search window opening over the record
 - New opens a New record window instead of a menu: type to find the kind of record (a switch, a VM, a domain, and the kinds a type comes in, such as Switch or Mini PC) or choose it from the list, then the form walks through a step at a time (Basics, each group of fields, each section, Notes) with Back, Next and Create on every step. New buttons on a record open it at Basics with the kind settled
 - The lines in the network diagram, the Neighborhood and the dependency diagram are easier to point at: each reacts to the pointer within 8 px either side, at any zoom, so a cable's ports and VLANs show without having to land on a thin line

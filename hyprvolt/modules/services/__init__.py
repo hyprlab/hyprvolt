@@ -76,7 +76,9 @@ module = Module(
         EntityType("service", "Service", "Services", detail=ServiceDetail, located_in=(), icon=ICON,
                    statuses=STATUSES, traits=("supplied", "tls"),
                    fields=(Field("kind", "Kind", "select", options=KINDS, groups=KIND_GROUPS, list=True),
-                           Field("url", "Address", "url", card=True, help="Where people reach it."),
+                           Field("url", "Address", "url", card=True,
+                                 help="Where people reach it: a web address, or an IP address or hostname with "
+                                      "a port if it has one, such as 192.168.1.1 for DHCP on the router."),
                            Field("host", "Runs on", "ref", trait="host", relation="runs_on", card=True, list=True,
                                  help="A server, VM, container or stack. More than one: link the rest in "
                                       "Relationships."),

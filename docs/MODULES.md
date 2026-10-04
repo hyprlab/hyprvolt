@@ -159,7 +159,7 @@ and a `kind`:
 
 | Kind | Stored as | Shown as |
 | --- | --- | --- |
-| `text`, `email`, `url` | a string, 500 characters at most | text; a `url` starting with http links out, an `email` is a mailto: link |
+| `text`, `email`, `url` | a string, 500 characters at most; a `url` is an address with a scheme (http, ssh, smb and the like) or a bare hostname or IP address, with a port and a path if any | text; a `url` starting with http links out, an `email` is a mailto: link |
 | `speed` | a speed, typed with Mb/s or Gb/s chosen beside it, or as text such as "1 Gb/s" through the API; kept as whole megabits per second | "1 Gb/s" or "940 Mb/s" |
 | `phone` | a phone number as written, not checked: an extension, a vanity number (1-833-VERIZON) or a note | a tel: link when it can be dialed, letters on their keypad digits |
 | `longtext` | text | text, line breaks kept |

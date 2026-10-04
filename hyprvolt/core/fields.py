@@ -13,6 +13,10 @@ from ..manifest import Field
 
 URL_SCHEMES = ("http", "https", "ftp", "sftp", "ssh", "smb", "rdp", "vnc", "nfs", "git")
 URL_RE = re.compile(r"^([a-z][a-z0-9+.-]*)://\S+$", re.I)
+#: An address without a scheme: a hostname or an IPv4 or [IPv6] address,
+#: then a port and a path if any (192.168.1.1, router.lab:8443/admin).
+HOST_RE = re.compile(r"^(?:\[[0-9a-f:.]+\]|[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*)"
+                     r"(?::\d{1,5})?(?:/(?!/)\S*)?$", re.I)
 #: What a phone number can be dialed from: digits, or the letters of a
 #: vanity number (1-833-VERIZON), with the usual separators.
 DIALABLE_RE = re.compile(r"^\+?[0-9A-Za-z ().\-/]{3,40}$")
@@ -72,10 +76,9 @@ def parse(f: Field, raw, lookup=None):
             raise Invalid(f"{f.label} is limited to {limit} characters.")
         if kind == "email" and not EMAIL_RE.match(raw):
             raise Invalid(f"{f.label} must be an email address.")
-        if kind == "url":
-            m = URL_RE.match(raw)
-            if not m or m.group(1).lower() not in URL_SCHEMES:
-                raise Invalid(f"{f.label} must be a full address, such as https://example.com.")
+        if kind == "url" and raw and not _address(raw):
+            raise Invalid(f"{f.label} must be a web address such as https://example.com, or an IP address or "
+                          "hostname such as 192.168.1.1.")
         return raw
 
     if kind in ("integer", "number"):
@@ -375,6 +378,19 @@ def href(f: Field, value) -> str | None:
             return None
         return "tel:" + "".join(c if c.isdigit() or c == "+" else KEYPAD.get(c.lower(), "") for c in number)
     return None
+
+
+def _address(raw: str) -> bool:
+    """A url field's value: an address with a known scheme, or a bare
+    hostname or IP address (a service on a router has no web page)."""
+    m = URL_RE.match(raw)
+    if m:
+        return m.group(1).lower() in URL_SCHEMES
+    try:
+        ipaddress.ip_address(raw)
+        return True
+    except ValueError:
+        return bool(HOST_RE.match(raw))
 
 
 def is_link(f: Field, value) -> bool:

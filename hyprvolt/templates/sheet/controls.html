@@ -153,7 +153,7 @@
   <input type="date" name="{{ item.name }}" value="{{ v.isoformat() if v else '' }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>
 {% else %}
   <input type="{{ 'email' if f.kind == 'email' else ('tel' if f.kind == 'phone' else 'text') }}" name="{{ item.name }}" value="{{ v or '' }}" {{ described(id, f.help) }}
-         maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https://" spellcheck="false"{% elif f.kind not in ('ip', 'cidr') %}{{ empty }}{% endif %}
+         maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https:// or an IP address" spellcheck="false"{% elif f.kind not in ('ip', 'cidr') %}{{ empty }}{% endif %}
          {%- if f.kind in ('ip', 'cidr') %} spellcheck="false" autocomplete="off" placeholder="{{ '10.0.20.11' if f.kind == 'ip' else '10.0.20.0/24' }}"{% endif %}
          {%- if not save and etype.name_from == f.key %} autofocus{% endif %}{{ suggest_attrs(f.suggest) }}{{ extra }}>
 {% endif %}
