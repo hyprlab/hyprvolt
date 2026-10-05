@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- A service's kind can be a business app, under a Business heading: ERP, CRM, accounting, payroll and HR, point of sale, online store, inventory and assets, project management, help desk, office and productivity, video meetings, and scheduling and booking. A Homepage import recognizes apps such as Odoo, SuiteCRM, Akaunting, Snipe-IT, Zammad and Jitsi
 - Set up a site is in the sidebar, below All records, so the site setup guide opens without going through New
 - A service's Runs on can be Cloud service, for one that isn't on your premises, such as Microsoft 365 or a hosted website: it is first in the list, before your own servers, VMs and containers
 - A router or firewall can have more than one internet connection, for a site with two ISPs or a mobile backup: its Internet connections section, and its row in the setup guide's Network gear step, tick every line that plugs into it. Each line is drawn above it in the network diagram and listed in what goes down with it

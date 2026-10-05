@@ -131,6 +131,14 @@ def test_the_reviewed_services_are_imported(client, h, admin):
     assert any(r["other"]["name"] == "Sonarr" for r in rels)
 
 
+def test_a_business_app_is_given_its_kind():
+    from hyprvolt.modules.services.homepage import guess_kind
+    for name, icon, kind in (("Odoo", "odoo.png", "erp"), ("Customers", "suitecrm.svg", "crm"),
+                             ("Books", "akaunting.png", "accounting"), ("Tickets", "zammad.svg", "helpdesk"),
+                             ("Snipe-IT", "", "inventory"), ("Jitsi Meet", "", "meetings")):
+        assert guess_kind({"widget": "", "icon": icon, "name": name}) == kind, name
+
+
 def test_files_that_arent_homepage_services_say_so(client, h, admin):
     assert "isn't valid YAML near line" in read(client, h, b"- a: [b", None, status=400)["error"]
     assert "No services found" in read(client, h, b"title: My homepage\nlayout: {}\n", None, status=400)["error"]
