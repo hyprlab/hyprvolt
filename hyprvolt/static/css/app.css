@@ -1795,6 +1795,18 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 .tree-icon svg { width: 17px; height: 17px; color: var(--muted); }
 .tree-name { font-size: 14.5px; font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tree-kind { font-size: 12px; color: var(--faint); }
+/* A place's name and kind are changed where they are shown: plain text
+   until pointed at or focused, then a field. */
+.tree-name-input, .tree-kind-select {
+  font: inherit; border: 1px solid transparent; border-radius: 6px; background: transparent;
+  transition: border-color .12s, background .12s;
+}
+.tree-name-input { font-size: 14.5px; font-weight: 600; color: var(--ink); padding: 3px 6px; margin-left: -7px;
+  flex: 0 1 auto; field-sizing: content; min-width: 6ch; max-width: 100%; }
+.tree-kind-select { font-size: 12px; color: var(--faint); padding: 2px 4px; cursor: pointer; }
+.tree-name-input:hover, .tree-kind-select:hover { border-color: var(--line-strong); }
+.tree-name-input:focus, .tree-kind-select:focus { outline: none; border-color: var(--accent); background: var(--field); color: var(--ink); }
+.tree-name-input:invalid { border-color: var(--danger); }
 .tree-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: none; }
 .tree-handle { margin-left: -4px; }
 .tree-node.is-dragging > .tree-row { opacity: .45; }

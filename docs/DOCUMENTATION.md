@@ -502,7 +502,13 @@ building or straight in the site. Dragging a place by its handle onto another pu
 onto the site brings it back to the top; with the handle focused, → puts it
 inside the place above it and ← takes it out a level. The × beside a place
 deletes it, and a building goes with the rooms in it: the dialog asks first
-and says how many, and Undo brings them all back.
+and says how many, and Undo brings them all back. A place's name is changed
+where it is shown, saved on Enter or on leaving it (Escape puts it back),
+and its kind beside it: a room that is really a building becomes one,
+keeping its links and what is in it, and moves up to the site, where
+buildings go. A building made a room keeps its place, and the rooms in it
+move out beside it. A room with a rack in it stays a room, and says so,
+since a rack can't be in a building.
 
 Every other step is a list of rows, one record a row: what the site has
 already, and a blank row at the end. Typing a name in the blank row and

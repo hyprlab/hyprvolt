@@ -272,6 +272,45 @@ def test_buildings_and_rooms_are_a_tree_of_the_site(client, h, admin):
     assert client.get("/site-setup/vendors/tree").status_code == 404
 
 
+def test_a_place_in_the_tree_is_renamed_and_made_another_kind_in_its_row(client, h, admin):
+    site = site_named(client, h, "Home")
+    b1 = make(client, h, "building", name="Main House", location_id=site["id"])
+    office = make(client, h, "room", name="Office", location_id=b1["id"])
+    lab = make(client, h, "room", name="Lab", location_id=b1["id"])
+
+    def row(tree, entity):
+        return tree.split(f'data-node="{entity["id"]}"')[1].split('class="tree-children"')[0]
+
+    def where(entity):
+        got = client.get(f"/api/entities/{entity['id']}").get_json()["entity"]
+        return got["type"], got["location"]["id"]
+    tree = client.get(f"/site-setup/rooms/tree?site={site['id']}").data.decode()
+    assert 'data-tree-save="name" value="Office"' in row(tree, office)
+    assert 'data-tree-save="name"' not in row(tree, site)
+    # Every place can be the other kind, wherever it is.
+    assert '<option value="building" >Building</option>' in row(tree, office)
+    assert '<option value="room" >Room</option>' in row(tree, b1)
+    kind = f"/site-setup/rooms/tree/{office['id']}/kind"
+    assert f'data-tree-kind="{kind}"' in row(tree, office)
+    # A room in a building made a building moves up to the site.
+    assert client.post(kind, json={"type": "building"}, headers=h).get_json()["ok"]
+    assert where(office) == ("building", site["id"])
+    tree = client.get(f"/site-setup/rooms/tree?site={site['id']}").data.decode()
+    assert "Add a room in Office" in tree
+    # A building made a room stays put, and its rooms move out beside it.
+    done = client.post(f"/site-setup/rooms/tree/{b1['id']}/kind", json={"type": "room"}, headers=h).get_json()
+    assert done["moved"] == ["Lab"] and where(b1) == ("room", site["id"]) and where(lab) == ("room", site["id"])
+    # A room holding a rack stays a room, with the reason, and nothing moves.
+    make(client, h, "rack", name="Rack 1", location_id=lab["id"])
+    wrong = client.post(f"/site-setup/rooms/tree/{lab['id']}/kind", json={"type": "building"}, headers=h)
+    assert wrong.status_code == 400 and "Rack 1 is in it" in wrong.get_json()["error"]
+    assert where(lab) == ("room", site["id"])
+    # Only the step's kinds, and only a place of the step.
+    assert client.post(kind, json={"type": "rack"}, headers=h).status_code == 400
+    rack = entities(client, "rack")[0]
+    assert client.post(f"/site-setup/rooms/tree/{rack['id']}/kind", json={"type": "room"}, headers=h).status_code == 404
+
+
 def test_deleting_a_building_takes_its_rooms_and_undo_brings_them_back(client, h, admin):
     site = site_named(client, h, "Home")
     b1 = make(client, h, "building", name="Building 1", location_id=site["id"])
@@ -306,8 +345,9 @@ def test_viewers_cannot_use_it_and_editors_find_it(client, h, admin, viewer):
     other, oh = viewer
     assert other.get("/site-setup/site").status_code == 403
     assert other.post("/site-setup/site/rows", json={"values": {"name": "X"}}, headers=oh).status_code == 403
-    assert "Set up a site, step by step" in client.get("/").data.decode()
-    assert "Set up a site, step by step" not in other.get("/").data.decode()
+    # Its link, not its name, which the changelog in About may well mention.
+    assert 'href="/site-setup"' in client.get("/").data.decode()
+    assert 'href="/site-setup"' not in other.get("/").data.decode()
     assert client.get("/site-setup/nothing").status_code == 404
 
 
