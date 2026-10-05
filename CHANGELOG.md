@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.3] — 2026-10-05
+## [1.4.0-beta.4] — 2026-10-05
 
 ### Added
 - In the setup guide's Buildings and rooms, each place's name and kind can be changed in its row: type over the name, or choose Building or Room beside it. A room made a building moves up to the site, where buildings go, and a building made a room keeps its place with its rooms moving out beside it
