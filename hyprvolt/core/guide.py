@@ -262,7 +262,9 @@ def _found(step, scope) -> list[Entity]:
 
 def tree(step, scope) -> dict | None:
     """The site and the step's records under it, each where it is:
-    {"entity", "type", "accepts" [kinds it can hold], "children", "root",
+    {"entity", "type", "accepts" [kinds it can hold], "becomes" [the
+    step's kinds it can be changed to where it is, its own first, holding
+    what it holds], "children", "root",
     "inside" (how many of the step's records are in it, at any depth),
     "holds" (how many other records, such as racks and servers, are)}.
     A record whose place is outside the site, or gone, isn't in it."""
@@ -273,6 +275,16 @@ def tree(step, scope) -> dict | None:
 
     def accepts(type_key):
         return [k for k in kinds if reg.type(k.type).located_in is None or type_key in reg.type(k.type).located_in]
+
+    def fits(type_key, parent_key):
+        inside = reg.type(type_key).located_in
+        return inside is None or parent_key in inside
+
+    def becomes(e, parent, children):
+        own = reg.type(e.type)
+        return [own] + [reg.type(k.type) for k in kinds
+                        if k.type != e.type and k.type in own.becomes and fits(k.type, parent.type)
+                        and all(fits(c["type"].key, k.type) for c in children)]
     rows = Entity.live().filter(Entity.type.in_({k.type for k in kinds})).all()
     below = {}
     for e in rows:
@@ -282,8 +294,8 @@ def tree(step, scope) -> dict | None:
                   .filter(Entity.deleted_at.is_(None), Entity.type.notin_({k.type for k in kinds}))
                   .group_by(Entity.location_id).all())
 
-    def node(e, root=False, seen=()):
-        children = [node(c, seen=seen + (e.id,)) for c in
+    def node(e, root=False, seen=(), parent=None):
+        children = [node(c, seen=seen + (e.id,), parent=e) for c in
                     sorted(below.get(e.id, []), key=lambda c: (order.get(c.type, 9), c.name.lower()))
                     if c.id not in seen]
         etype = reg.type(e.type)
@@ -294,6 +306,7 @@ def tree(step, scope) -> dict | None:
                 count[t] = count.get(t, 0) + n
         words = [f"{n} {reg.type(t).text(n != 1)}" for t, n in sorted(count.items(), key=lambda x: order.get(x[0], 9))]
         return {"entity": e, "type": etype, "accepts": accepts(e.type), "children": children, "root": root,
+                "becomes": becomes(e, parent, children) if parent is not None else [etype],
                 "count": count, "inside": " and ".join(words),
                 "holds": others.get(e.id, 0) + sum(c["holds"] for c in children)}
     return node(scope, root=True)

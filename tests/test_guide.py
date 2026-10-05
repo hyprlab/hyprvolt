@@ -272,6 +272,33 @@ def test_buildings_and_rooms_are_a_tree_of_the_site(client, h, admin):
     assert client.get("/site-setup/vendors/tree").status_code == 404
 
 
+def test_a_place_in_the_tree_is_renamed_and_made_another_kind_in_its_row(client, h, admin):
+    site = site_named(client, h, "Home")
+    b1 = make(client, h, "building", name="Building 1", location_id=site["id"])
+    office = make(client, h, "room", name="Office 1", location_id=b1["id"])
+    garage = make(client, h, "room", name="Garage", location_id=site["id"])
+
+    def row(tree, entity):
+        return tree.split(f'data-node="{entity["id"]}"')[1].split('class="tree-children"')[0]
+    tree = client.get(f"/site-setup/rooms/tree?site={site['id']}").data.decode()
+    assert 'data-tree-save="name" value="Garage"' in row(tree, garage)
+    # A room on the site can be a building; one in a building can't, and nor
+    # can a building with rooms in it be a room.
+    assert '<option value="building" >Building</option>' in row(tree, garage)
+    assert 'data-tree-save="type"' not in row(tree, office) and 'data-tree-save="type"' not in row(tree, b1)
+    assert 'data-tree-save="name"' not in row(tree, site)
+    client.post(f"/api/entities/{garage['id']}", json={"type": "building", "name": "Garage block"}, headers=h)
+    got = client.get(f"/api/entities/{garage['id']}").get_json()["entity"]
+    assert (got["type"], got["name"]) == ("building", "Garage block")
+    tree = client.get(f"/site-setup/rooms/tree?site={site['id']}").data.decode()
+    assert "Add a room in Garage block" in tree and '<option value="room" >Room</option>' in row(tree, garage)
+    # A room holding a rack stays a room, with the reason.
+    make(client, h, "rack", name="Rack 1", location_id=office["id"])
+    client.post(f"/api/entities/{office['id']}", json={"location_id": site["id"]}, headers=h)
+    wrong = client.post(f"/api/entities/{office['id']}", json={"type": "building"}, headers=h)
+    assert wrong.status_code == 400 and wrong.get_json()["error"]
+
+
 def test_deleting_a_building_takes_its_rooms_and_undo_brings_them_back(client, h, admin):
     site = site_named(client, h, "Home")
     b1 = make(client, h, "building", name="Building 1", location_id=site["id"])

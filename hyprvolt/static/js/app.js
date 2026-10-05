@@ -1355,6 +1355,41 @@
       if (e.key === "Escape") { e.preventDefault(); li.remove(); }
     });
   }
+  // A place's name and kind, changed in its row (data-tree-save="name" or
+  // "type"): saved when the name is left or Enter pressed, or the kind
+  // chosen; Escape puts the name back. Changing the kind keeps the record,
+  // with what is in it and links to it.
+  function saveTreeField(el) {
+    var node = treeNode(el), tree = treeOf(el), field = el.getAttribute("data-tree-save");
+    var value = field === "name" ? el.value.trim() : el.value;
+    var before = field === "name" ? node.getAttribute("data-name") : node.getAttribute("data-type");
+    if (value === before) { el.value = before; return; }
+    if (field === "name" && !value) { el.value = before; toastError(new Error("Give it a name.")); return; }
+    var body = {};
+    body[field] = value;
+    var id = node.getAttribute("data-node");
+    api("/api/entities/" + id, body).then(function () {
+      redrawTree(tree, function (fresh) {
+        var again = treeFind(fresh, id), same = again && again.querySelector('[data-tree-save="' + field + '"]');
+        if (same && document.activeElement === document.body) same.focus({ preventScroll: true });
+      });
+    }).catch(function (err) { el.value = before; toastError(err); });
+  }
+  document.addEventListener("change", function (e) {
+    var el = e.target.closest && e.target.closest("[data-tree-save]");
+    if (el && treeOf(el)) saveTreeField(el);
+  });
+  document.addEventListener("keydown", function (e) {
+    var el = e.target.closest && e.target.closest('input[data-tree-save]');
+    if (!el || !treeOf(el)) return;
+    if (e.key === "Enter") { e.preventDefault(); el.blur(); }
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      el.value = treeNode(el).getAttribute("data-name");
+      el.blur();
+    }
+  });
   function moveTreeNode(node, target) {
     var id = node.getAttribute("data-node"), tree = treeOf(node);
     api("/api/entities/" + id, { location_id: target.getAttribute("data-node") }).then(function () {
