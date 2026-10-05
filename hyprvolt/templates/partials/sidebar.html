@@ -1,5 +1,6 @@
-{# The sidebar's scrolling middle: the dashboard, every module with its live
-   count (the open one lists its types and filters), then the tags. #}
+{# The sidebar's scrolling middle: the dashboard, all records and the site
+   setup guide, every module with its live count (the open one lists its
+   types and filters), then the tags. #}
 {% from "partials/macros.html" import type_icon %}
 <nav class="nav-primary" aria-label="Sections">
   <a class="navitem {{ 'is-active' if nav_special == 'dashboard' }}" href="{{ url_for('main.index') }}">
@@ -12,6 +13,12 @@
     <span>All records</span>
     {% if nav_total %}<span class="count">{{ nav_total }}</span>{% endif %}
   </a>
+  {% if site_guide %}
+  <a class="navitem" href="{{ url_for('guide.start') }}">
+    <svg viewBox="0 0 24 24"><path d="M5 19.5V5.5M5 5.5h11l-2 3.5 2 3.5H5"/></svg>
+    <span>Set up a site</span>
+  </a>
+  {% endif %}
   {% if nav_deleted %}
   <a class="navitem {{ 'is-active' if nav_special == 'deleted' }}" href="{{ url_for('main.all_records', deleted=1) }}">
     <svg viewBox="0 0 24 24"><path d="M5.5 7.5h13M9.5 7V5h5v2M7 7.5l.8 12a1 1 0 0 0 1 .9h6.4a1 1 0 0 0 1-.9l.8-12"/></svg>

@@ -10,7 +10,8 @@ services that go down with it, and a domain's lists what breaks if it
 lapses, without Services needing either module. The ``tls`` trait lets
 Certificates say which certificate a service serves.
 """
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, Page, SetupField, SetupKind, SetupStep, Widget
+from hyprvolt.manifest import (EntityType, Field, ListFilter, Module, Page, SetupField, SetupKind, SetupStep, Step,
+                               Widget)
 
 from . import demo, homepage, views
 from .models import ServiceDetail
@@ -27,9 +28,13 @@ KINDS = (
     ("registry", "Image registry"), ("automation", "Automation"), ("broker", "Message broker"),
     ("files", "File sharing"), ("objects", "Object storage"), ("database", "Database"),
     ("documents", "Document management"),
+    ("erp", "ERP"), ("crm", "CRM"), ("accounting", "Accounting"), ("payroll", "Payroll and HR"),
+    ("pos", "Point of sale"), ("ecommerce", "Online store"), ("inventory", "Inventory and assets"),
+    ("projects", "Project management"), ("helpdesk", "Help desk"), ("office", "Office and productivity"), ("print", "Print server"),
+    ("meetings", "Video meetings"), ("booking", "Scheduling and booking"),
     ("web", "Web app"), ("dashboard", "Dashboard"), ("mail", "Mail"), ("chat", "Chat"), ("wiki", "Wiki"),
     ("media", "Media"), ("downloads", "Downloads"), ("photos", "Photos"), ("smarthome", "Home automation"),
-    ("nvr", "Cameras (NVR)"), ("pbx", "Phone system (PBX)"), ("print", "Printing"),
+    ("nvr", "Cameras (NVR)"), ("pbx", "Phone system (PBX)"),
     ("remote", "Remote access"), ("ai", "AI"), ("games", "Game server"),
     ("other", "Other"),
 )
@@ -39,12 +44,21 @@ KIND_GROUPS = (
     ("Operations", ("monitoring", "logging", "backup", "containers", "git", "cicd", "registry", "automation",
                     "broker")),
     ("Storage and data", ("files", "objects", "database", "documents")),
+    ("Business", ("erp", "crm", "accounting", "payroll", "pos", "ecommerce", "inventory", "projects", "helpdesk",
+                  "office", "print", "meetings", "booking")),
     ("Apps", ("web", "dashboard", "mail", "chat", "wiki", "media", "downloads", "photos", "smarthome", "nvr",
-              "pbx", "print", "remote", "ai", "games")),
+              "pbx", "remote", "ai", "games")),
 )
+#: What a service can run on besides a record: someone else's cloud.
+ELSEWHERE = (("cloud", "Cloud service"),)
 CRITICALITY = (("low", "Low"), ("normal", "Normal"), ("high", "High"), ("critical", "Critical"))
 STATUSES = (("running", "Running"), ("degraded", "Degraded"), ("down", "Down"), ("planned", "Planned"),
             ("retired", "Retired"))
+
+def _cloud(m):
+    """Runs on can be Cloud service, which is no record to link to."""
+    m.add_column("service_details", "host", "VARCHAR(20)")
+
 
 ICON = ('<path d="M12 3.5 4.5 7.5v4.2c0 4.3 3.1 7.7 7.5 8.8 4.4-1.1 7.5-4.5 7.5-8.8V7.5L12 3.5Z"/>'
         '<path d="m8.8 12.2 2.2 2.2 4.2-4.4"/>')
@@ -56,8 +70,9 @@ SETUP_HELP = {
         "A service is something people use that you run: a website, file sharing, a media server, DNS, "
         "SABnzbd. Say what it runs on (a server, a VM or a container), so the dependency view shows what "
         "breaks when that host goes down.",
-        "An outside company it relies on, such as a Usenet provider or a cloud host, is a vendor, linked in "
-        "the service's Supplier section.",
+        "One that runs in someone else's cloud, such as Microsoft 365 or a hosted website, runs on Cloud "
+        "service. The company behind it, or any outside company it relies on, such as a Usenet provider, "
+        "is a vendor, linked in the service's Supplier section.",
     ),
 }
 
@@ -79,9 +94,10 @@ module = Module(
                            Field("url", "Address", "url", card=True,
                                  help="Where people reach it: a web address, or an IP address or hostname with "
                                       "a port if it has one, such as 192.168.1.1 for DHCP on the router."),
-                           Field("host", "Runs on", "ref", trait="host", relation="runs_on", card=True, list=True,
-                                 help="A server, VM, container or stack. More than one: link the rest in "
-                                      "Relationships."),
+                           Field("host", "Runs on", "ref", trait="host", relation="runs_on", also=ELSEWHERE,
+                                 card=True, list=True,
+                                 help="A server, VM, container or stack, or Cloud service for one that isn't "
+                                      "on your premises. More than one: link the rest in Relationships."),
                            Field("domain", "Domain", "ref", trait="domain", relation="depends_on",
                                  help="The domain its address is under."),
                            Field("ports", "Ports", help="443/tcp, 51820/udp"),
@@ -100,4 +116,5 @@ module = Module(
                      fields=(SetupField("name", placeholder="Jellyfin"), SetupField("f.kind"), SetupField("f.host"),
                              SetupField("f.url"))),),
     seed=demo.seed,
+    migrations=(Step("service-cloud", _cloud),),
 )

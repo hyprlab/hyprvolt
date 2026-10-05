@@ -109,9 +109,12 @@ def _records_of(types) -> list[tuple[int, str]]:
 
 def _field_choices(fields) -> list:
     """The records a column's ref fields can point at, once each: by name,
-    or under each kind's heading when there are several kinds."""
+    or under each kind's heading when there are several kinds. Choices
+    that aren't records (``Field.also``) come first."""
     from .views import _ref_choices
     seen, flat, groups = set(), [], {}
+    fixed = list(dict.fromkeys(c for f in fields for c in f.also))
+    seen.update(value for value, _ in fixed)
     for f in fields:
         for c in _ref_choices(f):
             for value, label in (c["options"] if isinstance(c, dict) else [c]):
@@ -119,8 +122,8 @@ def _field_choices(fields) -> list:
                     seen.add(value)
                     (groups.setdefault(c["label"], []) if isinstance(c, dict) else flat).append((value, label))
     if not groups:
-        return sorted(flat, key=lambda c: str(c[1]).lower())
-    return [{"label": label, "options": options} for label, options in groups.items()] + flat
+        return fixed + sorted(flat, key=lambda c: str(c[1]).lower())
+    return fixed + [{"label": label, "options": options} for label, options in groups.items()] + flat
 
 
 def in_site(entities, scope) -> list:

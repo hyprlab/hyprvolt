@@ -285,17 +285,18 @@ def _preset(f):
 def _ref_choices(f, entity=None) -> list:
     """The records a ref field can point at, by name: (id, name), or with
     several kinds of record (a service's Runs on), each kind under its
-    heading as {"label", "options"}, in the order the modules list them."""
+    heading as {"label", "options"}, in the order the modules list them.
+    Choices that aren't records (``Field.also``) come first."""
     reg = registry()
     keys = [k for k in reg.ref_types(f) if k in reg.enabled_type_keys()]
     rows = [e for e in Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name)
             if entity is None or e.id != entity.id]
     if len(keys) <= 1:
-        return [(e.id, e.name) for e in rows]
+        return list(f.also) + [(e.id, e.name) for e in rows]
     by_type = {}
     for e in rows:
         by_type.setdefault(e.type, []).append((e.id, e.name))
-    return [{"label": reg.type(k).plural, "options": by_type[k]} for k in keys if k in by_type]
+    return list(f.also) + [{"label": reg.type(k).plural, "options": by_type[k]} for k in keys if k in by_type]
 
 
 @bp.route("/e/form")
@@ -341,8 +342,7 @@ def edit_items(entity, etype, retyping: bool = False) -> dict:
     if retyping:
         detail = records.detail_of(entity)
         linked = records.linked_values([entity.id], etype).get(entity.id, {})
-        own = {f.key: linked.get(f.key) if f.relation else getattr(detail, f.key, None) if detail else None
-               for f in etype.fields}
+        own = {f.key: records.value_of(f, detail, linked) for f in etype.fields}
     values = records.custom_values(entity) if entity else {}
     fields = []
     for f in etype.fields:

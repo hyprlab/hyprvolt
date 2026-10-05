@@ -97,8 +97,16 @@ def own_values(entity: Entity, detail=None, linked=None) -> dict:
         detail = detail_of(entity)
     if linked is None:
         linked = linked_values([entity.id], etype).get(entity.id, {})
-    return {f.key: linked.get(f.key) if f.relation else (getattr(detail, f.key, None) if detail else None)
-            for f in etype.fields}
+    return {f.key: value_of(f, detail, linked) for f in etype.fields}
+
+
+def value_of(f, detail, linked) -> object:
+    """One field's value: from the detail row or, for a field kept as a
+    link, the relationships; with no link, a choice that isn't a record
+    (``Field.also``) from the row."""
+    if f.relation and (f.key in linked or not f.also):
+        return linked.get(f.key)
+    return getattr(detail, f.key, None) if detail else None
 
 
 def field_values(entity: Entity) -> list[tuple]:
@@ -446,15 +454,15 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
             else:
                 continue
             value = F.parse(f, raw, lookup=live)
-            old = linked.get(f.key) if f.relation else getattr(detail, f.key, None)
+            old = value_of(f, detail, linked)
             # "" and None are both empty: a column's default ("") is no change.
             if old != value and not (old in (None, "") and value in (None, "")):
-                refs = {"old_ref": old, "new_ref": value} if f.kind == "ref" else {}
+                refs = {"old_ref": _id(old), "new_ref": _id(value)} if f.kind == "ref" else {}
                 note("f." + f.key, f.label, F.display(f, old, live), F.display(f, value, live), **refs)
                 if f.relation:
-                    _relink(entity, f, old, value, user)
-                else:
-                    setattr(detail, f.key, value)
+                    _relink(entity, f, _id(old), _id(value), user)
+                if not f.relation or f.also:
+                    setattr(detail, f.key, None if f.relation and _id(value) else value)
 
     given = data.get("custom") or {}
     if given:
@@ -532,6 +540,11 @@ def _set_created(entity: Entity, raw, user, note) -> None:
     if entity.created_at is not None:
         note("created_at", LABELS["created_at"], clock.shown(entity.created_at), clock.shown(when))
     entity.created_at = when
+
+
+def _id(value) -> int | None:
+    """A ref's record id; None for a choice that isn't a record."""
+    return value if isinstance(value, int) else None
 
 
 def _relink(entity: Entity, f, old_id, new_id, user) -> None:

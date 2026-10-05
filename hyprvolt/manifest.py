@@ -41,6 +41,9 @@ class Field:
     types: tuple = ()                # ref: entity types it may point at
     trait: str = ""                  # ref: or any type with this trait
     relation: str = ""               # ref: kept as a link of this kind, not a column
+    also: tuple = ()                 # ref: choices that aren't records, ((value, label), ...), listed
+                                     # first and kept in the detail's column of the field's key:
+                                     # a service that runs on a cloud service
     help: str = ""
     unit: str = ""                   # shown after the value: "U", "W", "GB"
     min: float | None = None

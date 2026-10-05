@@ -181,6 +181,11 @@ tab shows it and the dependency view follows it, and unlinking it there
 empties the field. The detail table needs no column for it, and a type whose
 fields are all kept as links needs no detail table.
 
+`also=(("cloud", "Cloud service"),)` gives a `ref` choices that aren't
+records, listed before them: a service's Runs on can be Cloud service. One
+is kept in the detail table's column of the field's key (which then needs
+one), and choosing a record instead empties it.
+
 A `date` field with `expires=True` is a date something ends or falls due: a
 warranty, a renewal, a contract's end. The core reminds of it: within the
 admin's reminder window either side of today, the record is on the
@@ -252,7 +257,7 @@ anything else a module does to it (Locations logs rack mounts this way).
 
 ## Steps of the site setup guide
 
-The site setup guide (New > Set up a site, step by step) walks a site from
+The site setup guide (Set up a site, in the sidebar) walks a site from
 the site itself out to its endpoints, one short step at a time. Its steps
 are the turned-on modules' `setup`, sorted by `order`: Locations has the
 site (10), rooms (20) and racks (30), Contacts vendors (35), Network the

@@ -440,7 +440,9 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
                      "(or \"\" for none chosen)")
         if f.relation and f.kind != "ref":
             p.append(f"{where} is kept as a link, so it must be a ref")
-        if columns and f.key not in columns and not f.relation:
+        if f.also and f.kind != "ref":
+            p.append(f"{where} has choices besides records, so it must be a ref")
+        if columns and f.key not in columns and (not f.relation or f.also):
             p.append(f"{where} has no column in {t.detail.__tablename__}")
     tabs = set()
     for tab in t.tabs:

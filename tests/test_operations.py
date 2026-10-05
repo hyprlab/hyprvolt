@@ -120,12 +120,43 @@ def test_a_service_runs_on_a_host_and_depends_on_its_domain(client, h, admin):
     assert ">example.net</option>" in form and ">Home<" not in runs_on
 
 
+def test_a_service_can_run_on_a_cloud_service(client, h, admin):
+    vm = make(client, h, "vm", name="docker1")
+    form = client.get("/e/form?type=service").data.decode()
+    runs_on = form.split('name="f.host"')[1].split("</select>")[0]
+    assert runs_on.index('<option value="cloud" >Cloud service</option>') < runs_on.index("<optgroup")
+    svc = make(client, h, "service", name="Mail", **{"f.host": "cloud"})
+    assert svc["fields"]["host"] == "cloud"
+    assert re.search(r'row-dek">[^<]*Cloud service', listed(client, "/services?view=list"))
+    # A host instead: linked, and the cloud forgotten; then back to the cloud, and the link gone.
+    client.post(f"/api/entities/{svc['id']}", json={"f.host": vm["id"]}, headers=h)
+    assert client.get(f"/api/entities/{svc['id']}").get_json()["entity"]["fields"]["host"] == vm["id"]
+    assert "Mail" in tree_names(client.get(f"/api/entities/{vm['id']}/dependencies").get_json()["tree"])
+    client.post(f"/api/entities/{svc['id']}", json={"f.host": "cloud"}, headers=h)
+    assert client.get(f"/api/entities/{svc['id']}").get_json()["entity"]["fields"]["host"] == "cloud"
+    assert "Mail" not in tree_names(client.get(f"/api/entities/{vm['id']}/dependencies").get_json()["tree"])
+    assert history(client, svc["id"])[0]["changes"][0]["new"] == "Cloud service"
+    client.post(f"/api/entities/{svc['id']}", json={"f.host": None}, headers=h)
+    assert client.get(f"/api/entities/{svc['id']}").get_json()["entity"]["fields"]["host"] is None
+    bad = client.post("/api/entities", json={"type": "service", "name": "X", "f.host": "moon"}, headers=h)
+    assert bad.status_code == 400
+    # The setup guide's Services step offers it too, first.
+    site = make(client, h, "site", name="Home")
+    step = client.get(f"/site-setup/services?site={site['id']}").data.decode()
+    new_host = step.split("data-row-new")[1].split('name="f.host"')[1].split("</select>")[0]
+    assert new_host.index(">Cloud service<") < new_host.index("<optgroup")
+
+
 def test_a_service_kind_is_chosen_under_its_heading(client, h, admin):
     form = client.get("/e/form?type=service").data.decode()
     network = form.split('<optgroup label="Network">')[1].split("</optgroup>")[0]
     assert '<option value="dhcp" >DHCP</option>' in network and ">Reverse proxy<" in network
     assert '<option value="ddns" >Dynamic DNS</option>' in network and '<option value="adblock" >Ad blocking</option>' in network
     assert form.index('label="Apps"') < form.index('<option value="other" >Other</option>')
+    business = form.split('<optgroup label="Business">')[1].split("</optgroup>")[0]
+    for value, label in (("erp", "ERP"), ("crm", "CRM"), ("accounting", "Accounting"), ("pos", "Point of sale"),
+                         ("print", "Print server")):
+        assert f'<option value="{value}" >{label}</option>' in business
     dhcp = make(client, h, "service", name="Kea", **{"f.kind": "dhcp"})
     assert client.get(f"/api/entities/{dhcp['id']}").get_json()["entity"]["fields"]["kind"] == "dhcp"
     # The New record window finds it by the kind.
