@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.5] — 2026-10-05
+## [1.4.0-beta.6] — 2026-10-05
 
 ### Added
 - A service's kind can be a business app, under a Business heading: ERP, CRM, accounting, payroll and HR, point of sale, online store, inventory and assets, project management, help desk, office and productivity, print server (Printing before, moved from Apps), video meetings, and scheduling and booking. A Homepage import recognizes apps such as Odoo, SuiteCRM, Akaunting, Snipe-IT, Zammad, Jitsi and PaperCut
