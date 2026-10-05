@@ -1357,8 +1357,9 @@
   }
   // A place's name and kind, changed in its row (data-tree-save="name" or
   // "type"): saved when the name is left or Enter pressed, or the kind
-  // chosen; Escape puts the name back. Changing the kind keeps the record,
-  // with what is in it and links to it.
+  // chosen; Escape puts the name back. The kind goes to data-tree-kind,
+  // which keeps the record, links and all, and moves it up to where its
+  // new kind belongs (a room made a building goes to the site).
   function saveTreeField(el) {
     var node = treeNode(el), tree = treeOf(el), field = el.getAttribute("data-tree-save");
     var value = field === "name" ? el.value.trim() : el.value;
@@ -1368,7 +1369,8 @@
     var body = {};
     body[field] = value;
     var id = node.getAttribute("data-node");
-    api("/api/entities/" + id, body).then(function () {
+    var url = el.getAttribute("data-tree-kind") || "/api/entities/" + id;
+    api(url, body).then(function () {
       redrawTree(tree, function (fresh) {
         var again = treeFind(fresh, id), same = again && again.querySelector('[data-tree-save="' + field + '"]');
         if (same && document.activeElement === document.body) same.focus({ preventScroll: true });

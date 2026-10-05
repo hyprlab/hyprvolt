@@ -24,11 +24,12 @@
     <input class="tree-name tree-name-input" data-tree-save="name" value="{{ e.name }}" maxlength="200" required
            autocomplete="off" spellcheck="false" aria-label="Name of {{ e.name }}">
     {% if n.becomes|length > 1 %}
-    <select class="tree-kind tree-kind-select" data-tree-save="type" aria-label="What {{ e.name }} is">
+    <select class="tree-kind tree-kind-select" data-tree-save="type" aria-label="What {{ e.name }} is"
+            data-tree-kind="{{ url_for('guide.tree_kind', key=step.key, entity_id=e.id) }}">
       {% for t in n.becomes %}<option value="{{ t.key }}" {{ 'selected' if t.key == e.type }}>{{ t.label }}</option>{% endfor %}
     </select>
     {% else %}
-    <span class="tree-kind" title="It can't be another kind where it is, or with what is in it">{{ n.type.label }}</span>
+    <span class="tree-kind" title="Nothing above it can hold another kind">{{ n.type.label }}</span>
     {% endif %}
     {% endif %}
     <span class="tree-actions">
@@ -52,6 +53,6 @@
   <ul class="tree">{{ node(tree) }}</ul>
   <p class="hint" id="tree-hint-{{ step.key }}">Drag a place by its handle onto another to put it inside that one, or
     onto {{ scope.name }} to bring it back to the top. With the handle focused, → puts it inside the one above it
-    and ← takes it out a level. Change a name or a kind where it is shown, a room that is really a building; a
-    room in a building comes out of it first, and a building gives up its rooms before it can be a room.</p>
+    and ← takes it out a level. Change a name or a kind where it is shown: a room made a building moves up to
+    {{ scope.name }}, and a building made a room keeps its place, its rooms moving out beside it.</p>
 </div>

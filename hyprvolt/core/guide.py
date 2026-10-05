@@ -263,8 +263,8 @@ def _found(step, scope) -> list[Entity]:
 def tree(step, scope) -> dict | None:
     """The site and the step's records under it, each where it is:
     {"entity", "type", "accepts" [kinds it can hold], "becomes" [the
-    step's kinds it can be changed to where it is, its own first, holding
-    what it holds], "children", "root",
+    step's kinds it can be made, its own first: those a place above it can
+    hold (tree_kind moves it there)], "children", "root",
     "inside" (how many of the step's records are in it, at any depth),
     "holds" (how many other records, such as racks and servers, are)}.
     A record whose place is outside the site, or gone, isn't in it."""
@@ -280,11 +280,10 @@ def tree(step, scope) -> dict | None:
         inside = reg.type(type_key).located_in
         return inside is None or parent_key in inside
 
-    def becomes(e, parent, children):
+    def becomes(e, above):
         own = reg.type(e.type)
-        return [own] + [reg.type(k.type) for k in kinds
-                        if k.type != e.type and k.type in own.becomes and fits(k.type, parent.type)
-                        and all(fits(c["type"].key, k.type) for c in children)]
+        return [own] + [reg.type(k.type) for k in kinds if k.type != e.type and k.type in own.becomes
+                        and any(fits(k.type, a.type) for a in above)]
     rows = Entity.live().filter(Entity.type.in_({k.type for k in kinds})).all()
     below = {}
     for e in rows:
@@ -294,8 +293,8 @@ def tree(step, scope) -> dict | None:
                   .filter(Entity.deleted_at.is_(None), Entity.type.notin_({k.type for k in kinds}))
                   .group_by(Entity.location_id).all())
 
-    def node(e, root=False, seen=(), parent=None):
-        children = [node(c, seen=seen + (e.id,), parent=e) for c in
+    def node(e, root=False, seen=(), above=()):
+        children = [node(c, seen=seen + (e.id,), above=(e,) + above) for c in
                     sorted(below.get(e.id, []), key=lambda c: (order.get(c.type, 9), c.name.lower()))
                     if c.id not in seen]
         etype = reg.type(e.type)
@@ -306,7 +305,7 @@ def tree(step, scope) -> dict | None:
                 count[t] = count.get(t, 0) + n
         words = [f"{n} {reg.type(t).text(n != 1)}" for t, n in sorted(count.items(), key=lambda x: order.get(x[0], 9))]
         return {"entity": e, "type": etype, "accepts": accepts(e.type), "children": children, "root": root,
-                "becomes": becomes(e, parent, children) if parent is not None else [etype],
+                "becomes": becomes(e, above) if above else [etype],
                 "count": count, "inside": " and ".join(words),
                 "holds": others.get(e.id, 0) + sum(c["holds"] for c in children)}
     return node(scope, root=True)
@@ -631,6 +630,46 @@ def tree_delete(key, entity_id):
     db.session.commit()
     return jsonify(ok=True, deleted=len(gone),
                    undo={"url": url_for("guide.tree_restore", key=key), "body": {"ids": [e.id for e in gone]}})
+
+
+@bp.route("/site-setup/<key>/tree/<int:entity_id>/kind", methods=["POST"])
+@role("editor")
+def tree_kind(key, entity_id):
+    """``type``: make a place of a tree step another of the step's kinds (a
+    room that is really a building), all at once or not at all. It moves up
+    to the nearest place above it that can hold the new kind (a building
+    goes to the site), and the step's places in it that the new kind can't
+    hold (a building's rooms, when it becomes a room) move out beside it.
+    Anything else in it that can't stay (a rack in a room) refuses it."""
+    current = _step_or_404(key)
+    kinds = {k.type for k in _kinds(current)}
+    entity = records.live(entity_id)
+    if not current.tree or entity is None or entity.type not in kinds:
+        abort(404, description="There is no such place.")
+    reg = registry()
+    new = reg.type(str(_body().get("type") or ""))
+    if new is None or new.key not in kinds or new.key == entity.type:
+        return jsonify(error="Choose another kind of place."), 400
+
+    def fits(type_key, place):
+        inside = reg.type(type_key).located_in
+        return inside is None or place.type in inside
+    place = entity.location
+    while place is not None and not fits(new.key, place):
+        place = place.location
+    if place is None:
+        return jsonify(error=f"Nothing above {entity.name} can hold a {new.text()}."), 400
+    moved = [c for c in Entity.live().filter(Entity.location_id == entity.id, Entity.type.in_(kinds))
+             if reg.type(c.type).located_in is not None and new.key not in reg.type(c.type).located_in]
+    try:
+        for c in moved:
+            records.update(c, {"location_id": place.id}, current_user)
+        records.update(entity, {"type": new.key, "location_id": place.id}, current_user)
+    except Invalid as err:
+        db.session.rollback()
+        return jsonify(error=str(err)), 400
+    db.session.commit()
+    return jsonify(ok=True, moved=[c.name for c in moved])
 
 
 @bp.route("/site-setup/<key>/tree/restore", methods=["POST"])
