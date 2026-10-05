@@ -9,7 +9,7 @@ def seed(demo):
     service("svc-dns", "DNS and ad blocking", kind="dns", host="pihole", domain="lab-home", ports="53/udp, 53/tcp",
             users="Everything on the network", criticality="critical", url="https://pihole.lab.home/admin",
             notes="If it is down, nothing resolves. The fallback is edge-fw's own resolver at 10.0.20.1.")
-    service("svc-ha", "Home Assistant", kind="automation", host="homeassistant", domain="lab-home",
+    service("svc-ha", "Home Assistant", kind="smarthome", host="homeassistant", domain="lab-home",
             url="https://ha.lab.home:8123", ports="8123/tcp", users="Everyone at home", criticality="high")
     service("svc-vpn", "VPN", kind="vpn", host="edge-fw", domain="example-net", ports="51820/udp",
             users="Family phones and laptops", criticality="high", notes="WireGuard at vpn.example.net.")

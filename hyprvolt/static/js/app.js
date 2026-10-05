@@ -117,7 +117,10 @@
       applyTheme(next);
       var radio = document.querySelector('input[name="theme"][value="' + next + '"]');
       if (radio) radio.checked = true;
-      api("/settings", { theme: next }).catch(function () {});
+      // Signed in it is the account's; before that (the first-run setup
+      // page), this browser's, and the setup gives it to the admin.
+      if (root.hasAttribute("data-signed-in")) api("/settings", { theme: next }).catch(function () {});
+      else try { localStorage.setItem("theme", next); } catch (_) {}
     });
   }
   document.querySelectorAll('input[name="theme"]').forEach(function (radio) {
@@ -143,17 +146,16 @@
   });
 
   /* ————— Dialogs ————— */
-  /* The settings window: a rail of sections and one pane at a time. On a
-     phone only one of the two shows, and .is-showing-pane says which. */
-  var settingsModal = document.getElementById("settings-modal");
+  /* Rail windows (.modal--rail: Settings, Help): a rail of sections and one
+     pane at a time. On a phone only one of the two shows, and
+     .is-showing-pane says which. */
   var narrow = window.matchMedia("(max-width: 700px)");
-  function settingsItems() {
-    return settingsModal ? Array.prototype.slice.call(settingsModal.querySelectorAll(".settings-navitem")) : [];
+  function railItems(d) {
+    return Array.prototype.slice.call(d.querySelectorAll(".settings-navitem"));
   }
-  function showSettingsSection(name, focusItem) {
-    if (!settingsModal) return;
+  function showRailSection(d, name, focusItem) {
     var chosen = null;
-    settingsItems().forEach(function (item) {
+    railItems(d).forEach(function (item) {
       var on = item.getAttribute("data-section") === name;
       item.classList.toggle("is-active", on);
       item.setAttribute("aria-selected", on ? "true" : "false");
@@ -161,30 +163,28 @@
       if (on) chosen = item;
     });
     if (!chosen) return;
-    settingsModal.querySelectorAll(".settings-pane").forEach(function (pane) {
+    d.querySelectorAll(".settings-pane").forEach(function (pane) {
       var on = pane.getAttribute("data-pane") === name;
       if (on && !pane.classList.contains("is-active")) pane.scrollTop = 0;
       pane.classList.toggle("is-active", on);
     });
-    document.getElementById("settings-section-title").textContent =
-      chosen.querySelector("span").textContent;
-    settingsModal.classList.add("is-showing-pane");
+    d.querySelector(".settings-head-title").textContent = chosen.querySelector("span").textContent;
+    d.classList.add("is-showing-pane");
     if (focusItem) chosen.focus();
   }
-  function showSettingsList() {
-    if (!settingsModal) return;
-    settingsModal.classList.remove("is-showing-pane");
-    var active = settingsModal.querySelector(".settings-navitem.is-active");
+  function showRailList(d) {
+    d.classList.remove("is-showing-pane");
+    var active = d.querySelector(".settings-navitem.is-active");
     if (active) active.focus();
   }
 
   function openDialog(id, section) {
     var dialog = document.getElementById(id);
     if (!dialog || dialog.open) return;
-    if (id === "settings-modal") {
+    if (dialog.classList.contains("modal--rail")) {
       // A named section opens straight to it. Otherwise the window reopens
       // where it was left, except on a phone, where it starts at the list.
-      if (section) showSettingsSection(section);
+      if (section) showRailSection(dialog, section);
       else if (narrow.matches) dialog.classList.remove("is-showing-pane");
     }
     setSidebar(false);
@@ -194,7 +194,7 @@
   // paging) open their dialog too.
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-open]");
-    if (btn) openDialog(btn.getAttribute("data-open"), btn.getAttribute("data-settings-section"));
+    if (btn) openDialog(btn.getAttribute("data-open"), btn.getAttribute("data-open-section"));
   });
 
   function prefersReducedMotion() {
@@ -278,35 +278,36 @@
     }
   });
 
-  /* ————— Settings ————— */
-  if (settingsModal) {
-    settingsItems().forEach(function (item) {
+  /* ————— Rail windows: Settings, Help ————— */
+  // (The New record window's rail is its steps: see "The New record window".)
+  document.querySelectorAll(".modal--rail:not(.modal--steps)").forEach(function (d) {
+    railItems(d).forEach(function (item) {
       item.addEventListener("click", function () {
-        showSettingsSection(item.getAttribute("data-section"));
+        showRailSection(d, item.getAttribute("data-section"));
       });
     });
     // Arrow keys move through the rail and select as they go (the WAI-ARIA
     // vertical tab pattern); Home and End jump to the ends.
-    settingsModal.querySelector(".settings-nav").addEventListener("keydown", function (e) {
-      var items = settingsItems();
+    d.querySelector(".settings-nav").addEventListener("keydown", function (e) {
+      var items = railItems(d);
       var at = items.indexOf(document.activeElement);
       if (at === -1) return;
       var next = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[e.key];
       if (next === undefined) return;
       e.preventDefault();
       next = (next + items.length) % items.length;
-      showSettingsSection(items[next].getAttribute("data-section"), true);
-      if (narrow.matches) settingsModal.classList.remove("is-showing-pane");
+      showRailSection(d, items[next].getAttribute("data-section"), true);
+      if (narrow.matches) d.classList.remove("is-showing-pane");
     });
-    settingsModal.querySelector(".settings-back").addEventListener("click", showSettingsList);
+    d.querySelector(".settings-back").addEventListener("click", function () { showRailList(d); });
     // On a phone, Escape inside a section goes back to the list first.
-    settingsModal.addEventListener("cancel", function (e) {
-      if (narrow.matches && settingsModal.classList.contains("is-showing-pane")) {
+    d.addEventListener("cancel", function (e) {
+      if (narrow.matches && d.classList.contains("is-showing-pane")) {
         e.preventDefault();
-        showSettingsList();
+        showRailList(d);
       }
     });
-  }
+  });
   document.querySelectorAll('input[name="view_mode"]').forEach(function (radio) {
     radio.addEventListener("change", function () {
       api("/settings", { view_mode: radio.value })
@@ -432,6 +433,112 @@
       });
     });
   });
+
+  // [data-sortable]: a list whose [data-sort-item] children move by their
+  // .sort-handle, dragged (mouse, pen or touch) or with ↑ and ↓ while it has
+  // focus. Each move fires a "sorted" event from the list; what the order
+  // means, and saving it, is up to whoever listens.
+  var sorting = null;
+  function sortItems(list) {
+    return Array.prototype.filter.call(list.children, function (el) { return el.hasAttribute("data-sort-item"); });
+  }
+  function sortParts(handle) {
+    var item = handle.closest("[data-sort-item]");
+    var list = item && item.parentNode;
+    return list && list.hasAttribute("data-sortable") ? { item: item, list: list } : null;
+  }
+  function sorted(list) { list.dispatchEvent(new CustomEvent("sorted", { bubbles: true })); }
+  document.addEventListener("pointerdown", function (e) {
+    var handle = e.target.closest(".sort-handle");
+    var parts = handle && sortParts(handle);
+    if (!parts || e.button !== 0) return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    sorting = { handle: handle, item: parts.item, list: parts.list, before: sortItems(parts.list).indexOf(parts.item) };
+    parts.item.classList.add("is-sorting");
+    document.body.classList.add("is-sorting");
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (!sorting) return;
+    // Near an edge of what scrolls around it, that scrolls, so a long list
+    // can be crossed in one drag.
+    var pane = sorting.list.closest(".settings-pane, .modal, .sheet");
+    if (pane) {
+      var box = pane.getBoundingClientRect();
+      if (e.clientY < box.top + 40) pane.scrollTop -= 14;
+      else if (e.clientY > box.bottom - 40) pane.scrollTop += 14;
+    }
+    // Goes before the first other item whose middle is below the pointer.
+    var others = sortItems(sorting.list).filter(function (el) { return el !== sorting.item; });
+    var next = others.find(function (el) {
+      var r = el.getBoundingClientRect();
+      return e.clientY < r.top + r.height / 2;
+    });
+    if (next ? sorting.item.nextElementSibling !== next : sortItems(sorting.list).pop() !== sorting.item) {
+      sorting.list.insertBefore(sorting.item, next || null);
+    }
+  });
+  function endSort() {
+    if (!sorting) return;
+    var s = sorting;
+    sorting = null;
+    s.item.classList.remove("is-sorting");
+    document.body.classList.remove("is-sorting");
+    if (sortItems(s.list).indexOf(s.item) !== s.before) sorted(s.list);
+    s.handle.focus({ preventScroll: true });
+  }
+  document.addEventListener("pointerup", endSort);
+  document.addEventListener("pointercancel", endSort);
+  document.addEventListener("keydown", function (e) {
+    var handle = e.target.closest && e.target.closest(".sort-handle");
+    var parts = handle && sortParts(handle);
+    if (!parts || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+    e.preventDefault();
+    var items = sortItems(parts.list), at = items.indexOf(parts.item);
+    var to = e.key === "ArrowUp" ? at - 1 : at + 1;
+    if (to < 0 || to >= items.length) return;
+    parts.list.insertBefore(parts.item, e.key === "ArrowUp" ? items[to] : items[to].nextElementSibling);
+    handle.focus({ preventScroll: true });
+    sorted(parts.list);
+  });
+
+  // Settings > Modules: the sidebar's order, saved as it changes; the
+  // sidebar behind the settings follows at once.
+  var sidebarOrder = document.querySelector("[data-sidebar-order]");
+  var orderReset = document.getElementById("sidebar-order-reset");
+  function arrangeSidebar(groups, modules) {
+    var blocks = document.querySelectorAll(".sidebar .sidebar-group[data-group]");
+    if (!blocks.length) return;
+    var parent = blocks[0].parentNode, after = blocks[blocks.length - 1].nextSibling;
+    groups.forEach(function (label) {
+      var block = parent.querySelector(':scope > .sidebar-group[data-group="' + CSS.escape(label) + '"]');
+      if (block) parent.insertBefore(block, after);
+    });
+    modules.forEach(function (id) {
+      var link = parent.querySelector('.navitem[data-module="' + CSS.escape(id) + '"]');
+      if (!link) return;
+      var nested = link.nextElementSibling && link.nextElementSibling.matches(".sidelist--nested") ? link.nextElementSibling : null;
+      link.parentNode.appendChild(link);
+      if (nested) link.parentNode.appendChild(nested);
+    });
+  }
+  if (sidebarOrder) {
+    sidebarOrder.addEventListener("sorted", function () {
+      var groups = Array.prototype.map.call(sidebarOrder.querySelectorAll("[data-group]"), function (el) { return el.getAttribute("data-group"); });
+      var modules = Array.prototype.map.call(sidebarOrder.querySelectorAll("[data-module]"), function (el) { return el.getAttribute("data-module"); });
+      api("/admin/sidebar-order", { groups: groups, modules: modules }).then(function () {
+        arrangeSidebar(groups, modules);
+        if (orderReset) orderReset.hidden = false;
+      }).catch(toastError);
+    });
+  }
+  if (orderReset) {
+    orderReset.addEventListener("click", function () {
+      api("/admin/sidebar-order", { reset: true }).then(function () {
+        reloadWith("The sidebar is back in its default order");
+      }).catch(toastError);
+    });
+  }
 
   var adduserForm = document.getElementById("admin-adduser");
   if (adduserForm) {
@@ -706,8 +813,8 @@
   }
 
   /* ————— The record form ————— */
-  // One dialog for every type: the form inside is the server's, built from
-  // the type's field schema (sheet/form.html), fetched each time it opens.
+  // One form for every type: the server's, built from the type's field
+  // schema (sheet/form.html), fetched into the New record window each time.
   var entityModal = document.getElementById("entity-modal");
   var formSlot = document.getElementById("entity-form-slot");
   var formSource = null;
@@ -731,19 +838,12 @@
     });
   }
 
-  function openEntityForm(url) {
-    if (!entityModal) return;
-    loadForm(url).then(function (form) {
-      if (!entityModal.open) entityModal.showModal();
-      var first = form.querySelector("[autofocus]");
-      if (first) first.focus();
-    }).catch(toastError);
-  }
-
   function formData(form) {
     var out = {};
     Array.prototype.forEach.call(form.elements, function (el) {
       if (!el.name || el.disabled || el.type === "file" || el.type === "submit") return;
+      if (el.closest("[data-section][hidden]")) return;   // hidden by a choice: left as it is
+      if (el.type === "radio" && !el.checked) return;       // a choice: the one chosen
       out[el.name] = el.type === "checkbox" ? el.checked : el.value;
     });
     return out;
@@ -768,6 +868,21 @@
     location.assign(location.pathname + "?" + params.toString());
   }
 
+  // A choice that hides form sections, in the form and in an editor's
+  // Overview: a server made a tower loses its rack position section.
+  // data-hides: "section=value,value" rules, each section hidden while the
+  // choice is one of its values (an empty one: none chosen).
+  function showSections(select) {
+    var root = select.closest("form, [data-autosave]") || document;
+    select.getAttribute("data-hides").split(" ").forEach(function (rule) {
+      var key = rule.split("=")[0], hide = rule.slice(key.length + 1).split(",").indexOf(select.value) !== -1;
+      root.querySelectorAll('[data-section="' + key + '"]').forEach(function (s) { s.hidden = hide; });
+    });
+  }
+  document.addEventListener("change", function (e) {
+    if (e.target.matches && e.target.matches("select[data-hides]")) showSections(e.target);
+  });
+
   if (formSlot) {
     // Another type chosen for a record: the form for that type, with what
     // was typed carried over.
@@ -778,6 +893,7 @@
       delete values.type;
       loadForm("/e/" + form.getAttribute("data-id") + "/form?type=" + encodeURIComponent(select.value)).then(function (fresh) {
         fillForm(fresh, values);
+        fresh.querySelectorAll("select[data-hides]").forEach(showSections);
         var again = fresh.querySelector("select[data-retype]");
         if (again) again.focus();
       }).catch(toastError);
@@ -786,13 +902,21 @@
       var form = e.target.closest("#entity-form");
       if (!form) return;
       e.preventDefault();
-      var errEl = form.querySelector(".form-error");
-      var btn = form.querySelector("button[type=submit]");
+      var errEl = form.querySelector(".form-error") || newError;
+      var btn = form.querySelector("button[type=submit]") || newCreate;
       var id = form.getAttribute("data-id");
       errEl.hidden = true;
+      // Something required left empty on a step not in view: that step, and say so.
+      if (!id) {
+        var gap = null;
+        formSteps().some(function (step) { gap = stepGap(step); if (gap) showStep(step.name); return gap; });
+        if (gap) { flagGap(gap); return; }
+      }
       setBusy(btn, true);
       api(id ? "/api/entities/" + id : "/api/entities", formData(form)).then(function (data) {
         entityModal.close();   // saved: the page that follows shows the record, not the form
+        // What the save did beyond what was asked (an address moved), told after the reload.
+        if (data.notices && data.notices.length) queueToast(data.notices.join(" "));
         // Edited from its open sheet: reload, and the sheet comes back in
         // place (same tab, same scroll) over the refreshed list.
         if (id && sheet && sheet.open && new URLSearchParams(location.search).get("open") === id) location.reload();
@@ -805,12 +929,269 @@
     });
   }
 
+  /* ————— The New record window ————— */
+  // A rail of steps: what kind of record first, found by searching or
+  // chosen from the list, then the parts of its form (data-step), one at a
+  // time. Back and Next walk them, the rail jumps to any, and Create saves
+  // from whichever is showing. A record started from somewhere that
+  // decides its kind and more (a VM from its host's sheet) skips the first.
+  var newSteps = document.getElementById("newrec-steps");
+  var newKinds = document.getElementById("newrec-kinds");
+  var newQuery = document.getElementById("newrec-q");
+  var newList = document.getElementById("newrec-list");
+  var newNone = document.getElementById("newrec-none");
+  var newFoot = document.getElementById("newrec-foot");
+  var newError = document.getElementById("entity-error");
+  var newBack = document.getElementById("newrec-back");
+  var newNext = document.getElementById("newrec-next");
+  var newCreate = document.getElementById("newrec-create");
+  var KIND_STEP = "Kind";
+  // params: what the form is opened with besides its type (a location, a
+  // record to attach to); fixed: no Kind step; chosen: the kind picked.
+  var wiz = { params: "", fixed: false, step: KIND_STEP, chosen: null };
+
+  // The form's steps: its data-step parts, an unnamed one joined to the
+  // one before, and one hidden by a choice (a tower's rack position) left out.
+  function formSteps() {
+    var form = formSlot && formSlot.querySelector("form"), out = [];
+    if (!form) return out;
+    form.querySelectorAll("[data-step]").forEach(function (el) {
+      var name = el.getAttribute("data-step");
+      if (!name && out.length) { out[out.length - 1].els.push(el); return; }
+      if (!el.hidden) out.push({ name: name || "Details", els: [el] });
+    });
+    return out;
+  }
+  function allSteps() {
+    var steps = formSteps();
+    if (!wiz.fixed) steps.unshift({ name: KIND_STEP, kind: true, els: [] });
+    return steps;
+  }
+
+  function stepFields(step) {
+    var out = [];
+    step.els.forEach(function (el) {
+      el.querySelectorAll("input:not([type=hidden]), select, textarea").forEach(function (f) {
+        if (!f.disabled && !f.closest("[hidden]")) out.push(f);
+      });
+    });
+    return out;
+  }
+  // A required field of the step left empty, or null.
+  function stepGap(step) {
+    var gap = null;
+    stepFields(step).some(function (f) { if (f.required && !f.value.trim()) gap = f; return gap; });
+    return gap;
+  }
+  function flagGap(field) {
+    var label = field.id && formSlot.querySelector('label[for="' + field.id + '"]');
+    var text = label ? label.firstChild.textContent.trim() : "";
+    newError.textContent = field.name === "name" ? "Give it a name." : (text || "This field") + " can't be left empty.";
+    newError.hidden = false;
+    field.focus();
+  }
+
+  function showStep(name, focus) {
+    var steps = allSteps(), at = 0;
+    steps.forEach(function (s, i) { if (s.name === name) at = i; });
+    var step = steps[at], form = formSlot.querySelector("form");
+    var moved = wiz.step !== step.name;
+    wiz.step = step.name;
+    newSteps.innerHTML = "";
+    steps.forEach(function (s, i) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "settings-navitem newrec-step" + (i === at ? " is-active" : "") + (i < at ? " is-past" : "");
+      b.setAttribute("data-step-go", s.name);
+      if (i === at) b.setAttribute("aria-current", "step");
+      var num = document.createElement("span");
+      num.className = "guide-num";
+      if (i < at) num.innerHTML = '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+      else num.textContent = String(i + 1);
+      var label = document.createElement("span");
+      label.textContent = s.name;
+      b.appendChild(num);
+      b.appendChild(label);
+      li.appendChild(b);
+      newSteps.appendChild(li);
+    });
+    newKinds.classList.toggle("is-active", !!step.kind);
+    formSlot.classList.toggle("is-active", !step.kind);
+    formSlot.querySelectorAll("[data-step]").forEach(function (el) {
+      el.classList.toggle("is-current", step.els.indexOf(el) !== -1);
+    });
+    if (moved) { formSlot.scrollTop = 0; newError.hidden = true; }
+    // Back at the kinds after choosing one: all of them, the choice marked.
+    if (moved && step.kind && wiz.chosen) { newQuery.value = ""; filterKinds(); }
+    document.getElementById("newrec-title").textContent = step.kind ? "What are you adding?" : step.name;
+    document.getElementById("newrec-count").textContent = steps.length > 1 ? "Step " + (at + 1) + " of " + steps.length : "";
+    var last = at === steps.length - 1;
+    newFoot.hidden = !form;
+    newBack.hidden = at === 0;
+    newNext.hidden = last;
+    newCreate.classList.toggle("btn--primary", last);
+    newCreate.classList.toggle("btn--ghost", !last);
+    if (!focus) return;
+    if (step.kind) { newQuery.focus(); return; }
+    var first = stepFields(step)[0];
+    if (first) first.focus({ preventScroll: true });
+  }
+  function stepBy(delta) {
+    var steps = allSteps(), at = 0;
+    steps.forEach(function (s, i) { if (s.name === wiz.step) at = i; });
+    if (delta > 0) {
+      var gap = stepGap(steps[at]);
+      if (gap) { flagGap(gap); return; }
+    }
+    var to = steps[Math.max(0, Math.min(steps.length - 1, at + delta))];
+    showStep(to.name, true);
+  }
+
+  // The kinds: all of them, grouped, until something is typed; then the
+  // ones that match, best first, the kinds a type comes in among them.
+  function kindOptions(visible) {
+    var all = Array.prototype.slice.call(newList.querySelectorAll(".newrec-kind"));
+    if (!visible) return all;
+    return all.filter(function (o) { return !o.hidden; }).sort(function (a, b) {
+      return (parseInt(a.style.order, 10) || 0) - (parseInt(b.style.order, 10) || 0) || all.indexOf(a) - all.indexOf(b);
+    });
+  }
+  function kindRank(opt, q) {
+    var label = opt.getAttribute("data-label").toLowerCase();
+    var words = opt.getAttribute("data-words").toLowerCase().split(/[\s-]+/);
+    var typed = q.split(/\s+/);
+    var starts = function (list) {
+      return typed.every(function (t) { return list.some(function (w) { return w.indexOf(t) === 0; }); });
+    };
+    if (label === q) return 1;
+    if (label.indexOf(q) === 0) return 2;
+    if (starts(label.split(/[\s-]+/))) return 3;
+    if (starts(words)) return 4;
+    return opt.getAttribute("data-words").toLowerCase().indexOf(q) !== -1 ? 5 : -1;
+  }
+  function filterKinds() {
+    var q = newQuery.value.trim().toLowerCase();
+    newList.classList.toggle("is-searching", !!q);
+    kindOptions().forEach(function (opt) {
+      var rank = q ? kindRank(opt, q) : (opt.hasAttribute("data-preset") ? -1 : 0);
+      opt.hidden = rank < 0;
+      opt.style.order = rank > 0 ? String(rank) : "";
+    });
+    var shown = kindOptions(true);
+    newNone.hidden = shown.length > 0;
+    markKind(shown[0] || null, q ? null : wiz.chosen);
+  }
+  // The one Enter picks: the best match, or the kind already chosen.
+  function markKind(opt, chosen) {
+    if (chosen) {
+      opt = kindOptions(true).filter(function (o) {
+        return o.getAttribute("data-kind-type") === chosen.type && (o.getAttribute("data-kind") || "") === (chosen.kind || "");
+      })[0] || opt;
+    }
+    kindOptions().forEach(function (o) {
+      o.classList.toggle("is-active", o === opt);
+      o.setAttribute("aria-selected", o === opt ? "true" : "false");
+    });
+    if (opt) {
+      newQuery.setAttribute("aria-activedescendant", opt.id);
+      if (newKinds.classList.contains("is-active")) opt.scrollIntoView({ block: "nearest" });
+    } else newQuery.removeAttribute("aria-activedescendant");
+  }
+
+  // The form for a kind, with what was typed for another kind carried over.
+  function chooseKind(type, kind, text) {
+    var params = new URLSearchParams(wiz.params);
+    params.set("type", type);
+    if (kind) params.set("f.kind", kind);
+    var old = formSlot.querySelector("form"), values = old ? formData(old) : null;
+    if (values) { delete values.type; if (kind) delete values["f.kind"]; }
+    return loadForm("/e/form?" + params.toString()).then(function (form) {
+      if (values) fillForm(form, values);
+      form.querySelectorAll("select[data-hides]").forEach(showSections);
+      wiz.chosen = { type: type, kind: kind || "", text: text || "" };
+      if (text) document.getElementById("entity-modal-title").textContent = "New " + text;
+      return form;
+    });
+  }
+  function pickKind(opt) {
+    if (!opt) return;
+    chooseKind(opt.getAttribute("data-kind-type"), opt.getAttribute("data-kind"), opt.getAttribute("data-text")).then(function () {
+      showStep(allSteps()[1].name, true);
+    }).catch(toastError);
+  }
+
+  // opts: {type, kind, params (a query string), fixed}
+  function openNewRecord(opts) {
+    if (!entityModal) return;
+    wiz = { params: opts.params || "", fixed: !!(opts.fixed && opts.type), step: KIND_STEP, chosen: null };
+    formSlot.innerHTML = "";
+    formSource = null;
+    document.getElementById("entity-modal-title").textContent = "New record";
+    newQuery.value = "";
+    newError.hidden = true;
+    setBusy(newCreate, false);
+    filterKinds();
+    var ready = Promise.resolve();
+    if (opts.type) {
+      var opt = newList.querySelector('.newrec-kind[data-kind-type="' + opts.type + '"]:not([data-preset])');
+      ready = chooseKind(opts.type, opts.kind, opt && opt.getAttribute("data-text"));
+    }
+    ready.then(function () {
+      setSidebar(false);
+      if (!entityModal.open) entityModal.showModal();
+      showStep(opts.type ? allSteps()[wiz.fixed ? 0 : 1].name : KIND_STEP, true);
+    }).catch(toastError);
+  }
+
+  if (entityModal && newList) {
+    newQuery.addEventListener("input", filterKinds);
+    newQuery.addEventListener("keydown", function (e) {
+      var shown = kindOptions(true), at = shown.indexOf(newList.querySelector(".newrec-kind.is-active"));
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        var to = at + (e.key === "ArrowDown" ? 1 : -1);
+        if (shown.length) markKind(shown[(to + shown.length) % shown.length]);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        pickKind(shown[at] || shown[0]);
+      }
+    });
+    newList.addEventListener("click", function (e) {
+      pickKind(e.target.closest(".newrec-kind"));
+    });
+    newSteps.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-step-go]");
+      if (b) showStep(b.getAttribute("data-step-go"), true);
+    });
+    newBack.addEventListener("click", function () { stepBy(-1); });
+    newNext.addEventListener("click", function () { stepBy(1); });
+    // Enter in a field goes on to the next step, and on the last creates.
+    entityModal.addEventListener("keydown", function (e) {
+      var el = e.target;
+      if (e.key !== "Enter" || e.defaultPrevented || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!formSlot.contains(el) || el.tagName === "TEXTAREA" || el.tagName === "BUTTON") return;
+      e.preventDefault();
+      if (newNext.hidden) newCreate.click(); else stepBy(1);
+    });
+    // A choice that hides a part (a tower: no rack position) changes the steps.
+    document.addEventListener("change", function (e) {
+      if (entityModal.open && formSlot.contains(e.target)) showStep(wiz.step);
+    });
+  }
+
   document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-new-record]")) {
+      e.preventDefault();
+      var where = entityModal && entityModal.getAttribute("data-location");
+      openNewRecord({ params: where ? "location_id=" + where : "" });
+      return;
+    }
     var btn = e.target.closest("[data-new-type]");
     if (!btn) return;
     e.preventDefault();
     closeMenus();
-    var params = new URLSearchParams({ type: btn.getAttribute("data-new-type") });
+    var params = new URLSearchParams();
     if (btn.getAttribute("data-new-location")) params.set("location_id", btn.getAttribute("data-new-location"));
     if (btn.getAttribute("data-new-attach")) params.set("attach_to", btn.getAttribute("data-new-attach"));
     // data-new-link="affects:12": the new record is linked to record 12.
@@ -823,8 +1204,10 @@
         Object.keys(values).forEach(function (key) { params.set("f." + key, values[key]); });
       } catch (err) { /* a template mistake; open the form without them */ }
     }
-    setSidebar(false);
-    openEntityForm("/e/form?" + params.toString());
+    // Started from a record (attached, linked or filled in for it), the
+    // kind is settled; from a list or the dashboard it can still change.
+    openNewRecord({ type: btn.getAttribute("data-new-type"), params: params.toString(),
+                    fixed: !!(btn.getAttribute("data-new-attach") || btn.getAttribute("data-new-link") || preset) });
   });
 
   /* ————— Small behaviors templates ask for with data-* ————— */
@@ -834,15 +1217,20 @@
   //   [data-api-post="/url"]     posts data-body (JSON) and then does data-then
   //   data-then="sheet|reload|remove"  re-render the open sheet, reload the
   //                              page, or remove the closest [data-row]
+  //   data-then="go"             go to the page in data-go ("/" if none)
   //   data-then="replace"        put the answer's html in #data-replace
   //   data-done="Message"        the toast, with Undo when the answer has one
   //   data-confirm="Question?"   asks first, in #confirm-modal; data-confirm-text
   //                              explains, data-confirm-go names the button
-  //   [data-pick]                chooses a record in the palette; its id goes
-  //                              into the form's data-pick-into field (other_id)
+  //   input[data-pick]           finds a record as it is typed in, in a list
+  //                              under it; the chosen one's id goes into the
+  //                              form's data-pick-into field (other_id)
   //   [data-fill='{"a": 1}']     sets fields of its form (or data-fill-form)
   //   [data-reveal="/url"]       posts to url and shows its value in the
   //                              element named by data-reveal-into; again hides it
+  //   [data-show="id"]           shows the hidden element with that id (a form
+  //                              folded behind an Add button) in its place;
+  //                              [data-hide="id"] folds it away again
   //   [data-copy="text"]         copies the text; [data-copy-url] posts first
   //                              and copies the answer's value
   //   input[data-autosubmit]     submits its form when it changes
@@ -855,6 +1243,7 @@
   //   [data-views="key"]         radios that show one [data-view] panel of
   //                              the tab (a list or a diagram), remembered
   //                              in this browser under the key
+  //   select[data-go]            goes to the page its chosen option names
   function afterAction(el, data) {
     var then = el.getAttribute("data-then");
     // An answer that says what happened ("12 made, 2 skipped") wins over
@@ -863,6 +1252,9 @@
     if (then === "reload") {
       if (done) queueToast(done);
       location.reload();
+    } else if (then === "go") {
+      if (done) queueToast(done);
+      location.href = el.getAttribute("data-go") || "/";
     } else if (then === "remove") {
       var row = el.closest("[data-row]");
       if (row) row.remove();
@@ -905,6 +1297,870 @@
     e.preventDefault();
     submitApiForm(form);
   });
+  // A tree of places (the site setup guide's Buildings and rooms): each
+  // is added where its + button is, moved by dragging its handle onto
+  // another (or with → and ←), and deleted, every change saved at once
+  // through the records API; then the tree is drawn again from the server.
+  function treeOf(el) { return el.closest("[data-tree]"); }
+  function treeNode(el) { return el && el.closest(".tree-node"); }
+  function treeAccepts(node, type) {
+    return (node.getAttribute("data-accepts") || "").split(" ").indexOf(type) !== -1;
+  }
+  function redrawTree(tree, then) {
+    return fetchHTML(tree.getAttribute("data-tree-url")).then(function (html) {
+      var holder = document.createElement("div");
+      holder.innerHTML = html;
+      var fresh = holder.querySelector("[data-tree]");
+      tree.replaceWith(fresh);
+      if (then) then(fresh);
+      return fresh;
+    });
+  }
+  function treeFind(tree, id) { return tree.querySelector('.tree-node[data-node="' + id + '"]'); }
+  function openTreeAdd(node, type, label) {
+    var list = node.querySelector(":scope > .tree-children");
+    var open = list.querySelector(":scope > .tree-adding");
+    if (open) open.remove();
+    var li = document.createElement("li");
+    li.className = "tree-adding";
+    var form = document.createElement("form");
+    var input = document.createElement("input");
+    input.type = "text";
+    input.maxLength = 200;
+    input.autocomplete = "off";
+    input.placeholder = label + " name";
+    input.setAttribute("aria-label", "Name of the new " + label.toLowerCase() + " in " + node.getAttribute("data-name"));
+    var hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = "Enter adds it, and the next one can be typed straight away. Esc stops.";
+    form.appendChild(input);
+    form.appendChild(hint);
+    li.appendChild(form);
+    list.appendChild(li);
+    input.focus();
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = input.value.trim();
+      if (!name) return;
+      input.disabled = true;
+      api("/api/entities", { type: type, name: name, location_id: node.getAttribute("data-node") }).then(function () {
+        var id = node.getAttribute("data-node");
+        redrawTree(treeOf(node), function (fresh) {
+          var again = treeFind(fresh, id);
+          if (again) openTreeAdd(again, type, label);
+        });
+      }).catch(function (err) { input.disabled = false; input.focus(); toastError(err); });
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { e.preventDefault(); li.remove(); }
+    });
+  }
+  function moveTreeNode(node, target) {
+    var id = node.getAttribute("data-node"), tree = treeOf(node);
+    api("/api/entities/" + id, { location_id: target.getAttribute("data-node") }).then(function () {
+      redrawTree(tree, function (fresh) {
+        var moved = treeFind(fresh, id), handle = moved && moved.querySelector(".tree-handle");
+        if (handle) handle.focus({ preventScroll: true });
+      });
+    }).catch(toastError);
+  }
+  // Where a place can go: a place that takes its kind, not itself or
+  // anything inside it, and not where it already is.
+  function treeDropOk(node, target) {
+    if (!target || target === node || node.contains(target)) return false;
+    if (treeNode(node.parentNode) === target) return false;
+    return treeAccepts(target, node.getAttribute("data-type"));
+  }
+  document.addEventListener("click", function (e) {
+    var add = e.target.closest("[data-tree-add]");
+    if (add && treeOf(add)) {
+      openTreeAdd(treeNode(add), add.getAttribute("data-tree-add"), add.getAttribute("data-tree-label"));
+      return;
+    }
+    var del = e.target.closest("[data-tree-delete]");
+    if (!del || !treeOf(del)) return;
+    var node = treeNode(del), tree = treeOf(del);
+    // A building goes with the rooms in it; the dialog says how many, and
+    // what else was placed in them.
+    var inside = del.getAttribute("data-inside");     // "2 rooms", or ""
+    var holds = parseInt(del.getAttribute("data-holds"), 10) || 0;
+    var name = node.getAttribute("data-name");
+    del.setAttribute("data-confirm", "Delete " + name + (inside ? " and the " + inside + " in it?" : "?"));
+    del.setAttribute("data-confirm-text", (inside ? "They go" : "It goes") + " to Recently deleted, where " +
+      (inside ? "they" : "it") + " can be restored until purged, and Undo brings " + (inside ? "them all" : "it") +
+      " back." + (holds ? " " + holds + (holds === 1 ? " other record is" : " other records are") + " placed in " +
+      (inside ? "them" : "it") + ", and will show no location unless " + (inside ? "they are" : "it is") + " restored." : ""));
+    del.setAttribute("data-confirm-go", "Delete");
+    confirmFirst(del, function () {
+      api(del.getAttribute("data-tree-delete")).then(function (data) {
+        redrawTree(tree).then(function () {
+          offerUndo("Deleted", data.undo, function () {
+            var now = document.querySelector("[data-tree]");
+            if (now) redrawTree(now);
+          });
+        });
+      }).catch(toastError);
+    });
+  });
+  var treeDrag = null;
+  document.addEventListener("pointerdown", function (e) {
+    var handle = e.target.closest(".tree-handle");
+    if (!handle || !treeOf(handle) || e.button !== 0) return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    var node = treeNode(handle), ghost = document.createElement("div");
+    ghost.className = "tree-ghost";
+    ghost.textContent = node.getAttribute("data-name");
+    document.body.appendChild(ghost);
+    treeDrag = { node: node, handle: handle, ghost: ghost, target: null };
+    node.classList.add("is-dragging");
+    document.body.classList.add("is-sorting");
+  });
+  document.addEventListener("pointermove", function (e) {
+    if (!treeDrag) return;
+    treeDrag.ghost.style.transform = "translate(" + (e.clientX + 14) + "px, " + (e.clientY + 10) + "px)";
+    var under = document.elementFromPoint(e.clientX, e.clientY);
+    var row = under && under.closest(".tree-row");
+    var target = row && treeOf(row) === treeOf(treeDrag.node) ? treeNode(row) : null;
+    if (!treeDropOk(treeDrag.node, target)) target = null;
+    if (target !== treeDrag.target) {
+      if (treeDrag.target) treeDrag.target.classList.remove("is-drop");
+      if (target) target.classList.add("is-drop");
+      treeDrag.target = target;
+    }
+  });
+  function endTreeDrag() {
+    if (!treeDrag) return;
+    var d = treeDrag;
+    treeDrag = null;
+    d.ghost.remove();
+    d.node.classList.remove("is-dragging");
+    document.body.classList.remove("is-sorting");
+    if (d.target) { d.target.classList.remove("is-drop"); moveTreeNode(d.node, d.target); }
+    else d.handle.focus({ preventScroll: true });
+  }
+  document.addEventListener("pointerup", endTreeDrag);
+  document.addEventListener("pointercancel", endTreeDrag);
+  document.addEventListener("keydown", function (e) {
+    var handle = e.target.closest && e.target.closest(".tree-handle");
+    if (!handle || !treeOf(handle) || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return;
+    e.preventDefault();
+    var node = treeNode(handle), parent = treeNode(node.parentNode), target;
+    if (e.key === "ArrowRight") {
+      // Into the place just above it, at its own level.
+      var prev = node.previousElementSibling;
+      while (prev && !prev.matches(".tree-node")) prev = prev.previousElementSibling;
+      target = prev;
+    } else {
+      target = parent && treeNode(parent.parentNode);
+    }
+    if (treeDropOk(node, target)) moveTreeNode(node, target);
+    else toast(e.key === "ArrowRight" ? "There is no place above it that can hold it." : "It can't go up another level.");
+  });
+
+  // A speed ([data-speed]): a number and Mb/s or Gb/s. The named, hidden
+  // input holds megabits, and a change to either reaches whoever saves it
+  // (the form, the Overview, a guide row) as a change of that input.
+  function speedSync(box) {
+    var number = box.querySelector('input[type="number"]'), unit = box.querySelector("select");
+    var out = box.querySelector("input[name]"), raw = number.value.trim();
+    var value = raw === "" ? "" : String(Math.round(parseFloat(raw) * (unit.value === "g" ? 1000 : 1)));
+    if (raw !== "" && isNaN(parseFloat(raw))) value = raw;       // the server says what's wrong
+    out.value = value;
+  }
+  document.addEventListener("input", function (e) {
+    var box = e.target.closest && e.target.closest("[data-speed]");
+    if (box && e.target !== box.querySelector("input[name]")) speedSync(box);
+  });
+  document.addEventListener("change", function (e) {
+    var box = e.target.closest && e.target.closest("[data-speed]");
+    if (!box || e.target === box.querySelector("input[name]")) return;
+    // The input the saving listens to, told of the change once it is made:
+    // the Overview compares it with what it was drawn with.
+    speedSync(box);
+    box.querySelector("input[name]").dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  // A field shown only while another has a value ([data-when] names that
+  // one, [data-when-is] the value: "1" for a switch that is on), in a form,
+  // a guide row or an editor's Overview. One that follows a field hidden
+  // itself is hidden too; the server drew them as they start.
+  function applyWhen(scope) {
+    scope.querySelectorAll("[data-when]").forEach(function (el) {
+      var name = CSS.escape(el.getAttribute("data-when"));
+      var ctl = scope.querySelector('[name="' + name + '"]:checked, [name="' + name + '"]:not([type="radio"])');
+      if (!ctl) return;
+      var holder = ctl.closest("[data-when]");
+      var value = ctl.type === "checkbox" ? (ctl.checked ? "1" : "0") : ctl.value;
+      el.hidden = !!(holder && holder.hidden) || el.getAttribute("data-when-is").split(" ").indexOf(value) === -1;
+    });
+  }
+  // A label that changes with another field ([data-relabel]): a server's IP
+  // address is its BMC's once it runs a hypervisor.
+  function applyRelabel(scope) {
+    scope.querySelectorAll("[data-relabel]").forEach(function (label) {
+      var ctl = scope.querySelector('[name="' + CSS.escape(label.getAttribute("data-relabel")) + '"]');
+      if (!ctl) return;
+      var value = ctl.type === "checkbox" ? (ctl.checked ? "1" : "0") : ctl.value;
+      label.textContent = label.getAttribute(value === label.getAttribute("data-relabel-is") ? "data-relabel-to" : "data-relabel-from");
+    });
+  }
+  document.addEventListener("change", function (e) {
+    var el = e.target;
+    if (!el.name || !el.closest) return;
+    var scope = el.closest("[data-row], [data-row-new], form, [data-autosave]");
+    if (scope && scope.querySelector("[data-when]")) applyWhen(scope);
+    if (scope && scope.querySelector("[data-relabel]")) applyRelabel(scope);
+  });
+  // A box whose unticking deletes something ([data-confirm-off]: a server's
+  // hypervisor) asks first; ticking it doesn't.
+  document.addEventListener("click", function (e) {
+    var box = e.target.closest && e.target.closest("input[type=checkbox][data-confirm-off]");
+    if (!box || box.checked) return;     // during a click it is already as it will be: ticked is fine
+    e.preventDefault();                  // unticked: it stays ticked until the answer
+    // What it would delete can't be deleted yet (a hypervisor with VMs on it): say why instead.
+    if (box.hasAttribute("data-confirm-blocked")) {
+      askFirst(box.getAttribute("data-confirm-blocked"), box.getAttribute("data-confirm-blocked-text"));
+      return;
+    }
+    askFirst(box.getAttribute("data-confirm-off"), box.getAttribute("data-confirm-text"), "Delete", function () {
+      box.checked = false;
+      box.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  });
+
+  // A value typed in parts ([data-join]): a subnet's address and mask
+  // ("/"), a range's first and last address ("-"). The parts, joined, go in
+  // the named, hidden input, and a change reaches whoever saves it as a
+  // change of that input; with nothing typed, the value is empty.
+  function joinParts(box) {
+    var parts = Array.prototype.slice.call(box.querySelectorAll("[data-part]"));
+    var typed = parts.filter(function (p) { return p.tagName !== "SELECT"; });
+    var empty = typed.every(function (p) { return !p.value.trim(); });
+    box.querySelector("input[name]").value = empty ? "" :
+      parts.map(function (p) { return p.value.trim(); }).join(box.getAttribute("data-join"));
+  }
+  document.addEventListener("input", function (e) {
+    var box = e.target.closest && e.target.closest("[data-join]");
+    if (box && e.target.hasAttribute("data-part")) joinParts(box);
+  });
+  document.addEventListener("change", function (e) {
+    var box = e.target.closest && e.target.closest("[data-join]");
+    if (!box || !e.target.hasAttribute("data-part")) return;
+    joinParts(box);
+    box.querySelector("input[name]").dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  // A choice of several ([data-multi]): the values of the boxes ticked,
+  // joined by commas, go in the named, hidden input, and a change reaches
+  // whoever saves it as a change of that input.
+  document.addEventListener("change", function (e) {
+    var box = e.target.closest && e.target.closest("[data-multi]");
+    if (!box || !e.target.hasAttribute("data-multi-item")) return;
+    var input = box.querySelector("input[name]");
+    input.value = Array.prototype.filter.call(box.querySelectorAll("[data-multi-item]"), function (c) {
+      return c.checked;
+    }).map(function (c) { return c.value; }).join(",");
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  // A text field that offers a catalog's names as it is typed in
+  // ([data-suggest]: operating systems, core/catalogs.py): the names that
+  // hold every word typed, under their groups, picked with a click or with
+  // the arrow keys and Enter. The last choice keeps what was typed, a custom
+  // name. A pick is a change of the field, saved as any other. One list, put
+  // under whichever field is open; each catalog is fetched once.
+  var catalogs = {}, suggestPop = null, suggestFor = null, suggestItems = [], suggestAt = -1;
+  function catalogOf(key) {
+    if (!catalogs[key]) {
+      catalogs[key] = get("/api/catalogs/" + encodeURIComponent(key)).then(function (data) { return data.groups || []; });
+      catalogs[key].catch(function () { delete catalogs[key]; });
+    }
+    return catalogs[key];
+  }
+  function suggestClose() {
+    if (!suggestPop || suggestPop.hidden) return;
+    suggestPop.hidden = true;
+    if (suggestFor) {
+      suggestFor.setAttribute("aria-expanded", "false");
+      suggestFor.removeAttribute("aria-activedescendant");
+    }
+    suggestFor = null;
+  }
+  function suggestMark(n) {
+    suggestAt = n;
+    suggestItems.forEach(function (el, i) { el.classList.toggle("is-current", i === n); });
+    if (n >= 0 && suggestItems[n]) {
+      suggestFor.setAttribute("aria-activedescendant", suggestItems[n].id);
+      suggestItems[n].scrollIntoView({ block: "nearest" });
+    } else if (suggestFor) suggestFor.removeAttribute("aria-activedescendant");
+  }
+  function suggestOpen(input) {
+    catalogOf(input.getAttribute("data-suggest")).then(function (groups) {
+      if (document.activeElement !== input) return;
+      if (!suggestPop) {
+        suggestPop = document.createElement("div");
+        suggestPop.className = "menupop menupop--scroll suggest-pop";
+        suggestPop.id = "suggest-pop";
+        suggestPop.setAttribute("role", "listbox");
+        // Picking keeps the focus in the field.
+        suggestPop.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        suggestPop.addEventListener("click", function (e) {
+          e.preventDefault();          // inside the field's label: not a click on the field too
+          var opt = e.target.closest("[data-pick-value]");
+          if (opt) suggestPick(opt);
+        });
+      }
+      var typed = input.value.trim(), all = [];
+      groups.forEach(function (g) { g.items.forEach(function (name) { all.push(name); }); });
+      // A name picked before shows the whole list again, to choose another.
+      var exact = all.some(function (name) { return name.toLowerCase() === typed.toLowerCase(); });
+      var words = exact ? [] : typed.toLowerCase().split(/\s+/).filter(Boolean);
+      suggestPop.textContent = "";
+      suggestItems = [];
+      function option(text, value, custom) {
+        var el = document.createElement("div");
+        el.className = "menuopt" + (custom ? " suggest-custom" : "");
+        el.id = "suggest-" + suggestItems.length;
+        el.setAttribute("role", "option");
+        el.setAttribute("data-pick-value", value);
+        if (custom) el.setAttribute("data-custom", "");
+        el.textContent = text;
+        suggestPop.appendChild(el);
+        suggestItems.push(el);
+      }
+      groups.forEach(function (g) {
+        var found = g.items.filter(function (name) {
+          var hay = (g.label + " " + name).toLowerCase();
+          return words.every(function (w) { return hay.indexOf(w) !== -1; });
+        });
+        if (!found.length) return;
+        var head = document.createElement("p");
+        head.className = "menupop-head";
+        head.textContent = g.label;
+        suggestPop.appendChild(head);
+        found.forEach(function (name) { option(name, name); });
+      });
+      if (!suggestItems.length) {
+        var none = document.createElement("p");
+        none.className = "menupop-head";
+        none.textContent = "No known name matches";
+        suggestPop.appendChild(none);
+      }
+      option(typed && !exact ? "Use “" + typed + "” as typed" : "Custom: type the name", typed, true);
+      var holder = input.parentNode;
+      holder.classList.add("has-suggest");
+      if (suggestPop.parentNode !== holder) input.insertAdjacentElement("afterend", suggestPop);
+      suggestFor = input;
+      input.setAttribute("aria-controls", "suggest-pop");
+      input.setAttribute("aria-expanded", "true");
+      suggestPop.hidden = false;
+      suggestMark(-1);
+    }).catch(function () { /* no list: the field is typed in as any other */ });
+  }
+  function suggestPick(opt) {
+    var input = suggestFor;
+    if (!input) return;
+    if (!opt.hasAttribute("data-custom")) {
+      input.value = opt.getAttribute("data-pick-value");
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    suggestClose();
+    input.focus();
+  }
+  document.addEventListener("input", function (e) {
+    if (e.target.matches && e.target.matches("input[data-suggest]")) suggestOpen(e.target);
+  });
+  document.addEventListener("click", function (e) {
+    var input = e.target.closest && e.target.closest("input[data-suggest]");
+    if (!input) return;
+    if (suggestFor === input) suggestClose();
+    else suggestOpen(input);
+  });
+  document.addEventListener("focusout", function (e) {
+    if (suggestFor && e.target === suggestFor) suggestClose();
+  });
+  // Before the guide's Enter (add the row) and a dialog's Escape (close it).
+  document.addEventListener("keydown", function (e) {
+    var input = e.target;
+    if (!input.matches || !input.matches("input[data-suggest]")) return;
+    var open = suggestFor === input && suggestPop && !suggestPop.hidden;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!open) { suggestOpen(input); return; }
+      var n = suggestAt + (e.key === "ArrowDown" ? 1 : -1);
+      suggestMark(Math.max(0, Math.min(suggestItems.length - 1, n)));
+    } else if (e.key === "Enter" && open && suggestAt >= 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      suggestPick(suggestItems[suggestAt]);
+    } else if (e.key === "Escape" && open) {
+      e.preventDefault();
+      e.stopPropagation();
+      suggestClose();
+    }
+  }, true);
+
+  // A field that finds a record as it is typed in (input[data-pick]; the
+  // record_pick macro): the records that match drop down under it, grouped
+  // by module, picked with a click or with the arrow keys and Enter. The
+  // chosen one's id goes into the form's field named by data-pick-into
+  // (other_id), its name stays in the field; typing again clears the
+  // choice. data-pick-types limits the kinds, data-pick-exclude leaves one
+  // out, data-pick-submit sends the form once one is chosen.
+  var pickPop = null, pickFor = null, pickItems = [], pickAt = -1, pickTimer = null, pickSeq = 0;
+  function pickField(input) {
+    return input.form && input.form.elements[input.getAttribute("data-pick-into") || "other_id"];
+  }
+  function pickClose() {
+    clearTimeout(pickTimer);
+    pickSeq++;
+    if (pickPop) pickPop.hidden = true;
+    if (pickFor) {
+      pickFor.setAttribute("aria-expanded", "false");
+      pickFor.removeAttribute("aria-activedescendant");
+    }
+    pickFor = null;
+    pickAt = -1;
+  }
+  function pickMark(n) {
+    pickAt = n;
+    pickItems.forEach(function (el, i) { el.classList.toggle("is-current", i === n); });
+    if (n >= 0 && pickItems[n]) {
+      pickFor.setAttribute("aria-activedescendant", pickItems[n].id);
+      pickItems[n].scrollIntoView({ block: "nearest" });
+    } else if (pickFor) pickFor.removeAttribute("aria-activedescendant");
+  }
+  function pickShow(input, groups, note) {
+    if (!pickPop) {
+      pickPop = document.createElement("div");
+      pickPop.className = "menupop menupop--scroll suggest-pop pick-pop";
+      pickPop.id = "pick-pop";
+      pickPop.setAttribute("role", "listbox");
+      // Picking keeps the focus in the field.
+      pickPop.addEventListener("mousedown", function (e) { e.preventDefault(); });
+      pickPop.addEventListener("click", function (e) {
+        e.preventDefault();          // inside the field's label: not a click on the field too
+        var opt = e.target.closest("[data-pick-id]");
+        if (opt) pickChoose(opt);
+      });
+    }
+    pickPop.textContent = "";
+    pickItems = [];
+    groups.forEach(function (g) {
+      if (!g.items.length) return;
+      var head = document.createElement("p");
+      head.className = "menupop-head";
+      head.textContent = g.label;
+      pickPop.appendChild(head);
+      g.items.forEach(function (r) {
+        var el = document.createElement("div");
+        el.className = "menuopt pick-opt" + (r.archived ? " is-done" : "");
+        el.id = "pick-" + pickItems.length;
+        el.setAttribute("role", "option");
+        el.setAttribute("data-pick-id", r.id);
+        el.setAttribute("data-pick-title", r.title);
+        var title = document.createElement("span");
+        title.className = "pick-opt-title";
+        title.textContent = r.title;
+        var meta = document.createElement("span");
+        meta.className = "pick-opt-meta";
+        meta.textContent = r.meta || "";
+        el.appendChild(title);
+        el.appendChild(meta);
+        pickPop.appendChild(el);
+        pickItems.push(el);
+      });
+    });
+    if (note) {
+      var p = document.createElement("p");
+      p.className = "menupop-head pick-note";
+      p.textContent = note;
+      pickPop.appendChild(p);
+    }
+    var holder = input.parentNode;
+    holder.classList.add("has-suggest");
+    if (pickPop.parentNode !== holder) input.insertAdjacentElement("afterend", pickPop);
+    pickFor = input;
+    input.setAttribute("aria-controls", "pick-pop");
+    input.setAttribute("aria-expanded", "true");
+    pickPop.hidden = false;
+    pickMark(pickItems.length ? 0 : -1);
+  }
+  function pickSearch(input) {
+    var q = input.value.trim();
+    clearTimeout(pickTimer);
+    if (q.length < 2) {
+      if (q) pickShow(input, [], "Keep typing: two letters or more");
+      else pickClose();
+      return;
+    }
+    var url = "/search?pick=1&q=" + encodeURIComponent(q);
+    if (input.getAttribute("data-pick-types")) url += "&types=" + encodeURIComponent(input.getAttribute("data-pick-types"));
+    if (input.getAttribute("data-pick-exclude")) url += "&exclude=" + encodeURIComponent(input.getAttribute("data-pick-exclude"));
+    // Debounced, and sequenced so a slow answer to an old query never
+    // replaces the answer to the current one.
+    pickTimer = setTimeout(function () {
+      var seq = ++pickSeq;
+      get(url).then(function (data) {
+        if (seq !== pickSeq || document.activeElement !== input) return;
+        var groups = data.groups || [];
+        var found = groups.some(function (g) { return g.items.length; });
+        pickShow(input, groups, found ? "" : "No record matches “" + q + "”");
+      }).catch(function () {});
+    }, 150);
+  }
+  function pickChoose(opt) {
+    var input = pickFor;
+    if (!input) return;
+    var field = pickField(input);
+    if (field) field.value = opt.getAttribute("data-pick-id");
+    input.value = opt.getAttribute("data-pick-title");
+    input.classList.add("is-picked");
+    pickClose();
+    if (input.hasAttribute("data-pick-submit") && input.form) submitApiForm(input.form);
+  }
+  document.addEventListener("input", function (e) {
+    var input = e.target;
+    if (!input.matches || !input.matches("input[data-pick]")) return;
+    var field = pickField(input);
+    if (field) field.value = "";      // typed again: no longer the one chosen
+    input.classList.remove("is-picked");
+    pickSearch(input);
+  });
+  document.addEventListener("focusout", function (e) {
+    if (pickFor && e.target === pickFor) pickClose();
+  });
+  // Before a form's Enter (send it) and a dialog's Escape (close it).
+  document.addEventListener("keydown", function (e) {
+    var input = e.target;
+    if (!input.matches || !input.matches("input[data-pick]")) return;
+    var open = pickFor === input && pickPop && !pickPop.hidden;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!open) { pickSearch(input); return; }
+      var n = pickAt + (e.key === "ArrowDown" ? 1 : -1);
+      pickMark(Math.max(0, Math.min(pickItems.length - 1, n)));
+    } else if (e.key === "Enter" && open && pickAt >= 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      pickChoose(pickItems[pickAt]);
+    } else if (e.key === "Escape" && open) {
+      e.preventDefault();
+      e.stopPropagation();
+      pickClose();
+    }
+  }, true);
+
+  // A subnet that fills in others ([data-prefills]: a gateway, a DHCP
+  // range): once it is typed, the first host becomes the gateway and the
+  // upper half of it the DHCP range, leaving the lower half for fixed
+  // addresses. Only a field left empty, or filled in this way, is filled;
+  // one typed in is left alone. IPv4 only.
+  function ipv4(text) {
+    var m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(text);
+    if (!m) return null;
+    var n = 0;
+    for (var i = 1; i <= 4; i++) { if (+m[i] > 255) return null; n = n * 256 + +m[i]; }
+    return n;
+  }
+  function ipv4Text(n) { return [n >>> 24 & 255, n >>> 16 & 255, n >>> 8 & 255, n & 255].join("."); }
+  function prefill(box) {
+    var cidr = box.querySelector("input[name]").value.split("/"), start = ipv4(cidr[0]), prefix = +cidr[1];
+    if (start === null || !(prefix >= 8 && prefix <= 30)) return;
+    var size = Math.pow(2, 32 - prefix), net = start - start % size, first = net + 1, last = net + size - 2;
+    var scope = box.closest("[data-row], [data-row-new], form, [data-autosave]") || document;
+    box.getAttribute("data-prefills").split(" ").forEach(function (name) {
+      var el = scope.querySelector('[name="' + CSS.escape(name) + '"]');
+      if (!el || el.disabled || (el.value && !el.hasAttribute("data-prefilled"))) return;
+      var range = el.closest('[data-join="-"]'), value;
+      if (range) {
+        if (size < 16) return;                       // too small to share
+        var from = net + size / 2, parts = range.querySelectorAll("[data-part]");
+        parts[0].value = ipv4Text(from);
+        parts[1].value = ipv4Text(last);
+        value = ipv4Text(from) + "-" + ipv4Text(last);
+      } else {
+        value = ipv4Text(first);
+      }
+      if (el.value === value) return;
+      el.value = value;
+      el.setAttribute("data-prefilled", "");
+      el.dispatchEvent(new Event("change", { bubbles: true }));   // a saved row saves it
+    });
+  }
+  document.addEventListener("change", function (e) {
+    var box = e.target.closest && e.target.closest("[data-prefills]");
+    if (box && e.target === box.querySelector("input[name]")) prefill(box);
+  });
+  // Typed in by hand: no longer filled in.
+  document.addEventListener("input", function (e) {
+    var el = e.target, range = el.closest && el.closest('[data-join="-"]');
+    var target = range ? range.querySelector("input[name]") : el;
+    if (target && target.hasAttribute && target.hasAttribute("data-prefilled")) target.removeAttribute("data-prefilled");
+  });
+
+  // A choice that is a page: the site setup guide's choice of site.
+  document.addEventListener("change", function (e) {
+    var select = e.target.closest && e.target.closest("select[data-go]");
+    if (select && select.value) location.href = select.value;
+  });
+
+  // What a save did beyond what was asked (an address moved from a server
+  // to its hypervisor), as the server says it.
+  function showNotices(data) {
+    if (data && data.notices && data.notices.length) toast(data.notices.join(" "));
+  }
+
+  // A step of rows in the site setup guide ([data-rows]): each row a record,
+  // each field saved as it changes; the blank row at the end added only when
+  // asked (Enter, its Add button, or Continue with a name typed in it); a row
+  // deleted after asking, with Undo. Adding or deleting draws the rows again.
+  var rowAdding = null;          // the add on its way, so Continue waits for it
+  function rowsOf(el) { return el.closest("[data-rows]"); }
+  function rowValue(el) { return el.type === "checkbox" ? el.checked : el.value; }
+  function rowError(row, message) {
+    var p = row.querySelector(".guide-row-error");
+    if (p) { p.textContent = message || ""; p.hidden = !message; }
+  }
+  // A saved row folded to one line ([data-row-toggle]): its name and a
+  // summary of what it holds, written from its fields; open to change it.
+  // Moving into another row folds an open one again, so the list stays tidy.
+  var openRows = {};              // row id -> open, kept across a redraw
+  function fieldText(item) {
+    if (item.hidden || item.classList.contains("guide-break")) return "";
+    var locked = item.querySelector(".guide-locked-text");
+    if (locked) return locked.textContent.trim();
+    var speed = item.querySelector("[data-speed]");
+    if (speed) {
+      var n = speed.querySelector('input[type="number"]').value.trim(), unit = speed.querySelector("select");
+      return n ? n + " " + unit.options[unit.selectedIndex].text : "";
+    }
+    var joined = item.querySelector("[data-join]");
+    if (joined) {
+      var v = joined.querySelector("input[name]").value;
+      return joined.getAttribute("data-join") === "-" ? v.replace("-", " to ") : v;
+    }
+    var multi = item.querySelector("[data-multi]");
+    if (multi) {
+      return Array.prototype.filter.call(multi.querySelectorAll("[data-multi-item]"), function (c) {
+        return c.checked;
+      }).map(function (c) { return c.parentNode.textContent.trim(); }).join(", ");
+    }
+    var chosen = item.querySelector('input[type="radio"]:checked');
+    if (chosen) return chosen.parentNode.textContent.trim();
+    var box = item.querySelector('input[type="checkbox"]');
+    if (box) return box.checked ? item.textContent.trim() : "";
+    var select = item.querySelector("select");
+    if (select) return select.value ? select.options[select.selectedIndex].text : "";
+    var input = item.querySelector("input[name]");
+    if (!input || input.name === "name" || input.disabled || !input.value.trim()) return "";
+    // A number with its unit: 1500 VA, 25 min.
+    return input.value.trim() + (input.getAttribute("data-unit") ? " " + input.getAttribute("data-unit") : "");
+  }
+  function summarizeRow(row) {
+    var body = row.querySelector(".guide-row-body"), out = row.querySelector("[data-row-summary]");
+    if (!body || !out) return;
+    // What the row's title and badge show already isn't said again.
+    var shown = (row.getAttribute("data-in-title") || "").split(" ");
+    out.textContent = Array.prototype.filter.call(body.children, function (item) {
+      var field = item.querySelector("[name]");
+      return !field || shown.indexOf(field.name) === -1;
+    }).map(fieldText).filter(Boolean).join(" · ");
+  }
+  function setRowOpen(row, open) {
+    row.classList.toggle("is-collapsed", !open);
+    var toggle = row.querySelector("[data-row-toggle]");
+    if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    openRows[row.getAttribute("data-row-id")] = open;
+    if (!open) summarizeRow(row);
+  }
+  function initRows(box) {
+    box.querySelectorAll("[data-row]").forEach(function (row) {
+      summarizeRow(row);
+      if (openRows[row.getAttribute("data-row-id")]) setRowOpen(row, true);
+    });
+  }
+  document.querySelectorAll("[data-rows]").forEach(initRows);
+  document.addEventListener("click", function (e) {
+    var toggle = e.target.closest && e.target.closest("[data-row-toggle]");
+    if (!toggle) return;
+    var row = toggle.closest("[data-row]");
+    setRowOpen(row, row.classList.contains("is-collapsed"));
+  });
+  document.addEventListener("focusin", function (e) {
+    var here = e.target.closest && e.target.closest("[data-row], [data-row-new]");
+    var box = here && rowsOf(here);
+    if (!box) return;
+    box.querySelectorAll("[data-row]:not(.is-collapsed)").forEach(function (row) {
+      if (row !== here && !row.contains(e.target)) setRowOpen(row, false);
+    });
+  });
+
+  function redrawRows(box, then) {
+    return fetchHTML(box.getAttribute("data-rows-url")).then(function (html) {
+      var holder = document.createElement("div");
+      holder.innerHTML = html;
+      var fresh = holder.querySelector("[data-rows]");
+      box.replaceWith(fresh);
+      initRows(fresh);
+      fitDiagrams(fresh);   // a step's diagram below its rows (the cables')
+      if (then) then(fresh);
+      return fresh;
+    });
+  }
+  function focusNewRow(box) {
+    var row = box.querySelector("[data-row-new]");
+    var first = row && (row.querySelector("input[type=text]") || row.querySelector("input, select"));
+    if (first) first.focus();
+  }
+  // Worth adding: a name, or in a row with none (a cable), anything chosen.
+  function newRowFilled(row) {
+    var name = row.querySelector('[name="name"]');
+    if (name) return !!name.value.trim();
+    return Array.prototype.some.call(row.querySelectorAll("select, input[type=text]"), function (el) {
+      return !!el.value.trim();
+    });
+  }
+  // Once only: a row being added (or gone from the page, drawn again) is
+  // left alone, and the add is done only when the rows are drawn again, so
+  // the focus leaving the old row doesn't add it a second time.
+  // Added on the step itself (Enter, Add): a new site's step comes back
+  // about the new site.
+  function addRowHere(row) {
+    return addRow(row).then(function (done) { if (done && done.go) location.href = done.go; });
+  }
+  // Anything typed into the blank row: a box that differs from how it was
+  // drawn (a number it starts with, such as a rack's 42 units, doesn't count).
+  function newRowTouched(row) {
+    return Array.prototype.some.call(row.querySelectorAll('input[type="text"], input[type="number"]'), function (el) {
+      return el.value.trim() !== el.defaultValue.trim();
+    });
+  }
+  // ``force``: added whatever it holds, for the server to say what is
+  // missing (a name) rather than lose what was typed.
+  function addRow(row, force) {
+    if (rowAdding) return rowAdding;
+    if (!row.isConnected || row.hasAttribute("data-adding") || !(force || newRowFilled(row))) return Promise.resolve(true);
+    var box = rowsOf(row), values = {};
+    row.querySelectorAll("[name]").forEach(function (el) {
+      if (el.type !== "radio" || el.checked) values[el.name] = rowValue(el);
+    });
+    row.setAttribute("data-adding", "");
+    rowError(row, null);
+    row.classList.add("is-saving");
+    rowAdding = api(box.getAttribute("data-create"), { values: values }).then(function (data) {
+      showNotices(data);
+      // The site's own step: where to go next, about the new site.
+      if (data && data.go) { rowAdding = null; return { go: data.go }; }
+      return redrawRows(box, focusNewRow).then(function () { rowAdding = null; return true; },
+                                               function () { rowAdding = null; return true; });
+    }, function (err) {
+      rowAdding = null;
+      row.removeAttribute("data-adding");
+      row.classList.remove("is-saving");
+      rowError(row, err.message);
+      return false;
+    });
+    return rowAdding;
+  }
+  // One save after another, so a check across fields (a gateway inside the
+  // address's network) sees the ones saved just before it.
+  var rowSaves = Promise.resolve();
+  document.addEventListener("change", function (e) {
+    var el = e.target, row = el.closest && el.closest("[data-row]");
+    if (!row || !rowsOf(row) || !el.name) return;
+    rowError(row, null);
+    el.removeAttribute("aria-invalid");
+    row.classList.add("is-saving");
+    var body = { name: el.name, value: rowValue(el) };
+    var saving = rowSaves.then(function () { return api(row.getAttribute("data-update"), body); });
+    rowSaves = saving.catch(function () {});
+    saving.then(function (data) {
+      row.classList.remove("is-saving");
+      showNotices(data);
+      // What was kept, as the server wrote it, unless the field is being typed in.
+      if (data && data.value !== undefined && data.value !== null && el.type === "text" && document.activeElement !== el) {
+        el.value = data.value;
+      }
+      var badge = row.querySelector("[data-row-badge]");
+      if (badge && badge.getAttribute("data-row-badge") === el.name) {
+        badge.textContent = el.value.trim() || "No label";
+        badge.classList.toggle("is-empty", !el.value.trim());
+      }
+      if (el.name === "name") {
+        row.setAttribute("data-name", el.value.trim());
+        var title = row.querySelector("[data-row-title]");
+        if (title) title.textContent = el.value.trim();
+      }
+      // Another kind can have other fields (a printer has no Used by); in
+      // rows that aren't records (cables, [data-redraw]), another choice
+      // changes what the others offer, and the diagram below them.
+      if (el.name === "_kind" || (el.tagName === "SELECT" && rowsOf(row).hasAttribute("data-redraw"))) {
+        redrawRows(rowsOf(row));
+      }
+    }, function (err) {
+      row.classList.remove("is-saving");
+      el.setAttribute("aria-invalid", "true");
+      rowError(row, err.message);
+    });
+  });
+  document.addEventListener("keydown", function (e) {
+    var el = e.target;
+    if (e.key !== "Enter" || !el.closest || el.tagName !== "INPUT" || el.type === "checkbox") return;
+    var fresh = el.closest("[data-row-new]"), saved = el.closest("[data-row]");
+    if (fresh && rowsOf(fresh)) { e.preventDefault(); addRowHere(fresh); }
+    else if (saved && rowsOf(saved)) { e.preventDefault(); el.blur(); }
+  });
+  // A row's form is never sent: Enter adds the blank row, and a field saves itself.
+  document.addEventListener("submit", function (e) {
+    var form = e.target.closest && e.target.closest("form[data-row-form]");
+    if (!form) return;
+    e.preventDefault();
+    var fresh = form.querySelector("[data-row-new]");
+    if (fresh) addRowHere(fresh);
+  });
+  document.addEventListener("click", function (e) {
+    var add = e.target.closest("[data-row-add]");
+    if (add && rowsOf(add)) { addRowHere(add.closest("[data-row-new]")); return; }
+    // Leaving the step (Continue, Back, another step, Exit setup) with
+    // something typed in the blank row adds it first; if it can't be added,
+    // the row says why and the page stays.
+    var go = e.target.closest("a[href]");
+    if (go && !go.closest("[data-rows]") && !go.target && !(e.ctrlKey || e.metaKey || e.shiftKey || e.altKey)) {
+      var pending = document.querySelector("[data-rows] [data-row-new]");
+      if (!pending || !newRowTouched(pending)) return;
+      e.preventDefault();
+      addRow(pending, true).then(function (done) {
+        if (!done) {
+          pending.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+          return;
+        }
+        // A new site: the next step, about it.
+        var next = new URL(go.href, location.href), site = done.go && new URL(done.go, location.href).searchParams.get("site");
+        if (site) next.searchParams.set("site", site);
+        location.href = next.toString();
+      });
+      return;
+    }
+    var del = e.target.closest("[data-row-delete]");
+    if (!del || !rowsOf(del)) return;
+    var row = del.closest("[data-row]"), box = rowsOf(del);
+    del.setAttribute("data-confirm", "Delete " + row.getAttribute("data-name") + "?");
+    del.setAttribute("data-confirm-text", "It goes to Recently deleted, where it can be restored until purged, and Undo brings it back.");
+    del.setAttribute("data-confirm-go", "Delete");
+    confirmFirst(del, function () {
+      api(row.getAttribute("data-delete")).then(function (data) {
+        redrawRows(box).then(function () {
+          offerUndo("Deleted", data.undo, function () {
+            var now = document.querySelector("[data-rows]");
+            if (now) redrawRows(now);
+          });
+        });
+      }).catch(toastError);
+    });
+  });
+
   document.addEventListener("change", function (e) {
     var input = e.target.closest("input[data-autosubmit]");
     if (input && input.form && input.form.hasAttribute("data-api")) submitApiForm(input.form);
@@ -965,7 +2221,40 @@
     // Keep the point under the pointer (or the middle) where it was.
     p.box.scrollLeft = px * scale - fx;
     p.box.scrollTop = py * scale - fy;
+    placePins(frame);
   }
+  // [data-pin] labels name the two sides of the line at the svg's
+  // data-divider: "above" just over it, "below" just under it, at the left of
+  // what shows. A box on the line (data-divider-clear: its left and right
+  // edges and half its height) pushes a label it would cover out past it.
+  // Scrolled past the line, the side in view keeps its label at the edge it
+  // went out by; the other side's is hidden.
+  function placePins(frame) {
+    var p = zoomParts(frame), pins = frame.querySelectorAll("[data-pin]");
+    if (!p || !pins.length || !p.svg.hasAttribute("data-divider")) return;
+    var scale = p.svg.getBoundingClientRect().width / p.natural;
+    var top = p.box.offsetTop + p.box.clientTop, high = p.box.clientHeight, left = 8;
+    var line = parseFloat(p.svg.getAttribute("data-divider")) * scale - p.box.scrollTop;
+    var clear = (p.svg.getAttribute("data-divider-clear") || "").split(" ").map(parseFloat);
+    var wide = Math.max.apply(null, Array.prototype.map.call(pins, function (pin) { return pin.offsetWidth; }));
+    // Both move together, so they stay the same distance from the line.
+    var covers = clear.length === 3 && clear[0] * scale - p.box.scrollLeft < left + wide + 8 &&
+                 clear[1] * scale - p.box.scrollLeft > left;
+    pins.forEach(function (pin) {
+      var h = pin.offsetHeight, gap = 6 + (covers ? clear[2] * scale : 0), edge = 6;
+      var above = pin.getAttribute("data-pin") === "above";
+      var y = above ? line - gap - h : line + gap;
+      var seen = above ? line > h + edge : line < high - h - edge;
+      y = Math.max(edge, Math.min(high - h - edge, y));
+      pin.style.top = (top + y) + "px";
+      pin.style.left = (p.box.offsetLeft + p.box.clientLeft + left) + "px";
+      pin.classList.toggle("is-placed", seen && scale > 0);
+    });
+  }
+  document.addEventListener("scroll", function (e) {
+    var box = e.target.closest && e.target.closest(".diagram-scroll");
+    if (box) placePins(box.closest("[data-zoom]"));
+  }, true);
   function fitDiagrams(root) {
     root.querySelectorAll("[data-zoom]").forEach(function (frame) {
       if (frame.offsetParent !== null && !frame.classList.contains("is-zoomed")) setZoom(frame, 0);
@@ -1016,6 +2305,53 @@
   }, true);
   window.addEventListener("resize", function () { fitDiagrams(document); });
 
+  // [data-depmap]: the dependency diagram, whose records fold their branch
+  // away with [data-fold] (a "D:12" key) and open it again, and whose
+  // [data-fold-set] folds those listed (Collapse all) or none (Expand all).
+  // The server draws it again each time. The folds last while the record is
+  // open: the sheet sends them when it draws itself again, and they are
+  // forgotten when it closes or another record opens.
+  var depFolds = { id: null, keys: "" };
+  function foldQuery(id) {
+    return depFolds.id === String(id) && depFolds.keys ? "&fold=" + encodeURIComponent(depFolds.keys) : "";
+  }
+  function foldDiagram(map, keys, focusKey) {
+    var id = map.getAttribute("data-depmap");
+    depFolds = { id: id, keys: keys };
+    fetchHTML("/e/" + id + "/depmap?fold=" + encodeURIComponent(keys)).then(function (html) {
+      var box = document.createElement("div");
+      box.innerHTML = html;
+      var fresh = box.querySelector("[data-depmap]");
+      if (!fresh || !map.isConnected) return;
+      map.replaceWith(fresh);
+      fitDiagrams(fresh);
+      var again = (focusKey && fresh.querySelector('[data-fold="' + focusKey + '"]')) || fresh.querySelector("[data-fold-set]");
+      if (again) again.focus();
+    }).catch(toastError);
+  }
+  function foldFrom(el) {
+    var map = el.closest("[data-depmap]");
+    if (!map) return;
+    if (el.hasAttribute("data-fold-set")) { foldDiagram(map, el.getAttribute("data-fold-set")); return; }
+    var key = el.getAttribute("data-fold");
+    var keys = (map.getAttribute("data-folded") || "").split(",").filter(Boolean);
+    var at = keys.indexOf(key);
+    if (at === -1) keys.push(key); else keys.splice(at, 1);
+    foldDiagram(map, keys.join(","), key);
+  }
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest && e.target.closest("[data-depmap] [data-fold], [data-depmap] [data-fold-set]");
+    if (!el) return;
+    e.preventDefault();
+    foldFrom(el);
+  });
+  document.addEventListener("keydown", function (e) {
+    var el = e.target.closest && e.target.closest("[data-depmap] [data-fold]");
+    if (!el || (e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault();
+    foldFrom(el);
+  });
+
   // [data-views]: a choice of how to show something, remembered per browser.
   var VIEWS_KEY = "app-views";
   function storedViews() {
@@ -1058,7 +2394,10 @@
     var btn = document.querySelector('[popovertarget="' + pop.id + '"]');
     if (!btn) return;
     var r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
-    var left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+    // A wide one (the setup guide's help) opens from the button's left edge,
+    // over the step rather than the steps beside it.
+    var from = pop.classList.contains("infotip-pop--wide") ? r.left : r.left + r.width / 2 - w / 2;
+    var left = Math.min(Math.max(8, from), window.innerWidth - w - 8);
     var top = r.bottom + 8;
     if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8);
     pop.style.left = left + "px";
@@ -1085,13 +2424,21 @@
   // Cancel, Escape or closing it does nothing.
   var confirmModal = document.getElementById("confirm-modal");
   function confirmFirst(btn, go) {
-    if (!confirmModal || !btn.hasAttribute("data-confirm")) { go(); return; }
-    document.getElementById("confirm-title").textContent = btn.getAttribute("data-confirm");
+    if (!btn.hasAttribute("data-confirm")) { go(); return; }
+    askFirst(btn.getAttribute("data-confirm"), btn.getAttribute("data-confirm-text"),
+             btn.getAttribute("data-confirm-go") || "Remove", go);
+  }
+  // With no ``go``, it only tells: why it can't be done, and OK.
+  function askFirst(question, detail, goLabel, go) {
+    if (!confirmModal) { if (go) go(); return; }
+    document.getElementById("confirm-title").textContent = question;
     var text = document.getElementById("confirm-text");
-    text.textContent = btn.getAttribute("data-confirm-text") || "";
+    text.textContent = detail || "";
     text.hidden = !text.textContent;
     var yes = document.getElementById("confirm-go");
-    yes.textContent = btn.getAttribute("data-confirm-go") || "Remove";
+    yes.hidden = !go;
+    confirmModal.querySelector("[data-close]").textContent = go ? "Cancel" : "OK";
+    yes.textContent = goLabel || "";
     yes.onclick = function () {
       yes.onclick = null;
       confirmModal.close();
@@ -1117,22 +2464,22 @@
       });
       return;
     }
-    var pick = e.target.closest("[data-pick]");
-    if (pick) {
+    var show = e.target.closest("[data-show], [data-hide]");
+    if (show) {
       e.preventDefault();
-      var form = pick.closest("form");
-      openPalette({
-        types: pick.getAttribute("data-pick-types") || "",
-        exclude: pick.getAttribute("data-pick-exclude") || "",
-        pick: function (item) {
-          var field = form && form.elements[pick.getAttribute("data-pick-into") || "other_id"];
-          if (field) field.value = item.id;
-          var label = pick.querySelector("[data-pick-label]");
-          if (label) { label.textContent = item.title; pick.classList.add("is-picked"); }
-          if (pick.hasAttribute("data-pick-submit") && form) submitApiForm(form);
-          else pick.focus();
-        }
-      });
+      var opening = show.hasAttribute("data-show");
+      var id = show.getAttribute(opening ? "data-show" : "data-hide");
+      var shown = document.getElementById(id);
+      if (!shown) return;
+      shown.hidden = !opening;
+      document.querySelectorAll('[data-show="' + id + '"]').forEach(function (b) { b.hidden = opening; });
+      if (opening) {
+        var first = shown.querySelector("select, input:not([type=hidden]), textarea, button");
+        if (first) first.focus();
+      } else {
+        var back = document.querySelector('[data-show="' + id + '"]');
+        if (back) back.focus();
+      }
       return;
     }
     var reveal = e.target.closest("[data-reveal]");
@@ -1281,7 +2628,8 @@
                            : !sheet.open || pos < 0 ? "new"
                            : current && current.id === id ? "replace" : "push");
     var before = sheet.scrollTop;
-    return fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview")).then(function (html) {
+    if (depFolds.id !== String(id)) depFolds = { id: null, keys: "" };
+    return fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview") + foldQuery(id)).then(function (html) {
       sheetArticle.innerHTML = html;
       applyViews(sheetArticle);
       var root = sheetArticle.querySelector(".sheet-content");
@@ -1473,6 +2821,7 @@
   if (sheet) {
     sheet.addEventListener("close", function () {
       current = null;
+      depFolds = { id: null, keys: "" };      // a record opens unfolded
       if (leaving === "closing") {
         leaving = null;         // Back closed it: the address has already moved
         pos = -1;
@@ -1523,21 +2872,29 @@
     if (deleteBtn) deleteBtn.addEventListener("click", function () {
       if (!current) return;
       var id = current.id;
-      api("/api/entities/" + id + "/delete").then(function (data) {
-        removeCard(id);
-        if (pos > 0) {
-          // Reached from another record: back to it, and Forward no longer
-          // leads to the one just deleted.
-          forgetForward = true;
-          history.back();
-        } else {
-          closeDialog(sheet, null, true);
-        }
-        // Undo instead of a confirm dialog: the delete only marks the
-        // record, and restoring it brings back the same id and its links.
-        offerUndo("Deleted", data.undo);
-      }).catch(toastError);
+      // Always asked first, in the confirm dialog; Undo still follows.
+      deleteBtn.setAttribute("data-confirm", "Delete " + current.name + "?");
+      deleteBtn.setAttribute("data-confirm-text", "It goes to Recently deleted, where it can be restored until it is purged. Its links come back with it.");
+      deleteBtn.setAttribute("data-confirm-go", "Delete");
+      confirmFirst(deleteBtn, function () { deleteCurrent(id); });
     });
+  }
+
+  function deleteCurrent(id) {
+    api("/api/entities/" + id + "/delete").then(function (data) {
+      removeCard(id);
+      if (pos > 0) {
+        // Reached from another record: back to it, and Forward no longer
+        // leads to the one just deleted.
+        forgetForward = true;
+        history.back();
+      } else {
+        closeDialog(sheet, null, true);
+      }
+      // Undo as well: the delete only marks the record, and restoring
+      // it brings back the same id and its links.
+      offerUndo("Deleted", data.undo);
+    }).catch(toastError);
   }
 
   function copyLink() {
@@ -1595,7 +2952,12 @@
     return el.value !== el.defaultValue;
   }
   function markSaved(el) {
-    if (el.type === "checkbox" || el.type === "radio") el.defaultChecked = el.checked;
+    // A choice of radios is saved as one: each of them now as it is, or an
+    // earlier one would read as a change still to save.
+    if (el.type === "radio") {
+      (el.closest("[data-autosave]") || document).querySelectorAll('input[type="radio"][name="' + CSS.escape(el.name) + '"]')
+        .forEach(function (r) { r.defaultChecked = r.checked; });
+    } else if (el.type === "checkbox" || el.type === "radio") el.defaultChecked = el.checked;
     else if (el.tagName === "SELECT") Array.prototype.forEach.call(el.options, function (o) { o.defaultSelected = o.selected; });
     else el.defaultValue = el.value;
   }
@@ -1668,7 +3030,7 @@
   }
   function refreshLive(id) {
     if (!current || current.id !== id) return;
-    fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(current.tab)).then(function (html) {
+    fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(current.tab) + foldQuery(id)).then(function (html) {
       if (!current || current.id !== id) return;
       var fresh = document.createElement("div");
       fresh.innerHTML = html;
@@ -1846,11 +3208,10 @@
       var newBtn = document.getElementById("new-btn");
       if (newBtn) { e.preventDefault(); newBtn.click(); }
     } else if (e.key === "/") { e.preventDefault(); openPalette(); }
+    else if (e.key === "?") { e.preventDefault(); openDialog("help-modal"); }
   });
 
   /* ————— Search palette (Ctrl/Cmd+K) ————— */
-  // Also the record picker: openPalette({pick: fn}) hands the chosen record
-  // to fn instead of opening it, which is how links are made.
   var palette = document.getElementById("search-modal");
   var searchInput = document.getElementById("search-input");
   var searchResults = document.getElementById("search-results");
@@ -1858,18 +3219,13 @@
   var searchSeq = 0;
   var activeIndex = -1;
   var paletteItems = [];
-  var picking = null;
 
   var kbd = document.getElementById("search-kbd");
   if (kbd && /Mac|iPhone|iPad/.test(navigator.platform)) kbd.textContent = "⌘K";
 
-  function openPalette(opts) {
+  function openPalette() {
     if (!palette || palette.open) return;
-    picking = opts && opts.pick ? opts : null;
     searchInput.value = "";
-    searchInput.placeholder = picking ? "Find the record to link…" : "Search everything…";
-    // A half-made link isn't worth bringing back after a reload.
-    if (picking) palette.setAttribute("data-restore", "off"); else palette.removeAttribute("data-restore");
     searchResults.hidden = true;
     searchResults.textContent = "";
     activeIndex = -1;
@@ -1877,7 +3233,6 @@
     palette.showModal();
     searchInput.focus();
   }
-  if (palette) palette.addEventListener("close", function () { picking = null; });
   var searchBtn = document.getElementById("search-btn");
   if (searchBtn) searchBtn.addEventListener("click", function () { openPalette(); });
 
@@ -1906,10 +3261,8 @@
       activeIndex = -1;
       return;
     }
-    if (!picking) {
-      groups = groups.concat([{ label: "", items: [{ url: "/all?q=" + encodeURIComponent(query),
-        title: "Every record matching “" + query + "”", meta: "as a list", all: true }] }]);
-    }
+    groups = groups.concat([{ label: "", items: [{ url: "/all?q=" + encodeURIComponent(query),
+      title: "Every record matching “" + query + "”", meta: "as a list", all: true }] }]);
     groups.forEach(function (group) {
       if (group.label) {
         var label = document.createElement("p");
@@ -1950,9 +3303,7 @@
   function choose(i) {
     var item = paletteItems[i === undefined ? activeIndex : i];
     if (!item) return;
-    var pick = picking && picking.pick;
     palette.close();
-    if (pick) { pick(item); return; }
     if (item.id) openEntity(item.id);
     else if (item.url) location.href = item.url;
   }
@@ -1963,11 +3314,6 @@
       clearTimeout(searchTimer);
       if (query.length < 2) { searchResults.hidden = true; return; }
       var url = "/search?q=" + encodeURIComponent(query);
-      if (picking) {
-        url += "&pick=1";
-        if (picking.types) url += "&types=" + encodeURIComponent(picking.types);
-        if (picking.exclude) url += "&exclude=" + encodeURIComponent(picking.exclude);
-      }
       // Debounced, and sequenced so a slow answer to an old query never
       // replaces the answer to the current one.
       searchTimer = setTimeout(function () {
@@ -2096,8 +3442,9 @@
   try { sessionStorage.removeItem(RESTORE_KEY); } catch (_) {}
   if (!reloaded || !remembered || remembered.path !== location.pathname) remembered = null;
 
-  var dialogMemory = {
-    "settings-modal": {
+  // A rail window comes back at the section, and the place in it, it was left at.
+  function railMemory(id) {
+    return {
       save: function (d) {
         var active = d.querySelector(".settings-navitem.is-active");
         var pane = d.querySelector(".settings-pane.is-active");
@@ -2108,22 +3455,36 @@
         };
       },
       restore: function (d, s) {
-        openDialog("settings-modal", s.section);
+        openDialog(id, s.section);
         if (narrow.matches && !s.pane) d.classList.remove("is-showing-pane");
         var pane = d.querySelector(".settings-pane.is-active");
         if (pane) requestAnimationFrame(function () { pane.scrollTop = s.scroll || 0; });
       }
-    },
+    };
+  }
+  var dialogMemory = {
+    "settings-modal": railMemory("settings-modal"),
+    "help-modal": railMemory("help-modal"),
     "entity-modal": {
       save: function () {
         var form = formSlot && formSlot.querySelector("form");
-        return form ? { src: formSource, values: formData(form) } : null;
+        return { src: form ? formSource : null, values: form ? formData(form) : null, wiz: wiz, q: newQuery.value };
       },
       restore: function (d, s) {
-        if (!s || !s.src) return;
+        if (!s) return;
+        if (!s.src) {
+          openNewRecord({ params: s.wiz && s.wiz.params });
+          newQuery.value = s.q || "";
+          filterKinds();
+          return;
+        }
         loadForm(s.src).then(function (form) {   // the form fresh, then the draft back in
           fillForm(form, s.values);
+          form.querySelectorAll("select[data-hides]").forEach(showSections);
+          wiz = s.wiz;
+          if (wiz.chosen && wiz.chosen.text) document.getElementById("entity-modal-title").textContent = "New " + wiz.chosen.text;
           d.showModal();
+          showStep(wiz.step, true);
         }).catch(toastError);
       }
     },

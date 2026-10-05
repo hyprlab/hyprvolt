@@ -35,3 +35,4 @@ class HardwareDetail(EntityDetail, db.Model):
     power_w = db.Column(db.Integer)
     os = db.Column(db.String(120))
     assigned_to = db.Column(db.String(120))
+    extension = db.Column(db.String(20))       # IP phones: the extension number

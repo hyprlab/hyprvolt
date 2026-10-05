@@ -1,0 +1,63 @@
+{# Import from Homepage, step 2: each service read, with what it would run
+   on and why (homepage.py, review). Those with no clear match come first,
+   to choose; nothing is saved until Import. #}
+{% set chips = {'matched': ('Matched', 'chip chip--muted'), 'check': ('Check', 'chip'), 'choose': ('Choose', 'chip chip--warn')} %}
+<form class="stack" data-api="{{ url_for('services.homepage_import') }}" data-then="replace" data-replace="homepage-import">
+  <input type="hidden" name="count" value="{{ rows|length }}">
+  <input type="hidden" name="back" value="{{ back }}">
+  <p class="hint">{{ rows|length }} {{ 'service' if rows|length == 1 else 'services' }} read:
+    {{ counts.matched }} matched to what {{ 'it runs' if counts.matched == 1 else 'they run' }} on,
+    {{ counts.check }} likely, to check, and {{ counts.choose }} with no clear match, to choose.
+    {% if counts.choose or counts.check %}Those come first.{% endif %}
+    Change anything below, then import.{% if not docker %} A docker.yaml would let services on a Docker server be found by its address.{% endif %}</p>
+  <ul class="review-list">
+    {% for state in ('choose', 'check', 'matched') %}
+    {% for r in rows if r.state == state %}
+    {% set i = r.i %}{% set best = r.candidates[0] if r.candidates else none %}
+    <li class="review-item">
+      <div class="manage-meta">
+        <span class="review-title">{{ r.s.name }} <span class="{{ chips[state][1] }}">{{ chips[state][0] }}</span></span>
+        <span class="manage-sub">{{ [r.s.group, r.s.href]|select|join(' · ') or 'No link in the file' }}</span>
+        <span class="review-why">
+          {%- if best and state != 'choose' %}Runs on {{ best.entity.name }}: {{ best.why }}.
+          {%- elif r.candidates %}Could be {% for c in r.candidates[:3] %}{{ c.entity.name }} ({{ c.why }}){{ ', or ' if not loop.last }}{% endfor %}.
+          {%- else %}Nothing in the file points at a recorded host{% if r.clues %}: it gives {{ r.clues }}{% endif %}.{% endif %}
+          {%- if r.existing %} Already recorded{% if r.current %}, running on {{ r.current.name }}{% endif %}.{% endif %}</span>
+      </div>
+      <div class="review-controls">
+        <label class="field"><span class="field-label">Import</span>
+          <select name="use{{ i }}">
+            {% if r.existing %}<option value="update" selected>Update the recorded one</option><option value="add">Add as another</option>
+            {% else %}<option value="add" selected>Add</option>{% endif %}
+            <option value="skip">Leave out</option>
+          </select></label>
+        <label class="field"><span class="field-label">Runs on</span>
+          <select name="host{{ i }}">
+            <option value="">Not set</option>
+            {% if r.candidates %}<optgroup label="Suggested">
+              {% for c in r.candidates %}<option value="{{ c.entity.id }}" {{ 'selected' if c.entity.id == r.proposed }}>{{ c.entity.name }}</option>{% endfor %}
+            </optgroup>{% endif %}
+            {% set offered = r.candidates|map(attribute='entity')|map(attribute='id')|list %}
+            {% for g in choices %}<optgroup label="{{ g.label }}">
+              {% for id, name in g.options %}<option value="{{ id }}" {{ 'selected' if id == r.proposed and id not in offered }}>{{ name }}</option>{% endfor %}
+            </optgroup>{% endfor %}
+          </select></label>
+        <label class="field"><span class="field-label">Kind</span>
+          <select name="kind{{ i }}">
+            {% for value, label in kinds %}<option value="{{ value }}" {{ 'selected' if value == r.kind }}>{{ label }}</option>{% endfor %}
+          </select></label>
+      </div>
+      <input type="hidden" name="data{{ i }}" value="{{ r.data }}">
+      <input type="hidden" name="ports{{ i }}" value="{{ r.ports }}">
+    </li>
+    {% endfor %}
+    {% endfor %}
+  </ul>
+  {% if groups %}
+  <label class="check"><input type="checkbox" name="tag_groups" value="1" checked><span>Tag each service with its Homepage group</span></label>
+  {% endif %}
+  <div class="doc-actions">
+    <button class="btn btn--primary" type="submit">Import</button>
+  </div>
+  <p class="form-error" hidden></p>
+</form>

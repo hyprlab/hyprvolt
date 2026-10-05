@@ -1,12 +1,15 @@
 """Virtual's tabs, filter and widget: what runs on a hypervisor, a cluster
-or a Docker host, and how much of the hardware underneath it is handed out."""
+or a Docker host, and how much of the hardware underneath it is handed out;
+and the Hypervisor section of a server, which makes the one running on it."""
 from flask import render_template
 from sqlalchemy.orm import aliased
 
-from hyprvolt.core import present
+from hyprvolt.core import present, records
+from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity, Relationship
 from hyprvolt.models import db
 from hyprvolt.modules.hardware.models import HardwareDetail
+from hyprvolt.registry import current as registry
 
 from .models import VirtualDetail
 
@@ -167,3 +170,98 @@ def hypervisor_widget() -> str:
         cap = capacity([host])
         rows.append({"host": host, "guests": len(cap["guests"]), "memory": cap["meters"][1]})
     return render_template("virtual/widget.html", rows=rows)
+
+
+# ———— A server's hypervisor: the Hypervisor section of its form ————
+
+#: Machines that can be marked as running a hypervisor: a server, and a
+#: NAS whose system runs VMs too (TrueNAS SCALE, Unraid).
+HYPERVISOR_MACHINES = ("server", "nas")
+
+
+def runs_hypervisor(etype) -> bool:
+    return etype.key in HYPERVISOR_MACHINES
+
+
+def hypervisors_on(server) -> list[Entity]:
+    """The hypervisors that run on a server."""
+    from hyprvolt.core import relations
+    return [e for e in relations.linked("runs_on", server, "target") if e.type == "hypervisor"]
+
+
+def _addresses(entity) -> str:
+    section = next((s for s in registry().form_sections(registry().type(entity.type)) if s.key == "addresses"), None)
+    return (section.values(entity) or {}).get("list", "") if section and section.values else ""
+
+
+def hypervisor_choices(name) -> list[tuple[str, str]] | None:
+    """The platform is a choice; the management address is typed."""
+    from . import PLATFORMS
+    return list(PLATFORMS) if name == "platform" else None
+
+
+def _guests(hyp) -> list[Entity]:
+    from hyprvolt.core import relations
+    return relations.linked("runs_on", hyp, "target")
+
+
+def _blocked(hyp) -> tuple | None:
+    """Why unticking can't delete the hypervisor, as the dialog says it
+    instead of asking: what still runs on it."""
+    guests = _guests(hyp)
+    if not guests:
+        return None
+    return (f"{hyp.name} can't be deleted yet",
+            f"{_listed(guests)} {'runs' if len(guests) == 1 else 'run'} on it. Move "
+            f"{'it' if len(guests) == 1 else 'them'} to another hypervisor or delete "
+            f"{'it' if len(guests) == 1 else 'them'} first.")
+
+
+def hypervisor_values(server) -> dict:
+    """What the section holds, and ``on_blocked``: why it can't be unticked."""
+    hyp = next(iter(hypervisors_on(server)), None)
+    if hyp is None:
+        return {"on": False, "platform": "", "address": ""}
+    return {"on": True, "platform": records.own_values(hyp).get("platform") or "", "address": _addresses(hyp),
+            "on_blocked": _blocked(hyp)}
+
+
+def hypervisor_form(etype, server) -> str:
+    from . import PLATFORMS
+    values = hypervisor_values(server) if server is not None else {"on": False, "platform": "", "address": ""}
+    return render_template("virtual/hypervisor_form.html", v=values, platforms=PLATFORMS, kind=etype.text(),
+                           name=hypervisors_on(server)[0].name if values["on"] else "")
+
+
+def _listed(entities) -> str:
+    names = [e.name for e in entities]
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def hypervisor_save(server, values, user) -> list[dict]:
+    """Runs a hypervisor, ticked: a hypervisor record running on the server
+    (or NAS), by its name, with its platform and management address. Unticked:
+    that record deleted (Undo in Recently deleted), unless guests run on it."""
+    current = next(iter(hypervisors_on(server)), None)
+    on = values.get("on") in (True, "1", "on", "true") if "on" in values else current is not None
+    data = {}
+    if values.get("platform") not in (None, ""):
+        data["f.platform"] = values["platform"]
+    if "address" in values and (values["address"] or current is not None):
+        data["s.addresses.list"] = values["address"] or ""
+    if on and current is None:
+        data.update({"name": server.name, "f.host": server.id})
+        made = records.create("hypervisor", data, user)
+        kind = registry().type(server.type).text()
+        records.notice(f"Added the hypervisor {made.name}, running on the {kind} {server.name}.")
+        return [{"field": "hypervisor", "label": "Hypervisor", "old": "", "new": made.name}]
+    if not on and current is not None:
+        blocked = _blocked(current)
+        if blocked:
+            raise Invalid(f"{blocked[0]}: {blocked[1]}")
+        records.delete(current, user)
+        records.notice(f"Deleted the hypervisor {current.name}.")
+        return [{"field": "hypervisor", "label": "Hypervisor", "old": current.name, "new": ""}]
+    if current is not None and data:
+        records.update(current, data, user)
+    return []

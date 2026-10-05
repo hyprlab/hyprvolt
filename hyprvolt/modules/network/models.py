@@ -1,6 +1,7 @@
-"""Network's tables: one detail table for its five types (a column each type
+"""Network's tables: one detail table for its six types (a column each type
 uses or leaves empty), and three of its own for what is too many to be
-records: the ports on devices, the cables between them, and DNS records."""
+records: the ports on devices, the cables between them, and DNS records;
+and which devices have their ports recorded one by one."""
 from hyprvolt.core.models import Entity, EntityDetail
 from hyprvolt.models import db, utcnow
 
@@ -9,9 +10,13 @@ class NetworkDetail(EntityDetail, db.Model):
     __tablename__ = "network_details"
 
     kind = db.Column(db.String(10))            # networks: lan, wan, vpn, other
-    provider = db.Column(db.String(120))       # networks: the ISP
+    circuit_id = db.Column(db.String(120))     # internet connections: the ISP's name for the line
     public_ips = db.Column(db.String(300))
-    bandwidth = db.Column(db.String(120))
+    bandwidth = db.Column(db.String(120))      # before download and upload: moved to them, or the notes
+    download = db.Column(db.Integer)           # internet connections: megabits per second
+    upload = db.Column(db.Integer)
+    static_ip = db.Column(db.Boolean)          # internet connections: a fixed address, with the three below
+    netmask = db.Column(db.String(45))         # 255.255.255.248; a static line's gateway and DNS use those of subnets
     network = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)
     vid = db.Column(db.Integer)                # VLANs: 1 to 4094
     vlan = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)
@@ -27,6 +32,10 @@ class NetworkDetail(EntityDetail, db.Model):
     expires = db.Column(db.Date, index=True)
     auto_renew = db.Column(db.Boolean)
     nameservers = db.Column(db.Text)
+    security = db.Column(db.String(12))        # wireless networks: wpa3, wpa2_wpa3, wpa2, enterprise, open
+    bands = db.Column(db.String(10))           # 2.4, 5, 6, or two or three of them: 2.4_5
+    hidden_ssid = db.Column(db.Boolean)
+    subnet = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)
 
 
 PORT_KINDS = (("rj45", "RJ45"), ("sfp", "SFP"), ("sfp_plus", "SFP+"), ("sfp28", "SFP28"), ("qsfp", "QSFP+"),
@@ -35,9 +44,19 @@ SPEEDS = ((100, "100 Mb"), (1000, "1 GbE"), (2500, "2.5 GbE"), (5000, "5 GbE"), 
           (25000, "25 GbE"), (40000, "40 GbE"), (100000, "100 GbE"))
 
 
+class PortsRecorded(db.Model):
+    """A device whose ports are recorded one by one. Any other device is
+    cabled as a whole: each of its cables ends at a port with no name,
+    made with the cable and removed with it."""
+    __tablename__ = "network_ports_recorded"
+
+    device_id = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="CASCADE"), primary_key=True)
+
+
 class Port(db.Model):
     """A port on a device. A patch panel's front and rear ports are paired
-    (``pair_id``): a trace goes in at one and out at the other."""
+    (``pair_id``): a trace goes in at one and out at the other. A port with
+    no name is where a cable meets a device as a whole."""
     __tablename__ = "network_ports"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -60,7 +79,7 @@ class Port(db.Model):
 
     @property
     def label(self) -> str:
-        return f"{self.device.name} {self.name}"
+        return f"{self.device.name} {self.name}".strip()
 
 
 class Cable(db.Model):

@@ -135,6 +135,20 @@ def status_label(entity: Entity) -> str:
 
 # ———— Writing ————
 
+def notice(text: str) -> None:
+    """Something a save did beyond what was asked, for the person to be told
+    (an address moved from a server to its hypervisor). The routes that
+    save return them as ``notices``; the page shows each as a toast."""
+    from flask import g, has_request_context
+    if has_request_context():
+        g.setdefault("record_notices", []).append(text)
+
+
+def notices() -> list[str]:
+    from flask import g, has_request_context
+    return list(g.get("record_notices", [])) if has_request_context() else []
+
+
 def create(type_key: str, data: dict, user=None) -> Entity:
     reg = registry()
     etype = reg.type(type_key)
@@ -369,7 +383,7 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
             raise Invalid("Give it a name.")
         if len(name) > 200:
             raise Invalid("Names are limited to 200 characters.")
-        note("name", LABELS["name"], entity.name, name)
+        note("name", etype.name_label, entity.name, name)
         entity.name = name
 
     if "slug" in data and (data.get("slug") or "").strip():
@@ -468,7 +482,7 @@ def _apply(entity: Entity, etype, data: dict, creating: bool, user) -> list[dict
             raise Invalid(f"{f.label} is required.")
         if name != entity.name:
             if not creating:
-                note("name", LABELS["name"], entity.name, name)
+                note("name", etype.name_label, entity.name, name)
             entity.name = name
         if entity.slug.startswith("~"):
             entity.slug = unique_slug(name)

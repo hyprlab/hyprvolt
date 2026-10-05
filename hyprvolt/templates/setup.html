@@ -2,6 +2,7 @@
 {% block title %}Set up {{ app_name }}{% endblock %}
 {% block bodyclass %}auth-body{% endblock %}
 {% block body %}
+{% with cls = 'theme-corner' %}{% include "partials/theme_button.html" %}{% endwith %}
 <main class="auth-wrap">
   <div class="auth-card wizard" id="wizard">
 
@@ -17,11 +18,12 @@
     <!-- Step 1 · Welcome -->
     <section class="wiz-step is-active" data-step="0">
       <h2 class="wiz-title">Welcome</h2>
-      <p class="wiz-text">Setting up this instance takes about a minute.</p>
+      <p class="wiz-text">Setting up this instance takes about a minute, and then a guide walks you through
+        documenting your first site.</p>
       <ul class="wiz-list">
         <li>Create the admin account</li>
         <li>Choose how the instance behaves</li>
-        <li>Start documenting, or load a demo homelab to look around</li>
+        <li>Document your first site, a step at a time, or load a demo homelab to look around</li>
       </ul>
       <div class="wiz-nav">
         <button class="btn btn--primary btn--block" data-next>Get started</button>
@@ -77,7 +79,7 @@
       <div class="wiz-nav">
         <button class="btn btn--ghost" data-back>Back</button>
         <button class="btn btn--primary" data-next>
-          <span class="btn-label">Create the instance</span>
+          <span class="btn-label">Create and continue</span>
           <span class="btn-busy" hidden>Setting up…</span>
         </button>
       </div>
@@ -154,9 +156,11 @@
           username: document.getElementById("wiz-email").value.trim(),
           password: document.getElementById("wiz-password").value,
           registration_open: document.getElementById("wiz-registration").checked,
+          theme: document.documentElement.getAttribute("data-theme"),
           worker_minutes: parseInt(document.getElementById("wiz-worker").value, 10)
         }).then(function () {
-          location.href = "/";
+          // On into the site setup guide, where a new install starts.
+          location.href = "/site-setup";
         }).catch(function (e) {
           err(2, e.message);
         }).finally(function () { setBusy(btn, false); });

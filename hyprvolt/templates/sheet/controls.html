@@ -20,26 +20,134 @@
 {%- endmacro %}
 {% macro described(id, help) %}id="{{ id }}"{% if help %} aria-describedby="{{ id }}-help"{% endif %}{% endmacro %}
 
+{# A field shown only while another has a value (Field.shown_when): the name
+   of the one it follows and the value, for app.js ([data-when]), and hidden
+   now if it doesn't have it (item.hidden). #}
+{% macro when(item, prefix='f.') -%}
+{%- set f = item.field -%}
+{%- if f.shown_when %} data-when="{{ prefix }}{{ f.shown_when[0] }}" data-when-is="{{ when_value(f.shown_when[1]) }}"{% if item.hidden %} hidden{% endif %}{% endif -%}
+{%- endmacro %}
+
+{# A choice between two states (Field.switch), as a segmented control: the
+   first on the left (the value 0), the second on the right (1), the one
+   chosen raised. ``first`` goes on the first option only (its id). #}
+{% macro switch(name, on, labels, first='', attrs='', disabled=false, label='') %}
+<span class="seg seg--choice" role="radiogroup"{% if label %} aria-label="{{ label }}"{% endif %}>
+  <label><input type="radio" name="{{ name }}" value="0" {{ 'checked' if not on }} {{ first }}{{ attrs }}{{ ' disabled' if disabled }}><span>{{ labels[0] }}</span></label>
+  <label><input type="radio" name="{{ name }}" value="1" {{ 'checked' if on }} {{ attrs }}{{ ' disabled' if disabled }}><span>{{ labels[1] }}</span></label>
+</span>
+{% endmacro %}
+
+{# A speed (Field kind "speed"): a number and Mb/s or Gb/s, with the value
+   in megabits kept in the named, hidden input that is saved (app.js,
+   [data-speed]). #}
+{% macro speed(name, value, id='', help='', label='', save=false, cls='', disabled=false) %}
+{% set parts = speed_parts(value) %}
+<span class="speed" data-speed>
+  <input type="number" min="0" step="any" value="{{ parts[0] }}" {% if id %}{{ described(id, help) }}{% else %}aria-label="{{ label }}"{% endif %}
+         {%- if cls %} class="{{ cls }}"{% endif %}{{ ' disabled placeholder=—' if disabled }}>
+  <select aria-label="{{ label }}: unit"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
+    <option value="m" {{ 'selected' if parts[1] == 'm' }}>Mb/s</option>
+    <option value="g" {{ 'selected' if parts[1] == 'g' }}>Gb/s</option>
+  </select>
+  <input type="text" hidden name="{{ name }}" value="{{ value if value is not none else '' }}"{{ ' data-save' if save }}{{ ' disabled' if disabled }}>
+</span>
+{% endmacro %}
+
+{# A value typed in parts (app.js, [data-join]): each part a control, the
+   value that is saved the parts joined in the named, hidden input. A subnet
+   is its network address and, chosen beside it, its mask; a range of
+   addresses is its first and its last. #}
+{% macro cidr(name, value, id='', help='', label='', save=false, cls='', disabled=false, placeholder='', prefills=()) %}
+{% set parts = cidr_parts(value) %}
+<span class="joined" data-join="/"{% if prefills %} data-prefills="{% for k in prefills %}f.{{ k }}{{ ' ' if not loop.last }}{% endfor %}"{% endif %}>
+  <input type="text" data-part value="{{ parts[0] }}" placeholder="{{ placeholder or '10.0.20.0' }}" spellcheck="false" autocomplete="off"
+         {% if id %}{{ described(id, help) }}{% endif %} aria-label="{{ label }}: network address"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
+  <select data-part aria-label="{{ label }}: subnet mask" title="Subnet mask"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
+    {% for g in mask_choices(parts[0], parts[1]) %}<optgroup label="{{ g.label }}">
+      {%- for n, text in g.options %}<option value="{{ n }}" {{ 'selected' if n == parts[1] }}>{{ text }}</option>{% endfor %}</optgroup>{% endfor %}
+  </select>
+  <input type="text" hidden name="{{ name }}" value="{{ value or '' }}"{{ ' data-save' if save }}{{ ' disabled' if disabled }}>
+</span>
+{% endmacro %}
+{% macro iprange(name, value, id='', help='', label='', save=false, cls='', disabled=false) %}
+{% set parts = iprange_parts(value) %}
+<span class="joined" data-join="-">
+  <input type="text" data-part value="{{ parts[0] }}" placeholder="First: 10.0.30.100" spellcheck="false" autocomplete="off"
+         {% if id %}{{ described(id, help) }}{% endif %} aria-label="{{ label }}: first address"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
+  <span class="joined-to" aria-hidden="true">to</span>
+  <input type="text" data-part value="{{ parts[1] }}" placeholder="Last: 10.0.30.199" spellcheck="false" autocomplete="off"
+         aria-label="{{ label }}: last address"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
+  <input type="text" hidden name="{{ name }}" value="{{ value or '' }}"{{ ' data-save' if save }}{{ ' disabled' if disabled }}>
+</span>
+{% endmacro %}
+
+{# A choice of several (app.js, [data-multi]): a box each, the values of
+   those ticked kept in the named, hidden input, joined by commas: the
+   wireless networks a device broadcasts. A choice can be a group
+   ({"label", "options"}), its boxes under its label: a UPS's servers, then
+   its network gear. ``empty`` says why there is nothing to tick. #}
+{% macro multi(name, value, choices, label='', disabled=false, empty='') %}
+{% set chosen = (value or '')|string %}{% set chosen = chosen.split(',') %}
+{% macro box(id, text) %}<label class="check"><input type="checkbox" value="{{ id }}" data-multi-item {{ 'checked' if id|string in chosen }}{{ ' disabled' if disabled }}><span>{{ text }}</span></label>{% endmacro %}
+<span class="multi" data-multi role="group"{% if label %} aria-label="{{ label }}"{% endif %}>
+  {% for c in choices %}
+  {% if c is mapping %}
+  <span class="multi-group">{{ c.label }}</span>
+  {% for id, text in c.options %}{{ box(id, text) }}{% endfor %}
+  {% else %}{{ box(c[0], c[1]) }}{% endif %}
+  {% else %}
+  <span class="hint">{{ empty or 'Nothing to choose from yet.' }}</span>
+  {% endfor %}
+  <input type="text" hidden name="{{ name }}" value="{{ value or '' }}"{{ ' disabled' if disabled }}>
+</span>
+{% endmacro %}
+
+{# A text field that offers a catalog's names as it is typed in (app.js,
+   [data-suggest]; core/catalogs.py): one picked with a click, or a custom
+   name typed in full. #}
+{% macro suggest_attrs(key) -%}
+{% if key %} data-suggest="{{ key }}" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off"{% endif %}
+{%- endmacro %}
+
 {% macro control(item, save=false, cls='', prefix='ef-') %}
 {% set f = item.field %}{% set v = item.value %}{% set id = prefix ~ item.name|replace('.', '-') %}
 {% set extra %}{% if save %} data-save{% endif %}{% if cls %} class="{{ cls }}"{% endif %}{% endset %}
 {% set empty %}{% if save %} placeholder="Not set"{% endif %}{% endset %}
-{% if f.kind == 'boolean' %}
+{% if f.kind == 'boolean' and f.switch %}
+  {% set first %}{{ described(id, f.help) }} {% endset %}
+  {{ switch(item.name, v, f.switch, first, extra, label=f.label) }}
+{% elif f.kind == 'boolean' %}
   <input type="checkbox" name="{{ item.name }}" value="1" {{ 'checked' if v }} {{ described(id, f.help) }}{{ extra }}>
 {% elif f.kind == 'longtext' %}
   <textarea name="{{ item.name }}" rows="{{ 2 if save else 4 }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}{{ empty }}>{{ v or '' }}</textarea>
 {% elif f.kind == 'markdown' %}
   <textarea name="{{ item.name }}" rows="16" class="mono{{ ' ' ~ cls if cls }}" spellcheck="true" {{ described(id, f.help) }} {{ 'required' if f.required }}{% if save %} data-save{% endif %}>{{ v or '' }}</textarea>
 {% elif f.kind == 'select' %}
-  <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>
+  <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}
+          {%- if f.hides %} data-hides="{% for k, when in f.hide_rules() %}{{ ' ' if not loop.first }}{{ k }}={{ when|join(',') }}{% endfor %}"{% endif %}>
     {% if not f.required %}<option value="" data-none>Not set</option>{% endif %}
-    {% for value, label in f.options %}<option value="{{ value }}" {{ 'selected' if v == value }}>{{ label }}</option>{% endfor %}
+    {% for c in f.choices() %}
+      {%- if c is mapping %}<optgroup label="{{ c.label }}">
+        {%- for value, label in c.options %}<option value="{{ value }}" {{ 'selected' if v == value }}>{{ label }}</option>{% endfor %}</optgroup>
+      {%- else %}<option value="{{ c[0] }}" {{ 'selected' if v == c[0] }}>{{ c[1] }}</option>{% endif %}
+    {%- endfor %}
   </select>
 {% elif f.kind == 'ref' %}
   <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>
     <option value="" data-none>Not set</option>
-    {% for rid, label in item.choices %}<option value="{{ rid }}" {{ 'selected' if v == rid }}>{{ label }}</option>{% endfor %}
+    {% for c in item.choices %}
+      {%- if c is mapping %}<optgroup label="{{ c.label }}">
+        {%- for rid, label in c.options %}<option value="{{ rid }}" {{ 'selected' if v == rid }}>{{ label }}</option>{% endfor %}</optgroup>
+      {%- else %}<option value="{{ c[0] }}" {{ 'selected' if v == c[0] }}>{{ c[1] }}</option>{% endif %}
+    {%- endfor %}
   </select>
+{% elif f.kind == 'speed' %}
+  {{ speed(item.name, v, id, f.help, f.label, save, cls) }}
+{% elif f.kind == 'cidr' %}
+  {{ cidr(item.name, v, id, f.help, f.label, save, cls, prefills=f.prefills) }}
+{% elif f.kind == 'iprange' %}
+  {{ iprange(item.name, v, id, f.help, f.label, save, cls) }}
 {% elif f.kind in ('integer', 'number') %}
   <input type="number" name="{{ item.name }}" value="{{ v if v is not none else '' }}" step="{{ '1' if f.kind == 'integer' else 'any' }}" {{ described(id, f.help) }}
          {% if f.min is not none %}min="{{ f.min }}"{% endif %} {% if f.max is not none %}max="{{ f.max }}"{% endif %} {{ 'required' if f.required }}{{ extra }}{{ empty }}>
@@ -49,21 +157,21 @@
   <input type="date" name="{{ item.name }}" value="{{ v.isoformat() if v else '' }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}>
 {% else %}
   <input type="{{ 'email' if f.kind == 'email' else ('tel' if f.kind == 'phone' else 'text') }}" name="{{ item.name }}" value="{{ v or '' }}" {{ described(id, f.help) }}
-         maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https://" spellcheck="false"{% elif f.kind not in ('ip', 'cidr') %}{{ empty }}{% endif %}
+         maxlength="500" {{ 'required' if f.required }} {% if f.kind == 'url' %}placeholder="https:// or an IP address" spellcheck="false"{% elif f.kind not in ('ip', 'cidr') %}{{ empty }}{% endif %}
          {%- if f.kind in ('ip', 'cidr') %} spellcheck="false" autocomplete="off" placeholder="{{ '10.0.20.11' if f.kind == 'ip' else '10.0.20.0/24' }}"{% endif %}
-         {%- if not save and etype.name_from == f.key %} autofocus{% endif %}{{ extra }}>
+         {%- if not save and etype.name_from == f.key %} autofocus{% endif %}{{ suggest_attrs(f.suggest) }}{{ extra }}>
 {% endif %}
 {% endmacro %}
 
 {% macro input(item) %}
 {% set f = item.field %}{% set id = 'ef-' ~ item.name|replace('.', '-') %}
-{% if f.kind == 'boolean' %}
-  <div class="form-check">
+{% if f.kind == 'boolean' and not f.switch %}
+  <div class="form-check"{{ when(item) }}>
     <label class="check">{{ control(item) }}<span>{{ f.label }}</span></label>
     {%- if f.help %}{{ tip(id, f.label, f.help) }}{% endif %}
   </div>
 {% else %}
-<div class="field {{ 'form-wide' if f.kind in ('longtext', 'markdown') }}">
+<div class="field {{ 'form-wide' if f.kind in ('longtext', 'markdown') }}"{{ when(item) }}>
   {{ head(id, f.label ~ (' (' ~ f.unit ~ ')' if f.unit else ''), f.help, f.required) }}
   {{ control(item) }}
 </div>

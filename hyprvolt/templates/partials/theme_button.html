@@ -1,0 +1,7 @@
+{# Light and dark: the sun shows in the dark theme, the moon in the light
+   one (app.js, "Theme"). Signed in, the choice is the account's; on the
+   first-run setup page it is kept in the browser and given to the admin. #}
+<button class="iconbtn {{ cls|default('') }}" id="theme-btn" aria-label="Switch between light and dark" title="Light or dark">
+  <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
+  <svg class="icon-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+</button>

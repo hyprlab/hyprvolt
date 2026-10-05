@@ -1,0 +1,17 @@
+{# Suggest cables, step 3: what was added, and what couldn't be and why.
+   Done goes back to the Cables step, the new cables in its rows. #}
+<div class="stack">
+  <p class="hint">{{ done.added|length }} {{ 'cable' if done.added|length == 1 else 'cables' }} added{% if done.skipped %}, {{ done.skipped }} left out{% endif %}{% if done.failed %}, and {{ done.failed|length }} that couldn't be added{% endif %}.</p>
+  {% if done.failed %}
+  <ul class="manage-list">
+    {% for f in done.failed %}
+    <li class="manage-item"><div class="manage-meta">
+      <span class="manage-title">{{ f.name }}</span><span class="manage-sub form-error">{{ f.error }}</span>
+    </div></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <div class="doc-actions">
+    <a class="btn btn--primary" href="{{ back }}">Done</a>
+  </div>
+</div>

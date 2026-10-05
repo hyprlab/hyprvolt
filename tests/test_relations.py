@@ -1,4 +1,6 @@
 """Relationships, both directions, and the dependency walk."""
+import re
+
 from .conftest import make, section
 
 
@@ -125,6 +127,10 @@ def test_the_dependency_view_switches_to_a_diagram(client, h, admin):
     assert '<div data-view="list" hidden>' in tab and 'value="diagram" checked' in tab
     drawing = tab[tab.index('data-view="diagram"'):]
     assert "What it needs" in drawing and "What breaks if this goes down" in drawing
+    # A dashed line through the record divides the sides; their names are pinned beside it in the page.
+    # The line stops either side of the record's box rather than showing through it.
+    assert re.search(r'class="diagram-divider" d="M0,[\d.]+H[\d.]+M[\d.]+,[\d.]+H[\d.]+"', drawing)
+    assert 'class="diagram-divider"' in drawing and 'data-pin="above"' in drawing and 'data-pin="below"' in drawing
     # One box each, web reached both from pve1 and through db.
     for name in ("srv1", "pve1", "web", "db"):
         assert drawing.count(f">{name}</text>") == 1, name
@@ -165,3 +171,20 @@ def test_a_crowded_row_draws_every_record(client, h, admin):
     drawing = tab[tab.index('data-view="diagram"'):]
     assert all(f">vm{n}</text>" in drawing for n in range(9)) and ">app</text>" in drawing
     assert "more in the list" not in drawing and "data-zoom" in drawing
+
+
+def test_a_branch_of_the_diagram_folds_away_and_opens_again(client, h, admin):
+    srv, hv, web, db = _chain(client, h)
+    tab = section(client.get(f"/e/{srv['id']}/sheet?tab=relationships").data.decode(), "relationships")
+    # pve1 has a branch to fold; web and db, which hang from it, show.
+    assert f'data-fold="D:{hv["id"]}"' in tab and 'aria-expanded="true"' in tab
+    assert ">web</text>" in tab and "Collapse all" in tab
+    # Folded: drawn again without them, and its + says how many it hides.
+    folded = client.get(f"/e/{srv['id']}/depmap?fold=D:{hv['id']}").data.decode()
+    assert ">web</text>" not in folded and ">db</text>" not in folded and ">pve1</text>" in folded
+    assert ">+2</text>" in folded and 'aria-expanded="false"' in folded and "Expand all" in folded
+    assert f'data-folded="D:{hv["id"]}"' in folded
+    # The sheet draws it folded while the record is open (app.js sends the folds); junk is ignored.
+    again = client.get(f"/e/{srv['id']}/sheet?tab=relationships&fold=D:{hv['id']},nonsense").data.decode()
+    assert ">+2</text>" in again
+    assert ">web</text>" in client.get(f"/e/{srv['id']}/depmap?fold=").data.decode()

@@ -2,14 +2,14 @@
 {% from "partials/diagram_node.html" import node %}
 {% from "partials/macros.html" import zoom_frame %}
 {% if nodes %}
-<p class="hint diagram-legend">{{ nodes|length }} devices and {{ edges|length }} links, from the internet side down. A solid line is a cable, traced through patch panels{% if dashed %}; a dashed one is a "connected to" link with no cable recorded{% endif %}. Hover a line for its ports and VLANs; choose a device to open it.</p>
+<p class="hint diagram-legend">{{ nodes|length }} {{ 'device' if nodes|length == 1 else 'devices' }} and {{ edges|length }} {{ 'link' if edges|length == 1 else 'links' }}, from the internet side down. A solid line is a cable, traced through patch panels{% if coax %} and over pairs of MoCA adapters{% endif %}{% if internet %}; a thick one is an internet connection coming in at its device{% endif %}{% if wireless %}; a dotted one is a wireless link between two bridges{% endif %}{% if dashed %}; a dashed one is a "connected to" link with no cable recorded{% endif %}. Hover a line for its ports and VLANs; choose a device to open it.</p>
 {% call zoom_frame() %}
 <svg class="diagram" width="{{ width|round|int }}" height="{{ height|round|int }}" viewBox="0 0 {{ width|round|int }} {{ height|round|int }}" role="img" aria-label="Network diagram">
   {% for e in edges %}
-  <g class="diagram-link {{ '' if e.cabled else 'diagram-link--loose' }}">
+  <g class="diagram-link{{ ' diagram-link--loose' if not e.cabled }}{{ ' diagram-link--' ~ e.kind if e.kind }}">
     <title>{{ e.title(by_id) }}</title>
-    <path d="{{ e.path }}"/>
-    {% if e.vlans or e.via %}<text x="{{ e.mid[0]|round(1) }}" y="{{ e.mid[1]|round(1) }}" text-anchor="middle">{{ e.vlans or ('via ' ~ e.via|join(', ')) }}</text>{% endif %}
+    <path class="diagram-link-hit" d="{{ e.path }}"/><path d="{{ e.path }}"/>
+    {% if e.vlans or e.via or e.coax %}<text x="{{ e.mid[0]|round(1) }}" y="{{ e.mid[1]|round(1) }}" text-anchor="middle">{{ e.vlans or ('via ' ~ e.via|join(', ') if e.via else 'over coax') }}</text>{% endif %}
   </g>
   {% endfor %}
   {% for n in nodes %}{{ node(n.id, n.label, n.type_label, n.icon, n.x, n.y, w, h) }}{% endfor %}
@@ -18,6 +18,6 @@
 {% else %}
 <div class="empty">
   <p class="empty-title">No cables yet</p>
-  <p class="hint">The diagram is drawn from the cables between devices' ports. Open a switch, a firewall or a server, add its ports in the Ports tab, and cable them to other devices.</p>
+  <p class="hint">The diagram is drawn from the cables between devices. Open a switch, a firewall or a server and connect a cable in its Cabling tab, or link an internet connection or a pair of wireless bridges.</p>
 </div>
 {% endif %}

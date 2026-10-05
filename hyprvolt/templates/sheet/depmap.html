@@ -1,18 +1,44 @@
 {# The dependency view drawn: what the record needs above it, what breaks if
-   it goes down below it, a row for each step away (core/depmap.py). #}
+   it goes down below it, a row for each step away (core/depmap.py). A
+   record's − folds its branch away and its + opens it again: app.js asks for
+   the diagram again with the folds ([data-depmap], [data-fold]). #}
 {% from "partials/diagram_node.html" import node %}
 {% from "partials/macros.html" import zoom_frame %}
-{% call zoom_frame() %}
+{% set tools %}{% if every %}
+    <button type="button" class="btn btn--xs btn--ghost" data-fold-set="{{ '' if folded else every|join(',') }}"
+            title="{{ 'Show everything' if folded else 'Show only the records next to this one' }}">{{ 'Expand all' if folded else 'Collapse all' }}</button>
+{% endif %}{% endset %}
+{% set pinned %}
+  {% if above %}<span class="diagram-pin" data-pin="above">What it needs</span>{% endif %}
+  {% if below %}<span class="diagram-pin" data-pin="below">What breaks if this goes down</span>{% endif %}
+{% endset %}
+<div class="depmap" data-depmap="{{ entity.id }}" data-folded="{{ state|join(',') }}">
+{% call zoom_frame(tools, pinned) %}
 <svg class="diagram diagram--fit" width="{{ width }}" height="{{ height }}" viewBox="0 0 {{ width }} {{ height }}" role="img"
-     aria-label="What {{ entity.name }} needs, and what breaks if it goes down">
-  {% for text, y in heads %}<text class="diagram-head" x="{{ margin }}" y="{{ y }}">{{ text }}</text>{% endfor %}
+     data-divider="{{ divider }}" data-divider-clear="{{ record|join(' ') }}" aria-label="What {{ entity.name }} needs, and what breaks if it goes down">
+  {# Broken off at the record's box, which it would show through. #}
+  <path class="diagram-divider" d="M0,{{ divider }}H{{ (record[0] - 6)|round(1) }}M{{ (record[1] + 6)|round(1) }},{{ divider }}H{{ width }}"/>
   {% for l in links %}
-  <g class="diagram-link{{ ' diagram-link--loose' if l.loop }}"><path d="{{ l.path }}"/>
+  <g class="diagram-link{{ ' diagram-link--loose' if l.loop }}"><path class="diagram-link-hit" d="{{ l.path }}"/><path d="{{ l.path }}"/>
     <text x="{{ l.lx|round(1) }}" y="{{ l.ly|round(1) }}" text-anchor="{{ l.anchor }}">{{ l.label }}</text></g>
   {% endfor %}
   {% for n in nodes %}
   {{ node(n.view.id, n.name, n.view.type_label, n.view.icon, n.x, n.y, w, h, 'is-center' if n.center else '') }}
   {% endfor %}
+  {% for f in folds %}
+  {% set what = ('what ' ~ f.name ~ ' needs') if f.side == 'U' else ('what depends on ' ~ f.name) %}
+  {% set pw = 18 if not f.hidden else 26 + 7 * (f.hidden|string|length) %}
+  <g class="diagram-fold{{ ' is-folded' if f.hidden }}" role="button" tabindex="0" data-fold="{{ f.key }}"
+     aria-expanded="{{ 'false' if f.hidden else 'true' }}"
+     aria-label="{{ ('Show ' ~ what ~ ', ' ~ f.hidden ~ ' more') if f.hidden else ('Fold away ' ~ what) }}"
+     transform="translate({{ f.x|round(1) }} {{ f.y|round(1) }})">
+    <title>{{ ('Show ' ~ f.hidden ~ ' more') if f.hidden else 'Fold this branch away' }}</title>
+    <rect x="{{ -pw / 2 }}" y="-9" width="{{ pw }}" height="18" rx="9"/>
+    {% if f.hidden %}<text y="4" text-anchor="middle">+{{ f.hidden }}</text>
+    {% else %}<path d="M-4,0H4"/>{% endif %}
+  </g>
+  {% endfor %}
 </svg>
 {% endcall %}
-<p class="hint">Each line is a link that carries a dependency; a record reached two ways is drawn once.{% if links|selectattr('loop')|list %} A dashed line leads back into a loop.{% endif %}{% if truncated %} It stops six steps out.{% endif %} Choose a record to open it.</p>
+<p class="hint">Each line is a link that carries a dependency; a record reached two ways is drawn once.{% if links|selectattr('loop')|list %} A dashed line leads back into a loop.{% endif %}{% if truncated %} It stops six steps out.{% endif %} Choose a record to open it{% if folds %}, and − or + on it to fold or show what hangs from it{% endif %}.</p>
+</div>

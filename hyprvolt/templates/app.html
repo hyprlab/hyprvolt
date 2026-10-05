@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "partials/macros.html" import type_icon %}
+{% from "partials/macros.html" import rail_item, type_icon %}
 {% block title %}{% if page == 'dashboard' %}{{ app_name }}{% else %}{{ title }} — {{ app_name }}{% endif %}{% endblock %}
 {% block body %}
 <div class="shell">
@@ -20,12 +20,15 @@
     </div>
 
     <div class="sidebar-foot">
-      <button type="button" class="user" data-open="settings-modal" data-settings-section="account" title="Account settings">
+      <button type="button" class="user" data-open="settings-modal" data-open-section="account" title="Account settings">
         <span class="avatar" id="user-avatar">{{ current_user.display_name[0]|upper }}</span>
         <span class="user-meta">
           <span class="user-name" id="user-name">{{ current_user.display_name }}</span>
           <span class="user-email" id="user-email" {% if not current_user.name %}hidden{% endif %}>{{ current_user.username }}</span>
         </span>
+      </button>
+      <button class="iconbtn" data-open="help-modal" aria-label="Help" title="Help (?)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.6M12 16.6v.1"/></svg>
       </button>
       <button class="iconbtn" data-open="settings-modal" aria-label="Settings" title="Settings">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
@@ -69,24 +72,10 @@
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         </button>
         {% else %}
-        <div class="menu" id="new-menu">
-          <button class="menubtn menubtn--icon" aria-haspopup="true" aria-expanded="false" title="New (n)" id="new-btn">
-            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            <span class="menubtn-label">New</span>
-            <svg class="chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
-          </button>
-          <div class="menupop menupop--scroll" role="menu" hidden>
-            {% for group in new_menu %}
-            {% if new_menu|length > 1 %}<p class="menupop-head">{{ group.module.name }}</p>{% endif %}
-            {% for t in group.types %}
-            <button type="button" class="menuopt" role="menuitem" data-new-type="{{ t.key }}"
-                    {% if location_entity %}data-new-location="{{ location_entity.id }}"{% endif %}>
-              {{ type_icon(t.icon or group.module.icon) }}<span>{{ t.label }}</span>
-            </button>
-            {% endfor %}
-            {% endfor %}
-          </div>
-        </div>
+        <button class="menubtn menubtn--icon" id="new-btn" data-new-record title="New record (n)">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          <span class="menubtn-label">New</span>
+        </button>
         {% endif %}
         {% endif %}
 
@@ -139,10 +128,7 @@
           </a>
         </div>
         {% endif %}
-        <button class="iconbtn" id="theme-btn" aria-label="Toggle theme" title="Toggle theme">
-          <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>
-          <svg class="icon-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
-        </button>
+        {% include "partials/theme_button.html" %}
       </div>
     </header>
 
@@ -159,17 +145,8 @@
   </main>
 </div>
 
-<!-- ————— New / edit record ————— -->
-{# The form inside is fetched per type (core/views.py, sheet/form.html). #}
-<dialog class="modal modal--wide" id="entity-modal" aria-labelledby="entity-modal-title">
-  <div class="modal-head">
-    <h3 id="entity-modal-title">New record</h3>
-    <button class="iconbtn" data-close aria-label="Close">
-      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-  </div>
-  <div class="modal-body" id="entity-form-slot"></div>
-</dialog>
+<!-- ————— New record ————— -->
+{% if current_user.can_edit %}{% include "partials/new_record.html" %}{% endif %}
 
 {% if page == 'list' and current_user.can_edit %}
 {# Importing a CSV: choose the file here; the column matching and the check
@@ -222,16 +199,7 @@
 {% endfor %}
 {% set settings_sections = extra.sections %}
 {% set about_icon = '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/>' %}
-{% macro settings_navitem(id, label, icon, active=false) %}
-  <button type="button" class="settings-navitem {{ 'is-active' if active }}" role="tab"
-          id="settings-tab-{{ id }}" data-section="{{ id }}" aria-controls="settings-{{ id }}"
-          aria-selected="{{ 'true' if active else 'false' }}" tabindex="{{ '0' if active else '-1' }}">
-    <svg viewBox="0 0 24 24">{{ icon|safe }}</svg>
-    <span>{{ label }}</span>
-    <svg class="settings-navitem-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>
-  </button>
-{% endmacro %}
-<dialog class="modal" id="settings-modal" aria-labelledby="settings-title">
+<dialog class="modal modal--rail" id="settings-modal" aria-labelledby="settings-title">
   <div class="settings">
     <aside class="settings-nav">
       <div class="settings-nav-head">
@@ -245,12 +213,12 @@
           {% set ns = namespace(group=None) %}
           {% for id, label, group, icon in settings_sections %}
             {% if group != ns.group %}<p class="settings-nav-label">{{ group }}</p>{% set ns.group = group %}{% endif %}
-            {{ settings_navitem(id, label, icon, loop.first) }}
+            {{ rail_item('settings', id, label, icon, loop.first) }}
           {% endfor %}
         </div>
         {# Pinned like the main sidebar's foot: About is always one click away. #}
         <div class="settings-nav-foot">
-          {{ settings_navitem('about', 'About', about_icon) }}
+          {{ rail_item('settings', 'about', 'About', about_icon) }}
           <p class="settings-nav-version" role="presentation">{{ app_name }} {{ app_version }}</p>
         </div>
       </div>
@@ -261,7 +229,7 @@
         <button class="iconbtn settings-back" aria-label="All settings" title="All settings">
           <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
         </button>
-        <h4 class="settings-head-title" id="settings-section-title">Appearance</h4>
+        <h4 class="settings-head-title">Appearance</h4>
         <button class="iconbtn" data-close aria-label="Close" title="Close (Esc)">
           <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
@@ -558,25 +526,39 @@
     {% if current_user.is_admin %}
     <section class="settings-pane" data-pane="modules" id="settings-modules" role="tabpanel" aria-labelledby="settings-tab-modules" tabindex="0">
       <p class="hint">A module that is turned off disappears from the sidebar, search, the dashboard and every record's tabs. Its records stay in the database and come back when it is turned on again.</p>
-      <ul class="manage-list modules-list">
-        {% for entry in admin_modules %}
-        {% set m = entry.module %}
-        <li class="manage-item" data-row>
-          <span class="module-icon">{{ type_icon(m.icon) }}</span>
-          <div class="manage-meta">
-            <span class="manage-title">{{ m.name }}{% if m.core %} <span class="chip chip--muted">built in</span>{% endif %}</span>
-            <span class="manage-sub">{{ m.description or '' }}</span>
-            <span class="manage-sub">{{ m.types|map(attribute='plural')|join(', ') }} · {{ entry.count }} {{ 'record' if entry.count == 1 else 'records' }}</span>
-            {% if entry.needs %}<span class="manage-sub">Off while {{ entry.needs|join(' and ') }} {{ 'is' if entry.needs|length == 1 else 'are' }} off.</span>{% endif %}
+      <p class="hint" id="sort-hint">Drag a group or a module by its handle to change the sidebar's order, or focus the handle and use ↑ and ↓. Modules move within their group.</p>
+      {% set grip %}<svg viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></svg>{% endset %}
+      <div class="sort-groups" data-sortable data-sidebar-order>
+        {% for group in admin_module_groups %}
+        <section class="sort-group" data-sort-item data-group="{{ group.label }}">
+          <div class="sort-group-head">
+            <button type="button" class="iconbtn iconbtn--sm sort-handle" aria-label="Move the {{ group.label }} group" aria-describedby="sort-hint">{{ grip }}</button>
+            <p class="setting-label">{{ group.label }}</p>
           </div>
-          <label class="switch" title="{{ 'Built in' if m.core else ('Needs ' ~ entry.needs|join(' and ')) if entry.needs else ('Turn off' if entry.enabled else 'Turn on') }}">
-            <input type="checkbox" data-module-toggle="{{ m.id }}" {{ 'checked' if entry.enabled }} {{ 'disabled' if m.core or entry.needs }}
-                   aria-label="{{ m.name }} is {{ 'on' if entry.enabled else 'off' }}">
-            <span class="switch-track"></span>
-          </label>
-        </li>
+          <ul class="manage-list modules-list" data-sortable>
+            {% for entry in group.modules %}
+            {% set m = entry.module %}
+            <li class="manage-item" data-row data-sort-item data-module="{{ m.id }}">
+              <button type="button" class="iconbtn iconbtn--sm sort-handle" aria-label="Move {{ m.name }}" aria-describedby="sort-hint">{{ grip }}</button>
+              <span class="module-icon">{{ type_icon(m.icon) }}</span>
+              <div class="manage-meta">
+                <span class="manage-title">{{ m.name }}{% if m.core %} <span class="chip chip--muted">built in</span>{% endif %}</span>
+                <span class="manage-sub">{{ m.description or '' }}</span>
+                <span class="manage-sub">{{ m.types|map(attribute='plural')|join(', ') }} · {{ entry.count }} {{ 'record' if entry.count == 1 else 'records' }}</span>
+                {% if entry.needs %}<span class="manage-sub">Off while {{ entry.needs|join(' and ') }} {{ 'is' if entry.needs|length == 1 else 'are' }} off.</span>{% endif %}
+              </div>
+              <label class="switch" title="{{ 'Built in' if m.core else ('Needs ' ~ entry.needs|join(' and ')) if entry.needs else ('Turn off' if entry.enabled else 'Turn on') }}">
+                <input type="checkbox" data-module-toggle="{{ m.id }}" {{ 'checked' if entry.enabled }} {{ 'disabled' if m.core or entry.needs }}
+                       aria-label="{{ m.name }} is {{ 'on' if entry.enabled else 'off' }}">
+                <span class="switch-track"></span>
+              </label>
+            </li>
+            {% endfor %}
+          </ul>
+        </section>
         {% endfor %}
-      </ul>
+      </div>
+      <button type="button" class="btn btn--xs btn--ghost sort-reset" id="sidebar-order-reset" {% if not admin_order_custom %}hidden{% endif %}>Put the default order back</button>
       {% if admin_module_errors %}
       <p class="setting-label setting-label--spaced">Left out because of an error</p>
       <ul class="manage-list">
@@ -687,6 +669,9 @@
     </div>
   </div>
 </dialog>
+
+<!-- ————— Help ————— -->
+{% include "partials/help.html" %}
 
 <!-- ————— Search palette ————— -->
 <dialog class="palette" id="search-modal">

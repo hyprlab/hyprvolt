@@ -59,14 +59,24 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.btn` + `--primary`, `--ghost`, `--danger`, `--block`, `--xs` | Buttons. One primary per view. |
 | `.iconbtn` + `--sm`, `--danger`, `.is-busy`, `[aria-pressed="true"]` | Square icon buttons; `.is-busy` spins the icon; pressed is a switch that is on (a user's access to secrets) |
 | `.field`, `.field-label`, `.check`, `.hint`, `.form-error` | Form parts |
+| `.multi` | A choice of several, a `.check` each; the values ticked kept in one hidden input (`[data-multi]`) |
+| `.suggest-pop` | Names offered under a text field as it is typed in (`[data-suggest]`), a `.menupop` of `.menuopt`s under group heads, the last keeping what was typed |
 | `.field--narrow`, `.inline-form`, `.inst-grid`, `.stack` | A short input; a field and its button on one line; the Admin settings' grid of number fields; a form whose parts stack with even gaps |
 | `.setting-label`, `.setting-label--spaced` | The small capitals heading a group in a tab, pane or card; `--spaced` puts room above one that follows content |
 | `.manage-list`, `.manage-item`, `.manage-meta`, `.manage-title`, `.manage-sub` | Rows of things with their actions: users, backups, tokens, and most module tabs (ports, installations, secrets, DNS records). The title is one line, the sub line is quieter and cut with an ellipsis |
 | `.link`, `.mono`, `.avatar` | A link in running text, underlined in the accent on hover; monospaced text (keys, compose files); a user's initial in a circle |
-| `.seg`, `.seg--xs` | Segmented control over radio inputs; `--xs` inside a list row (a user's role) |
+| `.seg`, `.seg--xs` | Segmented control over radio inputs, the chosen one in the accent; `--xs` inside a list row (a user's role) |
+| `.guide-body`, `.guide-top` (sticky, the brand always in sight), `.guide`, `.guide-next`, `.guide-tree`, `.tree`, `.tree-row`, `.tree-handle`, `.guide-rail`, `.guide-step`, `.guide-row`, `.guide-nav` | The site setup guide, on a page of its own (`guide.html`: the brand and Exit setup, no shell): its steps down the side (the one being done marked as the settings rail marks its section), a step's rows as panels of fields, and Back and Skip on the left, the step's saves on the right |
+| `.joined`, `.joined-to` | A value typed in parts (`[data-join]` joins them into the input that is saved): a subnet's address and its mask chosen beside it, a range's first and last address with "to" between |
+| `.speed` | A speed: its number and, beside it, Mb/s or Gb/s (`[data-speed]` keeps the megabits in the input that is saved) |
+| `.seg--choice` | A segmented control for a Field with `switch`: its two states side by side, the chosen one raised, as radios valued 0 and 1. `[data-when]` shows the fields that follow it |
+| `.guide-row-head`, `.guide-row-toggle`, `.guide-row-summary`, `.guide-row-body` | A saved guide row folded to one line (`.is-collapsed`): a chevron, its name and a summary of what it holds, written by app.js from its fields; it opens to its fields, and folds again when another row is worked in |
+| `.guide-break` | A new line in a guide row (`SetupField.newline`), hidden with the field it comes before |
 | `.switch`, `.switch-track` | An on/off switch over a checkbox, for something that takes effect at once (a module) |
 | `.theme-picker`, `.theme-chip` | Chip-style radio group |
-| `.chip`, `.chip--muted`, `.count`, `.count--alert`, `.title-chip` | Small labels and counters. `--alert` is a count that needs attention (conflicts); a `.title-chip` link clears a filter |
+| `.chip`, `.chip--muted`, `.chip--warn`, `.count`, `.count--alert`, `.title-chip` | Small labels and counters. `--alert` is a count that needs attention (conflicts), `.chip--warn` a label that does (Choose, in an import's review); a `.title-chip` link clears a filter |
+| `.review-list`, `.review-item`, `.review-title`, `.review-why`, `.review-controls` | Things to review before an import, each with why it was matched and its choices under it (Import from Homepage) |
+| `.guide-extra` | Above a guide step's rows: another way to fill the step (`SetupStep.extra`) |
 | `.tagchip`, `.tagdot` | A tag, the same in every module; a link where it filters. The dot marks tags in the sidebar |
 | `.shell`, `.sidebar`, `.sidebar-head/-scroll/-foot` | The layout. The head and foot stay pinned; only the middle scrolls. |
 | `.navitem`, `.sidebar-label`, `.sidelist`, `.sidelist--nested`, `.sideitem` | Sidebar rows: a module is a `.navitem`; the open module's types and filters are a nested list under it. `.is-active` adds the wash and an inset accent bar. |
@@ -81,12 +91,14 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.secret-value` | A secret's value in its row: a mask until Show, then the value as typed, lines kept, selectable in one click |
 | `.trace`, `.trace-path`, `.trace-hop`, `.trace-link` | A cable path inside a port's row, opened from a `<details>`: each port a pill, the cables and patch panels between them in small text |
 | `.empty`, `.empty--onboard`, `.pager`, `.pager-end` | Empty states and paging; `--onboard` is the first-run dashboard with the mark |
-| `.modal`, `.modal--wide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>` |
+| `.modal`, `.modal--wide`, `.modal--xwide`, `.modal-head`, `.modal-body` | Dialogs, built on `<dialog>`; `--xwide` for a review with choices side by side |
+| `[data-sortable]`, `[data-sort-item]`, `.sort-handle`, `.sort-group` | A list reordered by hand: each item's grip handle drags it (mouse, pen or touch, scrolling its pane at the edges), or moves it with ↑ and ↓ while focused. A move fires `sorted` from the list, and its listener saves the order. Settings > Modules uses it for the sidebar |
 | `#confirm-modal`, `.confirm-text`, `.confirm-actions` | The one confirmation dialog, filled in from the `data-confirm` button that opened it: a question, a line saying what happens, Cancel (focused) and the action |
 | `.form-grid`, `.form-wide`, `.form-check`, `.req` | The record form: two columns, long text across both, a required mark |
 | `.field-head`, `.infotip`, `.infotip-pop` | A field's label with an info button beside it; the button opens the field's help in a native popover (`popovertarget`), placed under it by app.js and closed by Escape, a click elsewhere or a scroll. The input names the help in `aria-describedby` too |
-| `.pickbtn` | A button standing in for a field: it opens the palette to choose a record |
-| `.settings`, `.settings-nav`, `.settings-navitem`, `.settings-head`, `.settings-pane` | The settings window: a rail of sections beside the chosen one; on phones a list that slides into each section |
+| `.recpick`, `.pick-pop`, `.pick-opt` | A field that finds a record as it is typed in (`record_pick`): a search icon inside it, and the records that match in a list under it, each with its kind and place, as the names a field suggests are |
+| `.settings`, `.settings-nav`, `.settings-navitem`, `.settings-head`, `.settings-pane` | The settings window, and Help (`.modal--rail`): a rail of sections beside the chosen one; on phones a list that slides into each section |
+| `.modal--steps`, `.newrec-steps`, `.newrec-step`, `.newrec-search`, `.newrec-list`, `.newrec-kind`, `.newrec-foot`, `.newrec-nav` | The New record window: a rail window whose rail is numbered steps (the guide's `.guide-num`, a tick once passed), the kinds as palette rows in two columns under a search, the form's `data-step` parts one at a time, and Back, Create and Next at the foot. On phones the steps alone, counted in the header |
 | `.sheet`, `.sheet-bar`, `.sheet-bar-nav`, `.sheet-article`, `.sheet-head`, `.sheet-notes`, `.prose` | The full-height detail view: Back and Forward through the records visited, then the record's actions, and close apart from them. Wider than 900px the actions head the sections' rail and close stays at the top right on its own; narrower, they share a bar across the top, close on the right. A record's notes come first in its Overview |
 | `.sheet-nav`, `.tabs`, `.tab`, `.sheet-sections`, `.sheet-section`, `.sheet-section-title`, `.tab-panel` | The sheet's sections, all on the page one after another, each after the first under its own heading; the last is at least a screen tall so its heading can reach the top. Their links jump there with a smooth scroll, and the one being read is marked as the sheet scrolls. Wider than 900px the links are a rail down the sheet's left, like the settings rail, with the chosen one in `--selected` with an accent edge; the rail is added to the sheet's width, so the record's column stays 660px. Narrower, they are a row under the header that stays under the bar while the record scrolls, the marked one underlined in the accent and scrolled into view |
 | `.crumbs`, `.crumbs-sep` | Where a record is: its locations, outermost first, each a link |
@@ -101,7 +113,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.linkform`, `.mountform`, `.mountform-wide`, `.doc-actions` | Small forms inside a tab: make a link, place something in a rack, add ports, cable them, add a DNS record, record a backup run; `.mountform-wide` takes a field or a hint across the whole form (a certificate's PEM text) |
 | `.module-page` | The body of a module's own page (`Page`), padded like a list |
 | `.seg--links` | A segmented control whose choices are links, each a page of its own (a label size) |
-| `.diagram`, `.diagram--fit`, `.diagram-scroll`, `.diagram-node`, `.diagram-link`, `.diagram-link--loose`, `.diagram-icon` | SVG drawn on the server: records as boxes that open their sheet, links as curves labeled near their lower end; a dashed link has no cable behind it. Colors come from the theme's variables, so both themes work. `--fit` scales down to the width it has; otherwise it scrolls. |
+| `.diagram`, `.diagram--fit`, `.diagram-scroll`, `.diagram-node`, `.diagram-link`, `.diagram-link--loose`, `.diagram-link--wireless`, `.diagram-link--internet`, `.diagram-icon` | SVG drawn on the server: records as boxes that open their sheet, links as curves labeled near their lower end; a dashed link has no cable behind it. Colors come from the theme's variables, so both themes work. `--fit` scales down to the width it has; otherwise it scrolls. |
 | `.labels`, `.labels--5160`, `.labels--l7160`, `.labels--62x29`, `.label`, `.label-qr` | Printable labels in real units, each size with its own named `@page`, so a sheet prints as it shows. Black on white whatever the theme |
 | `.snippet` | A command to copy, in monospace and wrapped, with a Copy button (`data-copy`) under it: a backup job's report command |
 | `.dropzone`, `.dropzone--slim`, `.file-thumb` | Where files are dropped or chosen, and an attachment's preview; `--slim` is one line, the featured image's empty place |
@@ -110,7 +122,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.history`, `.changes` | Who changed what: a line per change, old value struck through, new value after |
 | `.elevation`, `.rack-grid`, `.rack-u`, `.rack-slot`, `.rack-item`, `.rack-summary`, `.rack-problems` | A rack, front and rear, one grid row per unit. An empty unit is a button; overlapping items share the width, and a conflict is drawn in the danger color |
 | `.palette` and its parts | The Ctrl/Cmd+K search |
-| `.toast`, `.toast--error`, `.toast-action` | Confirmations under the topbar, with an optional action such as Undo |
+| `.toast`, `.toast--error`, `.toast-action` | Confirmations under the topbar, with an optional action such as Undo in the accent: a dark pill in the light theme, a raised charcoal one in the dark, and a red one for an error in each |
 | `.about-hero`, `.tech-stack`, `.release-list` | The About section |
 | `.auth-card`, `.auth-mark`, `.flash`, `.wizard`, `.wiz-*`, `.error-code` | Sign-in, setup and error pages |
 | `.ptr` | Pull to refresh on touch devices |
@@ -129,8 +141,8 @@ Long-form text uses `.prose` at 16.5px and 1.72.
   preference, a deleted record with Undo), not for every click.
 - **Undo instead of "Are you sure?"** for anything recoverable. A confirmation
   dialog is kept for what can't be undone, deleting an account, and for
-  removing a link between records, which always asks first (`data-confirm`)
-  and still offers Undo after.
+  deleting a record or removing a link between records, which always ask
+  first (`data-confirm`) and still offer Undo after.
 - **Edited where it is shown.** An editor changes a record in its Overview,
   one field at a time, saved on leaving the field; there is no Save button.
   A save that fails keeps the value, says why under the field, and holds

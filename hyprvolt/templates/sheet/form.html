@@ -1,7 +1,10 @@
 {# The record form, for creating and editing. Built from the type's field
    schema; fetched by app.js into <dialog id="entity-modal">. Field names are
    what the API takes: name, status, location_id, tags, notes, f.<field>,
-   c.<custom field>, and s.<section>.<name> for what other modules add. #}
+   c.<custom field>, and s.<section>.<name> for what other modules add.
+   Each part is a data-step, a step of the New record window (its name in
+   the rail; an empty one belongs to the step before); a new record's form
+   leaves its error and Create button to the window's foot. #}
 {% from "sheet/controls.html" import tip, head, described, input with context %}
 
 <form class="entity-form" id="entity-form" data-id="{{ entity.id if entity else '' }}" data-type="{{ etype.key }}"
@@ -9,10 +12,11 @@
   {% if not kinds %}<input type="hidden" name="type" value="{{ etype.key }}">{% endif %}
   {% if attach_to %}<input type="hidden" name="attach_to" value="{{ attach_to }}">{% endif %}
   {% if link %}<input type="hidden" name="link" value="{{ link }}">{% endif %}
+  <div data-step="Basics">
   <div class="form-grid">
     {% if not etype.name_from %}
     <div class="field form-wide">
-      {{ head('ef-name', 'Name', 'What people call it. It is shown wherever the record appears, and search matches it first.', true) }}
+      {{ head('ef-name', etype.name_label, ('What people call it, or the hostname it answers to.' if etype.name_label != 'Name' else 'What people call it.') ~ ' It is shown wherever the record appears, and search matches it first.', true) }}
       <input id="ef-name" name="name" maxlength="200" required autocomplete="off" value="{{ entity.name if entity else name }}" autofocus aria-describedby="ef-name-help">
     </div>
     {% endif %}
@@ -61,35 +65,45 @@
     </div>
     {% endif %}
   </div>
+  </div>
 
   {% set ns = namespace(group=None, open=false) %}
   {% for item in fields %}
     {% if loop.first or item.field.group != ns.group %}
-      {% if ns.open %}</div>{% endif %}
+      {% if ns.open %}</div></div>{% endif %}
+      <div data-step="{{ item.field.group }}">
       {% if item.field.group %}<p class="setting-label setting-label--spaced">{{ item.field.group }}</p>{% elif loop.first and fields|length > 1 %}<p class="setting-label setting-label--spaced">{{ etype.label }}</p>{% endif %}
       <div class="form-grid">{% set ns.open = true %}{% set ns.group = item.field.group %}
     {% endif %}
     {{ input(item) }}
-    {% if loop.last %}</div>{% endif %}
+    {% if loop.last %}</div></div>{% endif %}
   {% endfor %}
 
   {% if custom %}
+  <div data-step="Custom fields">
   <p class="setting-label setting-label--spaced">Custom fields</p>
   <div class="form-grid">{% for item in custom %}{{ input(item) }}{% endfor %}</div>
+  </div>
   {% endif %}
 
   {% for item in sections %}
+  <div data-step="{{ item.section.label }}" data-section="{{ item.section.key }}"{{ ' hidden' if item.hidden }}>
   <p class="setting-label setting-label--spaced">{{ item.section.label }}</p>
   {{ item.html }}
+  </div>
   {% endfor %}
 
+  <div data-step="Notes">
   <div class="field form-notes">
     {{ head('ef-notes', 'Notes', 'Anything else worth knowing, written in Markdown. Link to another record by writing its slug in double brackets: [[its-slug]].') }}
     <textarea id="ef-notes" name="notes" rows="4" placeholder="Markdown. Link to a record with [[its-slug]]." aria-describedby="ef-notes-help">{{ entity.notes if entity else '' }}</textarea>
   </div>
-  <p class="form-error" id="entity-error" hidden></p>
+  </div>
+  {% if entity %}
+  <p class="form-error" hidden></p>
   <button class="btn btn--primary btn--block" type="submit">
-    <span class="btn-label">{{ 'Save' if entity else 'Create' }}</span>
+    <span class="btn-label">Save</span>
     <span class="btn-busy" hidden>Saving…</span>
   </button>
+  {% endif %}
 </form>

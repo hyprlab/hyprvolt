@@ -105,8 +105,9 @@ def create_app(config_class=Config) -> Flask:
     from .core import api as core_api
     app.register_blueprint(core_api.bp)
     app.register_blueprint(core_api.files_bp)
-    from .core import views as core_views
+    from .core import guide as core_guide, views as core_views
     app.register_blueprint(core_views.bp)
+    app.register_blueprint(core_guide.bp)
     from .core import transfer
     app.register_blueprint(transfer.bp)
     from . import tokens
@@ -222,6 +223,11 @@ def create_app(config_class=Config) -> Flask:
 
     from . import about_docs
     app.jinja_env.globals["app_changelog"] = about_docs.changelog
+    from .core.fields import cidr_parts, iprange_parts, mask_choices, speed_parts, when_value
+    app.jinja_env.globals.update(cidr_parts=cidr_parts, iprange_parts=iprange_parts,   # the range controls
+                                 mask_choices=mask_choices)
+    app.jinja_env.globals["speed_parts"] = speed_parts     # the speed control's number and unit
+    app.jinja_env.globals["when_value"] = when_value       # a shown_when value as the page compares it
 
     from .core import clock
     app.jinja_env.filters["local"] = clock.shown

@@ -7,7 +7,8 @@ The hierarchy is the core's own ``location`` field: a room's location is its
 building. So every record anywhere gets breadcrumbs, and the Contents tab
 lists what is directly inside a place.
 """
-from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, Step, Tab, Widget
+from hyprvolt.manifest import (EntityType, Field, FormSection, ListFilter, Module, SetupField, SetupKind, SetupStep,
+                               Step, Tab, Widget)
 
 from . import demo, views
 from .models import LocationDetail, RackMount
@@ -51,6 +52,32 @@ def _becomes(key: str) -> tuple:
 
 
 in_a_rack = Tab("position", "Rack position", views.position_tab, when=views.has_mount)
+
+#: What goes in each of the module's steps of the site setup guide, and
+#: why: the paragraphs behind the step's info button.
+SETUP_HELP = {
+    "site": (
+        "A site is a place where you run equipment: a home, an office, a colocation rack. Everything the "
+        "later steps record is placed in it, so each site's equipment can be listed, drawn and handed over on "
+        "its own.",
+        "Two buildings on one property are one site with two buildings (the next step). A second address is a "
+        "second site: run the guide again for it.",
+        "Cloud accounts and hosted services aren't sites: the companies behind them go in Vendors.",
+    ),
+    "rooms": (
+        "Buildings and rooms say where equipment is inside the site, so a device's location reads as Home › "
+        "Basement › Rack 1.",
+        "Add a building when the site has more than one, or when you want it named; a room can sit straight "
+        "in the site. A closet off an office is a room of its own, not a room inside a room.",
+        "Racks and shelves come next, each in its room.",
+    ),
+    "racks": (
+        "A rack has a height in units, and each device in it gets a position, drawn in the rack's elevation. "
+        "A shelf holds equipment without unit positions: a shelf in a rack, or on a wall.",
+        "Skip this if nothing is racked: equipment can sit straight in a room.",
+    ),
+}
+
 
 module = Module(
     id="locations",
@@ -101,5 +128,25 @@ module = Module(
     form_sections=(FormSection("rack", "Rack position", views.rack_form, views.rack_save,
                                when=views.is_rackmount),),
     before_retype=views.before_retype,
+    setup=(
+        SetupStep("site", "The site", "Where all of this is: a home, an office, a data center. The steps after "
+                  "this one put what you add in it. A name is enough to start.", 10,
+                  group="Place",
+                  help=SETUP_HELP["site"], plan="site", scope=True,
+                  kinds=(SetupKind("Site", "site"),),
+                  fields=(SetupField("name", placeholder="Home"), SetupField("f.address"), SetupField("f.city"),
+                          SetupField("f.country"))),
+        SetupStep("rooms", "Buildings and rooms", "Places on-site that hold equipment.", 20,
+                  group="Place",
+                  help=SETUP_HELP["rooms"], plan="buildings, rooms", tree=True,
+                  kinds=(SetupKind("Building", "building"), SetupKind("Room", "room")),
+                  fields=(SetupField("name"),)),
+        SetupStep("racks", "Racks", "Racks, and shelves in a room or a rack. Skip this if nothing is racked.", 30,
+                  group="Place",
+                  help=SETUP_HELP["racks"], plan="racks",
+                  kinds=(SetupKind("Rack", "rack"), SetupKind("Shelf", "shelf")),
+                  fields=(SetupField("name", placeholder="Rack 1"), SetupField("location_id", "In"),
+                          SetupField("f.height_u"))),
+    ),
     seed=demo.seed,
 )

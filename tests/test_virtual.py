@@ -119,3 +119,44 @@ def test_the_demo_runs_from_the_ups_to_the_containers(client, h, admin):
     body = client.get(f"/e/{outage['id']}/sheet").data.decode()
     pve1 = client.get("/api/entities?type=hypervisor&q=pve1").get_json()["entities"][0]
     assert f'href="/e/{pve1["id"]}"' in body and "<s>" not in body
+
+
+def test_a_servers_form_makes_its_hypervisor(client, h, admin):
+    srv = make(client, h, "server", name="pve-host", **{"s.addresses.list": "10.0.20.21"})
+    form = client.get(f"/e/{srv['id']}/form").data.decode()
+    assert 'name="s.hypervisor.on"' in form and "Runs a hypervisor" in form
+    # The form is saved whole: the server's own list still has the address it gives the hypervisor.
+    resp = client.post(f"/api/entities/{srv['id']}", headers=h, json={
+        "s.addresses.list": "10.0.20.21", "s.hypervisor.on": True, "s.hypervisor.platform": "proxmox",
+        "s.hypervisor.address": "10.0.20.21"})
+    assert resp.status_code == 200, resp.get_json()
+    hyp = client.get("/api/entities?type=hypervisor").get_json()["entities"][0]
+    ip = client.get("/api/entities?type=ip_address").get_json()["entities"][0]
+    assert client.get(f"/api/entities/{ip['id']}").get_json()["entity"]["fields"]["assigned"] == hyp["id"]
+    # Saved again as it now shows: nothing changes.
+    resp = client.post(f"/api/entities/{srv['id']}", headers=h, json={
+        "s.addresses.list": "", "s.hypervisor.on": True, "s.hypervisor.platform": "proxmox",
+        "s.hypervisor.address": "10.0.20.21"})
+    assert resp.status_code == 200 and not resp.get_json()["notices"]
+    assert len(client.get("/api/entities?type=hypervisor").get_json()["entities"]) == 1
+    # A NAS that runs VMs (TrueNAS SCALE) is one too: its hypervisor is a host VMs can choose.
+    nas = make(client, h, "nas", name="nas1")
+    assert 'name="s.hypervisor.on"' in client.get(f"/e/{nas['id']}/form").data.decode()
+    resp = client.post(f"/api/entities/{nas['id']}", headers=h, json={"s.hypervisor.on": True,
+                                                                        "s.hypervisor.platform": "truenas"})
+    assert resp.get_json()["notices"] == ["Added the hypervisor nas1, running on the NAS nas1."]
+    vm_form = client.get("/e/form?type=vm").data.decode()
+    host = vm_form[vm_form.index('name="f.host"'):].split("</select>")[0]
+    assert ">nas1" in host and ">pve-host" in host
+
+
+def test_operating_systems_are_offered_as_they_are_typed(client, h, admin):
+    groups = client.get("/api/catalogs/os").get_json()["groups"]
+    names = [n for g in groups for n in g["items"]]
+    assert "Ubuntu Server 24.04 LTS" in names and "Windows Server 2022" in names and len(names) == len(set(names))
+    assert client.get("/api/catalogs/nope").status_code == 404
+    # The field offers them, and anything typed is kept.
+    form = client.get("/e/form?type=vm").data.decode()
+    assert 'data-suggest="os" role="combobox"' in form
+    vm = make(client, h, "vm", name="vm1", **{"f.os": "My own build 1.0"})
+    assert vm["fields"]["os"] == "My own build 1.0"

@@ -1,0 +1,12 @@
+{# A form section that is a list of records to tick (controls.html, multi),
+   each ticked one a link that reads the same from both ends: the wireless
+   networks an access point broadcasts, the equipment a UPS powers. The
+   section's own heading names it; the list carries the name for screen
+   readers. #}
+{% from "sheet/controls.html" import multi %}
+<div class="form-grid">
+  <div class="field form-wide">
+    {{ multi(name, value, choices, label=label, empty=empty) }}
+    {% if choices %}<span class="hint">{{ hint }}</span>{% endif %}
+  </div>
+</div>

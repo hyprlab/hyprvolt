@@ -6,7 +6,8 @@ service) gets a Supplier section in its form: its vendor and the contract
 that covers it, kept as "supplied by" and "covered by" links, so a vendor's
 Supplies tab and a contract's Covers tab list them.
 """
-from hyprvolt.manifest import EntityType, Field, FormSection, ListFilter, Module, RelationKind, Tab
+from hyprvolt.manifest import (EntityType, Field, FormSection, ListFilter, Module, RelationKind, SetupField, SetupKind,
+                               SetupStep, Tab)
 
 from . import demo, views
 from .models import ContactDetail
@@ -23,6 +24,25 @@ ICON = ('<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.6-3.2 2.7-5 5.5-5s
 VENDOR = '<path d="M4 20.5V9l8-5 8 5v11.5M4 20.5h16M9 20.5v-6h6v6"/>'
 PERSON = '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.8 3.4-6 7-6s6.2 2.2 7 6"/>'
 CONTRACT = '<path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20V3.5Z"/><path d="M14 3.5V8h4M9.5 12.5h5M9.5 16c1-.8 1.8-.8 2.6 0s1.6.8 2.4 0"/>'
+
+#: What goes in each of the module's steps of the site setup guide, and
+#: why: the paragraphs behind the step's info button.
+SETUP_HELP = {
+    "vendors": (
+        "A vendor is a company you buy from, pay, or call for support: your internet provider, the shop your "
+        "hardware came from, a domain registrar, a hosting provider, or a subscription such as a Usenet "
+        "provider or an indexer.",
+        "Record the company here, with its support line and your account number. What you pay for goes in a "
+        "contract (Contacts and vendors > New contract), with its renewal date and cost, so renewals show on "
+        "the dashboard before they lapse.",
+        "Link a vendor to what depends on it in that record's Supplier section: the internet connection to "
+        "the ISP, a server to the shop, SABnzbd to the Usenet provider. The vendor's Supplies tab then lists "
+        "everything it affects.",
+        "Logins and API keys go in Secrets on the vendor, not in its notes. Something you run yourself, such "
+        "as SABnzbd, is a service (a later step), not a vendor.",
+    ),
+}
+
 
 module = Module(
     id="contacts",
@@ -68,6 +88,14 @@ module = Module(
     ),
     filters=(ListFilter("ending", "Contracts ending soon", views.ending_soon),),
     form_sections=(FormSection("supplier", "Supplier", views.supplier_form, views.supplier_save,
-                               when=views.is_supplied),),
+                               when=views.is_supplied, values=views.supplier_values),),
+    setup=(SetupStep("vendors", "Vendors", "Internet service providers, domain registrars, equipment sellers, "
+                     "warranty providers, software and license vendors, cloud and hosting services, support "
+                     "contractors, and utilities.", 35,
+                     group="Place",
+                     help=SETUP_HELP["vendors"], plan="vendors",
+                     kinds=(SetupKind("Vendor", "vendor"),),
+                     fields=(SetupField("name", placeholder="Springfield Cable"), SetupField("f.support_phone"),
+                             SetupField("f.website"), SetupField("f.account_number"))),),
     seed=demo.seed,
 )

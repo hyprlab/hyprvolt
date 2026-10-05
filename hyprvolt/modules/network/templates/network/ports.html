@@ -1,16 +1,43 @@
-{# A device's ports, their cables and where each path ends; the forms to
-   add ports, change one and cable two together. #}
+{# A device's cables and where each path ends, and with its ports recorded,
+   every port; the switch that records them, and the forms to add ports,
+   change one and cable the device to another. #}
 {% from "partials/macros.html" import entity_link %}
 {% set cabled = items|selectattr('cable')|list|length %}
+{% set can_cable = (own_free or not recorded) and not full and (targets.devices or targets.ports) %}
+{% if current_user.can_edit %}
+<form data-api="/network/devices/{{ device.id }}/ports/recorded" data-then="sheet">
+  <ul class="manage-list">
+    <li class="manage-item">
+      <div class="manage-meta">
+        <span class="manage-title">Record each port</span>
+        <span class="manage-sub">{{ 'Its ports are named, and each is cabled on its own.' if recorded else 'Off: a cable goes to the device as a whole.' }}</span>
+      </div>
+      <label class="switch" title="{{ 'Turn off' if recorded else 'Turn on' }}">
+        <input type="checkbox" name="on" data-autosubmit{{ ' checked' if recorded }} aria-label="Record each port">
+        <span class="switch-track"></span>
+      </label>
+    </li>
+  </ul>
+</form>
+{% endif %}
+{% if recorded %}
+{% if items %}<p class="hint">{{ items|length }} {{ 'port' if items|length == 1 else 'ports' }}, {{ cabled }} cabled.</p>{% endif %}
+{% elif limit %}
+<p class="hint">{{ cabled }} of {{ limit }} {{ 'port' if limit == 1 else 'ports' }} cabled{% if full %}: give it more ports, or record them one by one, to cable more{% endif %}.</p>
+{% elif items %}
+<p class="hint">{{ cabled }} {{ 'cable' if cabled == 1 else 'cables' }}.</p>
+{% endif %}
 {% if items %}
-<p class="hint">{{ items|length }} {{ 'port' if items|length == 1 else 'ports' }}, {{ cabled }} cabled.</p>
 <ul class="manage-list">
   {% for i in items %}
   {% set p = i.port %}
   <li class="manage-item">
     <div class="manage-meta">
-      <span class="manage-title">{{ p.name }}{% if i.other %} <span class="hint">→</span> {{ entity_link(i.other.device.id, i.other.device.name) }} {{ i.other.name }}{% endif %}</span>
-      <span class="manage-sub">{{ i.facts|join(' · ') }}{% if i.cable and i.cable.text %} · cable {{ i.cable.text }}{% endif %}</span>
+      <span class="manage-title">
+        {%- if p.name %}{{ p.name }} <span class="hint">→</span> {% elif recorded %}<span class="hint">No port named →</span> {% endif %}
+        {%- if i.other %}{{ entity_link(i.other.device.id, i.other.device.name) }} {{ i.other.name }}{% endif %}</span>
+      {% set sub = i.facts + (['cable ' ~ i.cable.text] if i.cable and i.cable.text else []) %}
+      {% if sub %}<span class="manage-sub">{{ sub|join(' · ') }}</span>{% endif %}
       {% if i.trace|length > 3 %}
       <details class="trace">
         <summary>Trace to the far end</summary>
@@ -18,6 +45,7 @@
           {%- for step in i.trace %}
           {%- if step.port %}<li class="trace-hop">{{ entity_link(step.port.device.id, step.port.device.name) }} {{ step.port.name }}</li>
           {%- elif step.cable %}<li class="trace-link" title="Cable{% if step.cable.text %}: {{ step.cable.text }}{% endif %}">cable{% if step.cable.label %} {{ step.cable.label }}{% endif %}</li>
+          {%- elif step.coax %}<li class="trace-link" title="Over the coax from {{ step.through.name }} to {{ step.coax.name }}">coax</li>
           {%- else %}<li class="trace-link" title="Through {{ step.through.name }}">through</li>{% endif %}
           {%- endfor %}
         </ol>
@@ -27,41 +55,48 @@
     {% if current_user.can_edit %}
     {% if i.cable %}
     <button class="iconbtn iconbtn--sm" data-api-post="/network/cables/{{ i.cable.id }}/delete" data-then="sheet"
-            data-done="Cable removed" aria-label="Remove the cable on {{ p.name }}" title="Remove the cable">
+            data-done="Cable removed" aria-label="Remove the cable{{ ' on ' ~ p.name if p.name else ' to ' ~ i.other.label }}" title="Remove the cable">
       <svg viewBox="0 0 24 24"><path d="M9 7 7 9a3.5 3.5 0 0 0 5 5l.5-.5M15 17l2-2a3.5 3.5 0 0 0-5-5l-.5.5M4 4l16 16"/></svg>
     </button>
-    {% else %}
+    {% elif recorded and can_cable %}
     <button class="btn btn--xs btn--ghost" data-fill='{"port_id": {{ p.id }}}' data-fill-form="cable-form-{{ device.id }}">Cable</button>
     {% endif %}
-    <button class="iconbtn iconbtn--sm" aria-label="Change {{ p.name }}" title="Change this port"
+    {% if recorded %}
+    <button class="iconbtn iconbtn--sm" aria-label="{{ ('Change ' ~ p.name) if p.name else 'Name this port' }}" title="{{ 'Change this port' if p.name else 'Name this port' }}"
             data-fill-form="port-form-{{ device.id }}"
             data-fill='{{ {"port_id": p.id, "name": p.name, "kind": p.kind, "speed_mbps": p.speed_mbps or "", "poe": p.poe, "mac": p.mac, "vlan_id": p.vlan_id or "", "tagged": p.tagged, "description": p.description}|tojson }}'>
       <svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>
     </button>
+    {% if p.name %}
     <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/network/ports/{{ p.id }}/delete" data-then="sheet"
             data-done="Port removed" aria-label="Remove {{ p.name }}" title="Remove this port">
       <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     {% endif %}
+    {% endif %}
+    {% endif %}
   </li>
   {% endfor %}
 </ul>
-{% else %}
+{% elif recorded %}
 <p class="hint">No ports recorded yet.</p>
+{% else %}
+<p class="hint">No cables yet.</p>
 {% endif %}
 
 {% if current_user.can_edit %}
 <div class="doc-actions">
-  <button type="button" class="btn {{ 'btn--primary' if not items else 'btn--ghost' }}" data-fill='{}' data-fill-form="ports-form-{{ device.id }}">Add ports</button>
-  {% if own_free %}<button type="button" class="btn btn--ghost" data-fill='{}' data-fill-form="cable-form-{{ device.id }}">Connect a cable</button>{% endif %}
+  {% if recorded %}<button type="button" class="btn {{ 'btn--primary' if not items else 'btn--ghost' }}" data-fill='{}' data-fill-form="ports-form-{{ device.id }}">Add ports</button>{% endif %}
+  {% if can_cable %}<button type="button" class="btn {{ 'btn--primary' if not recorded and not items else 'btn--ghost' }}" data-fill='{}' data-fill-form="cable-form-{{ device.id }}">Connect a cable</button>{% endif %}
 </div>
 
+{% if recorded %}
 <form class="mountform" id="ports-form-{{ device.id }}" data-api="/network/devices/{{ device.id }}/ports" data-then="sheet" data-done="Ports added" hidden>
   <p class="setting-label">Add ports</p>
   <label class="field"><span class="field-label">Name before the number</span>
     <input name="prefix" value="{{ 'Port ' if not is_panel else '' }}" maxlength="40" spellcheck="false" data-fill-focus></label>
   <label class="field"><span class="field-label">From</span><input type="number" name="first" min="0" value="1"></label>
-  <label class="field"><span class="field-label">To</span><input type="number" name="last" min="0" value="{{ 24 if is_panel else 1 }}"></label>
+  <label class="field"><span class="field-label">To</span><input type="number" name="last" min="0" value="{{ count or (24 if is_panel else 1) }}"></label>
   <label class="field"><span class="field-label">Kind</span>
     <select name="kind">{% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
   <label class="field"><span class="field-label">Speed</span>
@@ -89,16 +124,22 @@
   <button class="btn btn--primary" type="submit">Save</button>
   <p class="form-error" hidden></p>
 </form>
+{% endif %}
 
-{% if own_free %}
+{% if can_cable %}
 <form class="mountform" id="cable-form-{{ device.id }}" data-api="/network/cables" data-then="sheet" data-done="Cabled" hidden>
   <p class="setting-label">Connect a cable</p>
+  {% if recorded %}
   <label class="field"><span class="field-label">From</span>
     <select name="port_id">{% for p in own_free %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></label>
+  {% else %}
+  <input type="hidden" name="device_id" value="{{ device.id }}">
+  {% endif %}
   <label class="field mountform-what"><span class="field-label">To</span>
-    <select name="other_id" data-fill-focus>
-      <option value="">Choose a port…</option>
-      {% for g in free %}<optgroup label="{{ g.device }}">{% for p in g.ports %}<option value="{{ p.id }}">{{ g.device }} {{ p.name }}</option>{% endfor %}</optgroup>{% endfor %}
+    <select name="to" data-fill-focus>
+      <option value="">Choose a device or port…</option>
+      {% for g in targets.groups %}<optgroup label="{{ g.label }}">{% for d in g.devices %}<option value="device:{{ d.id }}">{{ d.name }}</option>{% endfor %}</optgroup>{% endfor %}
+      {% for g in targets.ports %}<optgroup label="{{ g.device }} ports">{% for p in g.ports %}<option value="port:{{ p.id }}">{{ g.device }} {{ p.name }}</option>{% endfor %}</optgroup>{% endfor %}
     </select></label>
   <label class="field"><span class="field-label">Label</span><input name="label" maxlength="60" placeholder="A12"></label>
   <label class="field"><span class="field-label">Color</span><input name="color" maxlength="30"></label>

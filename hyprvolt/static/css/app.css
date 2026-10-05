@@ -174,8 +174,26 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   box-shadow: 0 8px 24px rgb(0 0 0 / .18);
 }
 .infotip-pop:popover-open { animation: pop-in .12s ease both; }
+.infotip-pop--wide { max-width: min(460px, calc(100vw - 16px)); padding: 14px 16px; font-size: 13.5px; }
+.infotip-pop--wide p { margin: 0; }
+.infotip-pop--wide p + p { margin-top: 8px; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-3px); } }
 .form-check { display: flex; align-items: center; gap: 5px; }
+/* A value typed in parts: a subnet's address and mask, a range's first and
+   last address. */
+.joined { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.joined input[type="text"] { flex: 1 1 0; min-width: 96px; }
+.field .joined select, .joined select { flex: none; width: auto; }
+@media (max-width: 560px) {
+  .joined[data-join="/"] { flex-wrap: wrap; }
+  .field .joined[data-join="/"] select { flex: 1 1 100%; width: 100%; }
+}
+.joined-to { flex: none; font-size: 13px; color: var(--muted); }
+/* A speed: its number and, beside it, Mb/s or Gb/s. */
+.speed { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.speed input[type="number"] { flex: 1 1 auto; min-width: 0; }
+.field .speed select, .speed select { flex: none; width: auto; }
+.kv-edit .speed input[type="number"] { flex: 0 1 96px; }
 .field input, .field textarea, .field select {
   width: 100%; padding: 10px 12px;
   font: inherit; color: var(--ink);
@@ -188,7 +206,16 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 }
 .check { display: flex; align-items: center; gap: 9px; font-size: 14px; color: var(--muted); cursor: pointer; }
 .check input { accent-color: var(--accent); width: 15px; height: 15px; }
+/* A choice of several, a box each (controls.html, multi). */
+.multi { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; min-height: 40px; }
+.multi .check { color: var(--ink); }
+.multi-group {
+  flex-basis: 100%; margin-top: 4px; font-size: 11px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--faint);
+}
+.multi-group:first-child { margin-top: 0; }
 .hint { font-size: 13px; color: var(--muted); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .form-error { font-size: 13.5px; color: var(--danger); font-weight: 550; }
 .stack { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
 .stack .field { width: 100%; }
@@ -200,6 +227,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   background: var(--accent); color: var(--accent-ink); vertical-align: 1px;
 }
 .chip--muted { background: var(--field); color: var(--muted); border: 1px solid var(--line); }
+.chip--warn { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 
 /* ————— Shell layout ————— */
 .shell { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); min-height: 100dvh; }
@@ -342,6 +370,12 @@ html[data-theme="dark"] .icon-moon { display: none; }
 .menupop[hidden] { display: none; }
 .menupop--scroll { max-height: min(460px, 70vh); overflow-y: auto; }
 button.menuopt { width: 100%; text-align: left; }
+/* The names a field offers as it is typed in (app.js, [data-suggest]), under it. */
+.has-suggest { position: relative; }
+.suggest-pop { top: calc(100% + 4px); left: 0; right: auto; width: max(100%, 280px); max-height: min(340px, 50vh); }
+.suggest-pop .menuopt { cursor: pointer; padding: 7px 10px; font-size: 13.5px; }
+.suggest-pop .menuopt.is-current { background: var(--wash); color: var(--ink); }
+.suggest-pop .suggest-custom { margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0; font-style: italic; }
 .menupop-head {
   padding: 6px 10px 8px; font-size: 11px; font-weight: 700;
   letter-spacing: .07em; text-transform: uppercase; color: var(--faint);
@@ -486,6 +520,7 @@ a.tagchip:hover { color: var(--ink); border-color: var(--line-strong); }
   border: 1px solid var(--line);
 }
 .modal--wide { width: min(620px, calc(100vw - 32px)); }
+.modal--xwide { width: min(880px, calc(100vw - 32px)); }
 .modal::backdrop, .sheet::backdrop { background: var(--scrim); backdrop-filter: blur(3px); }
 /* Every dialog is modal, and each leaves viewport around it: the sheet's
    gutters, the backdrop around a modal or the palette. A wheel over that space
@@ -520,8 +555,6 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .confirm-text { font-size: 14.5px; color: var(--muted); line-height: 1.5; }
 .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
 /* The record form: two columns of fields, long text across both. */
-#entity-modal { width: min(720px, calc(100vw - 32px)); }
-#entity-modal[open] { max-height: calc(100dvh - 48px); overflow-y: auto; }
 .entity-form { display: flex; flex-direction: column; gap: 12px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; align-items: start; }
 .form-wide { grid-column: 1 / -1; }
@@ -532,15 +565,15 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .req { color: var(--danger); }
 @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } .form-check { padding-top: 0; } }
 
-/* ————— Settings ————— */
+/* ————— Settings, and Help (.modal--rail) ————— */
 /* Two panes: a rail of sections on the left, styled like the app's own
    sidebar, and the chosen section on the right. The window has a fixed size,
    so moving between sections never resizes it; each pane scrolls on its own. */
-#settings-modal {
+.modal--rail {
   width: min(880px, calc(100vw - 32px));
   overflow: hidden;
 }
-#settings-modal[open] { display: flex; height: min(660px, calc(100dvh - 48px)); }
+.modal--rail[open] { display: flex; height: min(660px, calc(100dvh - 48px)); }
 .settings {
   display: grid; grid-template-columns: 224px minmax(0, 1fr);
   flex: 1; min-height: 0; width: 100%;
@@ -593,7 +626,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 @media (max-width: 700px) {
   /* Phones: full screen, one pane at a time. The list of sections comes
      first; choosing one slides it in, and Back (or Escape) returns. */
-  #settings-modal[open] {
+  .modal--rail[open] {
     width: 100vw; max-width: 100vw;
     height: 100dvh; max-height: 100dvh;
     margin: 0; border: 0; border-radius: 0;
@@ -607,10 +640,70 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
   .settings-navitem-chev { display: block; width: 16px; height: 16px; color: var(--faint); }
   .settings-navitem.is-active { background: none; box-shadow: none; font-weight: 500; }
   .settings-main { display: none; }
-  #settings-modal.is-showing-pane .settings-nav { display: none; }
-  #settings-modal.is-showing-pane .settings-main { display: flex; animation: pane-in .22s cubic-bezier(.2, .8, .3, 1) both; }
+  .modal--rail.is-showing-pane .settings-nav { display: none; }
+  .modal--rail.is-showing-pane .settings-main { display: flex; animation: pane-in .22s cubic-bezier(.2, .8, .3, 1) both; }
   .settings-head { padding-left: 12px; }
   .settings-pane.is-active { padding: 20px 18px 28px; }
+}
+/* Help's panes: prose under small headings, and plain tables. */
+.help { font-size: 14px; line-height: 1.6; color: var(--ink); }
+.help p, .help ul { color: var(--muted); }
+.help p + p { margin-top: 10px; }
+.help .help-lead { color: var(--ink); font-size: 15px; }
+.help h5 { margin: 22px 0 6px; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+.help em { font-style: normal; color: var(--ink); font-weight: 600; }
+.help-list { margin: 8px 0 10px; padding-left: 18px; list-style: disc; }
+.help-list li + li { margin-top: 6px; }
+.help-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; line-height: 1.45; }
+.help-table th, .help-table td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.help-table thead th { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+.help-table tbody th { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.help-table td { color: var(--muted); }
+.help-table .faint { color: var(--faint); }
+.help-table--keys td:first-child { width: 34%; white-space: nowrap; }
+.help kbd {
+  display: inline-block; min-width: 22px; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 6px;
+  background: var(--panel); font: 600 12px/1.5 var(--mono); color: var(--ink); text-align: center;
+}
+/* The New record window (.modal--steps): its rail is the steps, numbered
+   as the site guide numbers its own; the kinds are searched at the top of
+   the first, and Back, Next and Create stay at the foot of every one. */
+.newrec-steps { list-style: none; margin: 0; padding: 0; }
+.newrec-step .guide-num { flex: none; }
+.newrec-step.is-past .guide-num { border-color: transparent; background: var(--selected); color: var(--ink); }
+.newrec-step.is-active .guide-num { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.modal--steps .settings-nav-foot .settings-navitem span { white-space: normal; }
+.newrec-count { display: none; font-size: 12px; font-weight: 650; color: var(--faint); white-space: nowrap; }
+.settings-pane.newrec-kinds.is-active { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.newrec-search { flex: none; padding: 12px 26px; border-bottom: 1px solid var(--line); }
+.newrec-search input::-webkit-search-cancel-button { display: none; }
+.newrec-list {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; align-content: start; padding: 8px 18px 18px;
+}
+.newrec-group { grid-column: 1 / -1; padding-top: 12px; }
+.newrec-list.is-searching .newrec-group { display: none; }
+.newrec-list.is-searching { padding-top: 12px; }
+.newrec-kind svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+.newrec-kind:hover { background: var(--hover); }
+.newrec-kind.is-active svg { color: var(--ink); }
+.newrec-kind[hidden] { display: none; }
+.entity-form [data-step]:not([data-section]) { display: contents; }
+.newrec-form .entity-form [data-step] { display: none; }
+.newrec-form .entity-form [data-step].is-current { display: flex; flex-direction: column; gap: 12px; }
+.newrec-form .entity-form [data-step][hidden] { display: none; }
+.newrec-form [data-step]:not([data-step=""]) > .setting-label:first-child { display: none; }
+.newrec-foot { flex: none; padding: 12px 26px 14px; border-top: 1px solid var(--line); }
+.newrec-foot .form-error { margin-bottom: 10px; }
+.newrec-nav { display: flex; justify-content: space-between; gap: 10px; }
+.newrec-nav-go { display: flex; gap: 10px; margin-left: auto; }
+@media (max-width: 700px) {
+  /* Phones: the steps one at a time, without the rail. */
+  .modal--steps .settings-nav { display: none; }
+  .modal--steps .settings-main { display: flex; }
+  .newrec-count { display: inline; }
+  .newrec-list { grid-template-columns: minmax(0, 1fr); padding: 6px 10px 14px; }
+  .newrec-search, .newrec-foot { padding-left: 18px; padding-right: 18px; }
 }
 @keyframes pane-in { from { transform: translateX(24px); opacity: 0; } }
 .setting-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
@@ -641,7 +734,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
   font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
   transition: background .15s, color .15s;
 }
-.seg input:checked + span { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+.seg input:checked + span { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-1); }
 .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
 .seg--xs { padding: 2px; }
 .seg--xs span { padding: 3px 8px; font-size: 11.5px; border-radius: 6px; }
@@ -657,6 +750,17 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .manage-sub { font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .manage-sub.form-error { color: var(--danger); white-space: normal; }
 .manage-item .avatar { width: 30px; height: 30px; font-size: 13px; }
+/* A list of things to review before an import, each with its choices under
+   it: what was read, why it was matched, and what to do with it. */
+.review-list { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; }
+.review-item { display: flex; flex-direction: column; gap: 10px; padding: 14px 2px; border-bottom: 1px solid var(--line); }
+.review-item:last-child { border-bottom: 0; }
+.review-title { font-size: 14.5px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
+.review-why { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.review-controls { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 10px; }
+@media (max-width: 700px) { .review-controls { grid-template-columns: 1fr; } }
+/* Above a guide step's rows: another way to fill it (Import from Homepage). */
+.guide-extra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 16px; }
 
 /* A switch: a checkbox that turns something on or off at once. */
 .switch { position: relative; display: inline-flex; flex: none; cursor: pointer; }
@@ -673,7 +777,29 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .switch input:checked + .switch-track::after { transform: translateX(15px); }
 .switch input:focus-visible + .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
 .switch input:disabled + .switch-track { opacity: .55; cursor: default; }
+/* A choice between two states (Field.switch), a segmented control: the
+   chosen one raised. Beside a field, it is as tall as the field. */
+.seg--choice span { padding: 3px 18px; font-size: 14px; }
+.field .seg--choice { align-self: flex-start; }
+.kv-edit .seg--choice span { padding: 5px 14px; }
+.guide-switch { flex: 0 0 auto; }
+/* A new line in a row: what follows starts under it. */
+.guide-break { flex-basis: 100%; height: 0; }
 .modules-list .manage-sub { white-space: normal; }
+/* Reordering by a handle ([data-sortable]): drag it, or focus it and use the
+   arrow keys. The item being moved is lifted off the list. */
+.sort-handle { flex: none; cursor: grab; touch-action: none; color: var(--faint); }
+.sort-handle:hover { color: var(--ink); }
+.sort-handle svg { stroke-width: 3; }
+[data-sort-item].is-sorting { position: relative; z-index: 2; background: var(--surface); box-shadow: var(--shadow-2); border-radius: var(--radius-sm); }
+[data-sort-item].is-sorting .sort-handle { cursor: grabbing; color: var(--ink); }
+body.is-sorting { cursor: grabbing; user-select: none; }
+.sort-group + .sort-group { margin-top: 18px; }
+.sort-group-head { display: flex; align-items: center; gap: 6px; margin: 0 0 4px -6px; }
+.sort-group-head .setting-label { margin: 0; }
+.modules-list .manage-item { gap: 10px; }
+.modules-list .sort-handle { margin-left: -6px; }
+.sort-reset { margin-top: 14px; }
 .module-icon { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--field); color: var(--muted); }
 .module-icon svg { width: 17px; height: 17px; }
 .customform { margin: 16px 0 6px; }
@@ -1141,20 +1267,28 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
   margin: 20px 0 26px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
 }
 .linkform .form-error { grid-column: 1 / -1; }
+.linkform-actions { display: flex; gap: 8px; }
+.linkform-open { margin: 16px 0 22px; }
+.linkform-open svg { width: 16px; height: 16px; }
 @media (max-width: 700px) { .linkform { grid-template-columns: 1fr; } }
-/* A button that stands in for a field: it opens the palette to choose a record. */
-.pickbtn {
-  display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px;
-  background: var(--field); border: 1px solid var(--line); border-radius: var(--radius-sm);
-  color: var(--faint); text-align: left;
+/* A field that finds a record as it is typed in (record_pick): a search
+   icon inside it, and the records that match under it, each with its kind
+   and place. */
+.recpick { position: relative; display: block; }
+.recpick > svg {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--faint); pointer-events: none;
 }
-.pickbtn svg { width: 16px; height: 16px; }
-.pickbtn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pickbtn:hover, .pickbtn:focus-visible { border-color: var(--accent); }
-.pickbtn.is-picked { color: var(--ink); font-weight: 600; }
+.field .recpick input { padding-left: 36px; }
+.field .recpick input.is-picked { font-weight: 600; }
+.pick-pop { width: max(100%, 300px); }
+.pick-opt { display: flex; flex-direction: column; align-items: stretch; gap: 1px; text-align: left; }
+.pick-opt-title, .pick-opt-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-opt-meta { font-size: 11.5px; font-weight: 550; color: var(--faint); }
+.pick-opt.is-done .pick-opt-title { color: var(--muted); }
+.pick-note { font-weight: 550; letter-spacing: 0; text-transform: none; font-size: 12.5px; }
 /* The dependency view's List and Diagram switch. */
 .deps-switch { display: flex; margin: 26px 0 12px; }
-.diagram-head { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; fill: var(--muted); }
 .deps { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin: 8px 0 10px; }
 @media (max-width: 700px) { .deps { grid-template-columns: 1fr; } }
 .deptree { list-style: none; margin: 0; padding: 0; font-size: 14px; }
@@ -1404,6 +1538,10 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 .toast.is-leaving { animation: toast-out .25s ease forwards; }
 @keyframes toast-out { to { transform: translate(-50%, -16px); opacity: 0; } }
 .toast--error { background: var(--danger); color: #fff; }
+/* Dark: a raised charcoal pill with light text, where the light theme's is
+   dark on light; the accent Undo reads on both. */
+html[data-theme="dark"] .toast { background: #34343B; color: var(--ink); box-shadow: var(--shadow-2), 0 0 0 1px var(--line-strong); }
+html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box-shadow: var(--shadow-2), 0 0 0 1px #6E302B; }
 .toast-action {
   margin-left: 12px; color: var(--accent); font-weight: 750; font-size: 13px;
   text-transform: uppercase; letter-spacing: .05em;
@@ -1523,6 +1661,172 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 
 /* ————— A module's own page (Page in a manifest) ————— */
 .module-page { padding: clamp(18px, 3vw, 34px) clamp(16px, 3.5vw, 36px) 60px; }
+/* The site setup guide (partials/guide.html): its steps down the side, the
+   one being done marked as the settings rail marks its section, and the
+   step's rows, each a record to make. */
+.guide-body { min-height: 100dvh; }
+/* The guide's header stays at the top of the window, the brand always in
+   sight, with the page scrolling under it. */
+.guide-top { position: sticky; top: 0; z-index: 20; background: var(--bg); box-shadow: 0 1px 0 var(--line); }
+.guide-top-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  max-width: 1180px; margin: 0 auto; padding: 16px clamp(16px, 3.5vw, 36px);
+}
+.guide-top-side { display: flex; align-items: center; gap: 14px; }
+.theme-corner { position: fixed; top: 16px; right: 16px; z-index: 5; }
+.guide-exit { font-size: 13.5px; font-weight: 550; color: var(--muted); }
+.guide-exit:hover { color: var(--ink); }
+.guide-wrap { max-width: 1180px; margin: 0 auto; padding: clamp(12px, 3vw, 34px) clamp(16px, 3.5vw, 36px) 60px; }
+.guide { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(20px, 3vw, 40px); max-width: 1180px; }
+.guide-rail { position: sticky; top: 84px; align-self: start; }
+.guide-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.guide-group {
+  margin: 14px 0 4px; padding: 0 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--faint);
+}
+.guide-step--end { margin-top: 10px; }
+.guide-plan { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; max-width: 640px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.guide-plan li { display: flex; gap: 14px; padding: 11px 14px; border-top: 1px solid var(--line); font-size: 14px; }
+.guide-plan li:first-child { border-top: 0; }
+.guide-plan-head { flex: none; width: 96px; font-weight: 650; color: var(--ink); }
+.guide-plan-steps { color: var(--muted); }
+.guide-step {
+  display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--radius-sm);
+  font-size: 13.5px; font-weight: 500; color: var(--muted); transition: background .15s, color .15s;
+}
+.guide-step:hover { color: var(--ink); background: var(--hover); }
+.guide-step.is-active { color: var(--ink); font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.guide-num {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px;
+  border-radius: 50%; border: 1px solid var(--line-strong); font-size: 11.5px; font-weight: 650; color: var(--muted);
+}
+.guide-num svg { width: 13px; height: 13px; stroke-width: 2.4; }
+.guide-step.is-past .guide-num { border-color: transparent; background: var(--selected); color: var(--ink); }
+.guide-step.is-active .guide-num { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.guide-main { min-width: 0; max-width: 900px; }
+.guide-count { font-size: 12px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); margin: 4px 0 6px; }
+.guide-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 8px; }
+.guide-title-row .guide-title { margin: 0; }
+.guide-help {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 6px; border: 0; border-radius: 99px;
+  background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: color .15s, background .15s;
+}
+.guide-help svg { width: 17px; height: 17px; stroke-width: 1.8; }
+.guide-help:hover, .guide-help:focus-visible { color: var(--ink); background: var(--wash); }
+.guide-help:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.guide-title { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; margin: 0 0 8px; }
+.guide-intro { font-size: 14.5px; color: var(--muted); line-height: 1.55; max-width: 64ch; margin: 0 0 18px; }
+.guide-pick { max-width: 360px; margin-bottom: 16px; }
+.guide-rows { display: flex; flex-direction: column; gap: 10px; }
+/* A grouped step's heading for each kind of row (SetupStep.grouped). */
+.guide-kind { margin: 12px 2px -2px; }
+.guide-kind:first-child { margin-top: 0; }
+.guide-after { margin-top: 18px; }
+.guide-row {
+  display: flex; flex-direction: column; gap: 10px; margin: 0; min-width: 0;
+  padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+}
+.guide-row-body { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; min-width: 0; }
+.guide-row-body > .field { flex: 1 1 150px; min-width: 0; }
+.guide-row-body > .guide-wide { flex: 2 1 200px; }
+.guide-row-body > .guide-joined { flex: 3 1 360px; }
+/* A saved row folded to one line: its name and what it holds; it opens to
+   change it. */
+.guide-row-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.guide-row-toggle {
+  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 4px 6px; margin: -4px -6px;
+  border: 0; border-radius: var(--radius-sm); background: none; color: inherit; font: inherit; text-align: left;
+  cursor: pointer;
+}
+.guide-row-toggle:hover { background: var(--hover); }
+.guide-row-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.guide-row-chev { flex: none; width: 16px; height: 16px; color: var(--muted); transition: transform .15s; }
+.guide-row:not(.is-collapsed) .guide-row-chev { transform: rotate(90deg); }
+.guide-row-title { flex: none; max-width: 40%; font-size: 14.5px; font-weight: 700; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guide-row-summary { flex: 1; min-width: 0; font-size: 13.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A row with a title of its own (a cable's two ends) gives it the room, and
+   its badge (the cable's label) lines up down the list. */
+.guide-row-title--full { flex: 0 1 auto; max-width: none; }
+.guide-row-badge { flex: none; min-width: 64px; max-width: 30%; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; text-align: center; color: var(--ink); }
+.guide-row-badge.is-empty { color: var(--faint); font-family: inherit; }
+.guide-row.is-collapsed { padding-block: 10px; }
+.guide-row.is-collapsed .guide-row-body { display: none; }
+.guide-row:not(.is-collapsed) .guide-row-summary { visibility: hidden; }
+.guide-check { flex: none; padding-bottom: 11px; }
+.guide-row-body > .guide-multi { flex: 1 1 100%; }
+.guide-remove { flex: none; }
+.guide-row-form { display: contents; }
+.guide-row { transition: opacity .15s; }
+.guide-row.is-saving { opacity: .7; }
+.guide-row--new { border-style: dashed; background: transparent; }
+.guide-add-row { flex: none; margin-bottom: 1px; }
+.guide-row-error { margin: 0; }
+.guide-locked { flex: 1 1 150px; min-width: 0; }
+.guide-locked-text {
+  display: block; padding: 10px 0; font-size: 14.5px; font-weight: 600; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.guide-rows [aria-invalid="true"] { border-color: var(--danger); }
+.guide-nav + .hint { margin-top: 16px; }
+.guide-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 22px; }
+.guide-nav-side { display: flex; flex-wrap: wrap; gap: 10px; }
+/* Save and continue comes first, so Enter does it, and shows last. */
+.guide-nav-go { flex-direction: row-reverse; }
+.guide .manage-list { max-width: 640px; }
+/* A tree step: the site and the places in it, each inside the one it is in,
+   a line down the left of each level. */
+.guide-tree { max-width: 760px; }
+.tree, .tree-children { list-style: none; margin: 0; padding: 0; }
+.tree { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 8px; }
+.tree-children { margin-left: 22px; padding-left: 12px; border-left: 1px solid var(--line-strong); }
+.tree-node--root > .tree-children { margin-left: 14px; }
+.tree-children:empty { display: none; }
+.tree-row {
+  display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 8px; border-radius: var(--radius-sm);
+  transition: background .12s, box-shadow .12s;
+}
+.tree-row:hover { background: var(--hover); }
+.tree-node--root > .tree-row { font-weight: 700; }
+.tree-icon svg { width: 17px; height: 17px; color: var(--muted); }
+.tree-name { font-size: 14.5px; font-weight: 600; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-kind { font-size: 12px; color: var(--faint); }
+.tree-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: none; }
+.tree-handle { margin-left: -4px; }
+.tree-node.is-dragging > .tree-row { opacity: .45; }
+.tree-node.is-drop > .tree-row { background: var(--selected); box-shadow: inset 0 0 0 2px var(--accent); }
+.tree-ghost {
+  position: fixed; left: 0; top: 0; z-index: 90; pointer-events: none; padding: 6px 12px; border-radius: var(--radius-sm);
+  background: var(--surface); box-shadow: var(--shadow-2); font-size: 13.5px; font-weight: 600; color: var(--ink);
+}
+.tree-adding { padding: 4px 0 6px 8px; }
+.tree-adding form { display: flex; flex-direction: column; gap: 4px; max-width: 360px; }
+.tree-adding input {
+  width: 100%; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--accent);
+  background: var(--field); color: var(--ink); font: inherit; font-size: 14px;
+}
+.guide-tree > .hint { margin-top: 10px; }
+@media (max-width: 560px) {
+  .tree-row { flex-wrap: wrap; }
+  .tree-actions { margin-left: 0; width: 100%; padding-left: 30px; }
+}
+.guide-next {
+  display: flex; align-items: center; gap: 18px; max-width: 640px; margin: 0 0 20px; padding: 16px 18px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+}
+.guide-next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.guide-next-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.guide-next .btn { flex: none; }
+@media (max-width: 560px) { .guide-next { flex-direction: column; align-items: stretch; } }
+/* Narrow, the steps are the "Step 3 of 14" line above each one. */
+@media (max-width: 900px) {
+  .guide { grid-template-columns: minmax(0, 1fr); }
+  .guide-rail { display: none; }
+}
 /* A segmented control of links rather than radio buttons: each choice is a page. */
 .seg--links { flex-wrap: wrap; }
 .seg--links a {
@@ -1530,7 +1834,7 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
   font-size: 13px; font-weight: 600; color: var(--muted); transition: background .15s, color .15s;
 }
 .seg--links a:hover { color: var(--ink); }
-.seg--links a.is-active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+.seg--links a.is-active { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-1); }
 
 /* ————— Diagrams: SVG drawn on the server, colored here so both themes work ————— */
 .diagram-scroll { overflow: auto; max-width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
@@ -1546,6 +1850,18 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 .diagram-tools .iconbtn[disabled] { opacity: .35; cursor: default; background: none; }
 .diagram-frame.is-zoomed .diagram-scroll { max-height: min(72vh, 720px); cursor: grab; }
 .diagram-scroll.is-dragging { cursor: grabbing; user-select: none; }
+/* A dashed line across a diagram, and the names of its two sides pinned in
+   the page beside it (app.js, placePins): their size and place stay put
+   however far the drawing is zoomed or scrolled. */
+.diagram-frame { position: relative; }
+.diagram-divider { fill: none; stroke: var(--line-strong); stroke-width: 1.2; stroke-dasharray: 2 5; stroke-linecap: round; }
+.diagram-pin {
+  position: absolute; left: 9px; top: 0; z-index: 1; pointer-events: none; visibility: hidden;
+  padding: 2px 7px; border-radius: 6px; background: color-mix(in srgb, var(--surface) 88%, transparent);
+  font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+  white-space: nowrap;
+}
+.diagram-pin.is-placed { visibility: visible; }
 .diagram-node rect { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; transition: stroke .15s, fill .15s; }
 .diagram-node:hover rect, .diagram-node:focus-visible rect { stroke: var(--accent); fill: var(--wash); }
 .diagram-node:focus-visible { outline: none; }
@@ -1557,8 +1873,26 @@ html { overscroll-behavior-y: contain; }  /* keep the browser's own pull-to-refr
 .diagram-link path { fill: none; stroke: var(--line-strong); stroke-width: 1.6; }
 .diagram-link:hover path { stroke: var(--accent); stroke-width: 2.4; }
 .diagram-link--loose path { stroke-dasharray: 5 4; }
+.diagram-link--wireless path { stroke-dasharray: 1.5 5; stroke-linecap: round; stroke-width: 2.4; }
+.diagram-link--internet path { stroke-width: 3; }
+/* An invisible wider copy of each line under it: what the pointer hovers,
+   the same 16 px on screen at any zoom. */
+.diagram-link path.diagram-link-hit, .diagram-link:hover path.diagram-link-hit {
+  stroke: transparent; stroke-width: 16; stroke-dasharray: none; vector-effect: non-scaling-stroke; pointer-events: stroke;
+}
 .diagram-link text { font-size: 10.5px; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
 .diagram-legend { margin: 0 0 12px; max-width: 72ch; }
+/* A record's fold button on the edge its branch leaves from: − open, a
+   +N pill (how many it hides) folded. */
+.diagram-fold { cursor: pointer; }
+.diagram-fold rect { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1; transition: stroke .15s, fill .15s; }
+.diagram-fold path { stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; }
+.diagram-fold text { font-size: 10.5px; font-weight: 700; fill: var(--ink); }
+.diagram-fold.is-folded rect { fill: var(--wash); stroke: var(--accent); }
+.diagram-fold:hover rect, .diagram-fold:focus-visible rect { stroke: var(--accent); fill: var(--wash); }
+.diagram-fold:hover path { stroke: var(--ink); }
+.diagram-fold:focus-visible { outline: none; }
+.diagram-fold:focus-visible rect { stroke-width: 2; }
 
 /* ————— Printable labels, in real units: a sheet prints as it shows ————— */
 .labels-tools { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 20px; }

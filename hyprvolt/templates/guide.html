@@ -1,0 +1,30 @@
+{# The site setup guide's own page (core/guide.py): the guide and nothing
+   else of the app, no sidebar, search or New, so the one thing to do is the
+   step in front of you. The normal interface comes back when it is done,
+   or through Exit setup. #}
+{% extends "base.html" %}
+{% block title %}Set up a site — {{ app_name }}{% endblock %}
+{% block bodyclass %}guide-body{% endblock %}
+{% block body %}
+<header class="guide-top">
+  <div class="guide-top-bar">
+    <span class="brand">{% include "partials/mark.html" %}<span class="wordmark">{{ app_name }}</span></span>
+    <span class="guide-top-side">
+      {% include "partials/theme_button.html" %}
+      <a class="guide-exit" href="{{ url_for('main.index') }}">Exit setup</a>
+    </span>
+  </div>
+</header>
+<main class="guide-wrap">{{ page_html }}</main>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<dialog class="modal" id="confirm-modal" aria-labelledby="confirm-title" aria-describedby="confirm-text" data-restore="off">
+  <div class="modal-head"><h3 id="confirm-title">Are you sure?</h3></div>
+  <div class="modal-body">
+    <p class="confirm-text" id="confirm-text"></p>
+    <div class="confirm-actions">
+      <button type="button" class="btn btn--ghost" data-close autofocus>Cancel</button>
+      <button type="button" class="btn btn--danger" id="confirm-go">Remove</button>
+    </div>
+  </div>
+</dialog>
+{% endblock %}

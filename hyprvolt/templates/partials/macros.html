@@ -43,10 +43,14 @@
 {# A server-drawn diagram in its zoomable frame (app.js, "Diagram zoom"): it
    opens fitted so all of it shows, and −, Fit and + (or Ctrl/⌘ and the
    wheel) zoom it. Call it with the <svg> inside:
-   {% call zoom_frame() %}<svg class="diagram">…</svg>{% endcall %} #}
-{% macro zoom_frame() -%}
+   {% call zoom_frame() %}<svg class="diagram">…</svg>{% endcall %}
+   ``tools`` is markup for more buttons before the zoom's; ``pinned``, for
+   [data-pin] labels over the drawing beside the line its svg's
+   data-divider (a y in its own units) draws: "above" or "below" it. #}
+{% macro zoom_frame(tools='', pinned='') -%}
 <div class="diagram-frame" data-zoom>
   <div class="diagram-tools" role="group" aria-label="Zoom">
+    {{ tools }}
     <button type="button" class="iconbtn iconbtn--sm" data-zoom-by="-1" aria-label="Zoom out" title="Zoom out">
       <svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></button>
     <button type="button" class="btn btn--xs btn--ghost" data-zoom-fit title="Show all of it">Fit</button>
@@ -54,5 +58,35 @@
       <svg viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></svg></button>
   </div>
   <div class="diagram-scroll">{{ caller() }}</div>
+  {{ pinned }}
 </div>
+{%- endmacro %}
+
+{# One section in a rail window's rail (.modal--rail: Settings, Help). Its
+   id is "<prefix>-tab-<id>" and its pane's "<prefix>-<id>"; app.js shows
+   the pane whose data-pane is the item's data-section. #}
+{% macro rail_item(prefix, id, label, icon, active=false) -%}
+  <button type="button" class="settings-navitem {{ 'is-active' if active }}" role="tab"
+          id="{{ prefix }}-tab-{{ id }}" data-section="{{ id }}" aria-controls="{{ prefix }}-{{ id }}"
+          aria-selected="{{ 'true' if active else 'false' }}" tabindex="{{ '0' if active else '-1' }}">
+    <svg viewBox="0 0 24 24">{{ icon|safe }}</svg>
+    <span>{{ label }}</span>
+    <svg class="settings-navitem-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>
+  </button>
+{%- endmacro %}
+
+{# A field that finds a record as it is typed in (app.js, input[data-pick]):
+   the records that match drop down under it, and the one chosen puts its id
+   in the form's field named by into. submit sends the form once one is
+   chosen; exclude leaves a record out; types limits the kinds. #}
+{% macro record_pick(into='other_id', exclude='', submit=false, types='', placeholder='Type to search…') -%}
+<span class="recpick">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+  <input type="text" data-pick data-pick-into="{{ into }}"
+         {%- if exclude %} data-pick-exclude="{{ exclude }}"{% endif %}
+         {%- if types %} data-pick-types="{{ types }}"{% endif %}
+         {%- if submit %} data-pick-submit{% endif %}
+         placeholder="{{ placeholder }}" autocomplete="off" spellcheck="false"
+         role="combobox" aria-autocomplete="list" aria-expanded="false">
+</span>
 {%- endmacro %}

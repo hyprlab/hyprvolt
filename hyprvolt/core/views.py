@@ -37,7 +37,7 @@ def tabs_for(entity: Entity) -> list[SheetTab]:
     if etype:
         out += [SheetTab(t.key, t.label, t.render, t.count(entity) if t.count else None) for t in etype.tabs
                 if t.when is None or t.when(entity)]
-    rels = relations.for_entity(entity)
+    rels = relations.for_entity(entity) + relations.derived(entity)
     out.append(SheetTab("relationships", "Relationships", relationships_tab, len(rels)))
     extensions = [(m, t) for m in reg.enabled_modules() for t in m.sheet_tabs if t.when is None or t.when(entity)]
     out += [SheetTab(t.key, t.label, t.render, t.count(entity) if t.count else None) for m, t in extensions if m.core]
@@ -94,7 +94,9 @@ def overview_tab(entity: Entity) -> str:
     edit = edit_items(entity, etype) if editable else {}
     controls = edit.get("fields", []) + edit.get("custom", [])
     groups, prose, custom = [], [], []
-    for n, (f, value) in enumerate(records.field_values(entity)):
+    values = records.field_values(entity)
+    unshown = F.hidden_keys(etype.fields, {f.key: v for f, v in values[:n_own]}) if etype else set()
+    for n, (f, value) in enumerate(values):
         is_custom = n >= n_own
         control = controls[n] if n < len(controls) else None
         if f.kind == "markdown":
@@ -106,6 +108,8 @@ def overview_tab(entity: Entity) -> str:
         if is_custom:
             custom.append(item)
             continue
+        if not editable and f.key in unshown:
+            continue          # shown only while another field has a value it hasn't
         if not groups or groups[-1]["label"] != f.group:
             groups.append({"label": f.group, "items": []})
         groups[-1]["items"].append(item)
@@ -129,6 +133,12 @@ def relationships_tab(entity: Entity) -> str:
         if not grouped or grouped[-1]["label"] != r["label"]:
             grouped.append({"label": r["label"], "items": []})
         grouped[-1]["items"].append({**r, "view": present.View(r["other"])})
+    # Worked out from other records (cables), changed where those are.
+    derived: list[dict] = []
+    for d in sorted(relations.derived(entity), key=lambda d: d["label"]):
+        if not derived or derived[-1]["label"] != d["label"]:
+            derived.append({"label": d["label"], "note": d.get("note", ""), "items": []})
+        derived[-1]["items"].append({**d, "view": present.View(d["other"])})
     kinds = []
     for k in registry().kinds.values():
         kinds.append((f"{k.key}:out", k.label))
@@ -136,10 +146,26 @@ def relationships_tab(entity: Entity) -> str:
             kinds.append((f"{k.key}:in", k.reverse))
     dependents = relations.walk(entity, "dependents")
     needs = relations.walk(entity, "dependencies")
-    return render_template("sheet/relationships.html", entity=entity, grouped=grouped, kinds=kinds,
-                           diagram=Markup(depmap.draw(entity, needs, dependents)),
+    return render_template("sheet/relationships.html", entity=entity, grouped=grouped, derived=derived, kinds=kinds,
+                           diagram=Markup(depmap.draw(entity, needs, dependents, _folded())),
                            dependents=dependents, needs=needs,
                            n_dependents=relations.count(dependents), n_needs=relations.count(needs))
+
+
+def _folded() -> set[str]:
+    """The diagram's folded branches, "D:12,U:5", which app.js sends while
+    the record is open."""
+    return {k for k in (request.args.get("fold") or "").split(",") if k[:2] in ("D:", "U:") and k[2:].isdigit()}
+
+
+@bp.route("/e/<int:entity_id>/depmap")
+@role("viewer")
+def dependency_map(entity_id):
+    """The dependency diagram alone, drawn again with ``fold``'s branches
+    folded or opened."""
+    entity = entity_or_404(entity_id, deleted_ok=True)
+    return depmap.draw(entity, relations.walk(entity, "dependencies"), relations.walk(entity, "dependents"),
+                       _folded())
 
 
 def attachments_tab(entity: Entity) -> str:
@@ -256,14 +282,20 @@ def _preset(f):
     return raw
 
 
-def _ref_choices(f, entity=None) -> list[tuple[int, str]]:
+def _ref_choices(f, entity=None) -> list:
+    """The records a ref field can point at, by name: (id, name), or with
+    several kinds of record (a service's Runs on), each kind under its
+    heading as {"label", "options"}, in the order the modules list them."""
     reg = registry()
     keys = [k for k in reg.ref_types(f) if k in reg.enabled_type_keys()]
-    rows = Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name).all()
-    # Several kinds of record in one list: say which each is.
-    def label(e):
-        return f"{e.name} · {reg.type(e.type).label}" if len(keys) > 1 else e.name
-    return [(e.id, label(e)) for e in rows if entity is None or e.id != entity.id]
+    rows = [e for e in Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name)
+            if entity is None or e.id != entity.id]
+    if len(keys) <= 1:
+        return [(e.id, e.name) for e in rows]
+    by_type = {}
+    for e in rows:
+        by_type.setdefault(e.type, []).append((e.id, e.name))
+    return [{"label": reg.type(k).plural, "options": by_type[k]} for k in keys if k in by_type]
 
 
 @bp.route("/e/form")
@@ -326,6 +358,13 @@ def edit_items(entity, etype, retyping: bool = False) -> dict:
         f = F.custom_field(cf)
         custom.append({"field": f, "name": "c." + cf.key, "value": F.from_text(f, values.get(cf.id, "")),
                        "choices": None})
-    sections = [{"section": s, "html": Markup(s.render(etype, entity))} for s in reg.form_sections(etype)]
+    # A field that follows another's value (shown_when) starts hidden unless it has it.
+    gone = F.hidden_keys(etype.fields, {item["field"].key: item["value"] for item in fields})
+    for item in fields:
+        item["hidden"] = item["field"].key in gone
+    # A choice can hide another module's section: a tower has no rack position.
+    hidden = {k for item in fields for k, when in item["field"].hide_rules() if (item["value"] or "") in when}
+    sections = [{"section": s, "html": Markup(s.render(etype, entity)), "hidden": s.key in hidden}
+                for s in reg.form_sections(etype)]
     return {"fields": fields, "custom": custom, "sections": sections,
             "locations": _location_choices(etype, entity)}

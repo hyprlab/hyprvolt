@@ -29,11 +29,22 @@ def test_a_server_with_its_specs(client, h, admin):
 
 def test_every_type_has_a_form(client, h, admin):
     for key in ("server", "network_device", "firewall", "access_point", "ups", "nas", "workstation",
-                "printer", "peripheral"):
+                "printer", "ip_phone", "ip_camera", "peripheral"):
         form = client.get(f"/e/form?type={key}").data.decode()
         assert 'name="f.warranty_until"' in form, key
         # What goes in a rack has the rack position; the rest don't.
-        assert ('name="s.rack.rack_id"' in form) == (key not in ("access_point", "workstation", "printer")), key
+        assert ('name="s.rack.rack_id"' in form) == (key not in ("access_point", "workstation", "printer", "ip_phone",
+                                                                "ip_camera")), key
+
+
+def test_what_answers_on_the_network_is_named_or_hostnamed(client, h, admin):
+    for key in ("server", "network_device", "ip_phone", "ip_camera", "vm", "lxc", "hypervisor"):
+        assert '>Name or hostname <span class="req"' in client.get(f"/e/form?type={key}").data.decode(), key
+    for key in ("peripheral", "service", "container"):
+        assert '>Name <span class="req"' in client.get(f"/e/form?type={key}").data.decode(), key
+    client.post("/site-setup/site/rows", json={"values": {"name": "Home"}}, headers=h)
+    assert ">Name or hostname<" in client.get("/site-setup/endpoints").data.decode()
+    assert ">Name or hostname<" not in client.get("/site-setup/rooms").data.decode()
 
 
 def test_a_device_goes_in_a_rack_from_its_form(client, h, admin):
@@ -106,3 +117,54 @@ def test_the_demo_puts_the_equipment_in_the_rack(client, h, admin):
 def test_a_whole_price_reads_as_one_in_the_form(client, h, admin):
     server = make(client, h, "server", name="pve1", **{"f.price": 850})
     assert 'name="f.price" value="850"' in client.get(f"/e/{server['id']}/form").data.decode()
+
+
+def test_wireless_bridges_link_two_places_each_with_its_own_address(client, h, admin):
+    site = make(client, h, "site", name="Home")
+    house = make(client, h, "building", name="House", location_id=site["id"])
+    garage = make(client, h, "building", name="Garage", location_id=site["id"])
+    a = make(client, h, "network_device", name="Bridge A", location_id=house["id"],
+             **{"f.kind": "bridge", "s.addresses.list": "10.0.10.21"})
+    b = make(client, h, "network_device", name="Bridge B", location_id=garage["id"],
+             **{"f.kind": "bridge", "s.addresses.list": "10.0.10.22"})
+    switch = make(client, h, "network_device", name="sw1", **{"f.kind": "switch"})
+    # Linked from one end, the link reads the same from the other.
+    client.post(f"/api/entities/{a['id']}", json={"s.bridge.other": b["id"]}, headers=h)
+    form_b = client.get(f"/e/{b['id']}/form").data.decode()
+    assert f'<option value="{a["id"]}" selected>Bridge A</option>' in form_b and ">sw1<" not in form_b
+    rels = client.get(f"/api/entities/{b['id']}/relationships").get_json()["relationships"]
+    assert [r["other"]["name"] for r in rels if r["label"] == "has a wireless link to"] == ["Bridge A"]
+    history = client.get(f"/api/entities/{a['id']}/history").get_json()["history"]
+    assert any(c["label"] == "Wireless link" and c["new"] == "Bridge B" for e in history for c in e["changes"])
+    # Each end has its own place and address.
+    got = {e["name"]: e for e in (client.get(f"/api/entities/{x['id']}").get_json()["entity"] for x in (a, b))}
+    assert got["Bridge A"]["location"]["id"] == house["id"] and got["Bridge B"]["location"]["id"] == garage["id"]
+    # Only a bridge is offered, and a switch has no Wireless link section.
+    bad = client.post(f"/api/entities/{a['id']}", json={"s.bridge.other": switch["id"]}, headers=h)
+    assert bad.status_code == 400 and "wireless bridge that exists" in bad.get_json()["error"]
+    assert 'data-section="bridge" hidden>' in client.get(f"/e/{switch['id']}/form").data.decode()
+    assert 'data-section="bridge">' in form_b
+    # Unlinked from the other end.
+    client.post(f"/api/entities/{b['id']}", json={"s.bridge.other": ""}, headers=h)
+    assert 'Not linked</option>' in client.get(f"/e/{a['id']}/form").data.decode()
+    assert not [r for r in client.get(f"/api/entities/{a['id']}/relationships").get_json()["relationships"]
+                if r["label"] == "has a wireless link to"]
+
+
+
+def test_a_ups_powers_the_equipment_ticked(client, h, admin):
+    ups = make(client, h, "ups", name="ups1")
+    srv = make(client, h, "server", name="srv1")
+    sw = make(client, h, "network_device", name="sw1", **{"f.kind": "switch"})
+    other = make(client, h, "ups", name="ups2")
+    client.post(f"/api/entities/{ups['id']}", json={"s.powers.list": f"{srv['id']},{sw['id']}"}, headers=h)
+    rels = client.get(f"/api/entities/{srv['id']}/relationships").get_json()["relationships"]
+    assert [r["other"]["name"] for r in rels if r["label"] == "powered by"] == ["ups1"]
+    form = client.get(f"/e/{ups['id']}/form").data.decode()
+    assert '<span class="multi-group">Servers</span>' in form and ">ups2<" not in form
+    assert f'value="{srv["id"]}" data-multi-item checked' in form
+    # Unticked: the switch is no longer powered by it; a UPS can't be ticked.
+    client.post(f"/api/entities/{ups['id']}", json={"s.powers.list": str(srv["id"])}, headers=h)
+    assert not client.get(f"/api/entities/{sw['id']}/relationships").get_json()["relationships"]
+    bad = client.post(f"/api/entities/{ups['id']}", json={"s.powers.list": str(other["id"])}, headers=h)
+    assert bad.status_code == 400 and "hardware that exists" in bad.get_json()["error"]

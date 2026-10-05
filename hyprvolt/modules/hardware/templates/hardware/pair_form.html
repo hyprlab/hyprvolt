@@ -1,0 +1,13 @@
+{# The Wireless link or Coax link section in the form of a wireless bridge
+   or a MoCA adapter (views.py, PAIRS): the one at the other end, a link
+   that reads the same from either end. #}
+<div class="form-grid">
+  <label class="field">
+    <span class="field-label">Other end</span>
+    <select name="{{ name }}">
+      <option value="">Not linked</option>
+      {% for id, text in choices %}<option value="{{ id }}" {{ 'selected' if id == other_id }}>{{ text }}</option>{% endfor %}
+    </select>
+    <span class="hint">{{ hint if choices else empty }}</span>
+  </label>
+</div>

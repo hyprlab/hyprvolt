@@ -22,12 +22,13 @@
 </nav>
 
 {% for group in nav_groups %}
+<div class="sidebar-group" data-group="{{ group.label }}">
 <div class="sidebar-label"><span>{{ group.label }}</span></div>
 <nav class="nav-primary" aria-label="{{ group.label }}">
   {% for entry in group.modules %}
   {% set m = entry.module %}
   <a class="navitem {{ 'is-active' if entry.active and not entry.filters|selectattr('active')|list and not entry.types|selectattr('active')|list and not entry.pages|selectattr('active')|list and not request.args.get('archived') and not (entry.on_page and m.types) }}"
-     href="{{ entry.href }}">
+     href="{{ entry.href }}" data-module="{{ m.id }}">
     {{ type_icon(m.icon) }}
     <span>{{ m.name }}</span>
     {% if entry.count %}<span class="count">{{ entry.count }}</span>{% endif %}
@@ -40,7 +41,7 @@
     {% endfor %}
     {% for f in entry.filters %}
     <li><a class="sideitem {{ 'is-active' if f.active }}" href="{{ url_for('main.module_list', module_id=m.id, f=f.filter.key) }}">
-      <span class="sideitem-title">{{ f.filter.label }}</span>{% if f.count %}<span class="count count--alert">{{ f.count }}</span>{% endif %}</a></li>
+      <span class="sideitem-title">{{ f.filter.label }}</span>{% if f.count %}<span class="count {{ 'count--alert' if f.filter.alert }}">{{ f.count }}</span>{% endif %}</a></li>
     {% endfor %}
     {% for p in entry.pages %}
     <li><a class="sideitem {{ 'is-active' if p.active }}" href="{{ url_for('main.module_page', module_id=m.id, key=p.page.key) }}">
@@ -54,6 +55,7 @@
   {% endif %}
   {% endfor %}
 </nav>
+</div>
 {% endfor %}
 
 {% if nav_tags %}

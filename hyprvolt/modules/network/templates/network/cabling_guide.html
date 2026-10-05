@@ -1,0 +1,38 @@
+{# The guide's Cables step: Suggest cables opens its dialog and works the
+   cabling out at once (cabling.py), the suggestions in #cabling-suggest,
+   then what was added; Done comes back to the step. How they are worked
+   out is behind the info button beside the title. #}
+{% from "sheet/controls.html" import tip %}
+<div class="guide-extra">
+  <button type="button" class="btn btn--ghost" data-open="cabling-modal"
+          data-api-post="{{ url_for('network.cables_suggest') }}" data-body='{{ {"site": site, "back": back}|tojson }}'
+          data-then="replace" data-replace="cabling-suggest">Suggest cables…</button>
+  {% if unlabeled %}
+  <button type="button" class="btn btn--ghost" data-api-post="{{ url_for('network.cables_label') }}"
+          data-body='{"site": {{ site or 'null' }}}' data-then="reload">Label the unlabeled cables</button>
+  {% endif %}
+  <span class="hint">Have the cabling worked out from the gear and places recorded so far.
+    {%- if unlabeled %} {{ unlabeled }} {{ 'cable has' if unlabeled == 1 else 'cables have' }} no label: each is
+    given one from its network, such as 20-01 on VLAN 20.{% endif %}</span>
+</div>
+<dialog class="modal modal--xwide" id="cabling-modal" aria-labelledby="cabling-modal-title" data-restore="off">
+  <div class="modal-head">
+    <span class="field-head">
+      <h3 id="cabling-modal-title">Suggest cables</h3>
+      {{ tip("cabling-how", "How cables are suggested",
+             "The modem goes to the router or firewall, that to the core switch (the switch nearest it), and "
+             "every other switch to the core. A pair of MoCA adapters, or of wireless bridges, works like one "
+             "cable: its near end plugs into a switch, and what is in the far end's room plugs into that. "
+             "Every other device goes to a switch that carries its network, "
+             "or else the nearest switch: same rack, then same room, then same building. Switches with their "
+             "ports recorded give their free ports in order. Wireless extenders, patch panels, peripherals and "
+             "anything with a cable already are left out, and nothing is added until you add it.") }}
+    </span>
+    <button class="iconbtn" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="modal-body">
+    <div id="cabling-suggest"><p class="hint">Working out the cables…</p></div>
+  </div>
+</dialog>

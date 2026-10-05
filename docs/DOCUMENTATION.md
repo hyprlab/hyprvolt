@@ -13,9 +13,13 @@ docker compose up -d
 ```
 
 Open `http://<host>:8101`. The first visit opens the setup wizard, which
-creates the admin account. There is no default account or password. On an
-empty instance the dashboard offers to load a demo homelab to look around in;
-`flask seed-demo` does the same from the server.
+creates the admin account, then goes on into the guide that documents the
+first site a step at a time ([Setting up a site](#setting-up-a-site)). There
+is no default account or password. It is in the dark theme, as every new
+account is; the sun button at the top switches to light, and the admin
+account keeps the choice (Settings > Appearance changes it later). The guide's first page, and the dashboard
+while the instance is empty, offer to load a demo homelab to look around in
+instead; `flask seed-demo` does the same from the server.
 
 From a clone of the repository, `docker compose up -d` runs the same
 published image. `tools/redeploy.sh` builds the image from the working tree
@@ -81,6 +85,12 @@ in the database until it is turned back on. A module that needs another is
 off while that one is: Hardware needs Locations, and Virtual and Network
 need Hardware. The knowledge base and Secrets are built in, and stay on.
 
+An admin also sets the sidebar's order there: drag a group, or a module
+within its group, by its handle, or focus the handle and use ↑ and ↓. The
+order is saved as it changes, for every account, and Put the default order
+back undoes it. A record's sections from other modules follow the same
+order.
+
 A location, a piece of hardware, or a VM or LXC container can be made
 another kind in its Overview, under Type: a room that is really a building, a
 server recorded as a NAS, a VM that is really an LXC container. It keeps its
@@ -99,7 +109,16 @@ rack, units and face in its own form, and choosing a rack there makes the
 rack its location. The sidebar lists hardware whose warranty ends within the
 reminder window and hardware out of warranty (retired and disposed hardware
 is left out of both), and the dashboard's Coming up card shows warranties
-near their end.
+near their end. A UPS's Powers section ticks the equipment plugged into it,
+also in the setup guide's UPSes step, which offers the site's equipment:
+each is then powered by the UPS, and shows as going down with it. An IP
+phone records who uses it and its extension, and is added with the other
+endpoints in the setup guide's Endpoints step, as is an IP camera.
+
+An operating system field (a VM's, a container's, a server's) offers known
+operating systems as it is typed in: typing "ubu 24" lists Ubuntu Server and
+Ubuntu Desktop 24.04 LTS, and a click or the arrow keys and Enter fills it
+in. The last choice keeps what was typed, for a name not on the list.
 
 In Virtual, what something runs on is a field in its form: a VM's host, a
 hypervisor's hardware, a container's Docker host and stack. Each is also a
@@ -108,18 +127,82 @@ through its hypervisor and VMs down to the containers. A hypervisor's
 Guests tab adds up the vCPUs and memory of its running guests against the
 cores and memory recorded for its hardware, and a cluster's does the same
 for all its hypervisors. The sidebar lists VMs, containers and the rest that
-have no host yet.
+have no host yet. A bare-metal hypervisor is its server's operating system,
+so the address it is managed at goes on the hypervisor, and the server keeps
+only its iDRAC, iLO or IPMI address. Giving a hypervisor an address recorded
+on the server it runs on moves the address to it, and says so; any other
+address already assigned is refused. A server's or a NAS's Hypervisor section (also in
+the setup guide's Servers and storage step) has Runs a hypervisor: ticked,
+it adds a hypervisor of the same name running on the server, with its
+platform and management IP, and the server's IP address becomes its BMC's;
+unticked, it deletes that hypervisor after asking, unless something runs on
+it.
 
 In Network, a device's or a VM's IP addresses are typed into its own form,
 separated by commas; each becomes an IP address record in the subnet that
 holds it, and one taken off the list is deleted (it can be restored from
 Recently deleted), or only unassigned if it has notes or tags. An address can
-belong to one record at a time. A subnet's Addresses tab draws an IPv4 subnet
+belong to one record at a time. A subnet's range is typed as its network
+address with the subnet mask chosen beside it, and its DHCP range as its
+first and last address; a range the DHCP addresses don't fit in is refused.
+Once the range is typed, the gateway is filled in with its first address
+and the DHCP range with its upper half (.128 to .254 in a /24), leaving the
+lower half for fixed addresses; a gateway or range typed by hand is left
+alone.
+A subnet's Addresses tab draws an IPv4 subnet
 up to a /22 as a grid: used, reserved, held for DHCP or free. Choosing a free
-address records it. Anything with network ports has a Ports tab: add ports
-in a run (Port 1 to 24, or a patch panel's Front and Rear pairs), set a
-port's VLANs, and cable it to another device's port; a cabled port's path
-can be traced to the far end through patch panels. A domain's DNS records
+address records it. Anything with network ports has a Cabling tab. A cable
+goes to the device as a whole, to another device or to one of its ports,
+with no ports to set up first. A switch, router or firewall given a number
+of Ports (in its form, or the guide's Network gear step) takes no more
+cables than that: its Cabling tab counts them, a full one is no longer
+offered as the other end, and Suggest cables stops at it; with Ports left
+empty there is no limit. To be more exact about a device, turn on
+Record each port, the switch at the top of its Cabling tab: then add its
+ports in a run (Port 1 to 24, or a patch panel's Front and Rear pairs), set
+a port's VLANs, and cable each port; a patch panel needs its ports recorded
+for a path to go through it. Turning it off again keeps the ports, out of
+sight. A cabled port's path can be traced to the far end through patch
+panels. An internet connection
+is a network of the kind Internet connection, with its download and upload
+speeds (each a number with Mb/s or Gb/s chosen beside it), a Dynamic or
+Static switch for its IP address, and circuit ID. Static shows the line's
+fixed address, subnet mask (255.255.255.248 or /29), gateway and DNS
+servers; a gateway outside the address's network is refused. Dynamic hides
+them and keeps what was there. Its Comes in at names the modem, router or
+firewall the line plugs into (also set from that device's Internet
+connection section, and in the guide's Network gear step): the device then
+brings in the line, the network diagram draws the line above it, and the
+line depends on it. A modem in bridge mode has no address on your network
+and can be left without one. The ISP is a vendor, chosen in its Supplier
+section, with the contract for the line. The sidebar lists internet
+connections. A network device of the kind Wireless bridge links two places
+over the air: each end is its own record, with its own location and IP
+address, and its Wireless link section names the bridge at the other end, a
+link that reads the same from both; the diagram draws it as a dotted line.
+A Wireless extender is network gear that repeats an access point's signal.
+A MoCA adapter carries the network over the coaxial cable in the walls, and
+two of them work like one cable: each is its own record, where it is (so
+each can be powered by a UPS of its own), and its Coax link section names
+the adapter at the other end of the coax. In the guide's Network gear step
+a pair is one row: Where is one end, and Other end at the place of the
+other, which adds that adapter there (named for the pair and the place,
+with the same model) or moves it; deleting the row deletes both, and its Undo
+brings both back. Each is cabled to what it plugs into, and a trace,
+the Neighborhood and the network diagram go straight through the pair,
+naming the two adapters on the link as they do a patch panel.
+A wireless network is one Wi-Fi network name (SSID), with its security,
+bands, whether it is hidden, and the VLAN and subnet it puts devices on;
+its password belongs on its Secrets tab. The gear that broadcasts it (an
+access point, or network gear of the kind Modem, Router, Wireless extender
+or Wireless bridge) is ticked in its Broadcast by section, or the other way
+round in that gear's Wireless networks section; the network depends on the
+gear that broadcasts it. A switch, a router, a firewall or a modem that
+is the gateway ticks the VLANs and subnets it carries in its Networks
+section (and in the guide's Network gear step), or the other way round in
+a VLAN's or subnet's Carried by section; a subnet on a VLAN comes with the
+VLAN. A network depends on the gear that carries it, so the dependency view
+of a switch lists the networks it takes down. A domain's DNS records
 are written down by hand in its DNS records tab, and an A record or a CNAME
 that leads to a recorded address links to the device holding it. The
 palette finds DNS names and MAC addresses. The sidebar lists addresses with
@@ -178,8 +261,8 @@ were rolled back. The history of each record still logs every edit to it;
 changes are what people did to the systems themselves.
 
 Diagram draws the network from its cables: every device with a cable to
-another, the cables traced through patch panels (which are named on the
-link rather than drawn), in tiers from the internet side: modems, then
+another, the cables traced through patch panels and over pairs of MoCA
+adapters (which are named on the link rather than drawn), in tiers from the internet side: modems, then
 routers and firewalls, then outward. A "connected to" link between two
 devices with no cable recorded is drawn dashed. Hovering a link shows its
 ports and VLANs; choosing a device opens it. Every record with links or
@@ -215,7 +298,9 @@ have a Supplier section in their form: the vendor and the contract that
 covers them. A vendor's Supplies tab and a contract's Covers tab list what
 is linked; the sidebar lists contracts ending within the reminder window, or
 ended by no more than it. Phone numbers
-and email addresses are links.
+are kept as typed, not checked; one that can be dialed is a link, a vanity
+number such as 1-833-VERIZON dialing its keypad digits. Email addresses are
+links too.
 
 Settings > Custom fields adds fields of your own to any kind of record: text,
 a number, a date, a choice list, a web address, or yes or no. They appear in
@@ -305,6 +390,32 @@ with a header row, up to 5 MB and 5,000 rows) becomes records of one kind:
 5. Import. Rows with a problem are left out; the rest are saved, each with
    its line in the history. An exported file imports back unchanged.
 
+Services can also be read from a [Homepage](https://gethomepage.dev)
+dashboard: Import from Homepage, under Services in the sidebar and in the
+setup guide's Services step. Choose its `services.yaml`, and its
+`docker.yaml` if it has one (each up to 1 MB). Each service's name, group,
+link and description are read, and what it runs on is worked out from what
+the file says:
+
+- its Docker server and container: the container record on the Docker host
+  of that name, or at the address docker.yaml gives;
+- its Proxmox node and ID: the VM or LXC container with that ID on that
+  node;
+- its addresses (the widget's, the site monitor's, the ping's, then the
+  link's, which may be a reverse proxy's): the record an IP address is
+  assigned to, a name in a DNS record written down in Network, or a host
+  name like a record's own name.
+
+The review lists every service with what it would run on and why: Matched
+when one record is clearly best, Check when it is only likely, and Choose
+when nothing points anywhere or two are as likely, those first. Each has its
+Runs on, kind (guessed from the app: Sonarr is media, AdGuard Home DNS) and
+whether to add it, update the service of the same name, or leave it out.
+Import saves them, tagged with their Homepage group unless that is turned
+off, the description as notes and an address's port as Ports. API keys and
+passwords in the file are never read, and a value Homepage fills in itself
+(`{{HOMEPAGE_VAR_...}}`) is left out.
+
 Settings > Admin exports the whole instance as one JSON file: every table
 and row, the modules' own included, with password hashes, secret values, API
 token hashes and the Turnstile secret left out. Attached files are listed but
@@ -330,7 +441,9 @@ refused anything but reading. No token can reveal a secret, download the
 secrets key or a backup, restore one, or make or revoke tokens; those need
 someone signed in. Revoking one takes effect at once, and a restore revokes
 them all. Errors are
-`{"error": "..."}`, with a sentence meant for a person.
+`{"error": "..."}`, with a sentence meant for a person. A change that did
+more than was asked (an address moved from a server to its hypervisor) says
+so in `notices`, a list of sentences, beside the record.
 
 | Route | What it does |
 | --- | --- |
@@ -342,6 +455,7 @@ them all. Errors are
 | `POST /api/entities/by-slug/<slug>` | Create the record with that slug, or change it if it exists, so an import can run again without making copies. Creating needs `type` and `name`. The answer says `created` true or false; a slug held by a deleted record is refused until it is restored |
 | `POST /api/entities/<id>/archive`, `/delete`, `/restore` | Archive (`{"archived": false}` to undo), delete, restore |
 | `GET /api/entities/<id>/history`, `/relationships`, `/dependencies` | Its history, its links, what depends on it (`direction=dependencies` for the other way) |
+| `GET /api/catalogs/<key>` | A list of known names a field offers as it is typed in, under group headings: `os`, operating systems |
 | `POST /api/relationships`, `POST /api/relationships/<id>/delete` | Link two records (`kind`, `source_id`, `target_id`), unlink |
 | `GET /api/tags`, `GET /api/custom-fields` | Tags in use, custom field definitions |
 | `GET /api/entities/<id>/attachments`, `POST` the same | A record's files, the featured image aside; upload with multipart `file` parts. An image also has `thumb` and `large` |
@@ -352,10 +466,94 @@ them all. Errors are
 | `GET /export/<module>.csv` | A module's records as CSV, with the list's filters |
 | `GET /locations/racks/<id>/elevation` | A rack's units and what occupies them |
 | `GET /network/subnets/<id>/addresses` | A subnet's recorded addresses and how many are free |
-| `GET /network/devices/<id>/ports`, `GET /network/ports/<id>/trace` | A device's ports and cables; a cable path |
+| `GET /network/devices/<id>/ports`, `GET /network/ports/<id>/trace` | A device's ports and cables (a port with no name is where a cable meets a device cabled as a whole); a cable path |
 | `GET /network/domains/<id>/records` | A domain's DNS records |
 | `GET /software/titles/<id>/installations`, `GET /software/hosts/<id>/installations` | Where a title is installed; what a host has |
 | `GET /vault/entities/<id>/secrets` | A record's secrets, without their values, for an account with access |
+
+## Setting up a site
+
+A new install goes from the setup wizard straight into a guide that
+documents a site a step at a time; Set up a site, step by step, at the foot
+of the New record window (and the empty dashboard), opens it again later. Its first page says what it
+covers, in five parts: the place (the site, its buildings and rooms,
+racks, and the vendors it deals with), the network (the internet
+connection, VLANs, subnets, wireless networks), the equipment (network gear, servers and storage),
+what runs (hypervisors, virtual machines, services), and the endpoints, the
+UPSes that power them and everything else, and the cables between them.
+Steps of turned-off modules are left out. Each step has a What goes here
+button beside its title that says what belongs in it, what belongs in
+another step, and why: a Usenet provider or an indexer is a vendor, with its
+subscription as a contract, while SABnzbd, which you run, is a service. The guide has the screen to
+itself, the first time and every time after: no sidebar, search or New menu,
+only the steps. The app comes back at the end, or with Exit setup at the top.
+
+The last page counts what each step recorded and offers to start the site's
+runbook: a draft document in the knowledge base, attached to the site, that
+links to every room, device, subnet and service the guide recorded, with
+headings to fill in for who to call, what to check when the internet is
+down, what to do when something else breaks, and backups and recovery. Once
+it exists, the same button opens it.
+
+Buildings and rooms is a tree of the site: each place shows inside the one
+it is in, and its + buttons add a building or a room right there, saved as
+Enter is pressed, with the next name typed straight after. A room is in a
+building or straight in the site. Dragging a place by its handle onto another puts it inside that one, and
+onto the site brings it back to the top; with the handle focused, → puts it
+inside the place above it and ← takes it out a level. The × beside a place
+deletes it, and a building goes with the rooms in it: the dialog asks first
+and says how many, and Undo brings them all back.
+
+Every other step is a list of rows, one record a row: what the site has
+already, and a blank row at the end. Typing a name in the blank row and
+pressing Enter or its Add button adds it (nothing is added until then), and
+a new blank row appears for the next, so every endpoint or every service
+goes in one after another. In Network gear, Servers and storage, and
+Endpoints, the rows are grouped under a heading for each kind (modems,
+routers, firewalls, switches and so on, in that order), and a row whose
+kind is changed moves to its group. A row once added folds to one line, its name and
+what it holds; choosing it opens it again, and moving into another row folds
+it back. Any field of a row is changed in place and saved when it is left, a
+row's kind too (a router into a firewall); a change that doesn't fit says
+why under the row and saves nothing. The × on a row deletes it, asked first
+and with Undo. Continue goes on; anything typed in the blank row is added
+first, and if it can't be (it has no name), it says why and the step stays.
+Back, the steps down the side and Exit setup do the same. On the first step,
+the Site choice picks another site, or a new one; the guide can be run again
+to add what was left out, or for another site.
+
+Each cable in the Cables step can be moved: choose another From or To in
+its row (a free port, or a device with a port to spare) and the cable keeps
+its label, color and length. Once the site has a cable, the Cables step
+draws the network diagram below its rows, drawn again as each cable is added or deleted. The Cables step's
+Suggest cables works the cabling out from the steps before. Each modem goes to the gateway (a firewall, otherwise a router), the
+gateway to the core switch (the switch nearest it, by rack, room and
+building), and each other switch to the core. A pair of MoCA adapters, or
+of wireless bridges, works like one cable: its end nearer the gateway plugs
+into a switch, and its far end serves the place it is in, with no cable
+between the two. Every other device goes to
+a switch that carries its subnet (or the VLAN of it, or of a wireless
+network it broadcasts) if any does, otherwise to the switch nearest it, or
+to the far end serving its place, and a switch
+with its ports recorded gives its free ports in order. Wireless extenders,
+patch panels, peripherals and anything with a cable already are left out.
+Each suggestion says why and is marked Likely, Check (the switch is
+further away, or nothing records where the device is) or Choose a port
+(the switch has none free); either end can be changed, and nothing is
+added until Add the cables. The ones ticked are added, and any that can't
+be are listed with the reason.
+
+A cable added in the Cables step without a label is given one from its
+network: the VLAN's number, or with no VLAN the subnet's third number
+(192.168.50.0/24 is 50), then a running number, so 20-03 is the third cable
+on VLAN 20. The network is the VLAN set on the switch port it plugs into,
+if any, otherwise the subnet of the device's address (one the switch
+carries, if it has several), with patch panels followed to the device at
+the far end. A cable between two pieces of network gear is an uplink,
+UP-01, from a modem to the gateway WAN-01, and one whose network isn't
+known C-01. Suggest cables fills in each label the same way, to change
+before adding, and Label the unlabeled cables, shown while any cable in the
+site has none, labels those.
 
 ## Records
 
@@ -367,12 +565,35 @@ that one alone.
 
 A record's Relationships tab ends with its dependency view: what breaks if
 it goes down, and what it needs, followed through the links that carry a
-dependency (runs on, hosted by, depends on, installed on, powered by). It
+dependency (runs on, hosted by, depends on, installed on, powered by) and
+through the cables. A device cabled to network gear (a switch, router,
+firewall, modem or MoCA adapter) needs it, through any patch panels on the
+way; between two pieces of gear, the one further from where the internet
+comes in needs the nearer one (an edge switch the core, the core the
+firewall), and at the same distance neither needs the other. The far end
+of a MoCA or wireless bridge pair needs the near end. A UPS or a peripheral
+cabled to the network is managed over it and goes on working without it,
+so its cable makes it need nothing. None of this is stored: it follows the
+cables as they are, and a link that says the same is shown once. The tab
+lists the devices a device is cabled to under Cabled to, read-only, with the
+ports, any patch panels and the cable labels; the cable is changed in the
+Cabling tab. The form for a new link opens from Add link. It
 opens as a drawing, and List and Diagram switch between that and two nested
 lists. In the drawing, the record sits in the middle, what it needs above
-it and what breaks below it, a row for each step further away. A record
+it and what breaks below it, a row for each step further away. A dashed
+line through the record divides the two, What it needs named just above it
+and What breaks if this goes down just below; the names keep their size and
+stay in sight however far the drawing is zoomed or scrolled, at the edge
+the line went out by once it is out of view. A record
 reached two ways is one box with two lines into it, and a loop is a dashed
-line. Any box opens its record. The choice is remembered in the browser.
+line. Any box opens its record. A record with more hanging from it has a −
+on the edge its branch leaves from (below it under the record, above it over
+it): choosing it, or Enter on it, folds the branch away and draws the rest
+again closer together, with a +N in its place saying how many records it
+hides, and choosing that shows them again. Collapse all, beside the zoom
+buttons, folds everything past the records next to this one, and Expand all
+opens it all again. The folds last while the record is open, through edits
+to it, and it opens unfolded next time. The choice is remembered in the browser.
 
 Every diagram (this one, the Neighborhood tab and the network diagram)
 opens with all of it showing. −, Fit and + above it zoom it, as does
@@ -388,7 +609,23 @@ can't be saved (a required field left empty, a number out of range) says why
 under the field and keeps what was typed; closing the record then keeps it
 open once, and closing it again discards the change. Notes and other long
 text show formatted, with an Edit button that opens them as Markdown. `e`
-puts the cursor in the first field. New records are made in the form.
+puts the cursor in the first field.
+
+New records are made in the New record window, from New at the top of the
+page or the `n` key. It starts with what kind of record: type to search
+(by name, plural or module, and by the kinds a type comes in, so "switch"
+finds a network device with Switch chosen and "dns" a DNS service), or
+choose from the list, grouped by module; the arrow keys and Enter pick
+too. The form follows a step at a time down the rail: Basics (the name,
+status, location and tags, and the type's own main fields), then each
+group of fields, custom fields, each section other modules add (Rack
+position, IP addresses) and Notes. Next and Enter go on, Back and the rail
+go anywhere, and Create saves from any step; a required field left empty
+brings its step back with the reason. A choice that rules a section out
+(a tower has no rack position) takes its step away. Going back to the kind
+and choosing another keeps what was typed. A New button on a record (a VLAN
+on its network, a contract on its vendor) opens the window at Basics, the
+kind and the link to that record already settled.
 
 Deleting a record, a link or a file can be undone from the message that
 follows. A deleted record then waits under Recently deleted, where it can
@@ -571,11 +808,12 @@ its database, without signing in. The image's `HEALTHCHECK` uses it, so
 | Key | Where | What it does |
 | --- | --- | --- |
 | Ctrl K, ⌘K or `/` | anywhere | Search |
-| `n` | a page | New record (the menu of kinds, where there is more than one) |
+| `n` | a page | New record: the window that searches every kind of record, then walks through its form |
 | `j`, `k` | a record | Next, previous in the list |
 | Back, Forward (the browser's, or ‹ › in the record's bar) | a record | The records opened one from another: a link, a page's Next, `j` and `k`. Back from the first one closes it |
 | `1` to `9`, ↑ ↓ (← → on a narrow screen) | a record | Scroll to its sections |
 | `e`, `a`, `c` | a record | Edit (the cursor in its first field), archive or unarchive, copy its link |
+| `?` | a page | Help: how records, links and cables connect, and what follows from them |
 | Esc | a dialog | Close it |
 
 ## Troubleshooting

@@ -9,6 +9,7 @@ from hyprvolt.core import records
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity
 from hyprvolt.models import db
+from hyprvolt.registry import current as registry
 
 from .models import DnsRecord, NetworkDetail
 
@@ -79,6 +80,42 @@ def check_subnet(entity, detail):
                     else NetworkDetail.network == detail.network).first())
     if same:
         raise Invalid(f"{detail.cidr} is already recorded as {same[0].name}.")
+
+
+def _netmask(raw: str) -> str:
+    """255.255.255.248 from "255.255.255.248", "/29" or "29"; "/64" for an
+    IPv6 prefix, which has no dotted form."""
+    text = raw.strip().lstrip("/")
+    try:
+        if text.isdigit():
+            n = int(text)
+            if n <= 32:
+                return str(ipaddress.IPv4Network(f"0.0.0.0/{n}").netmask)
+            if n <= 128:
+                return f"/{n}"
+            raise ValueError
+        return str(ipaddress.IPv4Network(f"0.0.0.0/{text}").netmask)
+    except ValueError:
+        raise Invalid("The subnet mask is written as 255.255.255.248, or /29.") from None
+
+
+def check_network(entity, detail):
+    """A static line's subnet mask, written one way; its gateway inside the
+    network of its address, when that is one address."""
+    if not detail:
+        return
+    if detail.netmask:
+        detail.netmask = _netmask(detail.netmask)
+    if not (detail.static_ip and detail.netmask and detail.gateway and detail.public_ips):
+        return
+    try:
+        address = ipaddress.ip_address(detail.public_ips.strip())
+        mask = detail.netmask.lstrip("/") if detail.netmask.startswith("/") else detail.netmask
+        net = ipaddress.ip_interface(f"{address}/{mask}").network
+    except ValueError:
+        return                          # a range or a list: nothing to check it against
+    if ipaddress.ip_address(detail.gateway) not in net:
+        raise Invalid(f"The gateway {detail.gateway} is outside {net}, the network of {address}.")
 
 
 def check_vlan(entity, detail):
@@ -242,6 +279,22 @@ def section_form(etype, entity) -> str:
     return render_template("network/addresses_form.html", current=current)
 
 
+def section_values(entity) -> dict:
+    return {"list": ", ".join(d.address for _, d in addresses_of(entity))}
+
+
+def _takes_from(entity, holder) -> bool:
+    """A hypervisor (a type with the ``takes_host_address`` trait) takes an
+    address from the machine it runs on: it is that machine's operating
+    system, and the address is where it is reached. The other way round, an
+    address the hypervisor has is left with it when its machine lists it
+    too, as a server's form saved with its new hypervisor does."""
+    from hyprvolt.core import relations
+    etype = registry().type(entity.type)
+    return (etype is not None and "takes_host_address" in etype.traits
+            and any(e.id == holder.id for e in relations.linked("runs_on", entity, "source")))
+
+
 def section_save(entity, values, user) -> list[dict]:
     """Make the record's addresses the ones listed: new ones become IP
     address records assigned to it, and one taken off the list is deleted
@@ -259,15 +312,26 @@ def section_save(entity, values, user) -> list[dict]:
             wanted.append(text)
     have = {d.address: e for e, d in addresses_of(entity)}
     old = ", ".join(sorted(have, key=ip_key))
-    for text in wanted:
+    for text in list(wanted):
         if text in have:
             continue
         found = _live_details("ip_address").filter(NetworkDetail.address == text).first()
         if found:
             ip, d = found
-            if d.assigned and d.assigned != entity.id and records.live(d.assigned):
-                raise Invalid(f"{text} is assigned to {records.live(d.assigned).name}. Change it there first.")
+            holder = records.live(d.assigned) if d.assigned and d.assigned != entity.id else None
+            if holder is not None and _takes_from(holder, entity):
+                wanted.remove(text)      # the hypervisor on this server has it: it stays there
+                continue
+            if holder is not None and not _takes_from(entity, holder):
+                raise Invalid(f"{text} is assigned to {holder.name}. Change it there first.")
             records.update(ip, {"fields": {"assigned": entity.id}}, user)
+            if holder is not None:
+                records.audit(holder, "edited", [{"field": "addresses", "label": "IP addresses", "old": text,
+                                                  "new": f"moved to {entity.name}"}], user)
+                # Named with what each is: a server and its hypervisor often share a name.
+                kind = {e.id: registry().type(e.type).text() for e in (holder, entity)}
+                records.notice(f"{text} moved from the {kind[holder.id]} {holder.name} to the "
+                               f"{kind[entity.id]} {entity.name} running on it.")
         else:
             records.create("ip_address", {"fields": {"address": text, "assigned": entity.id}}, user)
     for text, ip in have.items():

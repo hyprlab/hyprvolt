@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="en" data-theme-pref="{{ current_user.theme if current_user.is_authenticated else 'system' }}">
+<html lang="en" data-theme-pref="{{ current_user.theme if current_user.is_authenticated else 'dark' }}"
+      {%- if current_user.is_authenticated %} data-signed-in{% endif %}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -13,8 +14,13 @@
   <link rel="stylesheet" href="{{ static_url('css/app.css') }}">
   <script>
     // Resolve the theme before first paint, or the page flashes the wrong one.
+    // Signed out, dark unless this browser chose light (the setup page).
     (function () {
-      var pref = document.documentElement.getAttribute('data-theme-pref') || 'system';
+      var pref = document.documentElement.getAttribute('data-theme-pref') || 'dark';
+      if (!document.documentElement.hasAttribute('data-signed-in')) {
+        try { pref = localStorage.getItem('theme') || pref; } catch (e) {}
+        document.documentElement.setAttribute('data-theme-pref', pref);
+      }
       var theme = pref === 'system'
         ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
         : pref;

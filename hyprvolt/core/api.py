@@ -92,6 +92,19 @@ def _fail(err: Invalid):
 
 # ———— Entities ————
 
+@bp.route("/catalogs/<key>")
+@role("viewer")
+def catalog(key):
+    """A list of known names a field offers as it is typed in (core/catalogs.py)."""
+    from .catalogs import catalog as find
+    groups = find(key)
+    if groups is None:
+        return jsonify(error="There is no such list."), 404
+    resp = jsonify(groups=groups)
+    resp.headers["Cache-Control"] = "private, max-age=3600"
+    return resp
+
+
 @bp.route("/entities")
 @role("viewer")
 def entity_list():
@@ -141,7 +154,7 @@ def entity_create():
     except Invalid as err:
         return _fail(err)
     db.session.commit()
-    return jsonify(ok=True, entity=to_json(entity))
+    return jsonify(ok=True, entity=to_json(entity), notices=records.notices())
 
 
 def _attach_new(entity: Entity, target_id) -> None:
@@ -218,7 +231,7 @@ def entity_update(entity_id):
     except Invalid as err:
         return _fail(err)
     db.session.commit()
-    return jsonify(ok=True, entity=to_json(entity))
+    return jsonify(ok=True, entity=to_json(entity), notices=records.notices())
 
 
 @bp.route("/entities/<int:entity_id>/archive", methods=["POST"])

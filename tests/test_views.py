@@ -1,6 +1,7 @@
 """The pages and fragments the interface is built from: lists, the sheet and
 its tabs, the form, and the dashboard."""
 import io
+import re
 
 from .conftest import make
 
@@ -19,6 +20,25 @@ def test_a_module_list_and_its_sidebar(client, h, admin):
     assert "Blue box" in body and "blue" in body            # the list field shows in the row
     assert 'href="/example?tag=lab"' in body                 # tags filter within the module
     assert client.get("/nosuchmodule").status_code == 404
+
+
+def test_the_new_record_window_offers_every_enabled_module_on_every_page(client, h, admin):
+    def offered(url):
+        page = client.get(url).data.decode()
+        kinds = page.split('id="newrec-list"')[1].split('id="newrec-none"')[0]
+        return set(re.findall(r'data-kind-type="([a-z_]+)"', kinds))
+    everything = offered("/")
+    assert {"server", "vm", "subnet", "vendor", "document"} <= everything
+    for url in ("/network", "/hardware?view=list", "/contacts"):
+        assert offered(url) == everything, url
+    page = client.get("/").data.decode()
+    assert 'id="new-btn" data-new-record' in page and 'id="new-menu"' not in page
+    # The kinds a type comes in are found too, and start its form with the kind chosen.
+    assert 'data-kind-type="network_device" data-kind="switch" data-label="Switch" data-text="switch"' in page
+    assert 'data-kind-type="service" data-kind="dns" data-label="DNS" data-text="DNS"' in page
+    assert 'data-kind="other"' not in page
+    client.post("/admin/modules/contacts", json={"enabled": False}, headers=h)
+    assert "vendor" not in offered("/network")
 
 
 def test_the_sheet_has_the_core_sections_one_after_another(client, h, admin):
@@ -59,6 +79,18 @@ def test_the_form_follows_the_schema(client, h, admin):
     assert client.get("/e/form?type=nothing").status_code == 404
 
 
+def test_a_new_records_form_comes_in_steps(client, h, admin):
+    body = client.get("/e/form?type=server&f.kind=tower").data.decode()
+    steps = re.findall(r'data-step="([^"]*)"', body)
+    assert steps[:4] == ["Basics", "", "Specs", "Purchase"] and steps[-1] == "Notes"
+    assert 'data-step="Rack position" data-section="rack" hidden' in body
+    assert '<option value="tower" selected>' in body
+    # The window has the error and Create; an edit's form keeps its own.
+    assert 'type="submit"' not in body
+    g = make(client, h, name="Blue box")
+    assert 'type="submit"' in client.get(f"/e/{g['id']}/form").data.decode()
+
+
 def test_viewers_get_no_form_and_no_edit_buttons(client, h, admin, viewer):
     g = make(client, h, name="Blue box")
     other, _ = viewer
@@ -66,8 +98,18 @@ def test_viewers_get_no_form_and_no_edit_buttons(client, h, admin, viewer):
     assert other.get("/e/form?type=gadget").status_code == 403
     page = other.get("/example").data.decode()
     assert 'id="sheet-edit"' not in page and 'id="sheet-delete"' not in page and "data-new-type" not in page
+    assert 'id="entity-modal"' not in page
     sheet = other.get(f"/e/{g['id']}/sheet?tab=relationships").data.decode()
     assert "linkform" not in sheet
+
+
+def test_the_link_form_waits_behind_add_link(client, h, admin):
+    g = make(client, h, name="Blue box")
+    sheet = client.get(f"/e/{g['id']}/sheet?tab=relationships").data.decode()
+    assert f'data-show="linkform-{g["id"]}"' in sheet and f'id="linkform-{g["id"]}" hidden' in sheet
+    # The record is found by typing in the field, not in the search window.
+    assert f'<input type="text" data-pick data-pick-into="other_id" data-pick-exclude="{g["id"]}"' in sheet
+    assert "pickbtn" not in sheet
 
 
 def test_a_deleted_record_shows_how_to_get_it_back(client, h, admin):
@@ -114,3 +156,12 @@ def test_an_account_can_see_one_section_at_a_time(client, h, admin):
     assert 'id="record-scroll" >' in client.get("/").get_data(as_text=True)
     client.post("/settings", json={"record_scroll": True}, headers=h)
     assert client.get(f"/e/{g['id']}/sheet").data.decode().count('data-panel="') == 7
+
+
+def test_help_explains_links_and_cables_from_the_registry(client, h, admin):
+    page = client.get("/").data.decode()
+    assert 'id="help-modal"' in page and 'data-open="help-modal"' in page
+    assert 'data-pane="versus"' in page and "Do I link what is cabled?" in page
+    # The kinds of link come from the core and the modules turned on, with which carry a dependency.
+    assert "<tr><td>runs on</td><td>runs</td><td>Yes</td></tr>" in page
+    assert "<tr><td>comes in at</td><td>brings in</td><td>Yes</td></tr>" in page

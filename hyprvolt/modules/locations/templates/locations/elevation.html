@@ -1,6 +1,6 @@
 {# A rack, front and rear, one grid row per unit. Mounts span their rows;
    an empty unit is a button that fills in the form below (editors). #}
-{% from "partials/macros.html" import entity_link %}
+{% from "partials/macros.html" import entity_link, record_pick %}
 {% if lay.problems %}
 <div class="banner banner--danger rack-problems">
   <ul>
@@ -63,12 +63,9 @@
 <form class="mountform" id="mount-form-{{ rack.id }}" data-api="/locations/racks/{{ rack.id }}/mounts" data-then="sheet" data-done="Placed" hidden>
   <p class="setting-label">Place in {{ rack.name }}</p>
   <input type="hidden" name="entity_id" value="">
-  <div class="field mountform-what"><span class="field-label">A record</span>
-    <button type="button" class="pickbtn" data-pick data-pick-into="entity_id" data-pick-exclude="{{ rack.id }}">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-      <span data-pick-label>Choose…</span>
-    </button>
-  </div>
+  <label class="field mountform-what"><span class="field-label">A record</span>
+    {{ record_pick(into='entity_id', exclude=rack.id) }}
+  </label>
   <label class="field mountform-label"><span class="field-label">Or just a name</span>
     <input name="label" maxlength="120" placeholder="Patch panel, blanking plate…"></label>
   <label class="field"><span class="field-label">Lowest unit</span>

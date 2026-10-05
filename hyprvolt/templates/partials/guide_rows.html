@@ -1,0 +1,118 @@
+{# A step of rows in the site setup guide (core/guide.py, _rows_html): what is
+   recorded already, one row each, and a blank row at the end for the next.
+   app.js ([data-rows]) saves a field of a row as it changes, adds the blank
+   row when asked (Enter, the Add button, or Continue), and
+   deletes a row after asking, each change at once; then this is drawn again
+   from data-rows-url. A saved row is folded to one line, its name and what
+   it holds (app.js writes that summary), and opens to change it. #}
+{% from "sheet/controls.html" import cidr, iprange, multi, speed, suggest_attrs, switch %}
+{% macro choice_options(choices, v) %}
+  {%- for c in choices %}
+    {%- if c is mapping %}<optgroup label="{{ c.label }}">{{ choice_options(c.options, v) }}</optgroup>
+    {%- else %}<option value="{{ c[0] }}" {{ 'selected' if c[0]|string == v|string }}>{{ c[1] }}</option>{% endif %}
+  {%- endfor %}
+{%- endmacro %}
+{% macro control(c, v, off=false, fresh=false, choices=none) %}
+  {% if c.kind == 'speed' %}
+  {{ speed(c.name, v if v != '' else none, label=c.label, disabled=off) }}
+  {% elif c.kind == 'cidr' %}
+  {{ cidr(c.name, v, label=c.label, disabled=off, placeholder=(c.placeholder or '').split('/')[0], prefills=c.prefills or ()) }}
+  {% elif c.kind == 'iprange' %}
+  {{ iprange(c.name, v, label=c.label, disabled=off) }}
+  {% elif c.kind == 'select' %}
+  <select name="{{ c.name }}" {{ 'disabled' if off }}>
+    {% if not c.required %}<option value="">{{ '—' if off else 'Not set' }}</option>{% endif %}
+    {% if not off %}{{ choice_options(choices or c.choices, v) }}{% endif %}
+  </select>
+  {% else %}
+  <input type="{{ 'number' if c.kind == 'number' else 'text' }}" name="{{ c.name }}" value="{{ v }}"
+         {%- if off %} disabled placeholder="—"{% elif fresh and c.name == 'name' %} placeholder="Type a name to add one"
+         {%- elif c.placeholder %} placeholder="{{ c.placeholder }}"{% endif %}
+         {%- if c.kind == 'number' %} step="any"{% if c.unit %} data-unit="{{ c.unit }}"{% endif %}{% endif %}
+         {%- if c.suggest and not off %}{{ suggest_attrs(c.suggest) }}{% else %} autocomplete="off"{% endif %} spellcheck="false" maxlength="500">
+  {% endif %}
+{% endmacro %}
+{% macro _shown(v) %}{{ '1' if v is sameas true else '0' if v is sameas false else (v if v is not none else '') }}{% endmacro %}
+{% macro row_fields(r) %}
+  {% for c in cols %}
+  {% set v = r['values'].get(c.name, c.default if c.default is not none else '') if r else (c.default if c.default is not none else '') %}
+  {# Shown only while the field it follows has a value (app.js, [data-when]). #}
+  {% set follows %}{% if c.when %} data-when="{{ c.when[0] }}" data-when-is="{{ c.when[1] }}"{% if c.name in (r.hidden if r else new_hidden) %} hidden{% endif %}{% endif %}{% endset %}
+  {# A new line of the row (SetupField.newline), hidden with its field. #}
+  {% if c.newline %}<span class="guide-break" aria-hidden="true"{{ follows }}></span>{% endif %}
+  {# A label that changes with another column (SetupField relabel): a
+     server's IP address is its BMC's once it runs a hypervisor. #}
+  {% set label %}{% if c.relabel and r and _shown(r['values'].get(c.relabel[0])) == c.relabel[1] %}{{ c.relabel[2] }}{% else %}{{ c.label }}{% endif %}{% endset %}
+  {% set relabel %}{% if c.relabel %} data-relabel="{{ c.relabel[0] }}" data-relabel-is="{{ c.relabel[1] }}" data-relabel-to="{{ c.relabel[2] }}" data-relabel-from="{{ c.label }}"{% endif %}{% endset %}
+  {% if r and c.name in r.locked %}
+  <div class="field guide-locked"><span class="field-label">{{ c.label }}</span><span class="guide-locked-text">{{ r.text[c.name] }}</span></div>
+  {% elif c.kind == 'check' and c.switch %}
+  <div class="field guide-switch"{{ follows }}><span class="field-label">{{ c.label }}</span>
+    {{ switch(c.name, v, c.switch, disabled=r and c.name in r.absent, label=c.label) }}</div>
+  {% elif c.kind == 'multi' %}
+  <div class="field guide-multi"{{ follows }}><span class="field-label">{{ c.label }}</span>
+    {{ multi(c.name, v, c.choices, label=c.label, disabled=r and c.name in r.absent,
+             empty=c.placeholder or 'None recorded yet: add them in the ' ~ c.label ~ ' step.') }}</div>
+  {% elif c.kind == 'check' %}
+  <label class="check guide-check"{{ follows }}><input type="checkbox" name="{{ c.name }}" value="1" {{ 'checked' if v }} {{ 'disabled' if r and c.name in r.absent }}
+    {%- if c.confirm_off %} data-confirm-off="{{ c.confirm_off[0] }}" data-confirm-text="{{ c.confirm_off[1] }}"{% endif %}
+    {%- set why = (r.blocked or {}).get(c.name) if r else none %}
+    {%- if why %} data-confirm-blocked="{{ why[0] }}" data-confirm-blocked-text="{{ why[1] }}"{% endif %}><span>{{ c.label }}</span></label>
+  {% else %}
+  <label class="field {{ 'guide-wide' if c.name == 'name' }}{{ ' guide-joined' if c.kind in ('cidr', 'iprange') }}"{{ follows }}><span class="field-label"{{ relabel }}>{{ label }}</span>
+    {{ control(c, v, r and c.name in r.absent, not r, choices=(r.choices or {}).get(c.name) if r else none) }}</label>
+  {% endif %}
+  {% endfor %}
+{% endmacro %}
+<div class="guide-rows" data-rows{{ ' data-redraw' if step.save }} data-rows-url="{{ url_for('guide.rows_part', key=step.key, **site) }}"
+     data-create="{{ url_for('guide.row_create', key=step.key, **site) }}">
+  {# Each row its own form, so a choice of radios (Dynamic or Static) is its
+     own in every row, not one across the page. #}
+  {% for r in rows %}
+  {% if r.group and (loop.first or loop.previtem.group != r.group) %}
+  <p class="kicker guide-kind">{{ r.group }}</p>
+  {% endif %}
+  <form class="guide-row-form" data-row-form novalidate>
+  <fieldset class="guide-row is-collapsed" data-row data-row-id="{{ r.id }}" data-name="{{ r.label }}"
+            {%- if r.in_title %} data-in-title="{{ r.in_title|join(' ') }}"{% endif %}
+            data-update="{{ url_for('guide.row_update', key=step.key, row_id=r.id, **site) }}"
+            data-delete="{{ url_for('guide.row_delete', key=step.key, row_id=r.id, **site) }}">
+    <legend class="visually-hidden">{{ r.label }}</legend>
+    <div class="guide-row-head">
+      <button type="button" class="guide-row-toggle" data-row-toggle aria-expanded="false"
+              aria-controls="{{ step.key }}-row-{{ r.id }}" title="Show or change it">
+        <svg class="guide-row-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        {#- A row that isn't a record can fold to its own title and a badge
+            (a cable: its label, then its two ends), the columns those show
+            left out of the summary beside them. #}
+        {%- if r.badge %}{% set b = r['values'].get(r.badge) %}
+        <code class="slug guide-row-badge{{ ' is-empty' if not b }}" data-row-badge="{{ r.badge }}">{{ b or 'No label' }}</code>
+        {%- endif %}
+        <span class="guide-row-title{{ ' guide-row-title--full' if r.title }}" data-row-title>{{ r.title or r.label }}</span>
+        <span class="guide-row-summary" data-row-summary></span>
+      </button>
+      <button type="button" class="iconbtn iconbtn--sm iconbtn--danger guide-remove" data-row-delete
+              aria-label="Delete {{ r.label }}" title="Delete">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="guide-row-body" id="{{ step.key }}-row-{{ r.id }}">{{ row_fields(r) }}</div>
+    <p class="form-error guide-row-error" role="alert" hidden></p>
+  </fieldset>
+  </form>
+  {% endfor %}
+  {% if new %}
+  {% if rows and rows[0].group %}<p class="kicker guide-kind">Add another</p>{% endif %}
+  <form class="guide-row-form" data-row-form novalidate>
+  <fieldset class="guide-row guide-row--new" data-row-new>
+    <legend class="visually-hidden">A new one</legend>
+    <div class="guide-row-body">
+      {{ row_fields(none) }}
+      <button type="button" class="btn btn--ghost guide-add-row" data-row-add>Add</button>
+    </div>
+    <p class="form-error guide-row-error" role="alert" hidden></p>
+  </fieldset>
+  </form>
+  {% endif %}
+  {% if after %}<div class="guide-after">{{ after }}</div>{% endif %}
+</div>

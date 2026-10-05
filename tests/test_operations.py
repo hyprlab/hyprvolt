@@ -1,8 +1,15 @@
 """Software, Services, and Contacts and vendors: installations and seats,
 services and what they run on, suppliers and contracts."""
+import re
 from datetime import date, timedelta
 
 from .conftest import make
+
+
+def listed(client, url):
+    """A page without the New record window, whose kinds (DNS, Lease) would
+    match a record's name."""
+    return client.get(url).data.decode().split('id="entity-modal"')[0]
 
 
 def post(client, h, url, status=200, **body):
@@ -107,7 +114,32 @@ def test_a_service_runs_on_a_host_and_depends_on_its_domain(client, h, admin):
     assert "Website" in tree_names(client.get(f"/api/entities/{server['id']}/dependencies").get_json()["tree"])
     assert "Website" in tree_names(client.get(f"/api/entities/{domain['id']}/dependencies").get_json()["tree"])
     form = client.get("/e/form?type=service").data.decode()
-    assert "docker1 · Virtual machine" in form and ">example.net</option>" in form and "Home · Site" not in form
+    # Runs on lists each kind of host under its own heading.
+    runs_on = form.split('name="f.host"')[1].split("</select>")[0]
+    assert re.search(r'<optgroup label="Virtual machines"><option value="\d+" >docker1</option>', runs_on)
+    assert ">example.net</option>" in form and ">Home<" not in runs_on
+
+
+def test_a_service_kind_is_chosen_under_its_heading(client, h, admin):
+    form = client.get("/e/form?type=service").data.decode()
+    network = form.split('<optgroup label="Network">')[1].split("</optgroup>")[0]
+    assert '<option value="dhcp" >DHCP</option>' in network and ">Reverse proxy<" in network
+    assert '<option value="ddns" >Dynamic DNS</option>' in network and '<option value="adblock" >Ad blocking</option>' in network
+    assert form.index('label="Apps"') < form.index('<option value="other" >Other</option>')
+    dhcp = make(client, h, "service", name="Kea", **{"f.kind": "dhcp"})
+    assert client.get(f"/api/entities/{dhcp['id']}").get_json()["entity"]["fields"]["kind"] == "dhcp"
+    # The New record window finds it by the kind.
+    assert 'data-kind-type="service" data-kind="dhcp"' in client.get("/").data.decode()
+
+
+def test_a_service_address_can_be_an_ip_address_or_hostname(client, h, admin):
+    for address in ("192.168.1.1", "192.168.1.1:67", "[fd00::1]:53", "router.lab:8443/admin", "https://dhcp.lab"):
+        made = make(client, h, "service", name=f"DHCP {address}", **{"f.kind": "dhcp", "f.url": address})
+        assert client.get(f"/api/entities/{made['id']}").get_json()["entity"]["fields"]["url"] == address
+    bad = client.post("/api/entities", json={"type": "service", "name": "X", "f.url": "not an address"}, headers=h)
+    assert bad.status_code == 400 and "IP address or hostname" in bad.get_json()["error"]
+    gopher = client.post("/api/entities", json={"type": "service", "name": "Y", "f.url": "gopher://x"}, headers=h)
+    assert gopher.status_code == 400
 
 
 def test_services_that_matter_show_on_the_dashboard(client, h, admin):
@@ -116,8 +148,8 @@ def test_services_that_matter_show_on_the_dashboard(client, h, admin):
     make(client, h, "service", name="Grafana")
     card = client.get("/").data.decode().split('<p class="setting-label">Services</p>')[1].split("</section>")[0]
     assert card.index(">Backups<") < card.index(">DNS<") and ">Grafana<" not in card and "Degraded" in card
-    assert ">DNS<" in client.get("/services?f=important&view=list").data.decode()
-    trouble = client.get("/services?f=trouble&view=list").data.decode()
+    assert ">DNS<" in listed(client, "/services?f=important&view=list")
+    trouble = listed(client, "/services?f=trouble&view=list")
     assert ">Backups<" in trouble and ">DNS<" not in trouble
 
 
@@ -126,8 +158,13 @@ def test_services_that_matter_show_on_the_dashboard(client, h, admin):
 def test_vendors_people_and_their_numbers(client, h, admin):
     vendor = make(client, h, "vendor", name="Dell", **{"f.support_phone": "+1 555 010 0142 ext 7",
                                                        "f.support_email": "help@dell.example"})
-    assert "phone number" in client.post("/api/entities", json={"type": "vendor", "name": "x",
-                                                                "f.support_phone": "call me"}, headers=h).get_json()["error"]
+    # A phone number is kept as written; what can be dialed is a tel: link,
+    # a vanity number's letters on their keys.
+    verizon = make(client, h, "vendor", name="Verizon", **{"f.support_phone": "1-833-VERIZON"})
+    loose = make(client, h, "vendor", name="Loose", **{"f.support_phone": "call Sam at the desk"})
+    assert verizon["fields"]["support_phone"] == "1-833-VERIZON"
+    assert 'href="tel:18338374966"' in client.get(f"/e/{verizon['id']}/sheet").data.decode()
+    assert "tel:" not in client.get(f"/e/{loose['id']}/sheet").data.decode()
     sheet = client.get(f"/e/{vendor['id']}/sheet").data.decode()
     assert 'href="tel:+15550100142"' in sheet and 'href="mailto:help@dell.example"' in sheet
     assert 'href="tel:+15550100142" target' not in sheet
@@ -166,7 +203,7 @@ def test_contracts_say_when_they_end(client, h, admin):
     make(client, h, "contract", name="Lease", **{"f.ends": (date.today() + timedelta(days=400)).isoformat()})
     tab = client.get(f"/e/{soon['id']}/sheet?tab=covers").data.decode()
     assert "Renews in 40 days" in tab and "Notice is due by " + (date.today() + timedelta(days=10)).isoformat() in tab
-    due = client.get("/contacts?f=ending&view=list").data.decode()
+    due = listed(client, "/contacts?f=ending&view=list")
     assert ">Internet<" in due and ">Lease<" not in due
 
 

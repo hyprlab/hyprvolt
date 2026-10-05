@@ -4,6 +4,8 @@ breaks if it goes down below it, a row further out for each step.
 It draws the same walks as the lists (``relations.walk``), as SVG made on
 the server. A record reached along two paths is one box with two lines into
 it; a loop back to a record already drawn is a dashed line to that box.
+A record's branch folds away with the − on it (``folded``), and the diagram
+is laid out again without it, while the record stays open (app.js).
 """
 from flask import render_template
 
@@ -11,7 +13,6 @@ from . import present, relations
 
 NODE_W, NODE_H = 164, 48
 MARGIN = 20
-HEAD = 28          # a band for a side's heading
 GAP_X = 24
 GAP_Y = 64         # between rows: room for the lines and their labels
 
@@ -70,32 +71,53 @@ def _side(tree: list[dict], root_id: int):
     return rows, [(None if p == root_id else p, c, label, loop) for p, c, label, loop in edges]
 
 
-def draw(entity, needs: list[dict], dependents: list[dict]) -> str:
+def _fold(tree: list[dict], side: str, folded, toggles: dict) -> list[dict]:
+    """The tree with the branches of the records in ``folded`` ("D:12", a
+    side and an id) cut off, and in ``toggles`` each record that has a
+    branch: its key -> how many records its folded branch hides (0 when
+    it is open)."""
+    out = []
+    for n in tree:
+        if n["children"]:
+            key = f"{side}:{n['entity'].id}"
+            hidden = key in folded
+            toggles[key] = relations.count(n["children"]) if hidden else 0
+            n = {**n, "children": [] if hidden else _fold(n["children"], side, folded, toggles)}
+        out.append(n)
+    return out
+
+
+def draw(entity, needs: list[dict], dependents: list[dict], folded=frozenset()) -> str:
     """The diagram's HTML, or "" when the record needs nothing and nothing
     needs it. Top to bottom: what it needs (the furthest first), the record,
-    what breaks if it goes down (the nearest first)."""
+    what breaks if it goes down (the nearest first). A record in ``folded``
+    shows without what hangs from it, and a + on it says how many that is."""
     if not needs and not dependents:
         return ""
+    # Collapse all folds the records next to this one.
+    every = [f"U:{n['entity'].id}" for n in needs if n["children"]] + \
+            [f"D:{n['entity'].id}" for n in dependents if n["children"]]
+    toggles: dict[str, int] = {}
+    needs, dependents = _fold(needs, "U", folded, toggles), _fold(dependents, "D", folded, toggles)
     up, up_edges = _side(needs, entity.id)
     down, down_edges = _side(dependents, entity.id)
     n_up, n_down = max(up, default=0), max(down, default=0)
     widest = max([len(r) for r in list(up.values()) + list(down.values())] + [1])
     width = max(widest * NODE_W + (widest - 1) * GAP_X, 3 * NODE_W + 2 * GAP_X) + 2 * MARGIN
 
-    # Each row's top edge, with a heading band above each side.
-    tops, y, heads = {}, MARGIN, []
+    # Each row's top edge. A dashed line through the record divides the two
+    # sides; their names are pinned beside it in the page (app.js), so they
+    # stay readable however far it is zoomed or scrolled.
+    tops, y = {}, MARGIN
     if n_up:
-        heads.append(("What it needs", y + 14))
-        y += HEAD
         for depth in range(n_up, 0, -1):
             tops[("U", depth)] = y
             y += NODE_H + GAP_Y
     tops[("", 0)] = y
+    divider = y + NODE_H / 2
     y += NODE_H
     if n_down:
-        # The heading just under the record; the first row a line's length below.
-        heads.append(("What breaks if this goes down", y + 32))
-        y += HEAD + GAP_Y
+        y += GAP_Y
         for depth in range(1, n_down + 1):
             tops[("D", depth)] = y
             y += NODE_H + GAP_Y
@@ -175,7 +197,18 @@ def draw(entity, needs: list[dict], dependents: list[dict]) -> str:
     views = {v.id: v for v in present.views(list({e.id: e for e in everyone}.values()))}
     nodes = [{"view": views[eid], "name": fit(views[eid].name, 15), "x": x, "y": y, "center": side == ""}
              for (side, eid), (x, y) in boxes.items()]
-    return render_template("sheet/depmap.html", entity=entity, nodes=nodes, links=links, heads=heads,
+    # A record's fold button sits on the edge its branch leaves from: the
+    # bottom below the record, the top above it.
+    folds = []
+    for key, hidden in toggles.items():
+        side, _, eid = key.partition(":")
+        x, y = boxes[(side, int(eid))]
+        folds.append({"key": key, "x": x + NODE_W / 2, "y": y + (NODE_H if side == "D" else 0),
+                      "hidden": hidden, "name": views[int(eid)].name, "side": side})
+    return render_template("sheet/depmap.html", entity=entity, nodes=nodes, links=links, folds=folds,
+                           divider=divider, above=bool(n_up), below=bool(n_down),
+                           record=(boxes[("", entity.id)][0], boxes[("", entity.id)][0] + NODE_W, NODE_H / 2),
+                           every=every, folded=sorted(k for k, n in toggles.items() if n), state=sorted(folded),
                            width=width, height=height, w=NODE_W, h=NODE_H, margin=MARGIN,
                            truncated=_truncated(needs) or _truncated(dependents))
 

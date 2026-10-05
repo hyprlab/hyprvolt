@@ -1,0 +1,27 @@
+{# Import from Homepage, step 3: what was made, updated, left out, and what
+   couldn't be saved and why. Done goes back where the import started. #}
+<div class="stack">
+  <p class="hint">{{ done.added|length }} added, {{ done.updated|length }} updated{% if done.skipped %}, {{ done.skipped|length }} left out{% endif %}{% if done.failed %}, and {{ done.failed|length }} that couldn't be saved{% endif %}.</p>
+  {% if done.failed %}
+  <ul class="manage-list">
+    {% for f in done.failed %}
+    <li class="manage-item"><div class="manage-meta">
+      <span class="manage-title">{{ f.name }}</span><span class="manage-sub form-error">{{ f.error }}</span>
+    </div></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if done.added or done.updated %}
+  <ul class="manage-list">
+    {% for x in done.added + done.updated %}
+    <li class="manage-item"><div class="manage-meta">
+      <span class="manage-title">{{ x.name }}</span>
+      <span class="manage-sub">{{ 'Added' if x in done.added else 'Updated' }}</span>
+    </div></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <div class="doc-actions">
+    <a class="btn btn--primary" href="{{ back }}">Done</a>
+  </div>
+</div>

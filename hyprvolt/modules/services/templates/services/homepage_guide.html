@@ -1,0 +1,15 @@
+{# The guide's Services step: Import from Homepage, in a dialog of its own;
+   its Done comes back to the step, the imported services in its rows. #}
+<div class="guide-extra">
+  <button type="button" class="btn btn--ghost" data-open="homepage-modal">Import from Homepage…</button>
+  <span class="hint">Already run a <a href="https://gethomepage.dev" target="_blank" rel="noopener">Homepage</a> dashboard? Import its services.</span>
+</div>
+<dialog class="modal modal--xwide" id="homepage-modal" aria-labelledby="homepage-modal-title" data-restore="off">
+  <div class="modal-head">
+    <h3 id="homepage-modal-title">Import from Homepage</h3>
+    <button class="iconbtn" data-close aria-label="Close">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="modal-body">{{ start }}</div>
+</dialog>

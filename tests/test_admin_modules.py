@@ -79,3 +79,36 @@ def test_module_search_providers_add_to_the_palette(client, h, admin, hooks):
         {"id": None, "url": "/example", "title": "Port 8080", "meta": "Found by the example module"}]}]
     # Choosing a record for a link only offers records.
     assert client.get("/search?q=8080&pick=1").get_json()["groups"] == []
+
+
+def _sidebar(page: str) -> tuple[list[str], list[str]]:
+    side = page.split('id="sidebar"')[1].split('class="sidebar-foot"')[0]
+    groups = [p.split('"')[0] for p in side.split('class="sidebar-group" data-group="')[1:]]
+    modules = [p.split('"')[0] for p in side.split('data-module="')[1:]]
+    return groups, modules
+
+
+def test_an_admin_reorders_the_sidebar(client, h, admin, editor):
+    groups, modules = _sidebar(client.get("/").data.decode())
+    assert len(groups) > 1 and len(modules) > 2
+    # The last group first, and in the first group its last module first.
+    new_groups = [groups[-1]] + groups[:-1]
+    new_modules = [modules[1], modules[0]] + modules[2:]
+    assert client.post("/admin/sidebar-order", json={"groups": new_groups, "modules": new_modules},
+                       headers=h).get_json() == {"ok": True}
+    page = client.get("/").data.decode()
+    got_groups, got_modules = _sidebar(page)
+    assert got_groups == new_groups
+    assert got_modules.index(modules[1]) < got_modules.index(modules[0])
+    assert 'id="sidebar-order-reset" >' in page or 'id="sidebar-order-reset">' in page
+    # A module the saved order doesn't name still shows, after the named ones.
+    client.post("/admin/sidebar-order", json={"groups": new_groups, "modules": modules[1:]}, headers=h)
+    assert modules[0] in _sidebar(client.get("/").data.decode())[1]
+    # Names it doesn't have, and anyone but an admin, are refused.
+    bad = client.post("/admin/sidebar-order", json={"groups": ["Nowhere"], "modules": []}, headers=h)
+    assert bad.status_code == 400 and "Reload" in bad.get_json()["error"]
+    other, oh = editor
+    assert other.post("/admin/sidebar-order", json={"reset": True}, headers=oh).status_code == 403
+    # Reset puts the modules' own order back.
+    client.post("/admin/sidebar-order", json={"reset": True}, headers=h)
+    assert _sidebar(client.get("/").data.decode()) == (groups, modules)

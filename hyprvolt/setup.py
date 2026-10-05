@@ -2,8 +2,9 @@
 
 Shown exactly once: while the instance has zero users, every request is steered
 to /setup. The wizard creates the admin account and the initial instance
-settings in one POST, signs the admin in, and hands over to the app. There is
-no seeded account and no default password.
+settings in one POST, signs the admin in, and hands over to the site setup
+guide (core/guide.py), which walks the first site through. There is no seeded
+account and no default password.
 """
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import login_user
@@ -58,7 +59,8 @@ def submit():
         return jsonify(error="The background interval must be between 0 and 1440 minutes."), 400
 
     admin = User(username=username, role="admin", can_see_secrets=True,
-                 name=(data.get("name") or "").strip()[:120] or None)
+                 name=(data.get("name") or "").strip()[:120] or None,
+                 theme=data.get("theme") if data.get("theme") in ("light", "dark", "system") else "dark")
     admin.set_password(password)
     db.session.add(admin)
     db.session.commit()

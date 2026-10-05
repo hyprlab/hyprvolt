@@ -1,0 +1,19 @@
+{# Import from Homepage, step 1: the files (homepage.py). The review, and
+   then what was imported, take this one's place in #homepage-import. #}
+<div id="homepage-import">
+  <form class="stack" data-api="{{ url_for('services.homepage_read') }}" enctype="multipart/form-data"
+        data-then="replace" data-replace="homepage-import">
+    <input type="hidden" name="back" value="{{ back }}">
+    <p class="hint">Homepage keeps its services in <code>services.yaml</code>, in its config folder. Each service's
+      name, group, link and description are read, and what it runs on is worked out from its Docker server and
+      container, its Proxmox node and ID, and its addresses. You check every match before anything is saved.
+      API keys and passwords in the file are not read.</p>
+    <label class="field"><span class="field-label">services.yaml</span>
+      <input type="file" name="services" accept=".yaml,.yml" required></label>
+    <label class="field"><span class="field-label">docker.yaml, if Homepage has one</span>
+      <input type="file" name="docker" accept=".yaml,.yml">
+      <span class="hint">Where each Docker server is, so the services on it are found by its address.</span></label>
+    <button class="btn btn--primary" type="submit">Read the files</button>
+    <p class="form-error" hidden></p>
+  </form>
+</div>

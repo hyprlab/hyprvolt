@@ -9,22 +9,78 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [1.4.0-beta.2] — 2026-09-29
 
 ### Added
+- A service's kind has many more choices, under headings: Network (DHCP, DNS, dynamic DNS, ad blocking, VPN, reverse proxy, load balancer, routing and firewall, tunnel, network controller, time), Security and identity (directory, single sign-on, password manager, certificate authority, security monitoring), Operations (monitoring, logging, backup, container management, code hosting, CI/CD, image registry, automation, message broker), Storage and data, and Apps (dashboard, chat, wiki, downloads, photos, home automation, cameras, phone system, printing, remote access, AI, game server and more). A Homepage import recognizes the apps behind them, such as Kea, Authentik, Vaultwarden, Portainer and Gitea
+- The dependency diagram in a record's Relationships tab folds: the − on a record hides what hangs from it and draws the rest again, a +N in its place saying how many it hides, and Collapse all shows only the records next to this one. The folds last while the record is open
+- Cables count as dependencies: a device needs the network gear it is cabled to (through any patch panels), and gear the gear nearer the internet, so a switch's What breaks lists everything plugged into it and all that runs on those, and a maintenance window on it lists them under Also goes down. A UPS or PDU cabled to the network is managed over it and takes nothing down with the switch. A device's Relationships tab lists what it is cabled to, read-only, under Cabled to
+- Help, from the ? button at the foot of the sidebar or the ? key: a window like Settings that explains how records connect (places, links and cables), the difference between a link and a cable, which links carry a dependency, how What breaks is worked out, networks, power, records and the keyboard
+- The setup guide's Cables step draws the network diagram below the cables once there are any, and draws it again as each cable is added or deleted
+- Cables in the setup guide are labeled by the network they are on: a cable added in the Cables step without a label gets one such as 20-03 (the third on VLAN 20, or on a subnet like 192.168.20.0/24 with no VLAN), UP-01 for an uplink between network gear and WAN-01 from the modem. Suggest cables fills the labels in, and Label the unlabeled cables labels the ones that have none
+- A switch, router or firewall's number of ports, optional, can be set in the setup guide's Network gear step as well as its form, and a device cabled as a whole takes no more cables than its ports: its Cabling tab shows how many are cabled, a full one isn't offered for another cable, and Suggest cables stops at it
+- Switches, routers, firewalls and gateway modems record the VLANs and subnets they carry, in their Networks section and in the setup guide's Network gear step, and a VLAN or subnet the gear it is carried by. A switch's dependency view lists the networks it takes down, and Suggest cables plugs a device into a switch that carries its subnet
+- The setup guide's Cables step has Suggest cables: the cabling worked out from the gear and where each piece is (the modem to the router or firewall, that to the core switch, other switches to the core, MoCA pairs and wireless bridges, and every other device to its nearest switch), each cable with why, to check, change or untick before they are added
+- IP phones are a kind of hardware, with who uses each one and its extension, and are offered in the setup guide's Endpoints step
+- IP cameras are a kind of hardware, with their firmware and power draw, and are offered in the setup guide's Endpoints step
+- Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
+- Operating system fields (virtual machines, containers, servers, NAS, workstations) list known operating systems as you type, from Ubuntu and Debian to Windows Server, TrueNAS and pfSense: click one, or pick it with the arrow keys and Enter, to fill it in, or keep what you typed as a custom name
+- A server or a NAS (TrueNAS SCALE, Unraid) can be marked Runs a hypervisor, in its form and in the setup guide's Servers and storage step: that adds the hypervisor running on it, with its platform and management IP, and the server's IP address becomes its BMC IP. Unticking it deletes the hypervisor, asked first, unless virtual machines run on it
+- The setup guide has a UPSes step of its own after Endpoints, with each UPS's capacity and runtime and the equipment it powers, ticked from the site's network gear, servers, storage and endpoints. A UPS's record has the same Powers section
+- Wireless networks: record each Wi-Fi network with its security, bands, hidden or not, VLAN and subnet, and tick the access points, extenders, bridges and Wi-Fi routers that broadcast it, from either record or from the setup guide, which has a Wireless networks step before Network gear
+- Network gear can be a Wireless extender, also offered in the setup guide's Network gear step
+- Network gear can be a MoCA adapter, for the network carried over coaxial cable, also offered in the setup guide's Network gear step. In the setup guide a pair is one row, with a place for each end (Where, and Other end at, which adds the other adapter there); each adapter is its own record, so each end can be powered by its own UPS. The pair works like one cable: a trace, the Neighborhood and the network diagram go from the device at one end over the coax to the device at the other, a cable to either adapter is labeled by the far device's network, and Suggest cables plugs the near adapter into a switch and what is in the far one's room into it
+- Wireless bridges: network gear of the kind Wireless bridge, each end its own record with its own location and IP address, linked to the bridge at the other end from either one (and in the setup guide's Network gear step). The network diagram draws the link as a dotted line, and an internet connection as a thick one
+- An internet connection records the modem, router or firewall it comes in at, from either record or from the setup guide's Network gear step. The device lists the line it brings in, the line depends on the device, and the network diagram draws the line above it. The Network gear step's help explains that a modem in bridge mode has no address on your network
+- An internet connection has a Dynamic or Static choice for its IP address, side by side with the chosen one raised. Static shows the line's static IP, subnet mask, gateway and DNS servers, in its record and in the setup guide; Dynamic hides them. A connection that already had public addresses is marked Static
+- In the site setup guide, Buildings and rooms is a tree of the site: add a building or room right where it goes, saved as you type each name, and drag one onto another (or use the arrow keys on its handle) to move it a level. Deleting a building there takes the rooms in it too, after asking, and Undo brings them all back
+- The setup wizard and the site setup guide have a light and dark button, and new installs and new accounts start in the dark theme
+- Each step of the site setup guide has a What goes here button that explains what belongs in it, what belongs in another step, and why, such as a Usenet provider being a vendor with a contract while SABnzbd is a service
+- The site setup guide's last page offers to start the site's runbook: a draft knowledge base document, attached to the site, that links to everything the guide recorded and has headings to fill in for who to call, what to check first and how to recover
+- A guide that documents a site step by step, from the site out to the endpoints: its rooms, racks, vendors, internet connection, VLANs, subnets, network gear, servers, hypervisors, virtual machines, services, endpoints and the cables between them. Each step lists what is recorded as rows that are changed in place and deleted with a ×, each change saved as it is made, and a blank row at the end adds the next one when a name is typed and Enter is pressed, or when moving on with something typed in it. A row once added folds to one line with its name and what it holds, and opens again to be changed, so all the endpoints or all the services go in one after another. A new install goes into it straight after creating the admin account, starting with a page that says what it covers. It has the screen to itself, with no sidebar, search or New menu, until it is done or Exit setup is chosen; later it opens from New > Set up a site, step by step, and from the empty dashboard
+- A device can be cabled to another without recording its ports: in its Cabling tab (Ports before), Connect a cable offers other devices as a whole, and the ports of devices that have them recorded. Record each port, a switch at the top of the Cabling tab, turns on ports to name and cable one by one, as before. A device that already has ports keeps them recorded
+- An admin can change the order of the sidebar in Settings > Modules: drag its groups, and the modules within each group, by their handles, or move them with the arrow keys. Put the default order back undoes it
 - A setting in Settings > Appearance to show a record one section at a time, as before, instead of all its sections on one page
 - A beta channel: `IMAGE_TAG=beta` runs previews of the next release, numbered like `1.4.0-beta.1`, while `latest` stays on stable
 - The dependency view in a record's Relationships tab can be shown as a diagram: what it needs above the record, what breaks if it goes down below it, a row for each step away. It opens as the diagram; List and Diagram switch between the two, and the choice is remembered in the browser
 - Diagrams open with all of them showing and can be zoomed, with −, Fit and + or with Ctrl or ⌘ and the scroll wheel (a trackpad's pinch), and dragged around when zoomed in: the dependency diagram, the Neighborhood tab and the network diagram
 
 ### Changed
+- A choice of record that can be of several kinds, such as a service's Runs on or an IP address's Assigned to, lists them under a heading for each kind (Servers, Network gear, Virtual machines, LXC containers, Containers and so on) instead of one long list, in the form, the Overview and the setup guide
+- An address field (a service's Address, a VM's Management, a vendor's Website) takes a bare IP address or hostname, with a port and a path if any, such as 192.168.1.1 for DHCP on the router, as well as a full address with https:// or another scheme. Only web addresses become links
+- Choosing a record for a link, a rack mount or a maintenance window's impact is typed in the field itself: the records that match drop down under it as you type, picked with a click or the arrow keys and Enter, instead of the search window opening over the record
+- New opens a New record window instead of a menu: type to find the kind of record (a switch, a VM, a domain, and the kinds a type comes in, such as Switch or Mini PC) or choose it from the list, then the form walks through a step at a time (Basics, each group of fields, each section, Notes) with Back, Next and Create on every step. New buttons on a record open it at Basics with the kind settled
+- The lines in the network diagram, the Neighborhood and the dependency diagram are easier to point at: each reacts to the pointer within 8 px either side, at any zoom, so a cable's ports and VLANs show without having to land on a thin line
+- The dependency diagram has a dashed line through the record dividing What it needs from What breaks if this goes down, and the two names stay beside it, readable and in sight, however far it is zoomed or scrolled
+- A record's Relationships tab keeps the form for a new link folded behind an Add link button, with Cancel to fold it away again
+- In the setup guide's Cables step, a folded cable reads as its label, then its two ends (1-01 AirPort-Kepler → LAN Switch), in label order, instead of repeating the ends twice
+- A cable in the setup guide's Cables step can be moved: either end is a choice in its row, offering the free ports and devices and its own, and the cable keeps its label, color and length
+- Choosing a cable's ends, in the setup guide's Cables step, Suggest cables and a device's Cabling tab, lists the devices grouped by kind (modems, routers, firewalls, switches and so on, then servers and endpoints), and then each device with its ports recorded
+- In the setup guide's Network gear, Servers and storage, and Endpoints steps, the rows are grouped under a heading for each kind: modems, routers, firewalls, switches, access points and so on
+- Devices and machines on the network (servers, network gear, firewalls, access points, UPSes, NAS, workstations, printers, IP phones, IP cameras, hypervisors, virtual machines and LXC containers) call their name Name or hostname, in their form, the setup guide, import and history
+- In the site setup guide, Vendors is the last step of Place instead of the first of Network
+- A hypervisor given the IP address recorded on the server it runs on takes it, with a message saying it moved, instead of refusing it. The setup guide's Servers and storage and Hypervisors help explains which address goes where (the management address on the hypervisor, the iDRAC, iLO or IPMI address on the server), and the Hypervisors step's column is now Management IP
+- In the site setup guide, each place in a Where choice says what it is: Hyprlab (site), Garage (building), Main House › Basement (room)
+- In the dark theme, messages such as Deleted with Undo are a dark pill with light text, and errors a dark red one, instead of a light pill the yellow Undo was hard to read on
+- Once a subnet's range is typed, its gateway is filled in with the first address and its DHCP range with the upper half of the subnet, unless they were typed by hand
+- A subnet's range is typed as its network address with the subnet mask chosen beside it (/24 · 255.255.255.0 · 254 hosts), and its DHCP range as a first and a last address in two boxes, in its record and in the setup guide
+- The chosen option of a segmented control (Dynamic or Static, a theme, a user's role, List or Diagram) is shown in the yellow accent
+- An internet connection's Bandwidth is now a Download and an Upload speed, each a number with Mb/s or Gb/s chosen beside it. Bandwidth already typed is read into them, and text that can't be read is kept at the end of the connection's notes
+- Phone numbers are kept as typed and no longer checked, so a vanity number such as 1-833-VERIZON or a note saves. One that can be dialed is still a link, its letters dialed as their keypad digits
+- A new app icon: the server unit now shades from light to dark, and the bolt from yellow to orange. It is the mark on every page, the browser tab's icon and the icon a phone's home screen shows
 - A record shows all of its sections (Overview, Relationships, History and the rest) one after another instead of one tab at a time. A list of them down its left side marks the one being read as it scrolls, and choosing one scrolls there smoothly. Back, Forward and the record's actions sit above the list, and the close button on its own at the top right. The record is wider by as much as the list, so its content has the same room as before. On a screen 900 pixels wide or less the list is a row under the header that stays in view while the record scrolls, and ↑ and ↓ move through the list where ← and → moved along the tabs
+- The New button offers every kind of record from every enabled module, on every page, in the sidebar's order. It used to offer only the kinds of the module being viewed
+- An internet connection's ISP is a vendor, chosen in the Supplier section of the network's form with the contract for the line, so the ISP's support number and account number are a click away and the vendor's Supplies tab lists the connection. The Provider text field is gone: what was typed in it is kept at the end of the network's notes. Internet connections have a Circuit ID field instead, and the Network sidebar lists them
+- A tower server has no Rack position section in its form or Overview
+- Deleting a record asks first, in a dialog, and then offers Undo as before
 - Removing a link between two records asks first, in a dialog, and so do detaching a document and taking a record off a maintenance window or change. Undo still follows
 
 ## [1.3.0] — 2026-09-28
 
 ### Added
+- Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
 - A location, a piece of hardware, or a VM or LXC container can be changed into another kind after it is saved, under Type in its Overview: a room into a building, a server into a NAS, a VM into an LXC container. It keeps its links, files and history
 - Pictures on records: a featured image in a place of its own at the top of a record's Overview, added, replaced or removed there, and shown on the record's card in card view. The record's attached images show below it as a strip, and any picture opens a viewer that moves through them with the arrow keys or a swipe
 
 ### Changed
+- In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - In the light theme, the chosen row in the sidebar, settings and search is a darker grey instead of yellow, keeping its yellow edge
 - The dark theme is lighter: charcoal backgrounds instead of near-black, with brighter borders and secondary text, so it is easier to read
 - A record is edited where it is shown, instead of in a form: in its Overview, an editor changes a field in place, and it is saved on leaving the field, on Enter, or on closing the record. A change that can't be saved says why under the field and keeps the record open until it is fixed or closed again. Notes and other long text show formatted until their Edit button. New records are still made in the form
@@ -37,6 +93,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [1.2.0] — 2026-09-28
 
 ### Added
+- Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
 - Headings in documents get anchors, and a page with three or more headings opens with a contents list linking to them
 - A fenced code block that names its language (bash, PowerShell, Python and the rest) is colored for it, with the language named above the block
 - Task lists: `- [ ]` and `- [x]` items show as checkboxes
@@ -48,6 +105,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - The API finds a record by its slug (`GET /api/entities/by-slug/<slug>`, or `?slug=` on the list) and creates or updates one by slug (`POST /api/entities/by-slug/<slug>`), so an import can run again without making copies
 
 ### Changed
+- In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - Back and Forward work in a record: following a link to another record, a page's Next, or j and k adds a step that the browser's Back and Forward, and the ‹ › buttons in the record's bar, walk through. Back from the first record closes it, and closing it leaves the browser's history as it was
 - A record's notes come first in its Overview, above its fields
 - A record's close button is on the right of its bar, with Back, Forward and its actions on the left
@@ -58,6 +116,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [1.1.0] — 2026-09-28
 
 ### Changed
+- In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - Windows such as the record form and Settings, and a record's sheet, no longer close on a click beside them; they close with their close button or Escape, so a form half filled in isn't lost
 - A record's sheet slides back down when it closes, the way it came in
 - Every field in the record form has an info button beside its label that says what the field is for, tags, slug and codes included, instead of hints under some of them
@@ -66,6 +125,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [1.0.0] — 2026-09-28
 
 ### Added
+- Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
 - Records of every kind share one interface: cards or a list with filters and live counts in the sidebar, a detail sheet with Overview, Relationships, Documents, Attachments and History tabs, and one form
 - Locations: sites, buildings, rooms, racks and shelves, with breadcrumbs on everything that has a place
 - Rack elevations show what occupies each unit on the front and rear, and flag overlaps and anything that no longer fits; a sidebar filter lists the racks with conflicts
@@ -127,6 +187,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 - Accounts have a role: viewers read everything, editors also change the documentation, admins also manage users and the instance. Admins pick the role per user and the role new accounts start with
 
 ### Changed
+- In the site setup guide, Vendors is the last step of Place instead of the first of Network
 - Hyprvolt is released under the MIT License
 - Secondary text and the red of errors and alerts have more contrast, meeting WCAG AA in both themes, and links and small buttons are easier to tap on a touch screen
 - The app icon is Hyprvolt's own, in the sidebar, on the sign-in page and as the browser tab's icon
@@ -136,4 +197,5 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [0.1.0] — 2026-09-25
 
 ### Added
+- Import services from a Homepage (gethomepage.dev) dashboard: upload its services.yaml, and docker.yaml if it has one, from Services in the sidebar or the setup guide's Services step. Each service is matched to the container, VM, LXC or server it runs on from its Docker server and container, Proxmox node and ID, and addresses; the review shows why, marks the ones to check or choose, and lets you change anything before importing. API keys and passwords in the file are never read
 - The first version, started from the Hyprlab Flask template

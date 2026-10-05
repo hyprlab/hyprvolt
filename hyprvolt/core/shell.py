@@ -77,18 +77,38 @@ def context(active_module=None, active_type=None, active_filter=None, active_tag
         "nav_tags": tag_counts(keys),
         "nav_special": special,
         "active_tag": active_tag,
-        "new_menu": new_menu(active_module),
+        "new_menu": new_menu(),
+        "site_guide": current_user.can_edit and bool(reg.setup_steps()),
         "list_pages": [(m, p) for m in reg.enabled_modules() for p in m.pages if p.from_list],
+        "help": help_context(reg),
         "module_panes": [(m, m.settings_pane) for m in reg.enabled_modules()
                          if m.settings_pane and (current_user.is_admin or not m.settings_pane.admin)],
     }
 
 
-def new_menu(active_module=None) -> list[dict]:
-    """What the "New" button offers: the page's module's types, or every
-    type, grouped by module."""
+def help_context(reg) -> dict:
+    """What the Help window needs: the modules turned on, and the kinds of
+    link they and the core have, in that order."""
+    from .relations import CORE_KINDS
+    modules = reg.enabled_modules()
+    kinds = list(CORE_KINDS) + [k for m in modules for k in m.relation_kinds]
+    return {"modules": {m.id for m in modules}, "kinds": kinds}
+
+
+def new_menu() -> list[dict]:
+    """What the "New" button offers: every enabled type, grouped by module in
+    the sidebar's order, whichever page it is on."""
     if not current_user.can_edit:
         return []
-    reg = registry()
-    modules = [active_module] if active_module else reg.enabled_modules()
-    return [{"module": m, "types": list(m.types)} for m in modules if m.types]
+    return [{"module": m, "types": list(m.types), "presets": [p for t in m.types for p in kind_presets(t)]}
+            for m in registry().enabled_modules() if m.types]
+
+
+def kind_presets(etype) -> list[tuple]:
+    """The kinds a type comes in, from its "kind" choice, so the New record
+    window finds a network device by "switch": (type, value, label), with
+    "Other" left out."""
+    field = next((f for f in etype.fields if f.key == "kind" and f.kind == "select"), None)
+    if field is None:
+        return []
+    return [(etype, value, label) for value, label in field.options if value and value != "other"]

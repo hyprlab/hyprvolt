@@ -29,9 +29,10 @@ from flask import Blueprint, Flask, abort, current_app, g, request
 from jinja2 import ChoiceLoader, FileSystemLoader
 from werkzeug.routing import BaseConverter
 
+from .core.catalogs import CATALOGS
 from .core.relations import CORE_KINDS
-from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, FormSection, Job, ListFilter, Page,
-                       Module, Pane, RelationKind, Step, Tab, Widget)
+from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, FormSection, Job, ListFilter, Module, Page,
+                       Pane, RelationKind, SetupField, SetupFinish, SetupKind, SetupStep, Step, Tab, Widget)
 
 log = logging.getLogger(__name__)
 
@@ -68,11 +69,43 @@ class Registry:
         return self.types.get(key)
 
     def sidebar_order(self, modules=None) -> list[Module]:
+        """Modules by group, then within their group: in the order an admin
+        set in Settings > Modules, and otherwise by each module's ``order``.
+        Anything the saved order doesn't name (a new module, a new group)
+        follows what it does, in the default order."""
         modules = list(self.modules.values()) if modules is None else modules
-        group_rank = {}
-        for m in sorted(modules, key=lambda m: m.order):
-            group_rank.setdefault(m.group, len(group_rank))
-        return sorted(modules, key=lambda m: (group_rank[m.group], m.order, m.name))
+        saved_groups, saved_modules = self.saved_order()
+        default = {}
+        for m in sorted(self.modules.values(), key=lambda m: m.order):
+            default.setdefault(m.group, len(default))
+
+        def group_rank(group):
+            return (0, saved_groups.index(group)) if group in saved_groups else (1, default.get(group, 0))
+
+        def rank(m):
+            own = (0, saved_modules.index(m.id)) if m.id in saved_modules else (1, m.order, m.name)
+            return (group_rank(m.group), own)
+        return sorted(modules, key=rank)
+
+    def saved_order(self) -> tuple[list[str], list[str]]:
+        """The sidebar's groups and modules as an admin ordered them, read
+        once per request; two empty lists until one does."""
+        if not _has_g():
+            return [], []       # outside the app (a test of the registry alone)
+        cached = g.get("_sidebar_order")
+        if cached is not None:
+            return cached
+        import json
+        from .models import get_setting
+        out = []
+        for key in ("sidebar:groups", "sidebar:modules"):
+            try:
+                value = json.loads(get_setting(key) or "[]")
+            except ValueError:
+                value = []
+            out.append([x for x in value if isinstance(x, str)] if isinstance(value, list) else [])
+        g._sidebar_order = (out[0], out[1])
+        return g._sidebar_order
 
     # ———— Enabled or not ————
 
@@ -138,6 +171,13 @@ class Registry:
         if f.trait:
             keys += [k for k, t in self.types.items() if f.trait in t.traits and k not in keys]
         return keys
+
+    def setup_steps(self) -> list[SetupStep]:
+        """The site setup guide's steps from turned-on modules, in order."""
+        return sorted((s for m in self.enabled_modules() for s in m.setup), key=lambda s: s.order)
+
+    def setup_finishes(self) -> list[SetupFinish]:
+        return [f for m in self.enabled_modules() for f in m.setup_finish]
 
     def form_sections(self, etype: EntityType) -> list[FormSection]:
         """What turned-on modules add to the form of ``etype``."""
@@ -297,6 +337,27 @@ def validate(m: Module, reg: Registry) -> list[str]:
         elif section.key in others:
             p.append(f"the form section {section.key!r} already exists")
         others.add(getattr(section, "key", None))
+    own = {t.key for t in m.types if isinstance(t, EntityType)}
+    others = {s.key for o in reg.modules.values() for s in o.setup}
+    for finish in m.setup_finish:
+        if not isinstance(finish, SetupFinish) or not callable(finish.make) or not ID_RE.match(finish.key or ""):
+            p.append(f"{finish!r} is not a SetupFinish with a lower-case key and a make function")
+    for step in m.setup:
+        if not isinstance(step, SetupStep):
+            p.append(f"{step!r} is not a SetupStep")
+            continue
+        if not ID_RE.match(step.key or "") or step.key in others:
+            p.append(f"the setup step {step.key!r} needs a lower-case key no other step has")
+        others.add(step.key)
+        if bool(step.kinds) == (step.save is not None):
+            p.append(f"the setup step {step.key!r} needs either kinds of record or a save function")
+        elif step.save is not None and not callable(step.rows):
+            p.append(f"the setup step {step.key!r} saves rows of its own, so it needs a rows function")
+        for k in step.kinds:
+            if not isinstance(k, SetupKind) or k.type not in own:
+                p.append(f"the setup step {step.key!r} makes {getattr(k, 'type', k)!r}, not one of the module's types")
+        if not all(isinstance(f, SetupField) for f in step.fields):
+            p.append(f"the setup step {step.key!r} has a field that is not a SetupField")
     for page in m.pages:
         if isinstance(page, Page) and (not ID_RE.match(page.key or "") or not callable(page.render)):
             p.append(f"the page {page.key!r} needs a lower-case key and a render function")
@@ -358,10 +419,25 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
             p.append(f"{where} has the unknown kind {f.kind!r}")
         if f.kind == "select" and not f.options:
             p.append(f"{where} is a select with no options")
+        if f.groups and (f.kind != "select" or not {v for _, values in f.groups for v in values}
+                         <= {v for v, _ in f.options}):
+            p.append(f"{where} groups its options, so it must be a select and group only options it has")
         if f.kind == "ref" and not f.types and not f.trait:
             p.append(f"{where} is a ref that names no types and no trait")
         if f.remind is not None and (not callable(f.remind) or not f.expires):
             p.append(f"{where} has a remind that isn't a function of an expiring date")
+        if f.suggest and (f.kind != "text" or f.suggest not in CATALOGS):
+            p.append(f"{where} suggests names, so it must be text and name a catalog in core/catalogs.py")
+        if f.prefills and f.kind != "cidr":
+            p.append(f"{where} fills in other fields from a subnet, so it must be a cidr")
+        if f.switch and (f.kind != "boolean" or len(f.switch) != 2):
+            p.append(f"{where} is a switch, so it must be a boolean with an off and an on label")
+        if f.shown_when and (len(f.shown_when) != 2 or f.shown_when[0] not in keys):
+            p.append(f"{where} is shown when another field has a value; name one of the type's fields before it")
+        if f.hides and (f.kind != "select" or any(not set(when) <= {v for v, _ in f.options} | {""}
+                                                  for _, when in f.hide_rules())):
+            p.append(f"{where} hides form sections, so it must be a select and hides_when some of its options "
+                     "(or \"\" for none chosen)")
         if f.relation and f.kind != "ref":
             p.append(f"{where} is kept as a link, so it must be a ref")
         if columns and f.key not in columns and not f.relation:

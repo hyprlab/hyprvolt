@@ -1,0 +1,254 @@
+{# Help: how records connect and what follows from it, in the Settings
+   window's shape (.modal--rail). Sections of turned-off modules are left
+   out; the kinds of link come from the registry (help.kinds), so a
+   module's own kinds are listed with the core's. #}
+{% from "partials/macros.html" import rail_item %}
+{% set net = 'network' in help.modules %}
+{% set hw = 'hardware' in help.modules %}
+{% set help_sections = [
+  ('connects', 'How it connects', 'Start here', '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M8 7.5l2.8 8.3M16 7.5l-2.8 8.3M8.5 6h7"/>'),
+  ('guide', 'The setup guide', 'Start here', '<path d="M5 4.5h10.5L19 8v11.5H5Z"/><path d="M8.5 11.5l2.2 2.2 4.3-4.4"/>'),
+  ('links', 'Links', 'Connections', '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/>'),
+] + ([
+  ('cables', 'Cables', 'Connections', '<path d="M5 3.5v5a3 3 0 0 0 3 3h8a3 3 0 0 1 3 3v6"/><rect x="2.5" y="2" width="5" height="4" rx="1"/><rect x="16.5" y="18" width="5" height="4" rx="1"/>'),
+  ('versus', 'Links or cables?', 'Connections', '<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.6M12 16.6v.1"/>'),
+] if net else []) + [
+  ('breaks', 'What breaks', 'Connections', '<path d="M12 3.5 21 19.5H3Z"/><path d="M12 10v4.5M12 17v.1"/>'),
+] + ([
+  ('networks', 'Networks', 'Your network', '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.5 5.2 3.5 8.5s-1.1 6.2-3.5 8.5c-2.4-2.3-3.5-5.2-3.5-8.5s1.1-6.2 3.5-8.5Z"/>'),
+] if net else []) + ([
+  ('power', 'Power', 'Your network', '<path d="M13 2.5 5.5 13.5H12l-1 8 7.5-11H12Z"/>'),
+] if hw else []) + [
+  ('records', 'Records', 'Using it', '<rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>'),
+  ('keyboard', 'Keyboard', 'Using it', '<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.1M9.5 10h.1M13 10h.1M16.5 10h.1M7.5 14h9"/>'),
+] %}
+<dialog class="modal modal--rail" id="help-modal" aria-labelledby="help-title">
+  <div class="settings">
+    <aside class="settings-nav">
+      <div class="settings-nav-head">
+        <h3 class="settings-nav-title" id="help-title">Help</h3>
+        <button class="iconbtn settings-nav-close" data-close aria-label="Close">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="settings-nav-tabs" role="tablist" aria-orientation="vertical" aria-labelledby="help-title">
+        <div class="settings-nav-list">
+          {% set ns = namespace(group=None) %}
+          {% for id, label, group, icon in help_sections %}
+            {% if group != ns.group %}<p class="settings-nav-label">{{ group }}</p>{% set ns.group = group %}{% endif %}
+            {{ rail_item('help', id, label, icon, loop.first) }}
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
+
+    <div class="settings-main">
+      <header class="settings-head">
+        <button class="iconbtn settings-back" aria-label="All topics" title="All topics">
+          <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <h4 class="settings-head-title">{{ help_sections[0][1] }}</h4>
+        <button class="iconbtn" data-close aria-label="Close" title="Close (Esc)">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </header>
+
+    {% macro pane(id, first=false) -%}
+    <section class="settings-pane help{{ ' is-active' if first }}" data-pane="{{ id }}" id="help-{{ id }}" role="tabpanel" aria-labelledby="help-tab-{{ id }}" tabindex="0">
+      {{ caller() }}
+    </section>
+    {%- endmacro %}
+
+    {% call pane('connects', true) %}
+      <p class="help-lead">Everything here is a record: a server, a VLAN, a service, a room, a contract. What makes
+        it more than a list is how the records connect, and there are three ways they do.</p>
+      <h5>Where it is</h5>
+      <p>A record's Location puts it in a site, building, room or rack. That is a place, not a dependency: a
+        server in Rack 1 doesn't stop working when you rename the rack. The place lists it in its Contents tab.</p>
+      <h5>Links</h5>
+      <p>A link says how two records relate: a VM <em>runs on</em> a hypervisor, a service <em>depends on</em> a
+        database, a UPS <em>powers</em> a switch. Links are in a record's Relationships tab, and some fields and
+        form sections make them for you (a UPS's Powers, a switch's Networks).</p>
+      {% if net %}
+      <h5>Cables</h5>
+      <p>A cable is the physical connection: from a port on one device, perhaps through a patch panel, to a port
+        on another. Cables are in a device's Cabling tab and the setup guide's Cables step.</p>
+      {% endif %}
+      <h5>What follows from them</h5>
+      <p>From the links that carry a dependency{% if net %}, and from the cables{% endif %}, Hyprvolt works out
+        what each record needs and what breaks if it goes down. You never record that twice: link a VM to its
+        host{% if net %} and cable the host to a switch{% endif %}, and the {% if net %}switch{% else %}host{% endif %}'s
+        "What breaks" lists the VM.</p>
+    {% endcall %}
+
+    {% call pane('guide') %}
+      <p class="help-lead">The site setup guide documents a site a step at a time, in the order a network is
+        built: the place, the network, the equipment, what runs on it, the endpoints, and the cables between them.</p>
+      <p>Each step is a list of rows, one record a row. Type a name in the blank row and press Enter to add it;
+        change any field of a row in place, and it is saved as you leave it. The What goes here button beside a
+        step's title says what belongs in it.</p>
+      {% if net %}
+      <p>The steps build on each other. The Network gear step says which VLANs and subnets each switch carries;
+        the Cables step uses that, and where each device is, to suggest the cabling (Suggest cables) and to
+        label each cable by its network, such as 20-03 for the third cable on VLAN 20.</p>
+      {% endif %}
+      <p>{% if site_guide %}Open it from New, then Set up a site, step by step. {% endif %}It can be run again
+        for another site, or to add what was left out.</p>
+    {% endcall %}
+
+    {% call pane('links') %}
+      <p class="help-lead">A link joins two records and reads both ways: "vm1 runs on pve1" is "pve1 runs vm1"
+        from the other end.</p>
+      <h5>Adding one</h5>
+      <p>In a record's Relationships tab, Add link opens the form. Choose how this record relates to the other
+        one, then the record, and an optional note. Removing a link asks first, and can be undone.</p>
+      <h5>Which links carry a dependency</h5>
+      <p>Only some kinds of link mean one record stops working when the other goes down. Those are the ones
+        followed to answer "What breaks".</p>
+      <table class="help-table">
+        <thead><tr><th>Link</th><th>Read from the other end</th><th>Carries a dependency</th></tr></thead>
+        <tbody>
+          {% for k in help.kinds %}
+          <tr><td>{{ k.label }}</td><td>{{ k.reverse }}</td><td>{% if k.impact != 'none' %}Yes{% else %}<span class="faint">No</span>{% endif %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <h5>Links made by fields</h5>
+      <p>Some form sections are links kept for you, so they show in Relationships as well:
+        {%- if hw %} a UPS's Powers, a wireless bridge's or MoCA adapter's other end{% endif %}
+        {%- if net %}, a switch's Networks, an access point's Wireless networks, and an internet connection's
+        Comes in at{% endif %}. Change them in the form; the link follows.</p>
+    {% endcall %}
+
+    {% if net %}
+    {% call pane('cables') %}
+      <p class="help-lead">A cable joins two devices, port to port. Cables live in each device's Cabling tab
+        and in the setup guide's Cables step.</p>
+      <h5>Ports</h5>
+      <p>A device is cabled as a whole until you record its ports one by one; a cable then goes to a named port.
+        A switch's Ports count, if set, is how many cables it takes as a whole.</p>
+      <h5>Patch panels</h5>
+      <p>A patch panel's front and rear ports are paired. A trace goes in at one and out at the other, so a
+        cable from a desk jack through the panel to a switch traces from end to end.</p>
+      <h5>MoCA and wireless bridges</h5>
+      <p>A pair of MoCA adapters, or of wireless bridges, works like one cable: a device on the far end
+        reaches the switch on the near end over the coax or the air. Each adapter is still its own record, with
+        its own place and its own UPS.</p>
+      <h5>Labels</h5>
+      <p>A cable added in the setup guide without a label is given one from its network: 20-03 is the third
+        cable on VLAN 20, UP-01 an uplink between network gear, WAN-01 from the modem.</p>
+    {% endcall %}
+
+    {% call pane('versus') %}
+      <p class="help-lead">A cable is the physical layer; a link is anything else that ties two records together.
+        Where they overlap, the cable is enough.</p>
+      <table class="help-table">
+        <thead><tr><th></th><th>Cables</th><th>Links</th></tr></thead>
+        <tbody>
+          <tr><th>Between</th><td>Devices, port to port</td><td>Any two records: VMs, services, documents, contracts</td></tr>
+          <tr><th>Recorded in</th><td>Cabling tab, setup guide's Cables step</td><td>Relationships tab, and some form sections</td></tr>
+          <tr><th>Holds</th><td>Ports, label, color, length, the path through patch panels</td><td>Its kind and a note</td></tr>
+          <tr><th>Counted in</th><td>What breaks, the network diagram, Neighborhood, a port's trace</td><td>What breaks (the kinds that carry a dependency), Neighborhood</td></tr>
+        </tbody>
+      </table>
+      <h5>Do I link what is cabled?</h5>
+      <p>No. A cable already counts as a dependency, worked out each time from the cables as they are:</p>
+      <ul class="help-list">
+        <li>A device cabled to network gear (a switch, router, firewall, modem or MoCA adapter) needs it,
+          through any patch panels on the way.</li>
+        <li>Between two pieces of gear, the one further from where the internet comes in needs the nearer one:
+          an edge switch needs the core switch, the core needs the firewall, the firewall needs the modem.</li>
+        <li>Two devices cabled to each other at the same distance, such as a server and a NAS on a direct link,
+          need nothing of each other.</li>
+        <li>The far end of a MoCA or wireless bridge pair needs the near end.</li>
+        <li>A UPS or a peripheral, such as a PDU, is managed over the network and goes on working without it,
+          so its cable makes it need nothing.</li>
+      </ul>
+      <p>Each device's Relationships tab lists what it is cabled to, read-only, under Cabled to. Change the cable
+        in the Cabling tab and the dependency follows. Add a link only to say something a cable can't, such as
+        a service that depends on a database.</p>
+    {% endcall %}
+    {% endif %}
+
+    {% call pane('breaks') %}
+      <p class="help-lead">Every record's Relationships tab ends with two questions: what breaks if this goes
+        down, and what it needs.</p>
+      <h5>How it is worked out</h5>
+      <p>From the record, Hyprvolt follows every link that carries a dependency{% if net %}, and every cable{% endif %},
+        step by step. If a switch goes down, so does the server plugged into it, the hypervisor that runs on the
+        server, every VM on that, and every service on those VMs.</p>
+      <p>The view opens as a drawing, what it needs above the record and what breaks below. List shows the same
+        as nested lists. A record reached two ways is drawn once, and a loop is marked rather than followed.</p>
+      <p>In the drawing, the − on a record folds away what hangs from it, and the +N left in its place shows it
+        again. Collapse all keeps only the records next to this one. The folds last until the record is
+        closed.</p>
+      {% if 'maintenance' in help.modules %}
+      <h5>Maintenance windows</h5>
+      <p>A maintenance window that affects a record lists, under Also goes down, everything that breaks with
+        it, worked out the same way.</p>
+      {% endif %}
+      <h5>When something is missing</h5>
+      <p>If a dependency you expect isn't there, one link in the chain is: a VM with no Runs on, a service with
+        no Depends on{% if net %}, a server with no cable to its switch{% endif %}. Add it where it belongs and the
+        whole chain follows.</p>
+    {% endcall %}
+
+    {% if net %}
+    {% call pane('networks') %}
+      <p class="help-lead">The network is recorded from where the internet comes in, outward.</p>
+      <h5>The internet connection</h5>
+      <p>An internet connection Comes in at a modem, router or firewall. If that device goes down, so does the
+        line, and the network diagram draws the line above it.</p>
+      <h5>VLANs, subnets and addresses</h5>
+      <p>A subnet can belong to a VLAN. A device's IP addresses place it in a subnet, which is how Hyprvolt
+        knows which network a device is on when it labels a cable or suggests a switch.</p>
+      <h5>Which switch carries which network</h5>
+      <p>A switch, router or firewall lists the VLANs and subnets it carries in its Networks section. A
+        network then depends on the gear that carries it, so a switch's What breaks lists its networks.</p>
+      <h5>Wireless networks</h5>
+      <p>A wireless network is broadcast by access points, extenders, bridges and Wi-Fi routers, ticked from
+        either record.</p>
+    {% endcall %}
+    {% endif %}
+
+    {% if hw %}
+    {% call pane('power') %}
+      <p class="help-lead">A UPS's Powers section ticks the equipment plugged into it.</p>
+      <p>Each one is a Powered by link, which carries a dependency: if the UPS fails, everything it powers goes
+        down{% if net %}, along with whatever is cabled behind it{% endif %}. The setup guide has a UPSes step
+        for this, after Endpoints.</p>
+      {% if net %}<p>Each end of a MoCA pair, or of a wireless bridge, is its own record, so each can be powered
+        by its own UPS.</p>{% endif %}
+    {% endcall %}
+    {% endif %}
+
+    {% call pane('records') %}
+      <p class="help-lead">A record shows all of its sections, one after another, Overview first.</p>
+      <h5>Changing it</h5>
+      <p>An editor changes a field where it is shown: point at it or click it, type, and it is saved as you
+        leave it. A change that can't be saved says why under the field.</p>
+      <h5>Deleting and archiving</h5>
+      <p>Deleting a record can be undone from the message that follows, and it waits under Recently deleted
+        until it is purged. Archiving keeps it, with its history and links, out of lists and search.</p>
+      <h5>History</h5>
+      <p>Every change, link and cable is written to the History of the records it touches, with who made it.</p>
+    {% endcall %}
+
+    {% call pane('keyboard') %}
+      <table class="help-table help-table--keys">
+        <tbody>
+          <tr><td><kbd>Ctrl K</kbd> <kbd>/</kbd></td><td>Search</td></tr>
+          <tr><td><kbd>n</kbd></td><td>New record</td></tr>
+          <tr><td><kbd>?</kbd></td><td>This help</td></tr>
+          <tr><td><kbd>j</kbd> <kbd>k</kbd></td><td>Next, previous record in the list</td></tr>
+          <tr><td><kbd>1</kbd> to <kbd>9</kbd></td><td>A record's sections</td></tr>
+          <tr><td><kbd>e</kbd></td><td>Edit the open record</td></tr>
+          <tr><td><kbd>a</kbd></td><td>Archive or unarchive it</td></tr>
+          <tr><td><kbd>c</kbd></td><td>Copy its link</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Close a window</td></tr>
+        </tbody>
+      </table>
+    {% endcall %}
+    </div>
+  </div>
+</dialog>
