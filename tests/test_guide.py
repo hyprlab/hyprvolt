@@ -306,8 +306,9 @@ def test_viewers_cannot_use_it_and_editors_find_it(client, h, admin, viewer):
     other, oh = viewer
     assert other.get("/site-setup/site").status_code == 403
     assert other.post("/site-setup/site/rows", json={"values": {"name": "X"}}, headers=oh).status_code == 403
-    assert "Set up a site, step by step" in client.get("/").data.decode()
-    assert "Set up a site, step by step" not in other.get("/").data.decode()
+    # Its link, not its name, which the changelog in About may well mention.
+    assert 'href="/site-setup"' in client.get("/").data.decode()
+    assert 'href="/site-setup"' not in other.get("/").data.decode()
     assert client.get("/site-setup/nothing").status_code == 404
 
 
