@@ -257,7 +257,7 @@ anything else a module does to it (Locations logs rack mounts this way).
 
 ## Steps of the site setup guide
 
-The site setup guide (New > Set up a site, step by step) walks a site from
+The site setup guide (Set up a site, in the sidebar) walks a site from
 the site itself out to its endpoints, one short step at a time. Its steps
 are the turned-on modules' `setup`, sorted by `order`: Locations has the
 site (10), rooms (20) and racks (30), Contacts vendors (35), Network the

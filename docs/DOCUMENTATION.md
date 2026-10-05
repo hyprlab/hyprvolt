@@ -478,8 +478,9 @@ so in `notices`, a list of sentences, beside the record.
 ## Setting up a site
 
 A new install goes from the setup wizard straight into a guide that
-documents a site a step at a time; Set up a site, step by step, at the foot
-of the New record window (and the empty dashboard), opens it again later. Its first page says what it
+documents a site a step at a time; Set up a site, below All records in the
+sidebar, opens it again later, as do the foot of the New record window and
+the empty dashboard. Its first page says what it
 covers, in five parts: the place (the site, its buildings and rooms,
 racks, and the vendors it deals with), the network (the internet
 connection, VLANs, subnets, wireless networks), the equipment (network gear, servers and storage),

@@ -349,6 +349,9 @@ def test_viewers_cannot_use_it_and_editors_find_it(client, h, admin, viewer):
     # Its link, not its name, which the changelog in About may well mention.
     assert 'href="/site-setup"' in client.get("/").data.decode()
     assert 'href="/site-setup"' not in other.get("/").data.decode()
+    # In the sidebar, not only behind New.
+    side = client.get("/services").data.decode().split('class="nav-primary"')[1].split("</nav>")[0]
+    assert 'href="/site-setup"' in side and "<span>Set up a site</span>" in side
     assert client.get("/site-setup/nothing").status_code == 404
 
 
