@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.2] — 2026-09-29
+## [1.4.0-beta.3] — 2026-10-05
 
 ### Added
 - A service's kind has many more choices, under headings: Network (DHCP, DNS, dynamic DNS, ad blocking, VPN, reverse proxy, load balancer, routing and firewall, tunnel, network controller, time), Security and identity (directory, single sign-on, password manager, certificate authority, security monitoring), Operations (monitoring, logging, backup, container management, code hosting, CI/CD, image registry, automation, message broker), Storage and data, and Apps (dashboard, chat, wiki, downloads, photos, home automation, cameras, phone system, printing, remote access, AI, game server and more). A Homepage import recognizes the apps behind them, such as Kea, Authentik, Vaultwarden, Portainer and Gitea
