@@ -19,7 +19,7 @@ def seed(demo):
             url="https://jellyfin.lab.home", ports="8096/tcp", users="Everyone at home")
     service("svc-grafana", "Grafana", kind="monitoring", host="grafana", domain="lab-home",
             url="https://grafana.lab.home", ports="3000/tcp", users="Admins", criticality="low")
-    service("svc-website", "Website", kind="web", domain="example-net", url="https://example.net",
+    service("svc-website", "Website", kind="web", host="cloud", domain="example-net", url="https://example.net",
             users="The public", notes="A static site on Cloudflare Pages.")
     demo.link("depends_on", "svc-jellyfin", "nas1", "The media library is an NFS share on nas1")
     demo.link("depends_on", "svc-backups", "svc-dns")

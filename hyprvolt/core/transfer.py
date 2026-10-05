@@ -313,6 +313,9 @@ class _Resolver:
                     return value
             raise Invalid(f"{f.label} must be one of: {', '.join(label for _, label in f.options)}.")
         if f.kind == "ref":
+            for value, label in f.also:
+                if text.lower() in (value.lower(), label.lower()):
+                    return value
             return self.find(text, self.reg.ref_types(f), f.label.lower())
         return text
 

@@ -81,10 +81,7 @@ class View:
         for f in self.etype.fields if self.etype else ():
             if not (f.card or f.list):
                 continue
-            if f.relation:
-                value = (linked or {}).get(f.key)
-            else:
-                value = getattr(detail, f.key, None) if detail is not None else None
+            value = records.value_of(f, detail, linked or {})
             if value in (None, ""):
                 continue
             shown = F.display(f, value, records.live)

@@ -215,7 +215,9 @@ A service is what people use: its address, ports, who uses it, how much it
 matters, what it runs on and the domain it is under. The last two are also
 links, so the dependency view of a server or a domain lists the services
 that go with it, and the dashboard shows the services marked high or
-critical and any that are degraded or down.
+critical and any that are degraded or down. One that isn't on your
+premises, such as Microsoft 365 or a hosted website, runs on Cloud service,
+at the top of the Runs on list.
 
 A certificate records the names it covers, its issuer, its dates, its key
 and its fingerprint, and what uses it: a service or host chosen in its form, or

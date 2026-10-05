@@ -181,6 +181,11 @@ tab shows it and the dependency view follows it, and unlinking it there
 empties the field. The detail table needs no column for it, and a type whose
 fields are all kept as links needs no detail table.
 
+`also=(("cloud", "Cloud service"),)` gives a `ref` choices that aren't
+records, listed before them: a service's Runs on can be Cloud service. One
+is kept in the detail table's column of the field's key (which then needs
+one), and choosing a record instead empties it.
+
 A `date` field with `expires=True` is a date something ends or falls due: a
 warranty, a renewal, a contract's end. The core reminds of it: within the
 admin's reminder window either side of today, the record is on the

@@ -124,6 +124,8 @@ def parse(f: Field, raw, lookup=None):
         return str(raw)
 
     if kind == "ref":
+        if str(raw) in dict(f.also):
+            return str(raw)
         try:
             ref_id = int(raw)
         except (TypeError, ValueError):
@@ -279,6 +281,8 @@ def display(f: Field, value, lookup=None) -> str:
     if f.kind == "select":
         return dict(f.options).get(value, str(value))
     if f.kind == "ref":
+        if value in dict(f.also):
+            return dict(f.also)[value]
         target = lookup(value) if lookup else None
         return target.name if target else f"#{value}"
     if f.kind == "datetime" and isinstance(value, datetime):
