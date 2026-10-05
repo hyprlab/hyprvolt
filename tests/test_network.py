@@ -437,7 +437,7 @@ def test_a_line_comes_in_at_its_modem_router_or_firewall(client, h, admin):
     modem = make(client, h, "network_device", name="Modem", **{"f.kind": "modem"})
     # From the device: its Internet connection section, offering only lines.
     form = client.get(f"/e/{modem['id']}/form").data.decode()
-    assert 'name="s.internet.line"' in form and ">Fiber<" in form and ">Home LAN<" not in form
+    assert 'name="s.internet.lines"' in form and "Fiber" in form and "Home LAN" not in form
     client.post(f"/api/entities/{modem['id']}", json={"s.internet.line": fiber["id"]}, headers=h)
     got = client.get(f"/api/entities/{fiber['id']}").get_json()["entity"]["fields"]
     assert got["comes_in_at"] == modem["id"]
@@ -449,6 +449,21 @@ def test_a_line_comes_in_at_its_modem_router_or_firewall(client, h, admin):
     assert client.get(f"/api/entities/{lte['id']}").get_json()["entity"]["fields"]["comes_in_at"] == modem["id"]
     client.post(f"/api/entities/{modem['id']}", json={"s.internet.line": ""}, headers=h)
     assert client.get(f"/api/entities/{lte['id']}").get_json()["entity"]["fields"]["comes_in_at"] is None
+    # Dual WAN: two lines ticked on one firewall; unticking one leaves the other.
+    fw = make(client, h, "firewall", name="fw")
+    form = client.get(f"/e/{fw['id']}/form").data.decode()
+    assert 'name="s.internet.lines"' in form and "more than one WAN" in form
+    client.post(f"/api/entities/{fw['id']}", json={"s.internet.lines": f"{fiber['id']},{lte['id']}"}, headers=h)
+    lines = lambda: {e["name"] for e in client.get("/api/entities?type=network").get_json()["entities"]
+                     if client.get(f"/api/entities/{e['id']}").get_json()["entity"]["fields"].get("comes_in_at") == fw["id"]}
+    assert lines() == {"Fiber", "LTE"}
+    rels = client.get(f"/api/entities/{fw['id']}/relationships").get_json()["relationships"]
+    assert {r["other"]["name"] for r in rels if r["label"] == "brings in"} == {"Fiber", "LTE"}
+    client.post(f"/api/entities/{fw['id']}", json={"s.internet.lines": str(lte["id"])}, headers=h)
+    assert lines() == {"LTE"}
+    # Ticking a line on another device takes it from this one.
+    client.post(f"/api/entities/{modem['id']}", json={"s.internet.lines": str(lte["id"])}, headers=h)
+    assert lines() == set()
     # A switch is network gear too, but a workstation has no such section.
     pc = make(client, h, "workstation", name="pc")
     assert "s.internet" not in client.get(f"/e/{pc['id']}/form").data.decode()
