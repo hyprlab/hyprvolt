@@ -24,7 +24,7 @@ from .core import models as _core_models  # noqa: F401  (the shared tables, for 
 #: The single source of truth for the version. tools/bump-version.sh edits this
 #: line; the About section, /healthz, the release scripts and the Docker tags all
 #: read it from here.
-__version__ = "1.4.0-beta.4"
+__version__ = "1.4.0-beta.5"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("hyprvolt")

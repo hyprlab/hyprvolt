@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.4] — 2026-10-05
+## [1.4.0-beta.5] — 2026-10-05
 
 ### Added
 - A router or firewall can have more than one internet connection, for a site with two ISPs or a mobile backup: its Internet connections section, and its row in the setup guide's Network gear step, tick every line that plugs into it. Each line is drawn above it in the network diagram and listed in what goes down with it
