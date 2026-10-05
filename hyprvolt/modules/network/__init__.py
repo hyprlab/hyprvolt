@@ -157,6 +157,8 @@ SETUP_HELP = {
         "addresses, the download and upload speeds, and the circuit ID the ISP asks for when you report a fault.",
         "The ISP itself is a vendor, chosen here as Provider, so its support number is a click away. The "
         "modem or ONT is network gear, a later step.",
+        "A site with more than one ISP, or a mobile backup, records each line here. In the Network gear "
+        "step, tick every line that plugs into the router or firewall: it can have several.",
     ),
     "vlans": (
         "A VLAN splits one physical network into separate ones, each with a number from 1 to 4094, such as "
@@ -281,7 +283,7 @@ module = Module(
                 Tab("ports", "Cabling", views.ports_tab, when=views.has_ports_tab, count=views.ports_count)),
     form_sections=(FormSection("addresses", "IP addresses", addresses.section_form, addresses.section_save,
                                when=addresses.is_addressable, values=addresses.section_values),
-                   FormSection("internet", "Internet connection", views.internet_form, views.internet_save,
+                   FormSection("internet", "Internet connections", views.internet_form, views.internet_save,
                                when=views.is_gateway_gear, values=views.internet_values,
                                choices=views.internet_choices),
                    FormSection("wifi", "Wireless networks", views.wifi_form, views.wifi_save,

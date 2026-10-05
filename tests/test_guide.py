@@ -138,8 +138,9 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     add(client, h, "gear", site["id"], **{"_kind": "1", "name": "fw1", "location_id": rack["id"]})
     # The Internet connection column: only in a modem's, router's or firewall's row.
     page = client.get(f"/site-setup/gear?site={site['id']}").data.decode()
-    assert 'data-when="_kind" data-when-is="0 1 2"><span class="field-label">Internet connection' in page
-    assert f'<option value="{wan["id"]}" >Fiber</option>' in page.replace("selected", "")
+    # A tick list, so a router or firewall with two ISPs has both.
+    assert 'data-when="_kind" data-when-is="0 1 2"><span class="field-label">Internet connections' in page
+    assert f'<input type="checkbox" value="{wan["id"]}" data-multi-item ><span>Fiber</span>' in page
     switch_row = page.split('data-name="sw1"')[1].split("</fieldset>")[0]
     assert 'data-when="_kind" data-when-is="0 1 2" hidden>' in switch_row
     # A wireless bridge's other end: only in a bridge's row.

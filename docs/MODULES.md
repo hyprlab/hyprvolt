@@ -368,8 +368,8 @@ FormSection("rack", "Rack position", render=rack_form, save=rack_save,
   names (`{"list": "10.0.20.5"}`), so the site setup guide's rows can show
   it. Network's addresses and Contacts' supplier sections have one.
   `choices(name)`, optional, gives the options of a field of it that is a
-  choice, for the guide's column: Network's Internet connection section
-  offers only internet connections.
+  choice, for the guide's column: Network's Internet connections section
+  offers only internet connections, a tick list in the guide as in the form.
 - The API takes the same values as `s.rack.position_u` or nested as
   `"sections": {"rack": {"position_u": 12}}`. A save that doesn't name the
   section leaves its values alone.

@@ -114,8 +114,9 @@ SETUP_HELP = {
         "Network gear is what moves traffic: the modem or ONT, the router or firewall, switches, access "
         "points and patch panels. Give each its management address; it is recorded as an IP address in its "
         "subnet.",
-        "The device the ISP's line plugs into gets that line as its Internet connection, so a line that "
-        "goes down points straight at it.",
+        "The device the ISP's line plugs into gets that line ticked under Internet connections, so a line "
+        "that goes down points straight at it. A router or firewall with more than one ISP (dual WAN, or a "
+        "mobile backup) has each of its lines ticked.",
         "A modem in bridge mode passes the internet through to your router, which gets the public address; "
         "the modem has no address on your network, so leave its IP address empty (or give its status page's "
         "address, such as 192.168.100.1). A modem that is the gateway, the ISP's own router, has an address "
@@ -249,8 +250,9 @@ module = Module(
                   fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"),
                           SetupField("f.ports", placeholder="24", kinds=("Router", "Firewall", "Switch")),
-                          SetupField("s.internet.line", "Internet connection",
-                                     kinds=("Modem", "Router", "Firewall")),
+                          SetupField("s.internet.lines", "Internet connections", kind="multi", newline=True,
+                                     kinds=("Modem", "Router", "Firewall"),
+                                     placeholder="None recorded yet: add them in the Internet connection step."),
                           SetupField("s.bridge.other", "Other end", kinds=("Wireless bridge",)),
                           # A MoCA pair is one row: this end's place, and the other end's,
                           # which makes or moves that adapter (powered by a UPS of its own).

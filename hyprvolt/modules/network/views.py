@@ -162,12 +162,13 @@ def _lines() -> list[Entity]:
     return Entity.live().filter(Entity.type == "network", Entity.id.in_(wan)).order_by(Entity.name).all()
 
 
-def _line_of(device: Entity):
-    """The internet connection that comes in at a device, if any."""
-    rel = (Relationship.query.join(Entity, Entity.id == Relationship.source_id)
+def _lines_of(device: Entity) -> list[Entity]:
+    """The internet connections that come in at a device: one, or several
+    at a site with more than one ISP (dual WAN)."""
+    ids = [r.source_id for r in Relationship.query.join(Entity, Entity.id == Relationship.source_id)
            .filter(Relationship.kind == "comes_in_at", Relationship.target_id == device.id,
-                   Entity.deleted_at.is_(None)).order_by(Relationship.id).first())
-    return records.live(rel.source_id) if rel else None
+                   Entity.deleted_at.is_(None)).order_by(Relationship.id)]
+    return [e for e in (records.live(i) for i in dict.fromkeys(ids)) if e is not None]
 
 
 def internet_choices(name) -> list[tuple[int, str]]:
@@ -175,36 +176,54 @@ def internet_choices(name) -> list[tuple[int, str]]:
 
 
 def internet_values(device) -> dict:
-    line = _line_of(device)
-    return {"line": line.id if line else ""}
+    return {"lines": ",".join(str(e.id) for e in _lines_of(device))}
 
 
 def internet_form(etype, device) -> str:
-    line = _line_of(device) if device is not None else None
-    return render_template("network/internet_form.html", lines=internet_choices("line"),
-                           line_id=line.id if line else None)
+    chosen = ",".join(str(e.id) for e in _lines_of(device)) if device is not None else ""
+    return render_template("sheet/multi_section.html", name="s.internet.lines", label="Internet connections",
+                           choices=internet_choices("lines"), value=chosen,
+                           hint="Each line from an ISP that plugs into it: tick two or more for a router or "
+                                "firewall with more than one WAN. A line comes in at one device, so ticking it "
+                                "here takes it from any other. Leave them all unticked for a device further in.",
+                           empty="No internet connections recorded yet: add them in the Internet connection "
+                                 "step or under Network, then tick them here.")
 
 
 def internet_save(device, values, user) -> list[dict]:
-    """Which line comes in at the device, kept as that connection's Comes in
-    at: the line chosen points here, and one that did and isn't chosen no
-    longer does. A second line (dual WAN) is set from its own record."""
-    if "line" not in values:
+    """The lines that come in at the device, kept as each connection's Comes
+    in at: a ticked line points here, and one that did and isn't ticked no
+    longer does. ``lines`` is the ticked ids; ``line``, one id or none, is
+    the same for a single line (the API before dual WAN)."""
+    if "lines" in values:
+        raw = values["lines"]
+        wanted_ids = raw if isinstance(raw, list) else [p for p in str(raw or "").split(",") if p.strip()]
+    elif "line" in values:
+        wanted_ids = [] if values["line"] in (None, "", 0, "0") else [values["line"]]
+    else:
         return []
-    wanted = None
-    if values["line"] not in (None, "", 0, "0"):
-        wanted = records.live(values["line"])
-        if wanted is None or wanted.id not in {e.id for e in _lines()}:
+    known = {e.id: e for e in _lines()}
+    wanted = []
+    for raw_id in wanted_ids:
+        try:
+            line = known.get(int(raw_id))
+        except (TypeError, ValueError):
+            line = None
+        if line is None:
             raise Invalid("Choose an internet connection that exists.")
-    current = _line_of(device)
-    if (wanted and current and wanted.id == current.id) or (wanted is None and current is None):
+        if line not in wanted:
+            wanted.append(line)
+    current = _lines_of(device)
+    if {e.id for e in wanted} == {e.id for e in current}:
         return []
-    if current is not None:
-        records.update(current, {"f.comes_in_at": ""}, user)
-    if wanted is not None:
-        records.update(wanted, {"f.comes_in_at": device.id}, user)
-    return [{"field": "internet", "label": "Internet connection", "old": current.name if current else "",
-             "new": wanted.name if wanted else ""}]
+    for line in current:
+        if line not in wanted:
+            records.update(line, {"f.comes_in_at": ""}, user)
+    for line in wanted:
+        if line not in current:
+            records.update(line, {"f.comes_in_at": device.id}, user)
+    return [{"field": "internet", "label": "Internet connections", "old": ", ".join(e.name for e in current),
+             "new": ", ".join(e.name for e in wanted)}]
 
 
 # ———— Wireless networks and the gear that broadcasts them ————

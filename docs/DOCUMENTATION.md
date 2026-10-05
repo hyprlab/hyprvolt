@@ -171,9 +171,11 @@ fixed address, subnet mask (255.255.255.248 or /29), gateway and DNS
 servers; a gateway outside the address's network is refused. Dynamic hides
 them and keeps what was there. Its Comes in at names the modem, router or
 firewall the line plugs into (also set from that device's Internet
-connection section, and in the guide's Network gear step): the device then
+connections section, and in the guide's Network gear step): the device then
 brings in the line, the network diagram draws the line above it, and the
-line depends on it. A modem in bridge mode has no address on your network
+line depends on it. A router or firewall at a site with more than one ISP
+(dual WAN, or a mobile backup) has each of its lines ticked there; a line
+comes in at one device, so ticking it on another moves it. A modem in bridge mode has no address on your network
 and can be left without one. The ISP is a vendor, chosen in its Supplier
 section, with the contract for the line. The sidebar lists internet
 connections. A network device of the kind Wireless bridge links two places
