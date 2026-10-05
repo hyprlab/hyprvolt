@@ -30,11 +30,11 @@ KINDS = (
     ("documents", "Document management"),
     ("erp", "ERP"), ("crm", "CRM"), ("accounting", "Accounting"), ("payroll", "Payroll and HR"),
     ("pos", "Point of sale"), ("ecommerce", "Online store"), ("inventory", "Inventory and assets"),
-    ("projects", "Project management"), ("helpdesk", "Help desk"), ("office", "Office and productivity"),
+    ("projects", "Project management"), ("helpdesk", "Help desk"), ("office", "Office and productivity"), ("print", "Print server"),
     ("meetings", "Video meetings"), ("booking", "Scheduling and booking"),
     ("web", "Web app"), ("dashboard", "Dashboard"), ("mail", "Mail"), ("chat", "Chat"), ("wiki", "Wiki"),
     ("media", "Media"), ("downloads", "Downloads"), ("photos", "Photos"), ("smarthome", "Home automation"),
-    ("nvr", "Cameras (NVR)"), ("pbx", "Phone system (PBX)"), ("print", "Printing"),
+    ("nvr", "Cameras (NVR)"), ("pbx", "Phone system (PBX)"),
     ("remote", "Remote access"), ("ai", "AI"), ("games", "Game server"),
     ("other", "Other"),
 )
@@ -45,9 +45,9 @@ KIND_GROUPS = (
                     "broker")),
     ("Storage and data", ("files", "objects", "database", "documents")),
     ("Business", ("erp", "crm", "accounting", "payroll", "pos", "ecommerce", "inventory", "projects", "helpdesk",
-                  "office", "meetings", "booking")),
+                  "office", "print", "meetings", "booking")),
     ("Apps", ("web", "dashboard", "mail", "chat", "wiki", "media", "downloads", "photos", "smarthome", "nvr",
-              "pbx", "print", "remote", "ai", "games")),
+              "pbx", "remote", "ai", "games")),
 )
 #: What a service can run on besides a record: someone else's cloud.
 ELSEWHERE = (("cloud", "Cloud service"),)

@@ -135,7 +135,8 @@ def test_a_business_app_is_given_its_kind():
     from hyprvolt.modules.services.homepage import guess_kind
     for name, icon, kind in (("Odoo", "odoo.png", "erp"), ("Customers", "suitecrm.svg", "crm"),
                              ("Books", "akaunting.png", "accounting"), ("Tickets", "zammad.svg", "helpdesk"),
-                             ("Snipe-IT", "", "inventory"), ("Jitsi Meet", "", "meetings")):
+                             ("Snipe-IT", "", "inventory"), ("Jitsi Meet", "", "meetings"),
+                             ("Printers", "papercut.png", "print")):
         assert guess_kind({"widget": "", "icon": icon, "name": name}) == kind, name
 
 

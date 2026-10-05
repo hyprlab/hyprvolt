@@ -82,7 +82,7 @@ KIND_WORDS = {
     "chat": ("matrix", "synapse", "element", "mattermost", "rocketchat", "zulip"),
     "wiki": ("bookstack", "wikijs", "outline", "docmost", "dokuwiki", "trilium"),
     "pbx": ("freepbx", "asterisk", "3cx", "fusionpbx"),
-    "print": ("cups",),
+    "print": ("cups", "papercut", "printserver", "ipp"),
     "remote": ("guacamole", "rustdesk", "meshcentral", "kasm"),
     "ai": ("ollama", "openwebui", "localai"),
     "games": ("pterodactyl", "crafty", "minecraft", "amp"),

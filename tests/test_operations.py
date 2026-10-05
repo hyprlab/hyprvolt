@@ -154,7 +154,8 @@ def test_a_service_kind_is_chosen_under_its_heading(client, h, admin):
     assert '<option value="ddns" >Dynamic DNS</option>' in network and '<option value="adblock" >Ad blocking</option>' in network
     assert form.index('label="Apps"') < form.index('<option value="other" >Other</option>')
     business = form.split('<optgroup label="Business">')[1].split("</optgroup>")[0]
-    for value, label in (("erp", "ERP"), ("crm", "CRM"), ("accounting", "Accounting"), ("pos", "Point of sale")):
+    for value, label in (("erp", "ERP"), ("crm", "CRM"), ("accounting", "Accounting"), ("pos", "Point of sale"),
+                         ("print", "Print server")):
         assert f'<option value="{value}" >{label}</option>' in business
     dhcp = make(client, h, "service", name="Kea", **{"f.kind": "dhcp"})
     assert client.get(f"/api/entities/{dhcp['id']}").get_json()["entity"]["fields"]["kind"] == "dhcp"
