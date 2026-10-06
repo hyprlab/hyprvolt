@@ -486,6 +486,9 @@ def cross_check(m: Module, reg: Registry) -> list[str]:
                     p.append(f"the field {t.key}.{f.key} points at the unknown type {target!r}")
             if f.relation and f.relation not in reg.kinds:
                 p.append(f"the field {t.key}.{f.key} is kept as the unknown link kind {f.relation!r}")
+        if t.named_with and not any(f.key == t.named_with and f.kind == "ref" and not f.relation
+                                    for f in t.fields):
+            p.append(f"{t.key!r} is named with {t.named_with!r}, which must be a ref field of its own in a column")
         for key in t.becomes:
             other = reg.types.get(key)
             if other is None:

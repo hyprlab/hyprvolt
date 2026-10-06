@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- A site can be more than one network, such as two buildings that each have their own internet line, router and addresses: add a local network for each building, in the setup guide's new Local networks step or as a network of the kind Local network placed in the building, and say which network each VLAN and subnet is in. A device's addresses are in its building's network, so both buildings can use 192.168.1.0/24, and even the same address, without a clash, and each subnet lists only its own building's addresses. Where VLANs or subnets of different networks share a name, a choice of them says which network each is in, such as Default (Annex network)
 - A service's kind can be a business app, under a Business heading: ERP, CRM, accounting, payroll and HR, point of sale, online store, inventory and assets, project management, help desk, office and productivity, print server (Printing before, moved from Apps), video meetings, and scheduling and booking. A Homepage import recognizes apps such as Odoo, SuiteCRM, Akaunting, Snipe-IT, Zammad, Jitsi and PaperCut
 - Set up a site is in the sidebar, below All records, so the site setup guide opens without going through New
 - A service's Runs on can be Cloud service, for one that isn't on your premises, such as Microsoft 365 or a hosted website: it is first in the list, before your own servers, VMs and containers

@@ -77,7 +77,7 @@ def _prefix_of(subnet: Entity | None) -> str | None:
 
 
 def _subnets(device: Entity) -> list[Entity]:
-    found = [addresses.subnet_of(d.address) for _, d in addresses.addresses_of(device)]
+    found = [addresses.subnet_of_ip(d) for _, d in addresses.addresses_of(device)]
     return [s for s in dict.fromkeys(found) if s is not None]
 
 

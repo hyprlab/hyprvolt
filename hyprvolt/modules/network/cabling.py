@@ -97,7 +97,7 @@ class Site:
     def networks(self, a) -> list[Entity]:
         """The subnets its addresses are in, and the VLAN and subnet of each
         wireless network it broadcasts."""
-        out = [addresses.subnet_of(d.address) for _, d in addresses.addresses_of(self.devices[a])]
+        out = [addresses.subnet_of_ip(d) for _, d in addresses.addresses_of(self.devices[a])]
         for wifi in Relationship.query.filter(Relationship.kind == "broadcast_by", Relationship.target_id == a):
             d = db.session.get(NetworkDetail, wifi.source_id)
             out += [records.live(i) for i in (d.vlan, d.subnet) if d is not None and i]

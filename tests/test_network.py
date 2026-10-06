@@ -113,6 +113,44 @@ def test_a_device_lists_its_addresses_in_its_form(client, h, admin):
     assert "s.addresses" not in client.get("/e/form?type=site").data.decode()
 
 
+def test_each_building_can_be_a_network_of_its_own(client, h, admin):
+    site = make(client, h, "site", name="Campus")
+    main = make(client, h, "building", name="Main", location_id=site["id"])
+    annex = make(client, h, "building", name="Annex", location_id=site["id"])
+    room = make(client, h, "room", name="Closet", location_id=annex["id"])
+    lan = make(client, h, "network", name="Annex network", location_id=annex["id"], **{"f.kind": "lan"})
+    # The same VLAN and range in each building: one in no network (the rest of the site), one in the annex's.
+    make(client, h, "vlan", name="Default", **{"f.vid": 1})
+    annex_vlan = make(client, h, "vlan", name="Default", **{"f.vid": 1, "f.network": lan["id"]})
+    here = make(client, h, "subnet", name="Main LAN", **{"f.cidr": "192.168.1.0/24"})
+    there = make(client, h, "subnet", name="Annex LAN", **{"f.cidr": "192.168.1.0/24", "f.vlan": annex_vlan["id"]})
+    assert there["fields"]["network"] == lan["id"]          # on the annex's VLAN: in its network
+    # The same address on a device in each building; a second in the annex is refused.
+    one = make(client, h, "server", name="main-srv", location_id=main["id"], **{"s.addresses.list": "192.168.1.10"})
+    two = make(client, h, "server", name="annex-srv", location_id=room["id"],
+               **{"s.addresses.list": "192.168.1.10"})
+    resp = client.post("/api/entities", json={"type": "server", "name": "x", "location_id": annex["id"],
+                                              "s.addresses.list": "192.168.1.10"}, headers=h)
+    assert resp.status_code == 400 and "assigned to annex-srv" in resp.get_json()["error"]
+    # Each subnet holds its own building's.
+    for subnet, owner in ((here, one), (there, two)):
+        got = client.get(f"/network/subnets/{subnet['id']}/addresses").get_json()
+        assert [(a["address"], a["assigned"]["name"]) for a in got["addresses"]] == [("192.168.1.10", owner["name"])]
+        assert got["subnet"]["used"] == 1
+    assert "Annex LAN" in client.get(f"/e/{two['id']}/sheet?tab=addresses").data.decode()
+    assert "Main LAN" in client.get(f"/e/{one['id']}/sheet?tab=addresses").data.decode()
+    # A choice of VLAN says whose each is.
+    form = client.get("/e/form?type=subnet").data.decode().split('name="f.vlan"')[1].split("</select>")[0]
+    assert ">Default</option>" in form and ">Default (Annex network)</option>" in form
+    # The setup guide has a Local networks step, and asks for each VLAN's network once there is one.
+    lans = client.get(f"/site-setup/lans?site={site['id']}").data.decode()
+    assert 'data-name="Annex network"' in lans
+    vlans = client.get(f"/site-setup/vlans?site={site['id']}").data.decode()
+    assert 'name="f.network"' in vlans and ">Annex network</option>" in vlans
+    other = make(client, h, "site", name="Cabin")
+    assert 'name="f.network"' not in client.get(f"/site-setup/vlans?site={other['id']}").data.decode()
+
+
 # ———— The subnet view ————
 
 def test_the_subnet_view_shows_what_is_used_reserved_and_free(client, h, admin, viewer):

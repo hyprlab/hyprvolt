@@ -202,6 +202,10 @@
       <h5>VLANs, subnets and addresses</h5>
       <p>A subnet can belong to a VLAN. A device's IP addresses place it in a subnet, which is how Hyprvolt
         knows which network a device is on when it labels a cable or suggests a switch.</p>
+      <h5>A site of several networks</h5>
+      <p>When a building has its own internet line, router and addresses, give it a local network placed in the
+        building and choose that network on its VLANs and subnets. Its devices' addresses are then in its network,
+        so two buildings can both use 192.168.1.0/24 without a clash.</p>
       <h5>Which switch carries which network</h5>
       <p>A switch, router or firewall lists the VLANs and subnets it carries in its Networks section. A
         network then depends on the gear that carries it, so a switch's What breaks lists its networks.</p>
