@@ -145,6 +145,11 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   record's location, anything located in it, or a ref field pointing at it
   (a service's Runs on) doesn't suit the new type. A module that attaches
   data by trait refuses it for its own data with `Module.before_retype`.
+- `named_with="network"` names a ref field of its own, kept in a column,
+  whose record's name follows the record's in a choice of it where the
+  records differ: VLANs of two buildings' networks read "Default" and
+  "Default (Annex network)". `present.choice_labels(entities)` gives the
+  labels.
 - `restrictable=True` gives the form a "Visible to" choice (everyone, editors,
   private) and hides the record from readers below it everywhere
   (`core/access.py`). Documents use it. Read records with `Entity.live()` or
@@ -261,7 +266,8 @@ The site setup guide (Set up a site, in the sidebar) walks a site from
 the site itself out to its endpoints, one short step at a time. Its steps
 are the turned-on modules' `setup`, sorted by `order`: Locations has the
 site (10), rooms (20) and racks (30), Contacts vendors (35), Network the
-internet connection (40), VLANs (45) and subnets (50), Hardware network
+internet connection (40), local networks (42), VLANs (45) and subnets (50),
+Hardware network
 gear (60), servers (70) and endpoints (100), Virtual hypervisors (80) and
 guests (85), Services services (90), and Network cables (110). A step of a
 new module takes a place between them. `group` is the part of the guide a
@@ -293,6 +299,10 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
   needs a `label` and is left out where the section doesn't apply, and
   `types=("vendor",)` makes it a choice of those records. A saved row shows
   what the section holds through its `FormSection.values(entity)`.
+- `SetupField("f.network", choices=views.local_networks)` narrows a ref
+  field's choices to `choices(scope)`, the site's, and leaves the column out
+  when there are none: a VLAN's Network is asked only in a site of more
+  than one local network.
 - `SetupField(..., kinds=("Modem", "Router", "Firewall"))` puts a column in
   rows of those kinds only, shown as a row's kind is chosen: the Network
   gear step's Internet connection.

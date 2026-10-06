@@ -291,11 +291,12 @@ def _ref_choices(f, entity=None) -> list:
     keys = [k for k in reg.ref_types(f) if k in reg.enabled_type_keys()]
     rows = [e for e in Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name)
             if entity is None or e.id != entity.id]
+    names = present.choice_labels(rows)
     if len(keys) <= 1:
-        return list(f.also) + [(e.id, e.name) for e in rows]
+        return list(f.also) + [(e.id, names[e.id]) for e in rows]
     by_type = {}
     for e in rows:
-        by_type.setdefault(e.type, []).append((e.id, e.name))
+        by_type.setdefault(e.type, []).append((e.id, names[e.id]))
     return list(f.also) + [{"label": reg.type(k).plural, "options": by_type[k]} for k in keys if k in by_type]
 
 

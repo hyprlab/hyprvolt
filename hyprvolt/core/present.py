@@ -60,6 +60,30 @@ def details_for(entities) -> dict[int, object]:
     return out
 
 
+def choice_labels(entities) -> dict[int, str]:
+    """Each record's name as a choice of it reads: followed by the name of
+    its type's ``named_with`` record (a VLAN's network) where those of the
+    records differ, so two buildings' VLANs called Default can be told apart."""
+    out = {e.id: e.name for e in entities}
+    by_type: dict[str, list] = {}
+    for e in entities:
+        by_type.setdefault(e.type, []).append(e)
+    for type_key, rows in by_type.items():
+        etype = registry().type(type_key)
+        if etype is None or not etype.named_with:
+            continue
+        details = details_for(rows)
+        values = {e.id: getattr(details.get(e.id), etype.named_with, None) for e in rows}
+        if len(set(values.values())) < 2:
+            continue
+        names = dict(db.session.query(Entity.id, Entity.name).filter(
+            Entity.id.in_({v for v in values.values() if v}), Entity.deleted_at.is_(None)))
+        for e in rows:
+            if values[e.id] in names:
+                out[e.id] = f"{e.name} ({names[values[e.id]]})"
+    return out
+
+
 class View:
     """One entity as a card or a list row shows it."""
 

@@ -192,6 +192,11 @@ def columns(step, scope) -> list[dict]:
             col["required"] = f.required and all(any(x.key == f.key for x in t.fields) for t in types)
             if f.kind == "select":
                 col.update(kind="select", choices=f.choices())
+            elif f.kind == "ref" and sf.choices is not None:
+                choices = sf.choices(scope)
+                if not choices:
+                    continue                 # nothing to choose in this site: no column
+                col.update(kind="select", choices=choices)
             elif f.kind == "ref":
                 col.update(kind="select", choices=_field_choices(fields))
             elif f.kind in ("speed", "cidr", "iprange"):

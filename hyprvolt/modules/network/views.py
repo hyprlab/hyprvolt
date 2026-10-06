@@ -64,7 +64,7 @@ def network_count(network: Entity):
 
 def ip_tab(ip: Entity) -> str:
     d = _detail(ip.id)
-    subnet = addresses.subnet_of(d.address) if d and d.address else None
+    subnet = addresses.subnet_of_ip(d) if d else None
     sd = _detail(subnet.id) if subnet else None
     vlan = records.live(sd.vlan) if sd and sd.vlan else None
     names = addresses.dns_names([d.address]).get(d.address, []) if d and d.address else []
@@ -74,7 +74,7 @@ def ip_tab(ip: Entity) -> str:
 def addresses_tab(entity: Entity) -> str:
     rows = []
     for ip, d in addresses.addresses_of(entity):
-        subnet = addresses.subnet_of(d.address)
+        subnet = addresses.subnet_of_ip(d)
         sd = _detail(subnet.id) if subnet else None
         rows.append({"ip": ip, "address": d.address, "subnet": subnet, "cidr": sd.cidr if sd else "",
                      "vlan": records.live(sd.vlan) if sd and sd.vlan else None, "mac": d.mac})
@@ -169,6 +169,15 @@ def _lines_of(device: Entity) -> list[Entity]:
            .filter(Relationship.kind == "comes_in_at", Relationship.target_id == device.id,
                    Entity.deleted_at.is_(None)).order_by(Relationship.id)]
     return [e for e in (records.live(i) for i in dict.fromkeys(ids)) if e is not None]
+
+
+def local_networks(scope) -> list[tuple[int, str]]:
+    """The site's local networks, for the setup guide's Network column:
+    none (and no column) for a site that is one network."""
+    from hyprvolt.core import guide
+    lans = (Entity.live().join(NetworkDetail, NetworkDetail.entity_id == Entity.id)
+            .filter(Entity.type == "network", NetworkDetail.kind == "lan").order_by(Entity.name).all())
+    return [(e.id, e.name) for e in guide.in_site(lans, scope)]
 
 
 def internet_choices(name) -> list[tuple[int, str]]:
@@ -345,19 +354,26 @@ def _carried(entity, side) -> str:
 
 def networks_choices(name) -> list[dict]:
     """The VLANs, by number, and the subnets, by range, each named for what
-    it is: "Servers (VLAN 20)", "Servers 10.0.20.0/24, on VLAN 20"."""
+    it is: "Servers (VLAN 20)", "Servers 10.0.20.0/24, on VLAN 20", and in
+    a site of several local networks, which: "Servers (VLAN 20, Annex)"."""
     details = {d.entity_id: d for d in NetworkDetail.query.filter(
         NetworkDetail.entity_id.in_([e.id for e in _segments()]))}
+    networks = {d.network for d in details.values()}
+    names = dict(db.session.query(Entity.id, Entity.name).filter(
+        Entity.id.in_({n for n in networks if n}))) if len(networks) > 1 else {}
     vlans, subnets = [], []
     for e in _segments():
         d = details.get(e.id)
+        net = names.get(d.network) if d else None
         if e.type == "vlan":
-            vlans.append((d.vid if d else 0, e.id, f"{e.name} (VLAN {d.vid})" if d and d.vid else e.name))
+            what = ", ".join(x for x in (f"VLAN {d.vid}" if d and d.vid else "", net) if x)
+            vlans.append((d.vid if d else 0, e.id, f"{e.name} ({what})" if what else e.name))
         else:
             vlan = details.get(d.vlan) if d and d.vlan else None
             label = e.name if not d or not d.cidr or d.cidr in e.name else f"{e.name}, {d.cidr}"
+            label = f"{label}, on VLAN {vlan.vid}" if vlan and vlan.vid else label
             subnets.append((addresses.ip_key(d.cidr.split("/")[0]) if d and d.cidr else (9, 0), e.id,
-                            f"{label}, on VLAN {vlan.vid}" if vlan and vlan.vid else label))
+                            f"{label}, in {net}" if net else label))
     groups = [("VLANs", sorted(vlans)), ("Subnets", sorted(subnets, key=lambda s: (s[0], s[2])))]
     return [{"label": label, "options": [(i, text) for _, i, text in rows]} for label, rows in groups if rows]
 

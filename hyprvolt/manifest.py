@@ -113,6 +113,9 @@ class EntityType:
     overview: Callable | None = None # overview(entity) -> (html above, html below) the Overview
     restrictable: bool = False       # can be hidden from viewers (core/access.py)
     becomes: tuple = ()              # types a record can be changed into: same module, same detail
+    named_with: str = ""             # a ref field (a column) whose record's name follows the record's
+                                     # own in a choice of it, where they differ: a VLAN's network,
+                                     # "Default (Annex network)"
     module: str = ""                 # filled in by the registry
 
     def text(self, plural: bool = False) -> str:
@@ -186,7 +189,9 @@ class SetupField:
     (its label and control come from the type's Field), or "s.<section>.<name>",
     which needs a ``label`` and is left out where the section doesn't apply.
     ``types`` makes it a choice of the records of those types; ``choices(scope)``
-    gives the choices of a step with its own ``save``."""
+    gives the choices of a step with its own ``save``, or narrows a ref
+    field's to the site's, the column left out when there are none (a VLAN's
+    Network, in a site of one network)."""
     name: str
     label: str = ""
     kind: str = "text"               # text, number or select, where not from a Field; multi: a

@@ -42,7 +42,7 @@ def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
     for group in ("Place", "Network", "Equipment", "What runs", "Endpoints"):
         assert f'<p class="guide-group">{group}</p>' in page
     assert "This guide covers the 5 main categories of a site" in page
-    for plan in ("Site, buildings, rooms, racks, and vendors", "Internet connections, VLANs, subnets, and wireless networks",
+    for plan in ("Site, buildings, rooms, racks, and vendors", "Internet connections, local networks, VLANs, subnets, and wireless networks",
                  "Network gear, servers, and storage", "Endpoints, UPSes, and cables"):
         assert f'<span class="guide-plan-steps">{plan}</span>' in page
     # Once something is recorded it is the guide's overview, run again.
