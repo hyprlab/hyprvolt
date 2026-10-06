@@ -95,6 +95,9 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     change(client, h, "vendors", isp["id"], "f.support_phone", "+1 555 010 0199", site["id"])
     page = client.get(f"/site-setup/vendors?site={site['id']}").data.decode()
     assert page.count("data-row ") == 2 and 'value="+1 555 010 0199"' in page and "data-row-new" in page
+    # The blank row can be emptied without adding it: Clear, shown once something is in it.
+    blank = page.split("data-row-new")[1]
+    assert 'data-row-clear hidden' in blank and blank.index("data-row-clear") < blank.index("data-row-add")
     # A saved row is folded to its name, and opens to be changed.
     assert page.count('class="guide-row is-collapsed"') == 2
     assert 'aria-expanded="false"' in page and '<span class="guide-row-title" data-row-title>Ubiquiti</span>' in page

@@ -535,7 +535,9 @@ Every other step is a list of rows, one record a row: what the site has
 already, and a blank row at the end. Typing a name in the blank row and
 pressing Enter or its Add button adds it (nothing is added until then), and
 a new blank row appears for the next, so every endpoint or every service
-goes in one after another. In Network gear, Servers and storage, and
+goes in one after another. Once anything is typed or chosen in the blank
+row, a Clear button beside Add empties it without adding it, so moving to
+another step adds nothing. In Network gear, Servers and storage, and
 Endpoints, the rows are grouped under a heading for each kind (modems,
 routers, firewalls, switches and so on, in that order), and a row whose
 kind is changed moves to its group. A row once added folds to one line, its name and
