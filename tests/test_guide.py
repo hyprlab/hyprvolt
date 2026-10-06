@@ -122,7 +122,8 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     assert '<span class="guide-break" aria-hidden="true" data-when="f.static_ip" data-when-is="1" hidden>' in new_row
     change(client, h, "internet", wan["id"], "f.static_ip", True, site["id"])
     change(client, h, "internet", wan["id"], "f.public_ips", "203.0.113.26", site["id"])
-    assert change(client, h, "internet", wan["id"], "f.netmask", "/29", site["id"])["value"] == "255.255.255.248"
+    assert change(client, h, "internet", wan["id"], "f.cidr", "203.0.113.26/29", site["id"])["value"] == \
+        "203.0.113.24/29"
     page = client.get(f"/site-setup/internet?site={site['id']}").data.decode()
     # Every row its own form, so each row's Dynamic or Static is its own.
     assert page.count("data-row-form") == page.count("data-row ") + page.count("data-row-new")

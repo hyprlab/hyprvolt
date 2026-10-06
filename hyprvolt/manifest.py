@@ -41,6 +41,9 @@ class Field:
     types: tuple = ()                # ref: entity types it may point at
     trait: str = ""                  # ref: or any type with this trait
     relation: str = ""               # ref: kept as a link of this kind, not a column
+    only: tuple = ()                 # ref: (field key, values, why): only records whose field has one of
+                                     # the values, and why another is refused: a subnet's network
+                                     # is a local one, not an internet connection
     also: tuple = ()                 # ref: choices that aren't records, ((value, label), ...), listed
                                      # first and kept in the detail's column of the field's key:
                                      # a service that runs on a cloud service

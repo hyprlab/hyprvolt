@@ -96,40 +96,20 @@ def check_subnet(entity, detail):
         raise Invalid(f"{detail.cidr} is already recorded as {same[0].name}.")
 
 
-def _netmask(raw: str) -> str:
-    """255.255.255.248 from "255.255.255.248", "/29" or "29"; "/64" for an
-    IPv6 prefix, which has no dotted form."""
-    text = raw.strip().lstrip("/")
-    try:
-        if text.isdigit():
-            n = int(text)
-            if n <= 32:
-                return str(ipaddress.IPv4Network(f"0.0.0.0/{n}").netmask)
-            if n <= 128:
-                return f"/{n}"
-            raise ValueError
-        return str(ipaddress.IPv4Network(f"0.0.0.0/{text}").netmask)
-    except ValueError:
-        raise Invalid("The subnet mask is written as 255.255.255.248, or /29.") from None
-
-
 def check_network(entity, detail):
-    """A static line's subnet mask, written one way; its gateway inside the
-    network of its address, when that is one address."""
-    if not detail:
+    """A static line's address and gateway inside its subnet, when the
+    address is one address rather than a range or a list."""
+    if not detail or not detail.static_ip or not detail.cidr:
         return
-    if detail.netmask:
-        detail.netmask = _netmask(detail.netmask)
-    if not (detail.static_ip and detail.netmask and detail.gateway and detail.public_ips):
-        return
+    net = ipaddress.ip_network(detail.cidr)
     try:
-        address = ipaddress.ip_address(detail.public_ips.strip())
-        mask = detail.netmask.lstrip("/") if detail.netmask.startswith("/") else detail.netmask
-        net = ipaddress.ip_interface(f"{address}/{mask}").network
+        address = ipaddress.ip_address((detail.public_ips or "").strip())
     except ValueError:
-        return                          # a range or a list: nothing to check it against
-    if ipaddress.ip_address(detail.gateway) not in net:
-        raise Invalid(f"The gateway {detail.gateway} is outside {net}, the network of {address}.")
+        address = None                  # none, or a range or a list: nothing to check
+    if address is not None and address not in net:
+        raise Invalid(f"The static IP {address} is outside {net}, the line's subnet.")
+    if detail.gateway and ipaddress.ip_address(detail.gateway) not in net:
+        raise Invalid(f"The gateway {detail.gateway} is outside {net}, the line's subnet.")
 
 
 def check_vlan(entity, detail):

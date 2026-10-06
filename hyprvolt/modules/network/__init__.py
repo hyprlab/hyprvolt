@@ -121,6 +121,26 @@ def _static_ip(m):
         "UPDATE network_details SET static_ip = 1 WHERE public_ips IS NOT NULL AND public_ips != ''")))
 
 
+def _wan_subnet(m):
+    """A static line's subnet mask was a line of text. The line has a Subnet
+    now, kept in the column subnets use: its static address with the mask
+    is its block, 203.0.113.26 and 255.255.255.248 being 203.0.113.24/29."""
+    import ipaddress
+
+    def move():
+        rows = db.session.execute(db.text(
+            "SELECT entity_id, public_ips, netmask FROM network_details WHERE kind = 'wan' "
+            "AND netmask IS NOT NULL AND netmask != '' AND (cidr IS NULL OR cidr = '')")).all()
+        for entity_id, address, mask in rows:
+            try:
+                net = ipaddress.ip_interface(f"{(address or '').strip()}/{mask.lstrip('/')}").network
+            except ValueError:
+                continue                 # no single address to place it: left for the line's form
+            db.session.execute(db.text("UPDATE network_details SET cidr = :c WHERE entity_id = :id"),
+                               {"c": str(net), "id": entity_id})
+    m.once("wan-subnet", move)
+
+
 def _wifi(m):
     """Wireless networks: their security, bands, and the subnet they hand
     out addresses in."""
@@ -136,7 +156,11 @@ WIFI_SECURITY = (("wpa3", "WPA3 Personal"), ("wpa2_wpa3", "WPA2/WPA3 Personal"),
 WIFI_BANDS = (("2.4", "2.4 GHz"), ("5", "5 GHz"), ("6", "6 GHz"), ("2.4_5", "2.4 and 5 GHz"),
               ("5_6", "5 and 6 GHz"), ("2.4_5_6", "2.4, 5 and 6 GHz"))
 
-NETWORK_REF = Field("network", "Network", "ref", types=("network",), list=True)
+#: A VLAN's or subnet's network: a local one (or a VPN), never an internet
+#: connection, whose own addresses are recorded on it.
+NETWORK_REF = Field("network", "Network", "ref", types=("network",), list=True,
+                    only=("kind", ("lan", "vpn", "other", None),
+                          "Choose a local network: an internet connection's subnet is recorded on the connection."))
 
 ICON = ('<circle cx="12" cy="5.5" r="2"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/>'
         '<path d="M12 7.5v4.5M12 12l-5.2 4.8M12 12l5.2 4.8"/>')
@@ -153,8 +177,9 @@ DOMAIN = ('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3
 #: why: the paragraphs behind the step's info button.
 SETUP_HELP = {
     "internet": (
-        "An internet connection is one line from an ISP: fiber, cable, a mobile backup. It holds the public "
-        "addresses, the download and upload speeds, and the circuit ID the ISP asks for when you report a fault.",
+        "An internet connection is one line from an ISP: fiber, cable, a mobile backup. It holds the download "
+        "and upload speeds, the circuit ID the ISP asks for when you report a fault, and, for a static line, "
+        "its address, subnet, gateway and DNS servers. They are not a subnet of their own.",
         "The ISP itself is a vendor, chosen here as Provider, so its support number is a click away. The "
         "modem or ONT is network gear, a later step.",
         "A site with more than one ISP, or a mobile backup, records each line here. In the Network gear "
@@ -182,7 +207,8 @@ SETUP_HELP = {
         "A subnet is an address range in use, such as 192.168.1.0/24, with its gateway and DHCP range. Each "
         "IP address recorded later is placed in the subnet that holds it, and the subnet shows which "
         "addresses are used and which are free.",
-        "Public addresses from the ISP belong on the internet connection, not here.",
+        "Only your own networks' ranges go here. An internet connection's static address, subnet and "
+        "gateway from the ISP are recorded on the connection, in the Internet connection step.",
         "In a site of more than one local network, choose the network each subnet is in; one on a VLAN is in "
         "the VLAN's network. An address is placed in the subnet of the network its device's building is in.",
     ),
@@ -219,7 +245,8 @@ module = Module(
     requires=("hardware",),
     models=(NetworkDetail, Port, Cable, DnsRecord, PortsRecorded),
     migrations=(Step("provider-to-notes", _provider_to_notes), Step("ports-recorded", _ports_recorded),
-                Step("bandwidth-speeds", _bandwidth_speeds), Step("static-ip", _static_ip), Step("wifi", _wifi)),
+                Step("bandwidth-speeds", _bandwidth_speeds), Step("static-ip", _static_ip), Step("wifi", _wifi),
+                Step("wan-subnet", _wan_subnet)),
     blueprint=views.bp,
     types=(
         EntityType("network", "Network", "Networks", detail=NetworkDetail, located_in=None, icon=NETWORK,
@@ -234,8 +261,10 @@ module = Module(
                                       "address by the ISP, and it can change; there is nothing more to record."),
                            Field("public_ips", "Static IP", shown_when=STATIC,
                                  help="The address the ISP gave the line: 203.0.113.26, or a range for a block."),
-                           Field("netmask", "Subnet mask", shown_when=STATIC,
-                                 help="From the ISP: 255.255.255.248, or /29."),
+                           Field("cidr", "Subnet", "cidr", shown_when=STATIC, prefills=("gateway",),
+                                 help="The line's block of addresses from the ISP, with the subnet mask chosen "
+                                      "beside it: 203.0.113.24 and /29 for a mask of 255.255.255.248. It is "
+                                      "recorded here, not as a subnet."),
                            Field("gateway", "Gateway", "ip", shown_when=STATIC,
                                  help="The ISP's side of the line, which your router sends everything to."),
                            Field("dns_servers", "DNS servers", shown_when=STATIC,
@@ -247,7 +276,8 @@ module = Module(
                            Field("circuit_id", "Circuit ID", shown_when=WAN,
                                  help="For an internet connection: what the ISP calls this line when you report "
                                       "a fault. The ISP itself goes in Supplier, as a vendor.")),
-                   tabs=(Tab("contents", "VLANs and subnets", views.network_tab, count=views.network_count),)),
+                   tabs=(Tab("contents", "VLANs and subnets", views.network_tab, when=views.has_contents,
+                             count=views.network_count),)),
         EntityType("vlan", "VLAN", "VLANs", detail=NetworkDetail, located_in=(), icon=VLAN, named_with="network",
                    check=addresses.check_vlan,
                    fields=(Field("vid", "VLAN ID", "integer", required=True, min=1, max=4094, card=True, list=True),
@@ -328,7 +358,7 @@ module = Module(
                           SetupField("f.download", newline=True), SetupField("f.upload"),
                           SetupField("f.static_ip", newline=True),
                           SetupField("f.public_ips", newline=True, placeholder="203.0.113.26"),
-                          SetupField("f.netmask", placeholder="255.255.255.248"), SetupField("f.gateway"),
+                          SetupField("f.cidr", placeholder="203.0.113.24"), SetupField("f.gateway"),
                           SetupField("f.dns_servers"))),
         SetupStep("lans", "Local networks", "Only for a site of more than one network, such as two buildings "
                   "each with its own internet line, router and addresses: one for each. Skip this if the site "

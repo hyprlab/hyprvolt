@@ -186,6 +186,11 @@ tab shows it and the dependency view follows it, and unlinking it there
 empties the field. The detail table needs no column for it, and a type whose
 fields are all kept as links needs no detail table.
 
+`only=("kind", ("lan", "vpn", "other", None), "Choose a local network: ...")`
+narrows a `ref` to the records whose field (a column of each type it names)
+has one of the values, and refuses another with the message: a subnet's
+Network is never an internet connection.
+
 `also=(("cloud", "Cloud service"),)` gives a `ref` choices that aren't
 records, listed before them: a service's Runs on can be Cloud service. One
 is kept in the detail table's column of the field's key (which then needs

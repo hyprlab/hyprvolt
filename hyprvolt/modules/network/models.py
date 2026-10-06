@@ -15,12 +15,13 @@ class NetworkDetail(EntityDetail, db.Model):
     bandwidth = db.Column(db.String(120))      # before download and upload: moved to them, or the notes
     download = db.Column(db.Integer)           # internet connections: megabits per second
     upload = db.Column(db.Integer)
-    static_ip = db.Column(db.Boolean)          # internet connections: a fixed address, with the three below
-    netmask = db.Column(db.String(45))         # 255.255.255.248; a static line's gateway and DNS use those of subnets
+    static_ip = db.Column(db.Boolean)          # internet connections: a fixed address, its cidr and gateway
+    netmask = db.Column(db.String(45))         # before a static line's Subnet (cidr): moved to it
+
     network = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)
     vid = db.Column(db.Integer)                # VLANs: 1 to 4094
     vlan = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)
-    cidr = db.Column(db.String(50))            # subnets: 10.0.20.0/24
+    cidr = db.Column(db.String(50))            # subnets: 10.0.20.0/24; a static line's: 203.0.113.24/29
     gateway = db.Column(db.String(45))
     dns_servers = db.Column(db.String(300))
     dhcp_range = db.Column(db.String(100))     # 10.0.30.100-10.0.30.199

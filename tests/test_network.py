@@ -444,13 +444,23 @@ def test_an_internet_connection_has_a_download_and_upload_speed(client, h, admin
 
 def test_a_static_line_has_its_address_mask_gateway_and_dns(client, h, admin, viewer):
     wan = make(client, h, "network", name="Fiber", **{"f.kind": "wan", "f.static_ip": True,
-                                                        "f.public_ips": "203.0.113.26", "f.netmask": "/29",
+                                                        "f.public_ips": "203.0.113.26", "f.cidr": "203.0.113.26/29",
                                                         "f.gateway": "203.0.113.25", "f.dns_servers": "203.0.113.53"})
-    assert wan["fields"]["netmask"] == "255.255.255.248"
+    assert wan["fields"]["cidr"] == "203.0.113.24/29"
     bad = client.post(f"/api/entities/{wan['id']}", json={"f.gateway": "203.0.113.1"}, headers=h)
     assert bad.status_code == 400 and "outside 203.0.113.24/29" in bad.get_json()["error"]
-    assert "255.255.255.248, or /29" in client.post(f"/api/entities/{wan['id']}", json={"f.netmask": "255.0.255.0"},
-                                                    headers=h).get_json()["error"]
+    bad = client.post(f"/api/entities/{wan['id']}", json={"f.public_ips": "198.51.100.7"}, headers=h)
+    assert bad.status_code == 400 and "static IP 198.51.100.7 is outside" in bad.get_json()["error"]
+    # Its subnet is its own, typed with the mask chosen beside it; not a subnet, nor holding any.
+    form = client.get(f"/e/{wan['id']}/form").data.decode()
+    assert 'data-prefills="f.gateway"' in form and "/29 · 255.255.255.248" in form
+    assert "VLANs and subnets" not in client.get(f"/e/{wan['id']}/sheet").data.decode()
+    assert "Choose a local network" in error(client, h, "subnet", name="WAN", **{"f.cidr": "203.0.113.24/29",
+                                                                                 "f.network": wan["id"]})
+    lan = make(client, h, "network", name="Home", **{"f.kind": "lan"})
+    choices = client.get("/e/form?type=subnet").data.decode().split('name="f.network"')[1].split("</select>")[0]
+    assert ">Home</option>" in choices and ">Fiber<" not in choices
+    assert "VLANs and subnets" in client.get(f"/e/{lan['id']}/sheet").data.decode()
     # The editor's switch, and the static fields that follow it.
     sheet = client.get(f"/e/{wan['id']}/sheet").data.decode()
     assert '<span class="seg seg--choice" role="radiogroup" aria-label="IP address">' in sheet
@@ -460,7 +470,7 @@ def test_a_static_line_has_its_address_mask_gateway_and_dns(client, h, admin, vi
     client.post(f"/api/entities/{wan['id']}", json={"f.static_ip": False}, headers=h)
     other, _ = viewer
     seen = section(other.get(f"/e/{wan['id']}/sheet").data.decode(), "overview")
-    assert "Dynamic" in seen and "Subnet mask" not in seen and "203.0.113.26" not in seen
+    assert "Dynamic" in seen and "203.0.113.24/29" not in seen and "203.0.113.26" not in seen
     assert 'data-when="f.static_ip" data-when-is="1" hidden' in client.get(f"/e/{wan['id']}/sheet").data.decode()
     # A local network has none of an internet connection's fields.
     lan = make(client, h, "network", name="Home LAN", **{"f.kind": "lan"})
@@ -522,6 +532,24 @@ def test_a_line_with_addresses_becomes_static(app, client, h, admin):
         _static_ip(Migrator("network"))
     get = lambda e: client.get(f"/api/entities/{e['id']}").get_json()["entity"]["fields"]["static_ip"]
     assert get(old) is True and not get(bare)
+
+
+def test_a_typed_subnet_mask_becomes_the_lines_subnet(app, client, h, admin):
+    from hyprvolt.migrate import Migrator
+    from hyprvolt.models import db
+    from hyprvolt.modules.network import _wan_subnet
+    lines = {"Fiber": ("203.0.113.26", "255.255.255.248"), "Cable": ("198.51.100.7", "/30"),
+             "Block": ("192.0.2.8-192.0.2.15", "255.255.255.248")}
+    made = {n: make(client, h, "network", name=n, **{"f.kind": "wan"}) for n in lines}
+    with app.app_context():
+        for n, (address, mask) in lines.items():
+            db.session.execute(db.text("UPDATE network_details SET public_ips = :a, netmask = :m WHERE entity_id = :i"),
+                               {"a": address, "m": mask, "i": made[n]["id"]})
+        db.session.execute(db.text("DELETE FROM settings WHERE key = 'migration:network:wan-subnet'"))
+        db.session.commit()
+        _wan_subnet(Migrator("network"))
+    got = {n: client.get(f"/api/entities/{e['id']}").get_json()["entity"]["fields"]["cidr"] for n, e in made.items()}
+    assert got == {"Fiber": "203.0.113.24/29", "Cable": "198.51.100.4/30", "Block": None}
 
 
 def test_bandwidth_text_becomes_speeds_or_notes(app, client, h, admin):
