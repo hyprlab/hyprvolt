@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.6] — 2026-10-05
+## [1.4.0-beta.7] — 2026-10-06
 
 ### Added
 - A site can be more than one network, such as two buildings that each have their own internet line, router and addresses: add a local network for each building, in the setup guide's new Local networks step or as a network of the kind Local network placed in the building, and say which network each VLAN and subnet is in. A device's addresses are in its building's network, so both buildings can use 192.168.1.0/24, and even the same address, without a clash, and each subnet lists only its own building's addresses. Where VLANs or subnets of different networks share a name, a choice of them says which network each is in, such as Default (Annex network)
