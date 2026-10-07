@@ -212,12 +212,24 @@ def layout(nodes: dict[int, Node], edges: list[Edge]) -> tuple[float, float]:
     left = set(nodes)
     while left:
         # Each part of the network from its most upstream device, or else its
-        # best-connected one.
+        # best-connected one: where the internet comes in, every one of them.
         start = min(left, key=lambda i: (rank.get(i, 9), -len(adj[i]), nodes[i].entity.name.lower()))
         base = max(tiers.values(), default=-1) + 1 if tiers else 0
-        queue = [(start, base)]
-        tiers[start] = base
-        left.discard(start)
+        # Every way the internet comes into this part (two lines, a modem for
+        # each ISP) starts it together, side by side in the top row.
+        seeds = [start]
+        if rank.get(start, 9) <= 0:
+            part, todo = {start}, [start]
+            while todo:
+                for j in adj[todo.pop()]:
+                    if j in left and j not in part:
+                        part.add(j)
+                        todo.append(j)
+            seeds = sorted((i for i in part if rank.get(i, 9) == rank[start]), key=lambda i: nodes[i].entity.name.lower())
+        queue = [(i, base) for i in seeds]
+        for i in seeds:
+            tiers[i] = base
+            left.discard(i)
         while queue:
             i, t = queue.pop(0)
             for j in sorted(adj[i], key=lambda j: (rank.get(j, 9), nodes[j].entity.name.lower())):

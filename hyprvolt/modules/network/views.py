@@ -441,16 +441,31 @@ def _unit_devices(scope, unit=None):
 
 
 def setup_ends(scope, unit=None) -> list[dict]:
-    """The free ends a cable can go to: in the part of the site being
-    cabled, when it is done a part at a time."""
-    ends, only = ports.free_ends(), _unit_devices(scope, unit)
-    out = [{"label": g["label"], "options": [(f"device:{d.id}", d.name) for d in g["devices"]
-                                             if only is None or d.id in only]}
-           for g in ends["groups"]]
-    out += [{"label": f"{g['device']} ports", "options": [(f"port:{p.id}", p.label) for p in g["ports"]
-                                                          if only is None or p.device_id in only]}
-            for g in ends["ports"]]
-    return [g for g in out if g["options"]]
+    """The free ends a cable can go to. Cabling one part of a site (a
+    building), its own first, then those of each other part under its name,
+    "Main · Switches", for a cable between buildings."""
+    from hyprvolt.core import guide
+
+    from .cabling import parts, units
+    ends = ports.free_ends()
+
+    def groups(keep, prefix=""):
+        out = [{"label": prefix + g["label"], "options": [(f"device:{d.id}", d.name) for d in g["devices"]
+                                                          if keep(d.id)]}
+               for g in ends["groups"]]
+        out += [{"label": f"{prefix}{g['device']} ports", "options": [(f"port:{p.id}", p.label) for p in g["ports"]
+                                                                       if keep(p.device_id)]}
+                for g in ends["ports"]]
+        return [g for g in out if g["options"]]
+    key = unit if unit is not None else guide.unit()
+    only = _unit_devices(scope, key)
+    if only is None:
+        return groups(lambda i: True)
+    out, where = groups(lambda i: i in only), parts(scope)
+    for other, name in units(scope):
+        if other not in ("all", str(key)):
+            out += groups(lambda i, other=other: where.get(i) == other, f"{name} · ")
+    return out
 
 
 def _setup_end(value):
@@ -548,7 +563,19 @@ class _CableTree:
         left = set(self.devices)
         while left:
             root = min(left, key=self.rank)
-            self.levels[root], queue, found = 0, [root], [root]
+            # Every device a line comes in at in this part is a top of it: two ISPs side by side.
+            roots = [root]
+            if root in self.lines:
+                part, todo = {root}, [root]
+                while todo:
+                    for j in near.get(todo.pop(), ()):
+                        if j in left and j not in part:
+                            part.add(j)
+                            todo.append(j)
+                roots = sorted((i for i in part if i in self.lines), key=self.rank)
+            for r in roots:
+                self.levels[r] = 0
+            queue, found = list(roots), list(roots)
             while queue:
                 i = queue.pop(0)
                 for j in sorted(near.get(i, ()), key=self.rank):
@@ -558,7 +585,7 @@ class _CableTree:
                         queue.append(j)
                         found.append(j)
             left -= set(found)
-            stack = [root]                  # in tree order: each device, then what hangs from it
+            stack = list(reversed(roots))   # in tree order: each device, then what hangs from it
             while stack:
                 i = stack.pop()
                 self.order[i] = len(self.order)

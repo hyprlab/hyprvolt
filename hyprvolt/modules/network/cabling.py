@@ -35,20 +35,14 @@ LEFT_OUT = {"extender", "patch_panel", "peripheral"}
 GATEWAY_WORDS = {"firewall": "firewall", "router": "router", "modem": "modem"}
 
 
-# ———— A site of several networks, cabled a part at a time ————
+# ———— A site of several buildings, cabled a part at a time ————
 
-def network_buildings(scope) -> list[Entity]:
-    """The site's buildings that are networks of their own: a VLAN, subnet
-    or internet line placed in each."""
+def buildings(scope) -> list[Entity]:
+    """The site's buildings, by name."""
     if scope is None:
         return []
     place_ids = {i for i, _ in guide._places(scope)}
-    buildings = Entity.live().filter(Entity.type == "building", Entity.id.in_(place_ids)).order_by(Entity.name).all()
-    lines = db.session.query(NetworkDetail.entity_id).filter(NetworkDetail.kind == "wan")
-    held = {loc for (loc,) in db.session.query(Entity.location_id).filter(
-        Entity.deleted_at.is_(None), Entity.location_id.in_([b.id for b in buildings]),
-        Entity.type.in_(("vlan", "subnet")) | Entity.id.in_(lines))}
-    return [b for b in buildings if b.id in held]
+    return Entity.live().filter(Entity.type == "building", Entity.id.in_(place_ids)).order_by(Entity.name).all()
 
 
 def _cabled(scope) -> list[Entity]:
@@ -56,12 +50,12 @@ def _cabled(scope) -> list[Entity]:
     return guide.in_site(Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name).all(), scope)
 
 
-def _unit_of(device, buildings: set[int], places: dict) -> str:
-    """The part of the site a device is in: the building of its own network
-    it is in (its id), or "rest"."""
+def _unit_of(device, ids: set[int], places: dict) -> str:
+    """The part of the site a device is in: the building it is in (its id),
+    or "rest" for one in no building (in the site itself, or in no place)."""
     location_id, seen = device.location_id, set()
     while location_id in places and location_id not in seen:
-        if location_id in buildings:
+        if location_id in ids:
             return str(location_id)
         seen.add(location_id)
         location_id = places[location_id]
@@ -74,17 +68,23 @@ def _places_index() -> dict[int, int | None]:
         Entity.deleted_at.is_(None), Entity.type.in_([t.key for t in reg.location_types()])))
 
 
+def parts(scope) -> dict[int, str]:
+    """device id -> the part of the site it is in (``_unit_of``), for each
+    cabled device of the site."""
+    ids, places = {b.id for b in buildings(scope)}, _places_index()
+    return {e.id: _unit_of(e, ids, places) for e in _cabled(scope)}
+
+
 def units(scope) -> list[tuple[str, str]]:
-    """The Cables step's parts, for a site of more than one network: each
-    building that is one, the rest of the site if anything cabled is there,
-    and the whole site."""
-    buildings = network_buildings(scope)
-    if not buildings:
+    """The Cables step's parts: each building with equipment in it, what is
+    in no building if anything is, and the whole site. None for a site whose
+    equipment is all in one part."""
+    if scope is None:
         return []
-    out = [(str(b.id), b.name) for b in buildings]
-    ids, places = {b.id for b in buildings}, _places_index()
-    if any(_unit_of(e, ids, places) == "rest" for e in _cabled(scope)):
-        out.append(("rest", f"Rest of {scope.name}"))
+    held = set(parts(scope).values())
+    out = [(str(b.id), b.name) for b in buildings(scope) if str(b.id) in held]
+    if "rest" in held:
+        out.append(("rest", "Not in a building"))
     return out + [("all", "Whole site")] if len(out) > 1 else []
 
 
@@ -94,8 +94,7 @@ def unit_devices(scope, unit=None) -> set[int] | None:
     unit = unit if unit is not None else guide.unit()
     if unit in (None, "", "all") or scope is None:
         return None
-    ids, places = {b.id for b in network_buildings(scope)}, _places_index()
-    return {e.id for e in _cabled(scope) if _unit_of(e, ids, places) == str(unit)}
+    return {i for i, part in parts(scope).items() if part == str(unit)}
 
 
 class Site:

@@ -1,5 +1,7 @@
 """The network diagram and each record's Neighborhood tab, and the module
 pages they hang on."""
+import re
+
 from .conftest import make
 from .test_network import post, rack
 
@@ -30,6 +32,22 @@ def test_where_the_internet_comes_in_is_drawn_first(client, h, admin):
     page = client.get("/p/diagram/network").data.decode()
     assert page.count('class="diagram-node') == 2 and page.index(">gw<") < page.index(">old-modem<")
     assert "Internet comes in" in page
+
+
+def test_two_internet_lines_are_drawn_side_by_side(client, h, admin):
+    # A modem for each ISP, both into one firewall: both in the top row, the firewall below them.
+    fiber = make(client, h, "network_device", name="fiber-modem", **{"f.kind": "modem", "s.internet.line": True})
+    lte = make(client, h, "network_device", name="lte-modem", **{"f.kind": "modem", "s.internet.line": True})
+    fw = make(client, h, "firewall", name="fw")
+    for m in (fiber, lte):
+        client.post("/network/cables", json={"device_id": fw["id"], "other_device_id": m["id"]}, headers=h)
+    page = client.get("/p/diagram/network").data.decode()
+    at = {}
+    for box in page.split('class="diagram-node')[1:]:
+        x, y = map(float, re.search(r'translate\(([\d.]+) ([\d.]+)\)', box).groups())
+        at[re.search(r'class="diagram-name"[^>]*>([^<]+)<', box).group(1)] = (x, y)
+    assert at["fiber-modem"][1] == at["lte-modem"][1] < at["fw"][1]          # one row, the firewall below
+    assert float(at["fiber-modem"][0]) < float(at["fw"][0]) < float(at["lte-modem"][0])
 
 
 def test_two_wireless_bridges_are_joined_by_a_dotted_line(client, h, admin):
