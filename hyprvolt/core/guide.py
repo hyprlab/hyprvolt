@@ -175,6 +175,13 @@ def columns(step, scope) -> list[dict]:
             col.update(label=sf.label or label, kind="text", required=True)
         elif sf.name == "location_id":
             places = _places(scope)
+            allowed = set().union(*(t.located_in for t in types)) if all(t.located_in for t in types) else None
+            if allowed and places:
+                # Only where the step's records can be: a subnet in the site or a building, not a rack.
+                fits = {e.id for e in Entity.query.filter(Entity.id.in_([i for i, _ in places]),
+                                                          Entity.type.in_(allowed))}
+                # With none yet (no rooms for a rack), every place, so adding one says why it can't.
+                places = [p for p in places if p[0] in fits] or places
             if not places:
                 continue
             col.update(label=sf.label or "Where", kind="select", choices=places, default=places[0][0])
@@ -192,11 +199,6 @@ def columns(step, scope) -> list[dict]:
             col["required"] = f.required and all(any(x.key == f.key for x in t.fields) for t in types)
             if f.kind == "select":
                 col.update(kind="select", choices=f.choices())
-            elif f.kind == "ref" and sf.choices is not None:
-                choices = sf.choices(scope)
-                if not choices:
-                    continue                 # nothing to choose in this site: no column
-                col.update(kind="select", choices=choices)
             elif f.kind == "ref":
                 col.update(kind="select", choices=_field_choices(fields))
             elif f.kind in ("speed", "cidr", "iprange"):
