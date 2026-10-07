@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.9] — 2026-10-07
+## [1.4.0-beta.10] — 2026-10-07
 
 ### Added
 - In the setup guide, a site of more than one network is cabled a building at a time: once a building has its own VLANs, subnets or internet line, the Cables step has a control above its cables to choose that building, the rest of the site or the whole site. A building lists its own cables and offers its own devices and ports, its part of the network diagram is drawn, and Suggest cables works out its cabling alone, from its own gateway and core switch
