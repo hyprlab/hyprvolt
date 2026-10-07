@@ -5,13 +5,13 @@
 {% from "sheet/controls.html" import tip %}
 <div class="guide-extra">
   <button type="button" class="btn btn--ghost" data-open="cabling-modal"
-          data-api-post="{{ url_for('network.cables_suggest') }}" data-body='{{ {"site": site, "back": back}|tojson }}'
+          data-api-post="{{ url_for('network.cables_suggest') }}" data-body='{{ {"site": site, "back": back, "unit": unit}|tojson }}'
           data-then="replace" data-replace="cabling-suggest">Suggest cables…</button>
   {% if unlabeled %}
   <button type="button" class="btn btn--ghost" data-api-post="{{ url_for('network.cables_label') }}"
-          data-body='{"site": {{ site or 'null' }}}' data-then="reload">Label the unlabeled cables</button>
+          data-body='{{ {"site": site or none, "unit": unit}|tojson }}' data-then="reload">Label the unlabeled cables</button>
   {% endif %}
-  <span class="hint">Have the cabling worked out from the gear and places recorded so far.
+  <span class="hint">Have the cabling {% if part %}of {{ part }} {% endif %}worked out from the gear and places recorded so far.
     {%- if unlabeled %} {{ unlabeled }} {{ 'cable has' if unlabeled == 1 else 'cables have' }} no label: each is
     given one from its network, such as 20-01 on VLAN 20.{% endif %}</span>
 </div>

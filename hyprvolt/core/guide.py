@@ -12,7 +12,7 @@ first, with Undo. A step of places that hold each other is a tree instead.
 The site chosen in the first step (``?site=``) is where the later steps'
 records are placed by default.
 """
-from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, g, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user
 from markupsafe import Markup
 
@@ -520,13 +520,34 @@ def _new_hidden(step, cols) -> set:
     return {c["name"] for c in cols if c["name"] in gone}
 
 
+def _units(step, scope) -> list[tuple[str, str]]:
+    """The parts of a step done one at a time (``SetupStep.units``), two or
+    more, with the chosen one (``?unit=``, else the first) kept for the
+    step's functions to read with ``unit()``."""
+    choices = list(step.units(scope)) if step.units is not None else []
+    if len(choices) < 2:
+        choices = []
+    keys = [k for k, _ in choices]
+    g.guide_unit = (request.args.get("unit") if request.args.get("unit") in keys else keys[0]) if keys else None
+    return choices
+
+
+def unit() -> str | None:
+    """The part of the step being done, of its ``units``; None for all of it."""
+    return g.get("guide_unit")
+
+
 def _rows_html(step, scope) -> str:
+    _units(step, scope)
     cols = columns(step, scope)
     rows = rows_of(step, cols, scope)
     after = Markup(step.after(scope)) if step.after is not None and rows else ""
+    site = {"site": scope.id} if scope is not None else {}
+    if unit() is not None:
+        site["unit"] = unit()                # the rows redrawn, and one added, in the same part
     return render_template("partials/guide_rows.html", step=step, cols=cols, rows=rows, after=after,
                            scope=scope, new=not (step.scope and scope is not None), new_hidden=_new_hidden(step, cols),
-                           site={"site": scope.id} if scope is not None else {})
+                           site=site)
 
 
 # ———— Pages ————
@@ -721,6 +742,7 @@ def row_create(key):
     """``values``: a new row's, by column. The site's own step answers with
     where to go next: the same step, about the new site."""
     step, scope = _row_step(key), _scope()
+    _units(step, scope)
     try:
         made = create_row(step, columns(step, scope), _body().get("values") or {}, scope)
     except Invalid as err:
@@ -772,11 +794,12 @@ def step(key):
     current = _step_or_404(key)
     index = steps.index(current)
     scope = _scope()
+    units = _units(current, scope)
     body = (_tree_html(current, scope) if scope is not None else "") if current.tree else _rows_html(current, scope)
     extra = Markup(current.extra(scope)) if current.extra is not None else ""
     sites = _records_of({k.type for k in _kinds(current)}) if current.scope else []
     return _page(render_template(
         "partials/guide.html", done=False, steps=steps, groups=_groups(steps), step=current, index=index,
-        scope=scope, body=Markup(body), sites=sites, extra=extra,
+        scope=scope, body=Markup(body), sites=sites, extra=extra, units=units, unit=unit(),
         back=steps[index - 1].key if index else None,
         following=steps[index + 1].key if index + 1 < len(steps) else "done", url=_url))

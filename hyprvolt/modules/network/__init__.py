@@ -246,6 +246,9 @@ SETUP_HELP = {
         "Suggest cables works the cabling out from the steps before: the modem to the router or firewall, that "
         "to the core switch, other switches to the core, and each device to the switch nearest it by rack, "
         "room and building. Each suggestion is checked before it is added.",
+        "A site of more than one network, a building with its own VLANs, subnets or internet line, is cabled "
+        "a building at a time: choose it above the cables. Suggest cables then works out its own gateway and "
+        "core switch, and Whole site lists every cable, as one between buildings.",
     ),
 }
 
@@ -400,6 +403,7 @@ module = Module(
                   "is cabled as a whole; one with its ports recorded offers its free ports.", 110,
                   group="Endpoints",
                   help=SETUP_HELP["cables"], plan="cables",
+                  units=cabling.units,
                   save=views.setup_cable, rows=views.setup_rows, update=views.setup_update,
                   delete=views.setup_delete, extra=cabling.setup_extra, after=cabling.setup_after,
                   fields=(SetupField("from", "From", choices=views.setup_ends),

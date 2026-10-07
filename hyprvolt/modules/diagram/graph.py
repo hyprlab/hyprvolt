@@ -90,8 +90,9 @@ def _vlans(port: Port) -> str:
     return ", ".join(bits)
 
 
-def network() -> tuple[dict[int, Node], list[Edge]]:
-    """Every cabled device and the links between them."""
+def network(only=None) -> tuple[dict[int, Node], list[Edge]]:
+    """Every cabled device and the links between them; or, with ``only``
+    (device ids), the links of those devices."""
     ports = {p.id: p for p in Port.query.options(joinedload(Port.device), joinedload(Port.vlan))}
     cable_at = {}
     for c in Cable.query:
@@ -184,6 +185,8 @@ def network() -> tuple[dict[int, Node], list[Edge]]:
         devices.setdefault(a.id, a)
         devices.setdefault(b.id, b)
         edges.append(Edge(a.id, b.id, kind="wireless"))
+    if only is not None:
+        edges = [e for e in edges if e.a in only or e.b in only]
     # A device only on the way (a patch panel) is named on its links, not drawn.
     ends = {i for e in edges for i in (e.a, e.b)}
     nodes = {i: Node(e) for i, e in devices.items() if i in ends}

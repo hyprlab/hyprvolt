@@ -35,13 +35,79 @@ LEFT_OUT = {"extender", "patch_panel", "peripheral"}
 GATEWAY_WORDS = {"firewall": "firewall", "router": "router", "modem": "modem"}
 
 
-class Site:
-    """The site's cabled devices, where each is, and what is cabled now."""
+# ———— A site of several networks, cabled a part at a time ————
 
-    def __init__(self, scope):
+def network_buildings(scope) -> list[Entity]:
+    """The site's buildings that are networks of their own: a VLAN, subnet
+    or internet line placed in each."""
+    if scope is None:
+        return []
+    place_ids = {i for i, _ in guide._places(scope)}
+    buildings = Entity.live().filter(Entity.type == "building", Entity.id.in_(place_ids)).order_by(Entity.name).all()
+    lines = db.session.query(NetworkDetail.entity_id).filter(NetworkDetail.kind == "wan")
+    held = {loc for (loc,) in db.session.query(Entity.location_id).filter(
+        Entity.deleted_at.is_(None), Entity.location_id.in_([b.id for b in buildings]),
+        Entity.type.in_(("vlan", "subnet")) | Entity.id.in_(lines))}
+    return [b for b in buildings if b.id in held]
+
+
+def _cabled(scope) -> list[Entity]:
+    keys = [t.key for t in registry().enabled_types() if ports.is_cabled(t)]
+    return guide.in_site(Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name).all(), scope)
+
+
+def _unit_of(device, buildings: set[int], places: dict) -> str:
+    """The part of the site a device is in: the building of its own network
+    it is in (its id), or "rest"."""
+    location_id, seen = device.location_id, set()
+    while location_id in places and location_id not in seen:
+        if location_id in buildings:
+            return str(location_id)
+        seen.add(location_id)
+        location_id = places[location_id]
+    return "rest"
+
+
+def _places_index() -> dict[int, int | None]:
+    reg = registry()
+    return dict(db.session.query(Entity.id, Entity.location_id).filter(
+        Entity.deleted_at.is_(None), Entity.type.in_([t.key for t in reg.location_types()])))
+
+
+def units(scope) -> list[tuple[str, str]]:
+    """The Cables step's parts, for a site of more than one network: each
+    building that is one, the rest of the site if anything cabled is there,
+    and the whole site."""
+    buildings = network_buildings(scope)
+    if not buildings:
+        return []
+    out = [(str(b.id), b.name) for b in buildings]
+    ids, places = {b.id for b in buildings}, _places_index()
+    if any(_unit_of(e, ids, places) == "rest" for e in _cabled(scope)):
+        out.append(("rest", f"Rest of {scope.name}"))
+    return out + [("all", "Whole site")] if len(out) > 1 else []
+
+
+def unit_devices(scope, unit=None) -> set[int] | None:
+    """The ids of the cabled devices in a part of the site (the guide's
+    chosen one, unless given); None for the whole of it."""
+    unit = unit if unit is not None else guide.unit()
+    if unit in (None, "", "all") or scope is None:
+        return None
+    ids, places = {b.id for b in network_buildings(scope)}, _places_index()
+    return {e.id for e in _cabled(scope) if _unit_of(e, ids, places) == str(unit)}
+
+
+class Site:
+    """The site's cabled devices (or those of one part of it, ``unit``),
+    where each is, and what is cabled now."""
+
+    def __init__(self, scope, unit=None):
         reg = registry()
-        keys = [t.key for t in reg.enabled_types() if ports.is_cabled(t)]
-        found = guide.in_site(Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name).all(), scope)
+        found = _cabled(scope)
+        only = unit_devices(scope, unit or "all")
+        if only is not None:
+            found = [e for e in found if e.id in only]
         details = {e.id: records.detail_of(e) for e in found}
         self.devices = {e.id: e for e in found}
         self.name = {e.id: e.name for e in found}
@@ -148,11 +214,12 @@ def _nearest(site, device_id, among):
     return min(among, key=lambda a: (site.distance(device_id, a), among.index(a)))
 
 
-def plan(scope) -> list[dict]:
+def plan(scope, unit=None) -> list[dict]:
     """The cables to suggest, the backbone first and then what plugs into
     each switch: [{"a", "b" (device ids), "a_end", "b_end" (where each
-    meets it), "why", "state" (likely, check, choose), "group", "title"}]."""
-    site = Site(scope)
+    meets it), "why", "state" (likely, check, choose), "group", "title"}].
+    For one part of the site (``unit``), its own gateway and core switch."""
+    site = Site(scope, unit)
     name = site.name
     lines = {r.target_id for r in Relationship.query.filter(Relationship.kind == "comes_in_at")}
     modems, switches = site.of("modem"), site.of("switch")
@@ -298,15 +365,22 @@ def setup_extra(scope) -> str:
     if not current_user.can_edit:
         return ""
     loose = Cable.query.filter(Cable.label == "").all()
-    devices = Site(scope).devices if loose else {}
+    unit = guide.unit()
+    devices = Site(scope, unit).devices if loose else {}
     unlabeled = sum(1 for c in loose if c.a.device_id in devices or c.b.device_id in devices)
+    names = dict(units(scope)) if unit not in (None, "all") else {}
     return render_template("network/cabling_guide.html", site=scope.id if scope else "",
-                           back=request.full_path.rstrip("?"), unlabeled=unlabeled)
+                           back=request.full_path.rstrip("?"), unlabeled=unlabeled, unit=unit or "",
+                           part=names.get(unit, ""))
 
 
 def _site(form):
     site = records.live(int(form["site"])) if str(form.get("site") or "").isdigit() else None
     return site if site is not None and registry().type(site.type) in registry().location_types() else None
+
+
+def _unit(form) -> str | None:
+    return str(form.get("unit") or "") or None
 
 
 def setup_after(scope) -> str:
@@ -317,14 +391,17 @@ def setup_after(scope) -> str:
     page = next((p for p in module.pages if p.key == "network"), None) if module is not None else None
     if page is None:
         return ""
-    return render_template("network/cabling_diagram.html", diagram=Markup(page.render()))
+    only = unit_devices(scope)
+    return render_template("network/cabling_diagram.html",
+                           diagram=Markup(page.render(only=only) if only is not None else page.render()))
 
 
 @bp.route("/cables/label", methods=["POST"])
 @role("editor")
 def cables_label():
     """Every cable in the site with no label, given one from its network."""
-    n = cable_labels.label_unlabeled(Site(_site(request.get_json(silent=True) or {})).devices, current_user)
+    form = request.get_json(silent=True) or {}
+    n = cable_labels.label_unlabeled(Site(_site(form), _unit(form)).devices, current_user)
     db.session.commit()
     return jsonify(ok=True, message=f"Labeled {n} {'cable' if n == 1 else 'cables'}." if n
                    else "Every cable has a label already.")
@@ -336,7 +413,7 @@ def cables_suggest():
     """The cables suggested for the site, each to check."""
     form = request.get_json(silent=True) or {}
     site = _site(form)
-    rows = plan(site)
+    rows = plan(site, _unit(form))
     used = cable_labels.taken()
     for r in rows:
         a, b = cable_labels.end_of(r["a_end"]), cable_labels.end_of(r["b_end"])
@@ -351,7 +428,8 @@ def cables_suggest():
              for k, g in groups.items()]
     counts = {k: sum(1 for r in rows if r["state"] == k) for k in ("likely", "check", "choose")}
     return jsonify(ok=True, html=render_template("network/cabling_review.html", groups=shown, count=len(rows),
-                                                 counts=counts, ends=setup_ends(None), back=_back(form.get("back"))))
+                                                 counts=counts, ends=setup_ends(site, _unit(form)),
+                                                 back=_back(form.get("back"))))
 
 
 @bp.route("/cables/suggest/add", methods=["POST"])

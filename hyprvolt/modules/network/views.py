@@ -431,11 +431,22 @@ def carriers_of(segment_ids) -> set[int]:
 
 # ———— The site setup guide's cables step ————
 
-def setup_ends(scope) -> list[dict]:
-    ends = ports.free_ends()
-    out = [{"label": g["label"], "options": [(f"device:{d.id}", d.name) for d in g["devices"]]}
+def _unit_devices(scope, unit=None):
+    """The devices of the part of the site the Cables step is doing (or
+    ``unit``), or None for all of it."""
+    from .cabling import unit_devices
+    return unit_devices(scope, unit)
+
+
+def setup_ends(scope, unit=None) -> list[dict]:
+    """The free ends a cable can go to: in the part of the site being
+    cabled, when it is done a part at a time."""
+    ends, only = ports.free_ends(), _unit_devices(scope, unit)
+    out = [{"label": g["label"], "options": [(f"device:{d.id}", d.name) for d in g["devices"]
+                                             if only is None or d.id in only]}
            for g in ends["groups"]]
-    out += [{"label": f"{g['device']} ports", "options": [(f"port:{p.id}", p.label) for p in g["ports"]]}
+    out += [{"label": f"{g['device']} ports", "options": [(f"port:{p.id}", p.label) for p in g["ports"]
+                                                          if only is None or p.device_id in only]}
             for g in ends["ports"]]
     return [g for g in out if g["options"]]
 
@@ -488,11 +499,14 @@ def _label_order(cable: Cable) -> tuple:
 
 
 def setup_rows(scope) -> list[dict]:
-    """Every cable as a row: either end to change, and its label. Each
-    row's choices are the free ends and its own."""
-    out, free = [], setup_ends(scope)
+    """Every cable as a row (of the part of the site being cabled, one with
+    an end in it): either end to change, and its label. Each row's choices
+    are the free ends and its own."""
+    out, free, only = [], setup_ends(scope), _unit_devices(scope)
     eager = (joinedload(Cable.a).joinedload(Port.device), joinedload(Cable.b).joinedload(Port.device))
     for c in Cable.query.options(*eager):
+        if only is not None and c.a.device_id not in only and c.b.device_id not in only:
+            continue
         if c.a.device.deleted_at is None and c.b.device.deleted_at is None:
             # Folded: its label, then its two ends.
             out.append({"id": c.id, "label": f"the cable from {c.a.label} to {c.b.label}",

@@ -1849,6 +1849,8 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 }
 .seg--links a:hover { color: var(--ink); }
 .seg--links a.is-active { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-1); }
+/* A setup guide step done a part at a time: each building's cabling. */
+.guide-units { margin: 0 0 18px; }
 
 /* ————— Diagrams: SVG drawn on the server, colored here so both themes work ————— */
 .diagram-scroll { overflow: auto; max-width: 100%; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
