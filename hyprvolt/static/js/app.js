@@ -2074,6 +2074,25 @@
       return el.value.trim() !== el.defaultValue.trim();
     });
   }
+  // Anything typed or chosen in the blank row: what Clear empties.
+  function newRowChanged(row) {
+    return newRowTouched(row) || Array.prototype.some.call(row.querySelectorAll("select, input"), function (el) {
+      if (el.tagName === "SELECT") {
+        return Array.prototype.some.call(el.options, function (o) { return o.selected !== o.defaultSelected; });
+      }
+      return (el.type === "checkbox" || el.type === "radio") && el.checked !== el.defaultChecked;
+    });
+  }
+  function showClear(row) {
+    var clear = row.querySelector("[data-row-clear]");
+    if (clear) clear.hidden = !newRowChanged(row);
+  }
+  ["input", "change"].forEach(function (type) {
+    document.addEventListener(type, function (e) {
+      var row = e.target.closest && e.target.closest("[data-row-new]");
+      if (row && rowsOf(row)) showClear(row);
+    });
+  });
   // ``force``: added whatever it holds, for the server to say what is
   // missing (a name) rather than lose what was typed.
   function addRow(row, force) {
@@ -2160,6 +2179,10 @@
   document.addEventListener("click", function (e) {
     var add = e.target.closest("[data-row-add]");
     if (add && rowsOf(add)) { addRowHere(add.closest("[data-row-new]")); return; }
+    // Not adding it after all: the step drawn again, its blank row empty, so
+    // moving on adds nothing. The rows above are saved already.
+    var clear = e.target.closest("[data-row-clear]");
+    if (clear && rowsOf(clear)) { redrawRows(rowsOf(clear), focusNewRow); return; }
     // Leaving the step (Continue, Back, another step, Exit setup) with
     // something typed in the blank row adds it first; if it can't be added,
     // the row says why and the page stays.

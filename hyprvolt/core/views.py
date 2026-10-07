@@ -286,11 +286,15 @@ def _ref_choices(f, entity=None) -> list:
     """The records a ref field can point at, by name: (id, name), or with
     several kinds of record (a service's Runs on), each kind under its
     heading as {"label", "options"}, in the order the modules list them.
-    Choices that aren't records (``Field.also``) come first."""
+    Choices that aren't records (``Field.also``) come first, and those a
+    field narrows its choices to (``Field.only``) are the only records."""
     reg = registry()
     keys = [k for k in reg.ref_types(f) if k in reg.enabled_type_keys()]
     rows = [e for e in Entity.live().filter(Entity.type.in_(keys)).order_by(Entity.name)
             if entity is None or e.id != entity.id]
+    if f.only:
+        details = present.details_for(rows)
+        rows = [e for e in rows if getattr(details.get(e.id), f.only[0], None) in f.only[1]]
     names = present.choice_labels(rows)
     if len(keys) <= 1:
         return list(f.also) + [(e.id, names[e.id]) for e in rows]

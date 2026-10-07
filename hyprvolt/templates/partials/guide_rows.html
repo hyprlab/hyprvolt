@@ -108,7 +108,11 @@
     <legend class="visually-hidden">A new one</legend>
     <div class="guide-row-body">
       {{ row_fields(none) }}
-      <button type="button" class="btn btn--ghost guide-add-row" data-row-add>Add</button>
+      <span class="guide-row-actions">
+        <button type="button" class="btn btn--ghost" data-row-clear hidden
+                title="Empty this row without adding it">Clear</button>
+        <button type="button" class="btn btn--ghost" data-row-add>Add</button>
+      </span>
     </div>
     <p class="form-error guide-row-error" role="alert" hidden></p>
   </fieldset>

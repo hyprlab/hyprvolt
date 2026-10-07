@@ -95,6 +95,9 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     change(client, h, "vendors", isp["id"], "f.support_phone", "+1 555 010 0199", site["id"])
     page = client.get(f"/site-setup/vendors?site={site['id']}").data.decode()
     assert page.count("data-row ") == 2 and 'value="+1 555 010 0199"' in page and "data-row-new" in page
+    # The blank row can be emptied without adding it: Clear, shown once something is in it.
+    blank = page.split("data-row-new")[1]
+    assert 'data-row-clear hidden' in blank and blank.index("data-row-clear") < blank.index("data-row-add")
     # A saved row is folded to its name, and opens to be changed.
     assert page.count('class="guide-row is-collapsed"') == 2
     assert 'aria-expanded="false"' in page and '<span class="guide-row-title" data-row-title>Ubiquiti</span>' in page
@@ -122,7 +125,8 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     assert '<span class="guide-break" aria-hidden="true" data-when="f.static_ip" data-when-is="1" hidden>' in new_row
     change(client, h, "internet", wan["id"], "f.static_ip", True, site["id"])
     change(client, h, "internet", wan["id"], "f.public_ips", "203.0.113.26", site["id"])
-    assert change(client, h, "internet", wan["id"], "f.netmask", "/29", site["id"])["value"] == "255.255.255.248"
+    assert change(client, h, "internet", wan["id"], "f.cidr", "203.0.113.26/29", site["id"])["value"] == \
+        "203.0.113.24/29"
     page = client.get(f"/site-setup/internet?site={site['id']}").data.decode()
     # Every row its own form, so each row's Dynamic or Static is its own.
     assert page.count("data-row-form") == page.count("data-row ") + page.count("data-row-new")

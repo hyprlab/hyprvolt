@@ -440,6 +440,8 @@ def _check_type(t: EntityType, reg: Registry, siblings: set) -> list[str]:
                      "(or \"\" for none chosen)")
         if f.relation and f.kind != "ref":
             p.append(f"{where} is kept as a link, so it must be a ref")
+        if f.only and (f.kind != "ref" or len(f.only) != 3 or not f.types):
+            p.append(f"{where} narrows its choices, so it must be a ref to named types with (key, values, why)")
         if f.also and f.kind != "ref":
             p.append(f"{where} has choices besides records, so it must be a ref")
         if columns and f.key not in columns and (not f.relation or f.also):
@@ -484,6 +486,10 @@ def cross_check(m: Module, reg: Registry) -> list[str]:
             for target in f.types:
                 if target not in reg.types:
                     p.append(f"the field {t.key}.{f.key} points at the unknown type {target!r}")
+            if f.only and any(target in reg.types and not any(x.key == f.only[0] for x in reg.types[target].fields)
+                              for target in f.types):
+                p.append(f"the field {t.key}.{f.key} narrows its choices by {f.only[0]!r}, which a type it "
+                         "points at doesn't have")
             if f.relation and f.relation not in reg.kinds:
                 p.append(f"the field {t.key}.{f.key} is kept as the unknown link kind {f.relation!r}")
         if t.named_with and not any(f.key == t.named_with and f.kind == "ref" and not f.relation

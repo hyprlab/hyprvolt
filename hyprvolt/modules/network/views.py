@@ -58,6 +58,13 @@ def network_tab(network: Entity) -> str:
                            subnets=[(v, addresses.usage(v.entity, grid=False)) for v in present.views(subnets)])
 
 
+def has_contents(network: Entity) -> bool:
+    """An internet connection holds no VLANs or subnets: its own addresses
+    are its fields. One recorded in it before still shows."""
+    d = _detail(network.id)
+    return not (d and d.kind == "wan") or bool(network_count(network))
+
+
 def network_count(network: Entity):
     return (len(_children("network", network.id, "vlan")) + len(_children("network", network.id, "subnet"))) or None
 

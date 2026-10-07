@@ -1764,7 +1764,9 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 .guide-row { transition: opacity .15s; }
 .guide-row.is-saving { opacity: .7; }
 .guide-row--new { border-style: dashed; background: transparent; }
-.guide-add-row { flex: none; margin-bottom: 1px; }
+/* The blank row's Clear (once something is in it) and Add, kept together
+   at the end of the row, however it wraps. */
+.guide-row-actions { display: flex; gap: 8px; flex: none; margin-left: auto; margin-bottom: 1px; }
 .guide-row-error { margin: 0; }
 .guide-locked { flex: 1 1 150px; min-width: 0; }
 .guide-locked-text {

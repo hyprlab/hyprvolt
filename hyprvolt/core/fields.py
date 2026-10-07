@@ -133,6 +133,10 @@ def parse(f: Field, raw, lookup=None):
         target = lookup(ref_id) if lookup else None
         if target is None or not ref_allows(f, target.type):
             raise Invalid(f"{f.label} must point at an existing record of the right type.")
+        if f.only:
+            from .records import own_values
+            if own_values(target).get(f.only[0]) not in f.only[1]:
+                raise Invalid(f.only[2])
         return ref_id
 
     if kind == "ip":

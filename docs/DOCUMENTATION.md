@@ -167,9 +167,13 @@ panels. An internet connection
 is a network of the kind Internet connection, with its download and upload
 speeds (each a number with Mb/s or Gb/s chosen beside it), a Dynamic or
 Static switch for its IP address, and circuit ID. Static shows the line's
-fixed address, subnet mask (255.255.255.248 or /29), gateway and DNS
-servers; a gateway outside the address's network is refused. Dynamic hides
-them and keeps what was there. Its Comes in at names the modem, router or
+fixed address, its subnet (typed as its network address with the subnet
+mask chosen beside it, 203.0.113.24 and /29, which fills in the gateway),
+gateway and DNS servers; an address or gateway outside the subnet is
+refused. Dynamic hides them and keeps what was there. A line's addresses
+are recorded on it, not as a subnet: a subnet or VLAN is in a local network
+(or a VPN), never an internet connection, and an internet connection has
+no VLANs and subnets tab. Its Comes in at names the modem, router or
 firewall the line plugs into (also set from that device's Internet
 connections section, and in the guide's Network gear step): the device then
 brings in the line, the network diagram draws the line above it, and the
@@ -531,7 +535,9 @@ Every other step is a list of rows, one record a row: what the site has
 already, and a blank row at the end. Typing a name in the blank row and
 pressing Enter or its Add button adds it (nothing is added until then), and
 a new blank row appears for the next, so every endpoint or every service
-goes in one after another. In Network gear, Servers and storage, and
+goes in one after another. Once anything is typed or chosen in the blank
+row, a Clear button beside Add empties it without adding it, so moving to
+another step adds nothing. In Network gear, Servers and storage, and
 Endpoints, the rows are grouped under a heading for each kind (modems,
 routers, firewalls, switches and so on, in that order), and a row whose
 kind is changed moves to its group. A row once added folds to one line, its name and
