@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.13] — 2026-10-07
+## [1.4.0-beta.14] — 2026-10-07
 
 ### Added
 - The setup guide's Cables step lists the cables as a tree from where the internet comes in: under the modem (or the device a line comes in at) its cables, then under the router or firewall its cables, then each switch and patch panel further in, each level indented a step, network gear before the endpoints beside it, and with two lines each its own top
