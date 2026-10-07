@@ -229,6 +229,14 @@ def columns(step, scope) -> list[dict]:
             col["when"] = ("_kind", " ".join(str(i) for i, k in enumerate(kinds) if k.label in sf.kinds))
             col["only"] = {i for i, k in enumerate(kinds) if k.label in sf.kinds}
         cols.append(col)
+    # A field that follows another the step doesn't ask for (an internet line's
+    # circuit, in a step of lines only) is always shown.
+    names = {c["name"] for c in cols} | {"_kind"}
+    for c in cols:
+        if "follows" in c and c["follows"][0] not in names:
+            del c["follows"]
+        if "when" in c and c["when"][0] not in names:
+            del c["when"]
     return cols
 
 
@@ -280,11 +288,9 @@ def _found(step, scope) -> list[Entity]:
         if not _inside(e, scope, place_ids):
             continue
         # A kind that is a preset of its type (a modem is network gear of
-        # the kind modem) lists only its own.
-        detail = records.detail_of(e)
-        if any(k.type == e.type and all(getattr(detail, n[2:], None) == v for n, v in k.values.items()
-                                        if n.startswith("f."))
-               for k in kinds):
+        # the kind modem, and one a line comes in at has its line on) lists
+        # only its own.
+        if any(_is_kind(k, e) for k in kinds):
             out.append(e)
     if step.joined is not None:
         # Shown in another's row: a MoCA pair is one row.
@@ -366,14 +372,33 @@ def _tree_html(step, scope) -> str:
 
 # ———— A step of rows: each a record, saved as it changes ————
 
+def _is_kind(kind, entity) -> bool:
+    """Whether a record is of a kind: its type, and the values the kind
+    starts with, of its own fields (``f.kind``) and of sections
+    (``s.internet.line``, a modem the internet comes in at)."""
+    if kind.type != entity.type:
+        return False
+    detail, held = records.detail_of(entity), {}
+    for n, v in kind.values.items():
+        if n.startswith("f.") and getattr(detail, n[2:], None) != v:
+            return False
+        if n.startswith("s."):
+            _, key, name = n.split(".", 2)
+            if key not in held:
+                section = next((s for s in registry().form_sections(registry().type(entity.type))
+                                if s.key == key), None)
+                held[key] = (section.values(entity) or {}) if section is not None and section.values else {}
+            if _shown_as(held[key].get(name)) != _shown_as(v):
+                return False
+    return True
+
+
 def _kind_index(step, entity) -> int:
     """Which of the step's kinds a record is: its type, and a preset it has
     (a switch is network gear of the kind switch)."""
     kinds = _kinds(step)
-    detail = records.detail_of(entity)
     for i, k in enumerate(kinds):
-        if k.type == entity.type and all(getattr(detail, n[2:], None) == v for n, v in k.values.items()
-                                         if n.startswith("f.")):
+        if _is_kind(k, entity):
             return i
     return next((i for i, k in enumerate(kinds) if k.type == entity.type), 0)
 

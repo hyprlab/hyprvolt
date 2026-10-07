@@ -118,9 +118,10 @@ SETUP_HELP = {
         "points and patch panels. Give each its management address; it is recorded as an IP address in its "
         "subnet.",
         "Where the internet comes in is the device the ISP's line plugs into: the modem or ONT, or the router "
-        "or firewall where there is no modem. Set its Internet to Comes in here, then its Provider (the ISP), "
-        "circuit ID, speeds and, for a static line, its address, subnet and gateway. The line is part of that "
-        "device, not a record of its own. A site with two ISPs has a modem for each line.",
+        "or firewall where there is no modem. The modems added in the Internet connection step are here "
+        "already, the same records. A router or firewall the line comes in at has its Internet set to Comes "
+        "in here, then its Provider (the ISP), circuit ID, speeds and, for a static line, its address, subnet "
+        "and gateway, and it is listed in Internet connection too.",
         "A modem in bridge mode passes the internet through to your router, which gets the public address; "
         "the modem has no address on your network, so leave its IP address empty (or give its status page's "
         "address, such as 192.168.100.1). A modem that is the gateway, the ISP's own router, has an address "

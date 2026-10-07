@@ -270,8 +270,8 @@ The site setup guide (Set up a site, in the sidebar) walks a site from
 the site itself out to its endpoints, one short step at a time. Its steps
 are the turned-on modules' `setup`, sorted by `order`: Locations has the
 site (10), rooms (20) and racks (30), Contacts vendors (35), Network the
-VLANs (45) and subnets (50), Hardware network gear (60, where the internet
-comes in), servers (70) and endpoints (100), Virtual hypervisors (80) and
+internet connections (40, the devices a line comes in at), VLANs (45) and
+subnets (50), Hardware network gear (60), servers (70) and endpoints (100), Virtual hypervisors (80) and
 guests (85), Services services (90), and Network cables (110). A step of a
 new module takes a place between them. `group` is the part of the guide a
 step is in, a heading over its steps: Place, Network, Equipment, What runs
@@ -294,8 +294,13 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
   `records.create` with its values under the record form's names, and a
   field of a saved row is saved alone through `records.update` as it
   changes. `kinds` are what a row can
-  be, each a type of the module's own and the values it starts with; with
-  more than one, each row chooses.
+  be, each a type of the module's own (or of a module it `requires`) and
+  the values it starts with; with more than one, each row chooses. A kind's
+  values can be a section's (`{"s.internet.line": True}`): the step then
+  lists only the records that have them, so Network's Internet connection
+  step lists the modems, routers and firewalls a line comes in at, the same
+  records Hardware's Network gear step lists. A column that follows one the
+  step doesn't ask for is always shown.
 - `fields` are the row's columns, by their form names. `f.<field>` takes its
   label and control from the type's `Field`; `location_id` offers the site
   being set up and the places in it the step's types can be in (a subnet

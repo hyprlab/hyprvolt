@@ -42,7 +42,7 @@ def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
     for group in ("Place", "Network", "Equipment", "What runs", "Endpoints"):
         assert f'<p class="guide-group">{group}</p>' in page
     assert "This guide covers the 5 main categories of a site" in page
-    for plan in ("Site, buildings, rooms, racks, and vendors", "VLANs, subnets, and wireless networks",
+    for plan in ("Site, buildings, rooms, racks, and vendors", "Internet connections, VLANs, subnets, and wireless networks",
                  "Network gear, servers, and storage", "Endpoints, UPSes, and cables"):
         assert f'<span class="guide-plan-steps">{plan}</span>' in page
     # Once something is recorded it is the guide's overview, run again.
@@ -77,9 +77,8 @@ def test_every_step_says_what_goes_there_and_why(app, client, h, admin):
 def test_the_steps_run_from_the_site_to_the_cables(client, h, admin):
     page = client.get("/site-setup/site").data.decode()
     assert "Step 1 of" in page and "· Place" in page
-    assert page.index("Buildings and rooms") < page.index("VLANs") < page.index("Network gear") \
-        < page.index("<span>Endpoints</span>") < page.index("<span>Cables</span>")
-    assert "Internet connection" not in page          # where it comes in is network gear
+    assert page.index("Buildings and rooms") < page.index("Internet connection") < page.index("VLANs") \
+        < page.index("Network gear") < page.index("<span>Endpoints</span>") < page.index("<span>Cables</span>")
 
 
 def test_a_site_is_set_up_step_by_step(client, h, admin):
@@ -505,3 +504,36 @@ def test_a_moca_pair_is_one_row_with_a_place_for_each_end(client, h, admin):
     assert not entities(client, "network_device")
     client.post(undo["url"], json=undo["body"], headers=h)
     assert {e["name"] for e in entities(client, "network_device")} == {"Screenbeam", "Screenbeam (Den)"}
+
+
+def test_an_isp_and_its_modem_are_one_row_in_either_step(client, h, admin):
+    site = site_named(client, h, "Home")
+    add(client, h, "vendors", site["id"], name="Springfield Cable")
+    isp = entities(client, "vendor")[0]
+    # Added in Internet connection: a modem the line comes in at, with its ISP as its supplier.
+    page = client.get(f"/site-setup/internet?site={site['id']}").data.decode()
+    new_row = page.split("data-row-new")[1]
+    assert ">Modem or ONT<" in new_row and 'name="s.internet.line"' not in new_row
+    assert '<span class="field-label">Circuit ID' in new_row and 'data-when="s.internet.line"' not in new_row
+    add(client, h, "internet", site["id"], **{"_kind": "0", "name": "Fiber modem", "s.supplier.vendor_id": isp["id"],
+                                              "s.internet.circuit_id": "SC-1", "s.internet.download": "1000"})
+    modem = next(e for e in entities(client, "network_device") if e["name"] == "Fiber modem")
+    assert modem["fields"]["kind"] == "modem"
+    # The same record in Network gear, its line on there; changed there, changed here.
+    gear = client.get(f"/site-setup/gear?site={site['id']}").data.decode()
+    row = gear.split('data-name="Fiber modem"')[1].split("</fieldset>")[0]
+    assert 'name="s.internet.line" value="1" checked' in row and 'value="SC-1"' in row
+    change(client, h, "gear", modem["id"], "s.internet.circuit_id", "SC-2", site["id"])
+    page = client.get(f"/site-setup/internet?site={site['id']}").data.decode()
+    assert 'value="SC-2"' in page.split('data-name="Fiber modem"')[1].split("</fieldset>")[0]
+    # A router added in Network gear with its line on is listed too; one without isn't.
+    add(client, h, "gear", site["id"], **{"_kind": "1", "name": "lte-router", "s.internet.line": True})
+    add(client, h, "gear", site["id"], **{"_kind": "1", "name": "inner-router"})
+    page = client.get(f"/site-setup/internet?site={site['id']}").data.decode()
+    assert 'data-name="lte-router"' in page and 'data-name="inner-router"' not in page
+    router_row = page.split('data-name="lte-router"')[1].split("</fieldset>")[0]
+    assert '<option value="1" selected>Router</option>' in router_row
+    # Its line turned off in Network gear: no longer an internet connection.
+    router = next(e for e in entities(client, "network_device") if e["name"] == "lte-router")
+    change(client, h, "gear", router["id"], "s.internet.line", False, site["id"])
+    assert 'data-name="lte-router"' not in client.get(f"/site-setup/internet?site={site['id']}").data.decode()
