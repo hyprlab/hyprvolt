@@ -264,6 +264,17 @@ DOMAIN = ('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3
 #: What goes in each of the module's steps of the site setup guide, and
 #: why: the paragraphs behind the step's info button.
 SETUP_HELP = {
+    "internet": (
+        "Each line from an ISP is the modem or ONT it plugs into, or the router or firewall where there is no "
+        "modem: add that device here with its Provider (the ISP, a vendor), the circuit ID the ISP asks for "
+        "when you report a fault, the speeds, and for a static line its address, subnet, gateway and DNS "
+        "servers. A site with more than one ISP, or a mobile backup, has a row for each line.",
+        "It is the same record in Network gear, where its model, IP address and the networks it carries are "
+        "set: a change in either step is the other's too. A router or firewall in Network gear whose line "
+        "comes in there, its Internet on Comes in here, is listed here as well.",
+        "A building with its own line chooses that building as Where. If it is its own network as well, "
+        "with its own router and addresses, its VLANs and subnets choose it as Where too, in the next steps.",
+    ),
     "vlans": (
         "A VLAN splits one physical network into separate ones, each with a number from 1 to 4094, such as "
         "Servers or IoT. Record them if your switches and router use them; skip this for one flat network.",
@@ -395,6 +406,22 @@ module = Module(
                     RelationKind("carried_by", "is carried by", "carries", impact="source")),
     before_retype=ports.before_retype,
     setup=(
+        SetupStep("internet", "Internet connection", "Each line from an ISP and the modem it comes in at, "
+                  "in one row: the provider, the speeds, and the addresses of a static line. The modem is network "
+                  "gear too, set up there as well.", 40,
+                  group="Network",
+                  help=SETUP_HELP["internet"], plan="internet connections",
+                  kinds=(SetupKind("Modem or ONT", "network_device", {"f.kind": "modem", "s.internet.line": True}),
+                         SetupKind("Router", "network_device", {"f.kind": "router", "s.internet.line": True}),
+                         SetupKind("Firewall", "firewall", {"s.internet.line": True})),
+                  fields=(SetupField("name", placeholder="Fiber modem"), SetupField("location_id"),
+                          SetupField("s.supplier.vendor_id", "Provider", types=("vendor",)),
+                          SetupField("s.internet.circuit_id"),
+                          SetupField("s.internet.download", newline=True), SetupField("s.internet.upload"),
+                          SetupField("s.internet.static_ip", newline=True),
+                          SetupField("s.internet.public_ips", newline=True, placeholder="203.0.113.26"),
+                          SetupField("s.internet.cidr", placeholder="203.0.113.24"),
+                          SetupField("s.internet.gateway"), SetupField("s.internet.dns_servers"))),
         SetupStep("vlans", "VLANs", "The VLANs the network is split into, each with its number. Skip this if "
                   "the network is one flat LAN.", 45, group="Network",
                   help=SETUP_HELP["vlans"], plan="VLANs",

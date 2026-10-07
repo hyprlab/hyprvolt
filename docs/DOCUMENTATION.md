@@ -176,7 +176,12 @@ the subnet mask chosen beside it, 203.0.113.24 and /29, which fills in the
 gateway), gateway and DNS servers; an address or gateway outside the subnet
 is refused, and Dynamic hides them and keeps what was there. The ISP is the
 device's Supplier, with the contract for the line. A reader sees what the
-line holds in the device's Overview. The network diagram draws that device
+line holds in the device's Overview. In the setup guide, the Internet
+connection step adds an ISP's line and its modem in one row (or a router or
+firewall the line comes in at); the device is network gear too, so it is
+also in the Network gear step, where its line is the Internet switch and
+everything else about it is set, and a change in either step is the other's.
+The network diagram draws that device
 first, marked Internet comes in, and What breaks counts the network from it. A site
 with two ISPs has a modem for each line, or a router or firewall holding
 one line and a modem the other. A modem in bridge mode has no address on

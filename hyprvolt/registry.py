@@ -353,9 +353,13 @@ def validate(m: Module, reg: Registry) -> list[str]:
             p.append(f"the setup step {step.key!r} needs either kinds of record or a save function")
         elif step.save is not None and not callable(step.rows):
             p.append(f"the setup step {step.key!r} saves rows of its own, so it needs a rows function")
+        # Its own types, or those of a module it requires: Network's Internet connection
+        # step makes Hardware's modems, with Network's line on.
+        makes = own | {t.key for need in m.requires if need in reg.modules for t in reg.modules[need].types}
         for k in step.kinds:
-            if not isinstance(k, SetupKind) or k.type not in own:
-                p.append(f"the setup step {step.key!r} makes {getattr(k, 'type', k)!r}, not one of the module's types")
+            if not isinstance(k, SetupKind) or k.type not in makes:
+                p.append(f"the setup step {step.key!r} makes {getattr(k, 'type', k)!r}, not one of the module's "
+                         "types or those of a module it requires")
         if not all(isinstance(f, SetupField) for f in step.fields):
             p.append(f"the setup step {step.key!r} has a field that is not a SetupField")
     for page in m.pages:
