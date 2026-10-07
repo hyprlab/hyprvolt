@@ -1767,6 +1767,15 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 .guide-row { transition: opacity .15s; }
 .guide-row.is-saving { opacity: .7; }
 .guide-row--new { border-style: dashed; background: transparent; }
+/* Rows in a hierarchy (the Cables step, from where the internet comes in):
+   each level a step further in, its heading with it. */
+.guide-rows [data-depth="1"] { margin-left: 18px; }
+.guide-rows [data-depth="2"] { margin-left: 36px; }
+.guide-rows [data-depth="3"] { margin-left: 54px; }
+.guide-rows [data-depth="4"] { margin-left: 72px; }
+.guide-rows [data-depth="5"] { margin-left: 90px; }
+.guide-rows [data-depth="6"] { margin-left: 108px; }
+@media (max-width: 560px) { .guide-rows [data-depth] { margin-left: 0; } }
 /* The blank row's Clear (once something is in it) and Add, kept together
    at the end of the row, however it wraps. */
 .guide-row-actions { display: flex; gap: 8px; flex: none; margin-left: auto; margin-bottom: 1px; }

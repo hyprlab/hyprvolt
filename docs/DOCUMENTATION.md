@@ -556,6 +556,12 @@ Back, the steps down the side and Exit setup do the same. On the first step,
 the Site choice picks another site, or a new one; the guide can be run again
 to add what was left out, or for another site.
 
+The Cables step lists the cables as a tree from where the internet comes
+in: under the device a line comes in at (else the modem), its cables, then
+under the router or firewall its cables, then each switch, patch panel and
+so on further in, each level indented a step, the network gear plugged into
+a device before the endpoints beside it, and in label order within them. A
+part cabled to nothing upstream hangs from its own most upstream device.
 Each cable in the Cables step can be moved: choose another From or To in
 its row (a free port, or a device with a port to spare) and the cable keeps
 its label, color and length. Once the site has a cable, the Cables step
