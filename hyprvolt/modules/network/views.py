@@ -441,16 +441,31 @@ def _unit_devices(scope, unit=None):
 
 
 def setup_ends(scope, unit=None) -> list[dict]:
-    """The free ends a cable can go to: in the part of the site being
-    cabled, when it is done a part at a time."""
-    ends, only = ports.free_ends(), _unit_devices(scope, unit)
-    out = [{"label": g["label"], "options": [(f"device:{d.id}", d.name) for d in g["devices"]
-                                             if only is None or d.id in only]}
-           for g in ends["groups"]]
-    out += [{"label": f"{g['device']} ports", "options": [(f"port:{p.id}", p.label) for p in g["ports"]
-                                                          if only is None or p.device_id in only]}
-            for g in ends["ports"]]
-    return [g for g in out if g["options"]]
+    """The free ends a cable can go to. Cabling one part of a site (a
+    building), its own first, then those of each other part under its name,
+    "Main · Switches", for a cable between buildings."""
+    from hyprvolt.core import guide
+
+    from .cabling import parts, units
+    ends = ports.free_ends()
+
+    def groups(keep, prefix=""):
+        out = [{"label": prefix + g["label"], "options": [(f"device:{d.id}", d.name) for d in g["devices"]
+                                                          if keep(d.id)]}
+               for g in ends["groups"]]
+        out += [{"label": f"{prefix}{g['device']} ports", "options": [(f"port:{p.id}", p.label) for p in g["ports"]
+                                                                       if keep(p.device_id)]}
+                for g in ends["ports"]]
+        return [g for g in out if g["options"]]
+    key = unit if unit is not None else guide.unit()
+    only = _unit_devices(scope, key)
+    if only is None:
+        return groups(lambda i: True)
+    out, where = groups(lambda i: i in only), parts(scope)
+    for other, name in units(scope):
+        if other not in ("all", str(key)):
+            out += groups(lambda i, other=other: where.get(i) == other, f"{name} · ")
+    return out
 
 
 def _setup_end(value):

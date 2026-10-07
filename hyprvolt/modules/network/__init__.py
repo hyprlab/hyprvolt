@@ -311,9 +311,10 @@ SETUP_HELP = {
         "Suggest cables works the cabling out from the steps before: the modem to the router or firewall, that "
         "to the core switch, other switches to the core, and each device to the switch nearest it by rack, "
         "room and building. Each suggestion is checked before it is added.",
-        "A site of more than one network, a building with its own VLANs, subnets or internet line, is cabled "
-        "a building at a time: choose it above the cables. Suggest cables then works out its own gateway and "
-        "core switch, and Whole site lists every cable, as one between buildings.",
+        "A site with equipment in more than one building is cabled a building at a time: choose it above "
+        "the cables, or Not in a building for what is in the site itself. Its own devices are offered first, "
+        "then every other building's under its name, so a link between buildings can be added from either. "
+        "Suggest cables works out a building alone, and Whole site lists every cable.",
     ),
 }
 

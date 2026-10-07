@@ -584,14 +584,17 @@ further away, or nothing records where the device is) or Choose a port
 added until Add the cables. The ones ticked are added, and any that can't
 be are listed with the reason.
 
-A site of more than one network (a building with its own VLANs, subnets
-or internet line) is cabled a building at a time. A control above the
-Cables step's rows chooses the building, the rest of the site, or the whole
-site. A building lists the cables with an end in it (one between buildings
-is in both), offers its own devices and ports as ends, draws its own part
-of the diagram, and Suggest cables works its cabling out alone, from its
-own gateway and core switch. Whole site lists every cable and offers every
-end, for a cable between buildings.
+A site with equipment in more than one building is cabled a building at a
+time. A control above the Cables step's rows lists each building with
+equipment in it, then Not in a building (equipment placed in the site
+itself, or in no place) if there is any, then Whole site. A building lists
+the cables with an end in it (one between buildings is in both) and draws
+its own part of the diagram. Its From and To offer its own devices and
+ports first, then those of each other building under its name ("Main ·
+Switches"), so anything on the site can be cabled from it, a link between
+buildings included. Suggest cables works a building's cabling out alone,
+from its own gateway and core switch if it has them. Whole site lists
+every cable and offers every end.
 
 A cable added in the Cables step without a label is given one from its
 network: the VLAN's number, or with no VLAN the subnet's third number
