@@ -182,7 +182,8 @@ firewall the line comes in at); the device is network gear too, so it is
 also in the Network gear step, where its line is the Internet switch and
 everything else about it is set, and a change in either step is the other's.
 The network diagram draws that device
-first, marked Internet comes in, and What breaks counts the network from it. A site
+first, marked Internet comes in (two lines side by side in the top row),
+and What breaks counts the network from it. A site
 with two ISPs has a modem for each line, or a router or firewall holding
 one line and a modem the other. A modem in bridge mode has no address on
 your network and can be left without one; its line still comes in there.

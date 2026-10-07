@@ -281,3 +281,15 @@ def test_the_cables_hang_from_where_the_internet_comes_in(client, h, admin):
     core_part = page.split("sw-core · Switch</p>")[1].split('<p class="kicker')[0]
     assert core_part.index("sw-office") < core_part.index("srv")
     assert 'data-depth="3"' in page.split("sw-office · Switch</p>")[1]
+
+
+def test_two_lines_are_each_a_top_of_the_cables(client, h, admin):
+    client.post("/site-setup/site/rows", json={"values": {"name": "Home"}}, headers=h)
+    fiber = make(client, h, "network_device", name="fiber", **{"f.kind": "modem", "s.internet.line": True})
+    lte = make(client, h, "network_device", name="lte", **{"f.kind": "modem", "s.internet.line": True})
+    fw = make(client, h, "firewall", name="fw")
+    for m in (fiber, lte):
+        post(client, h, "/network/cables", device_id=fw["id"], other_device_id=m["id"])
+    page = client.get("/site-setup/cables").data.decode().split("data-row-new")[0]
+    heads = re.findall(r'<p class="kicker guide-kind"(?: data-depth="(\d)")?>([^<]+)</p>', page)
+    assert heads[:2] == [("", "fiber · Modem, the internet comes in"), ("", "lte · Modem, the internet comes in")]

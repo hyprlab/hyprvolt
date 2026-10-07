@@ -548,7 +548,19 @@ class _CableTree:
         left = set(self.devices)
         while left:
             root = min(left, key=self.rank)
-            self.levels[root], queue, found = 0, [root], [root]
+            # Every device a line comes in at in this part is a top of it: two ISPs side by side.
+            roots = [root]
+            if root in self.lines:
+                part, todo = {root}, [root]
+                while todo:
+                    for j in near.get(todo.pop(), ()):
+                        if j in left and j not in part:
+                            part.add(j)
+                            todo.append(j)
+                roots = sorted((i for i in part if i in self.lines), key=self.rank)
+            for r in roots:
+                self.levels[r] = 0
+            queue, found = list(roots), list(roots)
             while queue:
                 i = queue.pop(0)
                 for j in sorted(near.get(i, ()), key=self.rank):
@@ -558,7 +570,7 @@ class _CableTree:
                         queue.append(j)
                         found.append(j)
             left -= set(found)
-            stack = [root]                  # in tree order: each device, then what hangs from it
+            stack = list(reversed(roots))   # in tree order: each device, then what hangs from it
             while stack:
                 i = stack.pop()
                 self.order[i] = len(self.order)
