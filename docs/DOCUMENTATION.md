@@ -211,16 +211,16 @@ VLAN. A network depends on the gear that carries it, so the dependency view
 of a switch lists the networks it takes down.
 
 A site can be more than one network: two buildings of one organization,
-each with its own internet line, router and addresses. A local network (a
-network of the kind Local network) placed in a building is that building's,
-and a VLAN or subnet says it is in it with its Network field; a subnet on a
-VLAN is in the VLAN's network. A device's addresses are in the network of
-the building it is in (the nearest local network at or above its place), so
-both buildings can use 192.168.1.0/24, and the same address in each, each
-subnet listing its own building's. A choice of VLAN or subnet names the
-network of each where they differ: Default (Annex network). The setup
-guide's Local networks step adds them, and its VLANs and Subnets steps then
-ask for each one's network. A domain's DNS records
+each with its own internet line, router and addresses. A VLAN or subnet
+has a Where, the site or a building, and one placed in a building is that
+building's; a subnet on a building's VLAN goes there with it. A device's
+address is in the subnet nearest it that holds the address: one placed in
+its building (or the building its room is in), then the site, then one
+placed nowhere. So both buildings can use 192.168.1.0/24, and the same
+address in each, each subnet listing its own building's, and VLAN 1 can be
+recorded in each. A choice of VLAN or subnet names the place of each where
+they differ: Default (Annex). The setup guide's VLANs and Subnets steps ask
+for each one's Where. A domain's DNS records
 are written down by hand in its DNS records tab, and an A record or a CNAME
 that leads to a recorded address links to the device holding it. The
 palette finds DNS names and MAC addresses. The sidebar lists addresses with
@@ -499,7 +499,7 @@ sidebar, opens it again later, as do the foot of the New record window and
 the empty dashboard. Its first page says what it
 covers, in five parts: the place (the site, its buildings and rooms,
 racks, and the vendors it deals with), the network (the internet
-connection, local networks, VLANs, subnets, wireless networks), the equipment (network gear, servers and storage),
+connection, VLANs, subnets, wireless networks), the equipment (network gear, servers and storage),
 what runs (hypervisors, virtual machines, services), and the endpoints, the
 UPSes that power them and everything else, and the cables between them.
 Steps of turned-off modules are left out. Each step has a What goes here

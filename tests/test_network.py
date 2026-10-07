@@ -118,13 +118,16 @@ def test_each_building_can_be_a_network_of_its_own(client, h, admin):
     main = make(client, h, "building", name="Main", location_id=site["id"])
     annex = make(client, h, "building", name="Annex", location_id=site["id"])
     room = make(client, h, "room", name="Closet", location_id=annex["id"])
-    lan = make(client, h, "network", name="Annex network", location_id=annex["id"], **{"f.kind": "lan"})
-    # The same VLAN and range in each building: one in no network (the rest of the site), one in the annex's.
-    make(client, h, "vlan", name="Default", **{"f.vid": 1})
-    annex_vlan = make(client, h, "vlan", name="Default", **{"f.vid": 1, "f.network": lan["id"]})
-    here = make(client, h, "subnet", name="Main LAN", **{"f.cidr": "192.168.1.0/24"})
-    there = make(client, h, "subnet", name="Annex LAN", **{"f.cidr": "192.168.1.0/24", "f.vlan": annex_vlan["id"]})
-    assert there["fields"]["network"] == lan["id"]          # on the annex's VLAN: in its network
+    # The same VLAN and range in each building: placed in the site (the rest of it), and in the annex.
+    make(client, h, "vlan", name="Default", location_id=site["id"], **{"f.vid": 1})
+    annex_vlan = make(client, h, "vlan", name="Default", location_id=annex["id"], **{"f.vid": 1})
+    assert "already Default in Annex" in error(client, h, "vlan", name="x", location_id=annex["id"], **{"f.vid": 1})
+    here = make(client, h, "subnet", name="Main LAN", location_id=site["id"], **{"f.cidr": "192.168.1.0/24"})
+    there = make(client, h, "subnet", name="Annex LAN", location_id=site["id"],
+                 **{"f.cidr": "192.168.1.0/24", "f.vlan": annex_vlan["id"]})
+    assert there["location"]["id"] == annex["id"]            # on the annex's VLAN: in the annex
+    assert "already recorded as Annex LAN in Annex" in error(client, h, "subnet", name="x", location_id=annex["id"],
+                                                              **{"f.cidr": "192.168.1.0/24"})
     # The same address on a device in each building; a second in the annex is refused.
     one = make(client, h, "server", name="main-srv", location_id=main["id"], **{"s.addresses.list": "192.168.1.10"})
     two = make(client, h, "server", name="annex-srv", location_id=room["id"],
@@ -139,16 +142,39 @@ def test_each_building_can_be_a_network_of_its_own(client, h, admin):
         assert got["subnet"]["used"] == 1
     assert "Annex LAN" in client.get(f"/e/{two['id']}/sheet?tab=addresses").data.decode()
     assert "Main LAN" in client.get(f"/e/{one['id']}/sheet?tab=addresses").data.decode()
-    # A choice of VLAN says whose each is.
+    # A choice of VLAN says where each is.
     form = client.get("/e/form?type=subnet").data.decode().split('name="f.vlan"')[1].split("</select>")[0]
-    assert ">Default</option>" in form and ">Default (Annex network)</option>" in form
-    # The setup guide has a Local networks step, and asks for each VLAN's network once there is one.
-    lans = client.get(f"/site-setup/lans?site={site['id']}").data.decode()
-    assert 'data-name="Annex network"' in lans
-    vlans = client.get(f"/site-setup/vlans?site={site['id']}").data.decode()
-    assert 'name="f.network"' in vlans and ">Annex network</option>" in vlans
+    assert ">Default (Campus)</option>" in form and ">Default (Annex)</option>" in form
+    # The setup guide asks where each VLAN and subnet is: the site or a building, no room.
+    for key in ("vlans", "subnets"):
+        page = client.get(f"/site-setup/{key}?site={site['id']}").data.decode()
+        where = page.split("data-row-new")[1].split('name="location_id"')[1].split("</select>")[0]
+        assert ">Annex (building)<" in where and ">Campus (site)<" in where and "Closet" not in where
+    assert client.get(f"/site-setup/lans?site={site['id']}").status_code == 404
+    # Another site's VLANs aren't this one's.
     other = make(client, h, "site", name="Cabin")
-    assert 'name="f.network"' not in client.get(f"/site-setup/vlans?site={other['id']}").data.decode()
+    assert 'data-name="Default"' not in client.get(f"/site-setup/vlans?site={other['id']}").data.decode()
+
+
+def test_a_local_networks_vlans_and_subnets_move_to_its_building(app, client, h, admin):
+    from hyprvolt.migrate import Migrator
+    from hyprvolt.models import db
+    from hyprvolt.modules.network import _segments_placed
+    site = make(client, h, "site", name="Campus")
+    annex = make(client, h, "building", name="Annex", location_id=site["id"])
+    lan = make(client, h, "network", name="Annex network", location_id=annex["id"], **{"f.kind": "lan"})
+    vlan = make(client, h, "vlan", name="Default", **{"f.vid": 1, "f.network": lan["id"]})
+    subnet = make(client, h, "subnet", name="Annex LAN", **{"f.cidr": "192.168.1.0/24", "f.network": lan["id"]})
+    loose = make(client, h, "subnet", name="Loose", **{"f.cidr": "10.0.0.0/24"})
+    with app.app_context():
+        db.session.execute(db.text("UPDATE entities SET location_id = NULL WHERE type IN ('vlan', 'subnet')"))
+        db.session.execute(db.text("DELETE FROM settings WHERE key = 'migration:network:segments-placed'"))
+        db.session.commit()
+        _segments_placed(Migrator("network"))
+        db.session.commit()
+    got = {e["id"]: (client.get(f"/api/entities/{e['id']}").get_json()["entity"]["location"] or {}).get("id")
+           for e in (vlan, subnet, loose)}
+    assert got == {vlan["id"]: annex["id"], subnet["id"]: annex["id"], loose["id"]: None}
 
 
 # ———— The subnet view ————

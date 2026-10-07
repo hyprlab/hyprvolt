@@ -23,9 +23,9 @@ def seed(demo):
             (20, "Servers", "10.0.20.0/24", {"dns_servers": "10.0.20.2"}),
             (30, "Clients", "10.0.30.0/24", {"dns_servers": "10.0.20.2", "dhcp_range": "10.0.30.100-10.0.30.199"}),
             (40, "IoT", "10.0.40.0/24", {"dns_servers": "10.0.20.2", "dhcp_range": "10.0.40.100-10.0.40.199"})):
-        vlan = demo.add("vlan", name, key=f"vlan-{vid}", vid=vid, network=home)
+        vlan = demo.add("vlan", name, key=f"vlan-{vid}", location="home", vid=vid, network=home)
         vlans[vid] = vlan
-        demo.add("subnet", f"{name} {cidr}", key=f"net-{vid}", cidr=cidr, vlan=vlan, network=home,
+        demo.add("subnet", f"{name} {cidr}", key=f"net-{vid}", location="home", cidr=cidr, vlan=vlan, network=home,
                  gateway=cidr.replace("0/24", "1"), **extra)
     # Two Wi-Fi networks from the office access point: clients, and IoT hidden on its own VLAN.
     for name, vid, extra in (("hyprlab", 30, {"security": "wpa2_wpa3", "bands": "2.4_5"}),

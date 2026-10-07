@@ -141,6 +141,25 @@ def _wan_subnet(m):
     m.once("wan-subnet", move)
 
 
+def _segments_placed(m):
+    """A building's VLANs and subnets were once in a local network placed in
+    it. They are placed in the building themselves now, which is what the
+    local network said; the local network stays, a network like any other."""
+    def move():
+        db.session.execute(db.text(
+            "UPDATE entities SET location_id = (SELECT n.location_id FROM network_details d "
+            "JOIN entities n ON n.id = d.network JOIN network_details nd ON nd.entity_id = n.id "
+            "JOIN entities p ON p.id = n.location_id "
+            "WHERE d.entity_id = entities.id AND nd.kind = 'lan' AND n.deleted_at IS NULL "
+            "AND p.type IN ('site', 'building')) "
+            "WHERE type IN ('vlan', 'subnet') AND location_id IS NULL AND EXISTS (SELECT 1 FROM network_details d "
+            "JOIN entities n ON n.id = d.network JOIN network_details nd ON nd.entity_id = n.id "
+            "JOIN entities p ON p.id = n.location_id "
+            "WHERE d.entity_id = entities.id AND nd.kind = 'lan' AND n.deleted_at IS NULL "
+            "AND p.type IN ('site', 'building'))"))
+    m.once("segments-placed", move)
+
+
 def _wifi(m):
     """Wireless networks: their security, bands, and the subnet they hand
     out addresses in."""
@@ -155,6 +174,10 @@ WIFI_SECURITY = (("wpa3", "WPA3 Personal"), ("wpa2_wpa3", "WPA2/WPA3 Personal"),
                  ("enterprise", "Enterprise (802.1X)"), ("open", "Open"))
 WIFI_BANDS = (("2.4", "2.4 GHz"), ("5", "5 GHz"), ("6", "6 GHz"), ("2.4_5", "2.4 and 5 GHz"),
               ("5_6", "5 and 6 GHz"), ("2.4_5_6", "2.4, 5 and 6 GHz"))
+
+#: Where a VLAN or subnet can be: the site, or a building that is a network
+#: of its own (its own internet line, router and addresses).
+SEGMENT_PLACES = ("site", "building")
 
 #: A VLAN's or subnet's network: a local one (or a VPN), never an internet
 #: connection, whose own addresses are recorded on it.
@@ -185,23 +208,14 @@ SETUP_HELP = {
         "A site with more than one ISP, or a mobile backup, records each line here. In the Network gear "
         "step, tick every line that plugs into the router or firewall: it can have several.",
         "A building with its own line chooses that building as Where. If it is its own network as well, "
-        "with its own router and addresses, add it in Local networks, next.",
-    ),
-    "lans": (
-        "Skip this when the site is one network, however many buildings it has. A local network is for a "
-        "building (or a site) that is a network of its own: its own internet line, router and addresses, "
-        "even though it belongs to the same organization.",
-        "Add one for each, with Where set to its building, and one for the site for the rest of it if "
-        "needed. Everything in a building is then in that building's network: the VLANs and subnets steps "
-        "ask which network each is in, and the same addresses, such as 192.168.1.0/24, can be used in "
-        "two buildings without being mistaken for each other.",
+        "with its own router and addresses, its VLANs and subnets choose it as Where too, in the next steps.",
     ),
     "vlans": (
         "A VLAN splits one physical network into separate ones, each with a number from 1 to 4094, such as "
         "Servers or IoT. Record them if your switches and router use them; skip this for one flat network.",
         "The address range each VLAN uses is a subnet, the next step, which names its VLAN.",
-        "In a site of more than one local network, choose the network each VLAN is in: two buildings can "
-        "both have a VLAN 10.",
+        "Where is the site, or a building that is a network of its own, with its own internet line, router "
+        "and addresses. Two such buildings can both have a VLAN 10.",
     ),
     "subnets": (
         "A subnet is an address range in use, such as 192.168.1.0/24, with its gateway and DHCP range. Each "
@@ -209,8 +223,9 @@ SETUP_HELP = {
         "addresses are used and which are free.",
         "Only your own networks' ranges go here. An internet connection's static address, subnet and "
         "gateway from the ISP are recorded on the connection, in the Internet connection step.",
-        "In a site of more than one local network, choose the network each subnet is in; one on a VLAN is in "
-        "the VLAN's network. An address is placed in the subnet of the network its device's building is in.",
+        "Where is the site, or a building that is a network of its own. Two such buildings can both use "
+        "192.168.1.0/24: an address goes to the subnet of the building its device is in, and a subnet on "
+        "a building's VLAN is in that building.",
     ),
     "wifi": (
         "A wireless network is one Wi-Fi network name (SSID) your devices join, such as home, iot or guest, "
@@ -246,7 +261,7 @@ module = Module(
     models=(NetworkDetail, Port, Cable, DnsRecord, PortsRecorded),
     migrations=(Step("provider-to-notes", _provider_to_notes), Step("ports-recorded", _ports_recorded),
                 Step("bandwidth-speeds", _bandwidth_speeds), Step("static-ip", _static_ip), Step("wifi", _wifi),
-                Step("wan-subnet", _wan_subnet)),
+                Step("wan-subnet", _wan_subnet), Step("segments-placed", _segments_placed)),
     blueprint=views.bp,
     types=(
         EntityType("network", "Network", "Networks", detail=NetworkDetail, located_in=None, icon=NETWORK,
@@ -278,13 +293,14 @@ module = Module(
                                       "a fault. The ISP itself goes in Supplier, as a vendor.")),
                    tabs=(Tab("contents", "VLANs and subnets", views.network_tab, when=views.has_contents,
                              count=views.network_count),)),
-        EntityType("vlan", "VLAN", "VLANs", detail=NetworkDetail, located_in=(), icon=VLAN, named_with="network",
+        EntityType("vlan", "VLAN", "VLANs", detail=NetworkDetail, located_in=SEGMENT_PLACES, icon=VLAN,
+                   named_with="location_id",
                    check=addresses.check_vlan,
                    fields=(Field("vid", "VLAN ID", "integer", required=True, min=1, max=4094, card=True, list=True),
                            NETWORK_REF),
                    tabs=(Tab("subnets", "Subnets", views.vlan_tab, count=views.vlan_count),)),
-        EntityType("subnet", "Subnet", "Subnets", detail=NetworkDetail, located_in=(), icon=SUBNET,
-                   named_with="network",
+        EntityType("subnet", "Subnet", "Subnets", detail=NetworkDetail, located_in=SEGMENT_PLACES, icon=SUBNET,
+                   named_with="location_id",
                    check=addresses.check_subnet,
                    fields=(Field("cidr", "Range", "cidr", required=True, card=True, list=True,
                                  prefills=("gateway", "dhcp_range")),
@@ -360,25 +376,19 @@ module = Module(
                           SetupField("f.public_ips", newline=True, placeholder="203.0.113.26"),
                           SetupField("f.cidr", placeholder="203.0.113.24"), SetupField("f.gateway"),
                           SetupField("f.dns_servers"))),
-        SetupStep("lans", "Local networks", "Only for a site of more than one network, such as two buildings "
-                  "each with its own internet line, router and addresses: one for each. Skip this if the site "
-                  "is one network.", 42, group="Network",
-                  help=SETUP_HELP["lans"], plan="local networks",
-                  kinds=(SetupKind("Local network", "network", {"f.kind": "lan"}),),
-                  fields=(SetupField("name", placeholder="Annex network"), SetupField("location_id"))),
         SetupStep("vlans", "VLANs", "The VLANs the network is split into, each with its number. Skip this if "
                   "the network is one flat LAN.", 45, group="Network",
                   help=SETUP_HELP["vlans"], plan="VLANs",
                   kinds=(SetupKind("VLAN", "vlan"),),
                   fields=(SetupField("name", placeholder="Servers"), SetupField("f.vid"),
-                          SetupField("f.network", choices=views.local_networks))),
+                          SetupField("location_id"))),
         SetupStep("subnets", "Subnets", "The address ranges in use, such as 192.168.1.0/24, with their gateway. "
                   "Addresses recorded in the later steps are found in these.", 50, group="Network",
                   help=SETUP_HELP["subnets"], plan="subnets",
                   kinds=(SetupKind("Subnet", "subnet"),),
                   fields=(SetupField("name", placeholder="Servers"), SetupField("f.cidr", placeholder="10.0.20.0/24"),
                           SetupField("f.gateway", placeholder="10.0.20.1"),
-                          SetupField("f.vlan", newline=True), SetupField("f.network", choices=views.local_networks),
+                          SetupField("f.vlan", newline=True), SetupField("location_id"),
                           SetupField("f.dhcp_range"))),
         SetupStep("wifi", "Wireless networks", "The Wi-Fi networks devices join, one row each, with the "
                   "VLAN or subnet each puts them on. Which gear broadcasts them comes next.", 55, group="Network",

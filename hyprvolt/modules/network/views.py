@@ -178,15 +178,6 @@ def _lines_of(device: Entity) -> list[Entity]:
     return [e for e in (records.live(i) for i in dict.fromkeys(ids)) if e is not None]
 
 
-def local_networks(scope) -> list[tuple[int, str]]:
-    """The site's local networks, for the setup guide's Network column:
-    none (and no column) for a site that is one network."""
-    from hyprvolt.core import guide
-    lans = (Entity.live().join(NetworkDetail, NetworkDetail.entity_id == Entity.id)
-            .filter(Entity.type == "network", NetworkDetail.kind == "lan").order_by(Entity.name).all())
-    return [(e.id, e.name) for e in guide.in_site(lans, scope)]
-
-
 def internet_choices(name) -> list[tuple[int, str]]:
     return [(e.id, e.name) for e in _lines()]
 
@@ -361,17 +352,17 @@ def _carried(entity, side) -> str:
 
 def networks_choices(name) -> list[dict]:
     """The VLANs, by number, and the subnets, by range, each named for what
-    it is: "Servers (VLAN 20)", "Servers 10.0.20.0/24, on VLAN 20", and in
-    a site of several local networks, which: "Servers (VLAN 20, Annex)"."""
+    it is: "Servers (VLAN 20)", "Servers 10.0.20.0/24, on VLAN 20", and
+    where they are in different places, which: "Servers (VLAN 20, Annex)"."""
     details = {d.entity_id: d for d in NetworkDetail.query.filter(
         NetworkDetail.entity_id.in_([e.id for e in _segments()]))}
-    networks = {d.network for d in details.values()}
+    places = {e.location_id for e in _segments()}
     names = dict(db.session.query(Entity.id, Entity.name).filter(
-        Entity.id.in_({n for n in networks if n}))) if len(networks) > 1 else {}
+        Entity.id.in_({p for p in places if p}))) if len(places) > 1 else {}
     vlans, subnets = [], []
     for e in _segments():
         d = details.get(e.id)
-        net = names.get(d.network) if d else None
+        net = names.get(e.location_id)
         if e.type == "vlan":
             what = ", ".join(x for x in (f"VLAN {d.vid}" if d and d.vid else "", net) if x)
             vlans.append((d.vid if d else 0, e.id, f"{e.name} ({what})" if what else e.name))

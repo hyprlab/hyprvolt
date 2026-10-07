@@ -2,13 +2,12 @@
 addresses of a subnet are used, reserved, handed out by DHCP or free, and
 the IP addresses section other records get in their form.
 
-A site can be more than one network: a local network (a network of the
-kind lan) placed in a building is that building's, and its VLANs and
-subnets say so in their Network field. An address belongs to the network
-of the place its device is in, the nearest local network at or above it,
-so two buildings can both use 192.168.1.0/24, and the same address in each.
-An address with no device, or whose device is in no local network's place,
-takes the network of the subnet that holds it."""
+A site can be more than one network: a subnet or VLAN placed in a building
+is that building's. An address is in the subnet that holds it nearest its
+device: one placed where the device is or above it (its room's building,
+then the site), else one placed nowhere. So two buildings can both use
+192.168.1.0/24, and the same address in each. An address with no device
+goes to a subnet placed nowhere before another building's."""
 import ipaddress
 
 from flask import g, render_template
@@ -57,11 +56,11 @@ def dhcp_bounds(text: str):
 def check_ip(entity, detail):
     if not detail or not detail.address:
         return
-    mine = ip_network(detail, fresh=True)
+    mine = ip_place(detail, fresh=True)
     for _, other in _live_details("ip_address").filter(NetworkDetail.address == detail.address,
                                                         Entity.id != entity.id):
-        if not _meets(ip_network(other, fresh=True), mine, detail.address, fresh=True):
-            continue                     # the same address in another building's network
+        if ip_place(other, fresh=True) != mine:
+            continue                     # the same address in another building's subnet
         where = records.live(other.assigned) if other.assigned else None
         raise Invalid(f"{detail.address} is already recorded" + (f", assigned to {where.name}." if where else "."))
 
@@ -85,15 +84,32 @@ def check_subnet(entity, detail):
         if first not in net or last not in net:
             raise Invalid(f"The DHCP range must be inside {net}.")
         detail.dhcp_range = f"{first}-{last}"
-    if detail.network is None and detail.vlan:
-        # On a VLAN of a building's network: in that network too.
-        vd = db.session.get(NetworkDetail, detail.vlan)
-        detail.network = vd.network if vd else None
-    same = (_live_details("subnet").filter(NetworkDetail.cidr == detail.cidr, Entity.id != entity.id)
-            .filter(NetworkDetail.network.is_(detail.network) if detail.network is None
-                    else NetworkDetail.network == detail.network).first())
+    vlan = records.live(detail.vlan) if detail.vlan else None
+    if vlan is not None:
+        # On a building's VLAN: in that building too, and in the VLAN's network.
+        if vlan.location_id and (entity.location_id is None or entity.location_id in _chain(vlan.location_id, True)):
+            entity.location_id = vlan.location_id
+        if detail.network is None:
+            vd = db.session.get(NetworkDetail, vlan.id)
+            detail.network = vd.network if vd else None
+    same = _same_place(_live_details("subnet").filter(NetworkDetail.cidr == detail.cidr, Entity.id != entity.id),
+                       entity, detail).first()
     if same:
-        raise Invalid(f"{detail.cidr} is already recorded as {same[0].name}.")
+        raise Invalid(f"{detail.cidr} is already recorded as {same[0].name}" + _here(entity) + ".")
+
+
+def _same_place(query, entity, detail):
+    """Those of the query in the same place and the same network: another
+    building, or another network, may use the same range or VLAN."""
+    query = query.filter(Entity.location_id.is_(None) if entity.location_id is None
+                         else Entity.location_id == entity.location_id)
+    return query.filter(NetworkDetail.network.is_(None) if detail.network is None
+                        else NetworkDetail.network == detail.network)
+
+
+def _here(entity) -> str:
+    place = records.live(entity.location_id) if entity.location_id else None
+    return f" in {place.name}" if place else ""
 
 
 def check_network(entity, detail):
@@ -116,32 +132,13 @@ def check_vlan(entity, detail):
     if not detail or detail.vid is None:
         return
     query = _live_details("vlan").filter(NetworkDetail.vid == detail.vid, Entity.id != entity.id)
-    query = query.filter(NetworkDetail.network.is_(None) if detail.network is None
-                         else NetworkDetail.network == detail.network)
-    clash = query.first()
+    clash = _same_place(query, entity, detail).first()
     if clash:
         raise Invalid(f"VLAN {detail.vid} is already {clash[0].name}" +
-                      (" in this network." if detail.network else "."))
+                      (_here(entity) or (" in this network" if detail.network else "")) + ".")
 
 
-# ———— Which network ————
-
-def _lans(fresh: bool = False) -> dict[int, int]:
-    """place id -> the local network placed there (the first, if several),
-    once per request unless ``fresh``: a check runs while records change."""
-    if fresh or "_lan_places" not in g:
-        rows = (db.session.query(Entity.location_id, Entity.id)
-                .join(NetworkDetail, NetworkDetail.entity_id == Entity.id)
-                .filter(Entity.type == "network", Entity.deleted_at.is_(None), NetworkDetail.kind == "lan",
-                        Entity.location_id.isnot(None)).order_by(Entity.id).all())
-        out = {}
-        for place, lan in rows:
-            out.setdefault(place, lan)
-        if fresh:
-            return out
-        g._lan_places = out
-    return g._lan_places
-
+# ———— Which building's ————
 
 def _parent(entity_id, fresh: bool):
     if fresh:
@@ -151,57 +148,30 @@ def _parent(entity_id, fresh: bool):
     return g._parents.get(entity_id)
 
 
-def network_at(location_id, fresh: bool = False) -> int | None:
-    """The local network of a place: one placed there, or at the nearest
-    place above it. None where there is none, as in a site that is one
-    network."""
-    lans = _lans(fresh)
-    seen = set()
-    while lans and location_id is not None and location_id not in seen:
-        if location_id in lans:
-            return lans[location_id]
-        seen.add(location_id)
+def _chain(location_id, fresh: bool = False) -> list[int]:
+    """A place and the places it is in, nearest first: a room, its
+    building, the site."""
+    out = []
+    while location_id is not None and location_id not in out and len(out) < 20:
+        out.append(location_id)
         location_id = _parent(location_id, fresh)
-    return None
+    return out
 
 
-def network_of(entity, fresh: bool = False) -> int | None:
-    """The local network of the place a record (a device) is in."""
-    return network_at(entity.location_id, fresh) if entity is not None else None
+def _device_place(detail, fresh: bool = False):
+    return _parent(detail.assigned, fresh) if detail.assigned else None
 
 
-def _network_for(address, location_id, fresh: bool = False) -> int | None:
-    """The network of an address on a device in this place: the place's,
-    else that of the subnet holding it."""
-    found = network_at(location_id, fresh) if location_id is not None else None
-    if found is not None:
-        return found
-    subnet = _holding(address, None, fresh)
-    return subnet[2] if subnet else None
-
-
-def ip_network(detail, fresh: bool = False) -> int | None:
-    """The network an address record is in: its device's, else its subnet's."""
-    place = _parent(detail.assigned, fresh) if detail.assigned and _lans(fresh) else None
-    return _network_for(detail.address, place, fresh)
-
-
-def _meets(one, other, address, fresh: bool = False) -> bool:
-    """Whether two networks are the same for an address: the same one, or
-    no network and one with no subnet of its own holding it (a site with a
-    local network whose subnets don't name it)."""
-    if one == other:
-        return True
-    if one is not None and other is not None:
-        return False
-    named = one if other is None else other
-    a = ipaddress.ip_address(address)
-    return not any(a in net and n == named for _, net, n in _subnets(fresh))
+def ip_place(detail, fresh: bool = False) -> int | None:
+    """Where the subnet an address record is in is placed: what tells the
+    same address in two buildings apart. None for one placed nowhere."""
+    found = _holding(detail.address, _device_place(detail, fresh), fresh)
+    return found[2] if found else None
 
 
 def subnet_of_ip(detail) -> Entity | None:
-    """The subnet an address record is in, in its own network."""
-    return subnet_of(detail.address, ip_network(detail)) if detail and detail.address else None
+    """The subnet an address record is in: the one nearest its device."""
+    return subnet_of(detail.address, _device_place(detail)) if detail and detail.address else None
 
 
 # ———— Subnets ————
@@ -250,9 +220,9 @@ def _states():
     return g._ip_states
 
 
-def _summary(net, detail, hosts) -> dict:
+def _summary(net, detail, hosts, place) -> dict:
     """The counts of a subnet, for a card or a row: no records loaded."""
-    taken = {a: status for a, status, d in _states() if a in net and _belongs(detail.network, a, d)}
+    taken = {a: status for a, status, d in _states() if a in net and _belongs(place, d)}
     try:
         dhcp = dhcp_bounds(detail.dhcp_range or "")
     except ValueError:
@@ -276,8 +246,8 @@ def usage(subnet: Entity, grid: bool = True) -> dict | None:
     net = ipaddress.ip_network(detail.cidr)
     hosts = net.num_addresses - (2 if net.version == 4 and net.prefixlen <= 30 else 0)
     if not grid:
-        return _summary(net, detail, hosts)
-    documented = sorted(((e, d, a) for e, d, a in all_ips() if a in net and _belongs(detail.network, a, d)),
+        return _summary(net, detail, hosts, subnet.location_id)
+    documented = sorted(((e, d, a) for e, d, a in all_ips() if a in net and _belongs(subnet.location_id, d)),
                         key=lambda x: (x[2].version, int(x[2])))
     try:
         dhcp = dhcp_bounds(detail.dhcp_range or "")
@@ -322,12 +292,12 @@ def usage(subnet: Entity, grid: bool = True) -> dict | None:
 
 
 def _subnets(fresh: bool = False) -> list[tuple[int, object, int | None]]:
-    """(id, range, network) of every live subnet, once per request."""
+    """(id, range, place) of every live subnet, once per request."""
     if fresh or "_subnet_rows" not in g:
         out = []
         for e, d in _live_details("subnet"):
             try:
-                out.append((e.id, ipaddress.ip_network(d.cidr), d.network))
+                out.append((e.id, ipaddress.ip_network(d.cidr), e.location_id))
             except (TypeError, ValueError):
                 continue
         if fresh:
@@ -336,40 +306,42 @@ def _subnets(fresh: bool = False) -> list[tuple[int, object, int | None]]:
     return g._subnet_rows
 
 
-def _holding(address, network, fresh: bool = False):
-    """The (id, range, network) of the most specific subnet holding
-    ``address``: in ``network``, or else in none; with no network given,
-    one in none before any other."""
+def _holding(address, location_id, fresh: bool = False):
+    """The (id, range, place) of the subnet holding ``address`` nearest a
+    device in ``location_id``: one placed there or above it, nearest first,
+    then one placed nowhere, then another building's; the most specific of
+    those equally near."""
     try:
         a = ipaddress.ip_address(address)
     except (TypeError, ValueError):
         return None
+    rank = {place: i for i, place in enumerate(_chain(location_id, fresh))}
     best = None
     for row in _subnets(fresh):
-        if a not in row[1] or (network is not None and row[2] not in (network, None)):
+        if a not in row[1]:
             continue
-        key = (row[2] == network, row[1].prefixlen)
-        if best is None or key > best[0]:
+        near = rank.get(row[2], len(rank) if row[2] is None else len(rank) + 1)
+        key = (near, -row[1].prefixlen)
+        if best is None or key < best[0]:
             best = (key, row)
     return best[1] if best else None
 
 
-def subnet_of(address: str, network: int | None = None) -> Entity | None:
-    """The most specific live subnet holding ``address``, in ``network``
-    (or in none) when it is given."""
-    found = _holding(address, network)
+def subnet_of(address: str, location_id: int | None = None) -> Entity | None:
+    """The subnet holding ``address`` nearest a device in ``location_id``."""
+    found = _holding(address, location_id)
     return db.session.get(Entity, found[0]) if found else None
 
 
-def _belongs(subnet_network, a, detail) -> bool:
-    """Whether an address in a subnet's range is one of its own, in its
-    network (``_meets``). A wider subnet still counts those of the narrower
+def _belongs(place, detail) -> bool:
+    """Whether an address in a subnet's range is one of its own: in a subnet
+    placed where it is. A wider subnet still counts those of the narrower
     ones inside it."""
-    if "_ip_networks" not in g:
-        g._ip_networks = {}
-    if detail.entity_id not in g._ip_networks:
-        g._ip_networks[detail.entity_id] = ip_network(detail)
-    return _meets(subnet_network, g._ip_networks[detail.entity_id], a)
+    if "_ip_places" not in g:
+        g._ip_places = {}
+    if detail.entity_id not in g._ip_places:
+        g._ip_places[detail.entity_id] = ip_place(detail)
+    return g._ip_places[detail.entity_id] == place
 
 
 # ———— The IP addresses section in other records' forms ————
@@ -424,10 +396,11 @@ def section_save(entity, values, user) -> list[dict]:
     for text in list(wanted):
         if text in have:
             continue
-        # The record of this address in the device's network, not another building's.
-        mine = _network_for(text, entity.location_id, fresh=True)
+        # The record of this address in the device's building, not another's.
+        held = _holding(text, entity.location_id, fresh=True)
+        mine = held[2] if held else None
         found = next(((ip, d) for ip, d in _live_details("ip_address").filter(NetworkDetail.address == text)
-                      if _meets(ip_network(d, fresh=True), mine, text, fresh=True)), None)
+                      if ip_place(d, fresh=True) == mine), None)
         if found:
             ip, d = found
             holder = records.live(d.assigned) if d.assigned and d.assigned != entity.id else None

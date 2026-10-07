@@ -42,7 +42,7 @@ def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
     for group in ("Place", "Network", "Equipment", "What runs", "Endpoints"):
         assert f'<p class="guide-group">{group}</p>' in page
     assert "This guide covers the 5 main categories of a site" in page
-    for plan in ("Site, buildings, rooms, racks, and vendors", "Internet connections, local networks, VLANs, subnets, and wireless networks",
+    for plan in ("Site, buildings, rooms, racks, and vendors", "Internet connections, VLANs, subnets, and wireless networks",
                  "Network gear, servers, and storage", "Endpoints, UPSes, and cables"):
         assert f'<span class="guide-plan-steps">{plan}</span>' in page
     # Once something is recorded it is the guide's overview, run again.
@@ -101,10 +101,10 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     # A saved row is folded to its name, and opens to be changed.
     assert page.count('class="guide-row is-collapsed"') == 2
     assert 'aria-expanded="false"' in page and '<span class="guide-row-title" data-row-title>Ubiquiti</span>' in page
-    # Where a record goes is chosen among the site's places, the site first.
+    # Where a record goes is chosen among the site's places it can be in: a rack in a room, not the site.
     page = client.get(f"/site-setup/racks?site={site['id']}").data.decode()
     assert f'<option value="{basement["id"]}" >Basement (room)</option>' in page.replace("selected", "")
-    assert f'<option value="{site["id"]}" >Home (site)</option>' in page.replace("selected", "")
+    assert f'<option value="{site["id"]}" >Home (site)</option>' not in page.replace("selected", "")
     add(client, h, "racks", site["id"], name="Rack 1", location_id=basement["id"], **{"f.height_u": "24"})
     rack = entities(client, "rack")[0]
     assert rack["fields"]["height_u"] == 24 and rack["fields"]["numbering"] == "bottom"
