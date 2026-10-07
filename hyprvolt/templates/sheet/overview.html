@@ -158,6 +158,12 @@
 </dl>
 {% endfor %}
 
+{# What a module's section with fields of its own holds (FormSection.fields): an internet line. #}
+{% for item in sections %}
+<p class="setting-label setting-label--spaced">{{ item.section.label }}</p>
+{{ item.html }}
+{% endfor %}
+
 {% if custom %}
 <p class="setting-label setting-label--spaced">Custom fields</p>
 <dl class="kv">

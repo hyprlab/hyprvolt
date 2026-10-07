@@ -43,7 +43,7 @@ class Field:
     relation: str = ""               # ref: kept as a link of this kind, not a column
     only: tuple = ()                 # ref: (field key, values, why): only records whose field has one of
                                      # the values, and why another is refused: a subnet's network
-                                     # is a local one, not an internet connection
+                                     # is a local one or a VPN
     also: tuple = ()                 # ref: choices that aren't records, ((value, label), ...), listed
                                      # first and kept in the detail's column of the field's key:
                                      # a service that runs on a cloud service
@@ -150,6 +150,9 @@ class FormSection:
     when: Callable | None = None
     values: Callable | None = None   # values(entity) -> {name: value}: what it holds now
     choices: Callable | None = None  # choices(name) -> [(value, label)]: a choice's options, for the guide
+    fields: tuple = ()               # Fields of its own, each named s.<key>.<field key>: the guide's
+                                     # columns take their label and control from them as from a type's
+                                     # fields, and shown_when names another of them
 
 
 @dataclass(frozen=True)

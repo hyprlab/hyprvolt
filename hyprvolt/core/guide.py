@@ -3,7 +3,7 @@ itself out to the endpoints and the cables between them.
 
 The steps come from the turned-on modules (``Module.setup``, SetupStep in
 manifest.py), in their ``order``: Locations asks for the site and its rooms,
-Network for the internet connection and subnets, Hardware for the gear,
+Network for the VLANs and subnets, Hardware for the gear,
 the servers and the endpoints, and so on. Each step is a list of rows, one
 record a row: what is recorded already, each field saved as it changes
 (``records.update``), and a blank row at the end that becomes a record
@@ -190,25 +190,19 @@ def columns(step, scope) -> list[dict]:
             if not fields:
                 continue
             f = fields[0]
-            col["label"] = sf.label or (f"{f.label} ({f.unit})" if f.unit else f.label)
-            col["unit"] = f.unit
-            col["suggest"] = f.suggest
-            col["switch"] = f.switch
             if f.shown_when:
                 col["when"] = ("f." + f.shown_when[0], F.when_value(f.shown_when[1]))
             col["required"] = f.required and all(any(x.key == f.key for x in t.fields) for t in types)
-            if f.kind == "select":
-                col.update(kind="select", choices=f.choices())
-            elif f.kind == "ref":
-                col.update(kind="select", choices=_field_choices(fields))
-            elif f.kind in ("speed", "cidr", "iprange"):
-                col.update(kind=f.kind, prefills=f.prefills)
-            elif f.kind in ("integer", "number"):
-                col.update(kind="number", default=f.default if f.default is not None else "")
-            elif f.kind == "boolean":
-                col.update(kind="check")
-            else:
-                col["kind"] = "text"
+            _field_column(col, fields, sf)
+        elif sf.name.startswith("s.") and _section_field(types, sf.name) is not None:
+            # A field of a module's section (FormSection.fields): a control as a type's own field
+            # has, shown while the one it follows has its value.
+            f = _section_field(types, sf.name)
+            prefix = sf.name.rsplit(".", 1)[0] + "."
+            if f.shown_when:
+                col["when"] = col["follows"] = (prefix + f.shown_when[0], F.when_value(f.shown_when[1]))
+            col["required"] = f.required
+            _field_column(col, [f], sf)
         elif sf.name.startswith("s."):
             key, name = sf.name.split(".")[1], sf.name.split(".", 2)[2]
             section = next((s for t in types for s in reg.form_sections(t) if s.key == key), None)
@@ -238,6 +232,37 @@ def columns(step, scope) -> list[dict]:
     return cols
 
 
+def _section_field(types, name):
+    """The Field of a section's column, s.<key>.<field key>, if the section
+    declares its fields (FormSection.fields)."""
+    _, key, field_key = name.split(".", 2)
+    reg = registry()
+    section = next((s for t in types for s in reg.form_sections(t) if s.key == key), None)
+    return next((f for f in section.fields if f.key == field_key), None) if section is not None else None
+
+
+def _field_column(col, fields, sf) -> None:
+    """A column's label and control from its Field (the first of ``fields``,
+    the same field of each of the step's types)."""
+    f = fields[0]
+    col["label"] = sf.label or (f"{f.label} ({f.unit})" if f.unit else f.label)
+    col["unit"] = f.unit
+    col["suggest"] = f.suggest
+    col["switch"] = f.switch
+    if f.kind == "select":
+        col.update(kind="select", choices=f.choices())
+    elif f.kind == "ref":
+        col.update(kind="select", choices=_field_choices(fields))
+    elif f.kind in ("speed", "cidr", "iprange"):
+        col.update(kind=f.kind, prefills=f.prefills)
+    elif f.kind in ("integer", "number"):
+        col.update(kind="number", default=f.default if f.default is not None else "")
+    elif f.kind == "boolean":
+        col.update(kind="check")
+    else:
+        col["kind"] = "text"
+
+
 def _count(step, scope) -> int:
     """How many of the step's records (or rows) the site has."""
     if step.save is not None:
@@ -254,8 +279,8 @@ def _found(step, scope) -> list[Entity]:
     for e in rows:
         if not _inside(e, scope, place_ids):
             continue
-        # A kind that is a preset of its type (an internet connection is a
-        # network of the kind wan) lists only its own.
+        # A kind that is a preset of its type (a modem is network gear of
+        # the kind modem) lists only its own.
         detail = records.detail_of(e)
         if any(k.type == e.type and all(getattr(detail, n[2:], None) == v for n, v in k.values.items()
                                         if n.startswith("f."))
@@ -572,11 +597,11 @@ def _groups(steps) -> list[dict]:
         if not out or out[-1]["label"] != s.group:
             out.append({"label": s.group, "steps": []})
         out[-1]["steps"].append((n, s))
-    for g in out:
-        words = [w.strip() for _, s in g["steps"] for w in (s.plan or s.title.lower()).split(",")]
+    for group in out:
+        words = [w.strip() for _, s in group["steps"] for w in (s.plan or s.title.lower()).split(",")]
         text = words[0] if len(words) == 1 else " and ".join(words) if len(words) == 2 else \
             ", ".join(words[:-1]) + ", and " + words[-1]
-        g["plan"] = text[:1].upper() + text[1:]
+        group["plan"] = text[:1].upper() + text[1:]
     return out
 
 
@@ -769,7 +794,7 @@ def row_update(key, row_id):
         db.session.rollback()
         return jsonify(error=str(err)), 400
     db.session.commit()
-    if step.save is None and name.startswith(("f.", "name")):
+    if step.save is None and name.startswith(("f.", "s.", "name")):
         kept = _row(step, cols, _record_of(step, row_id))["values"].get(name)
         return jsonify(ok=True, value=kept, notices=records.notices())
     return jsonify(ok=True, notices=records.notices())

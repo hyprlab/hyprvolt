@@ -24,7 +24,7 @@
    of the one it follows and the value, for app.js ([data-when]), and hidden
    now if it doesn't have it (item.hidden). #}
 {% macro when(item, prefix='f.') -%}
-{%- set f = item.field -%}
+{%- set f = item.field -%}{%- set prefix = item.prefix or prefix -%}
 {%- if f.shown_when %} data-when="{{ prefix }}{{ f.shown_when[0] }}" data-when-is="{{ when_value(f.shown_when[1]) }}"{% if item.hidden %} hidden{% endif %}{% endif -%}
 {%- endmacro %}
 
@@ -58,9 +58,9 @@
    value that is saved the parts joined in the named, hidden input. A subnet
    is its network address and, chosen beside it, its mask; a range of
    addresses is its first and its last. #}
-{% macro cidr(name, value, id='', help='', label='', save=false, cls='', disabled=false, placeholder='', prefills=()) %}
+{% macro cidr(name, value, id='', help='', label='', save=false, cls='', disabled=false, placeholder='', prefills=(), names='f.') %}
 {% set parts = cidr_parts(value) %}
-<span class="joined" data-join="/"{% if prefills %} data-prefills="{% for k in prefills %}f.{{ k }}{{ ' ' if not loop.last }}{% endfor %}"{% endif %}>
+<span class="joined" data-join="/"{% if prefills %} data-prefills="{% for k in prefills %}{{ names }}{{ k }}{{ ' ' if not loop.last }}{% endfor %}"{% endif %}>
   <input type="text" data-part value="{{ parts[0] }}" placeholder="{{ placeholder or '10.0.20.0' }}" spellcheck="false" autocomplete="off"
          {% if id %}{{ described(id, help) }}{% endif %} aria-label="{{ label }}: network address"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
   <select data-part aria-label="{{ label }}: subnet mask" title="Subnet mask"{% if cls %} class="{{ cls }}"{% endif %}{{ ' disabled' if disabled }}>
@@ -145,7 +145,7 @@
 {% elif f.kind == 'speed' %}
   {{ speed(item.name, v, id, f.help, f.label, save, cls) }}
 {% elif f.kind == 'cidr' %}
-  {{ cidr(item.name, v, id, f.help, f.label, save, cls, prefills=f.prefills) }}
+  {{ cidr(item.name, v, id, f.help, f.label, save, cls, prefills=f.prefills, names=item.prefix or 'f.') }}
 {% elif f.kind == 'iprange' %}
   {{ iprange(item.name, v, id, f.help, f.label, save, cls) }}
 {% elif f.kind in ('integer', 'number') %}

@@ -35,7 +35,7 @@ SETUP_HELP = {
         "Record the company here, with its support line and your account number. What you pay for goes in a "
         "contract (Contacts and vendors > New contract), with its renewal date and cost, so renewals show on "
         "the dashboard before they lapse.",
-        "Link a vendor to what depends on it in that record's Supplier section: the internet connection to "
+        "Link a vendor to what depends on it in that record's Supplier section: the modem to "
         "the ISP, a server to the shop, SABnzbd to the Usenet provider. The vendor's Supplies tab then lists "
         "everything it affects.",
         "Logins and API keys go in Secrets on the vendor, not in its notes. Something you run yourself, such "

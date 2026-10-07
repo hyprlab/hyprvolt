@@ -63,6 +63,9 @@ NOT_WIRELESS = tuple(v for v, _ in NETWORK_KINDS if v not in WIRELESS_KINDS) + (
 #: section), as a firewall does: a switch, a router, an ISP's gateway.
 CARRIER_KINDS = ("modem", "router", "switch")
 NOT_CARRIERS = tuple(v for v, _ in NETWORK_KINDS if v not in CARRIER_KINDS) + ("",)
+#: Kinds of network gear an internet line can come in at (Network's Internet
+#: line section): a modem or ONT, or a router; the section is hidden for the rest.
+NOT_GATEWAYS = tuple(v for v, _ in NETWORK_KINDS if v not in ("modem", "router")) + ("",)
 
 # ———— Icons, 24×24 stroked paths ————
 
@@ -114,9 +117,10 @@ SETUP_HELP = {
         "Network gear is what moves traffic: the modem or ONT, the router or firewall, switches, access "
         "points and patch panels. Give each its management address; it is recorded as an IP address in its "
         "subnet.",
-        "The device the ISP's line plugs into gets that line ticked under Internet connections, so a line "
-        "that goes down points straight at it. A router or firewall with more than one ISP (dual WAN, or a "
-        "mobile backup) has each of its lines ticked.",
+        "Where the internet comes in is the device the ISP's line plugs into: the modem or ONT, or the router "
+        "or firewall where there is no modem. Set its Internet to Comes in here, then its Provider (the ISP), "
+        "circuit ID, speeds and, for a static line, its address, subnet and gateway. The line is part of that "
+        "device, not a record of its own. A site with two ISPs has a modem for each line.",
         "A modem in bridge mode passes the internet through to your router, which gets the public address; "
         "the modem has no address on your network, so leave its IP address empty (or give its status page's "
         "address, such as 192.168.100.1). A modem that is the gateway, the ISP's own router, has an address "
@@ -137,8 +141,8 @@ SETUP_HELP = {
         "added for you. Each adapter is its own record, so the UPSes step can tick a UPS for each end. Then "
         "cable each to what it plugs into, a switch at one end and a device at the other: a trace, and the "
         "network diagram, go straight through.",
-        "Public addresses belong to the internet connection, not to the device. Computers and storage come "
-        "next, and cabling everything together is the last step.",
+        "Public addresses belong to the device's internet line, not its IP address. Computers and storage "
+        "come next, and cabling everything together is the last step.",
     ),
     "ups": (
         "A UPS keeps equipment running through a power outage, long enough to ride it out or shut down "
@@ -189,7 +193,7 @@ module = Module(
         hardware("network_device", "Network device", "Network gear", NETWORK, traits=RACK + HOST, specs=(
             Field("kind", "Kind", "select", options=NETWORK_KINDS, list=True, group="Specs",
                   hides=(("bridge", NOT_BRIDGES), ("moca", NOT_MOCA), ("wifi", NOT_WIRELESS),
-                         ("networks", NOT_CARRIERS))),
+                         ("networks", NOT_CARRIERS), ("internet", NOT_GATEWAYS))),
             PORTS, Field("managed", "Managed", "boolean", group="Specs"), FIRMWARE, POWER)),
         hardware("firewall", "Firewall", "Firewalls", FIREWALL, traits=RACK + HOST, specs=(
             PORTS, FIRMWARE, CPU, RAM, POWER)),
@@ -250,9 +254,16 @@ module = Module(
                   fields=(SetupField("name", placeholder="sw-core"), SetupField("location_id"), SetupField("f.model"),
                           SetupField("s.addresses.list", "IP address", placeholder="10.0.20.11"),
                           SetupField("f.ports", placeholder="24", kinds=("Router", "Firewall", "Switch")),
-                          SetupField("s.internet.lines", "Internet connections", kind="multi", newline=True,
-                                     kinds=("Modem", "Router", "Firewall"),
-                                     placeholder="None recorded yet: add them in the Internet connection step."),
+                          # Where the internet comes in: the device's own line, its details once on.
+                          SetupField("s.internet.line", newline=True, kinds=("Modem", "Router", "Firewall")),
+                          SetupField("s.supplier.vendor_id", "Provider", types=("vendor",), newline=True,
+                                     shown_when=("s.internet.line", "1")),
+                          SetupField("s.internet.circuit_id"), SetupField("s.internet.download"),
+                          SetupField("s.internet.upload"),
+                          SetupField("s.internet.static_ip", newline=True),
+                          SetupField("s.internet.public_ips", newline=True, placeholder="203.0.113.26"),
+                          SetupField("s.internet.cidr", placeholder="203.0.113.24"),
+                          SetupField("s.internet.gateway"), SetupField("s.internet.dns_servers"),
                           SetupField("s.bridge.other", "Other end", kinds=("Wireless bridge",)),
                           # A MoCA pair is one row: this end's place, and the other end's,
                           # which makes or moves that adapter (powered by a UPS of its own).

@@ -28,7 +28,7 @@ def seed(demo):
 
     for thing, who in (("srv1", "dell"), ("nas1", "synology"), ("sw-core", "ubiquiti"), ("ap-office", "ubiquiti"),
                        ("example-net", "cloudflare"), ("svc-website", "cloudflare"), ("m365", "microsoft"),
-                       ("m365-license", "microsoft"), ("windows", "microsoft"), ("wan", "isp")):
+                       ("m365-license", "microsoft"), ("windows", "microsoft"), ("modem", "isp")):
         demo.link("supplied_by", thing, who)
-    demo.link("covered_by", "wan", "isp-contract")
+    demo.link("covered_by", "modem", "isp-contract")
     demo.link("covered_by", "nas1", "nas-warranty")

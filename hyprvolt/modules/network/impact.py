@@ -15,7 +15,6 @@ from collections import deque
 from sqlalchemy.orm import joinedload
 
 from hyprvolt.core.models import Entity, Relationship
-from hyprvolt.models import db
 
 from . import ports
 from .models import Cable, Port
@@ -85,7 +84,7 @@ def _pairs() -> list[tuple[int, int, str]]:
 
 def _distances(found: list[Path], pairs) -> dict[int, int]:
     """Hops from where the internet comes in, for each device it reaches:
-    from the device an internet connection comes in at, or else a modem, or
+    from the device an internet line comes in at, or else a modem, or
     else a router or firewall."""
     near: dict[int, set[int]] = {}
     for p in found:
@@ -97,7 +96,8 @@ def _distances(found: list[Path], pairs) -> dict[int, int]:
     if not near:
         return {}
     devices = {e.id: e for e in Entity.query.filter(Entity.id.in_(near), Entity.deleted_at.is_(None))}
-    lines = {i for (i,) in db.session.query(Relationship.target_id).filter(Relationship.kind == "comes_in_at")}
+    from .views import line_ids
+    lines = line_ids()
     roots = [i for i in devices if i in lines]
     for roles in (("modem",), ("router", "firewall")):
         roots = roots or [i for i, e in devices.items() if ports.role(e) in roles]

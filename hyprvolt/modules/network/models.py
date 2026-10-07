@@ -1,5 +1,6 @@
 """Network's tables: one detail table for its six types (a column each type
-uses or leaves empty), and three of its own for what is too many to be
+uses or leaves empty; a modem's, router's or firewall's internet line is a
+row of it keyed by the device, of the kind wan), and three of its own for what is too many to be
 records: the ports on devices, the cables between them, and DNS records;
 and which devices have their ports recorded one by one."""
 from hyprvolt.core.models import Entity, EntityDetail
@@ -9,13 +10,13 @@ from hyprvolt.models import db, utcnow
 class NetworkDetail(EntityDetail, db.Model):
     __tablename__ = "network_details"
 
-    kind = db.Column(db.String(10))            # networks: lan, wan, vpn, other
-    circuit_id = db.Column(db.String(120))     # internet connections: the ISP's name for the line
+    kind = db.Column(db.String(10))            # networks: lan, vpn, other; a device's line: wan (views.LINE_FIELDS)
+    circuit_id = db.Column(db.String(120))     # a device's internet line: the ISP's name for it
     public_ips = db.Column(db.String(300))
     bandwidth = db.Column(db.String(120))      # before download and upload: moved to them, or the notes
-    download = db.Column(db.Integer)           # internet connections: megabits per second
+    download = db.Column(db.Integer)           # a device's internet line: megabits per second
     upload = db.Column(db.Integer)
-    static_ip = db.Column(db.Boolean)          # internet connections: a fixed address, its cidr and gateway
+    static_ip = db.Column(db.Boolean)          # a device's internet line: a fixed address, its cidr and gateway
     netmask = db.Column(db.String(45))         # before a static line's Subnet (cidr): moved to it
 
     network = db.Column(db.Integer, db.ForeignKey("entities.id", ondelete="SET NULL"), index=True)

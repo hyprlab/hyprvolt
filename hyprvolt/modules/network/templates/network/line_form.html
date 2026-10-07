@@ -1,0 +1,4 @@
+{# A modem's, router's or firewall's internet line (views.LINE_FIELDS):
+   whether one comes in here, and then its circuit, speeds and addresses. #}
+{% from "sheet/controls.html" import input with context %}
+<div class="form-grid">{% for item in items %}{{ input(item) }}{% endfor %}</div>

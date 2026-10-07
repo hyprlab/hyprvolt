@@ -1,0 +1,7 @@
+{# A section's fields (FormSection.fields) as a reader sees them: each one
+   shown, with its value. #}
+<dl class="kv">
+  {%- for f, shown in rows %}
+  <div><dt>{{ f.label }}</dt><dd>{{ shown }}</dd></div>
+  {%- endfor %}
+</dl>

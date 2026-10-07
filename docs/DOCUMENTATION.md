@@ -163,26 +163,26 @@ ports in a run (Port 1 to 24, or a patch panel's Front and Rear pairs), set
 a port's VLANs, and cable each port; a patch panel needs its ports recorded
 for a path to go through it. Turning it off again keeps the ports, out of
 sight. A cabled port's path can be traced to the far end through patch
-panels. An internet connection
-is a network of the kind Internet connection, with its download and upload
-speeds (each a number with Mb/s or Gb/s chosen beside it), a Dynamic or
-Static switch for its IP address, and circuit ID. Static shows the line's
-fixed address, its subnet (typed as its network address with the subnet
-mask chosen beside it, 203.0.113.24 and /29, which fills in the gateway),
-gateway and DNS servers; an address or gateway outside the subnet is
-refused. Dynamic hides them and keeps what was there. A line's addresses
-are recorded on it, not as a subnet: a subnet or VLAN is in a local network
-(or a VPN), never an internet connection, and an internet connection has
-no VLANs and subnets tab. Its Comes in at names the modem, router or
-firewall the line plugs into (also set from that device's Internet
-connections section, and in the guide's Network gear step): the device then
-brings in the line, the network diagram draws the line above it, and the
-line depends on it. A router or firewall at a site with more than one ISP
-(dual WAN, or a mobile backup) has each of its lines ticked there; a line
-comes in at one device, so ticking it on another moves it. A modem in bridge mode has no address on your network
-and can be left without one. The ISP is a vendor, chosen in its Supplier
-section, with the contract for the line. The sidebar lists internet
-connections. A network device of the kind Wireless bridge links two places
+panels.
+
+Where the internet comes in is the device the line plugs into: the modem
+or ONT, or the router or firewall where there is no modem. A line isn't a
+record of its own. The device's Internet line section says whether one
+comes in there (Not here or Comes in here) and then holds its circuit ID,
+its download and upload speeds (each a number with Mb/s or Gb/s chosen
+beside it), and a Dynamic or Static switch for its IP address. Static shows
+the line's fixed address, its subnet (typed as its network address with
+the subnet mask chosen beside it, 203.0.113.24 and /29, which fills in the
+gateway), gateway and DNS servers; an address or gateway outside the subnet
+is refused, and Dynamic hides them and keeps what was there. The ISP is the
+device's Supplier, with the contract for the line. A reader sees what the
+line holds in the device's Overview. The network diagram draws that device
+first, marked Internet comes in, and What breaks counts the network from it. A site
+with two ISPs has a modem for each line, or a router or firewall holding
+one line and a modem the other. A modem in bridge mode has no address on
+your network and can be left without one; its line still comes in there.
+A subnet or VLAN is in a local network or a VPN, never in a line.
+A network device of the kind Wireless bridge links two places
 over the air: each end is its own record, with its own location and IP
 address, and its Wireless link section names the bridge at the other end, a
 link that reads the same from both; the diagram draws it as a dotted line.

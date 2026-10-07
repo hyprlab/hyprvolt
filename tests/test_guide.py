@@ -42,7 +42,7 @@ def test_a_new_install_starts_with_what_the_guide_covers(client, h, admin):
     for group in ("Place", "Network", "Equipment", "What runs", "Endpoints"):
         assert f'<p class="guide-group">{group}</p>' in page
     assert "This guide covers the 5 main categories of a site" in page
-    for plan in ("Site, buildings, rooms, racks, and vendors", "Internet connections, VLANs, subnets, and wireless networks",
+    for plan in ("Site, buildings, rooms, racks, and vendors", "VLANs, subnets, and wireless networks",
                  "Network gear, servers, and storage", "Endpoints, UPSes, and cables"):
         assert f'<span class="guide-plan-steps">{plan}</span>' in page
     # Once something is recorded it is the guide's overview, run again.
@@ -77,8 +77,9 @@ def test_every_step_says_what_goes_there_and_why(app, client, h, admin):
 def test_the_steps_run_from_the_site_to_the_cables(client, h, admin):
     page = client.get("/site-setup/site").data.decode()
     assert "Step 1 of" in page and "· Place" in page
-    assert page.index("Buildings and rooms") < page.index("Internet connection") < page.index("Network gear") \
+    assert page.index("Buildings and rooms") < page.index("VLANs") < page.index("Network gear") \
         < page.index("<span>Endpoints</span>") < page.index("<span>Cables</span>")
+    assert "Internet connection" not in page          # where it comes in is network gear
 
 
 def test_a_site_is_set_up_step_by_step(client, h, admin):
@@ -108,30 +109,6 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     add(client, h, "racks", site["id"], name="Rack 1", location_id=basement["id"], **{"f.height_u": "24"})
     rack = entities(client, "rack")[0]
     assert rack["fields"]["height_u"] == 24 and rack["fields"]["numbering"] == "bottom"
-    add(client, h, "internet", site["id"],
-        **{"name": "Fiber", "location_id": site["id"], "s.supplier.vendor_id": isp["id"], "f.download": "1000",
-           "f.upload": "40"})
-    wan = entities(client, "network")[0]
-    assert wan["fields"]["kind"] == "wan"
-    page = client.get(f"/site-setup/internet?site={site['id']}").data.decode()
-    assert f'<option value="{isp["id"]}" selected>Springfield Cable</option>' in page     # the provider, as saved
-    # Dynamic or Static: the static line's fields only while the switch is on.
-    new_row = page.split("data-row-new")[1]
-    assert 'name="f.static_ip" value="0" checked' in new_row and "<span>Static</span>" in new_row
-    assert 'data-when="f.static_ip" data-when-is="1" hidden><span class="field-label">Static IP' in new_row
-    # Each part on its own line: the speeds, the switch, the static fields (the
-    # line break hidden with them).
-    assert new_row.count('class="guide-break"') == 3
-    assert '<span class="guide-break" aria-hidden="true" data-when="f.static_ip" data-when-is="1" hidden>' in new_row
-    change(client, h, "internet", wan["id"], "f.static_ip", True, site["id"])
-    change(client, h, "internet", wan["id"], "f.public_ips", "203.0.113.26", site["id"])
-    assert change(client, h, "internet", wan["id"], "f.cidr", "203.0.113.26/29", site["id"])["value"] == \
-        "203.0.113.24/29"
-    page = client.get(f"/site-setup/internet?site={site['id']}").data.decode()
-    # Every row its own form, so each row's Dynamic or Static is its own.
-    assert page.count("data-row-form") == page.count("data-row ") + page.count("data-row-new")
-    saved = page.split("data-row-new")[0]
-    assert 'data-when="f.static_ip" data-when-is="1"><span class="field-label">Static IP' in saved
     add(client, h, "subnets", site["id"], **{"name": "LAN", "f.cidr": "10.0.20.0/24", "f.gateway": "10.0.20.1"})
     # The kind of each row: a switch is network gear of the kind switch.
     lan = entities(client, "subnet")[0]
@@ -140,13 +117,31 @@ def test_a_site_is_set_up_step_by_step(client, h, admin):
     rels = client.get(f"/api/entities/{lan['id']}/relationships").get_json()["relationships"]
     assert [(r["label"], r["other"]["name"]) for r in rels] == [("is carried by", "sw1")]
     add(client, h, "gear", site["id"], **{"_kind": "1", "name": "fw1", "location_id": rack["id"]})
-    # The Internet connection column: only in a modem's, router's or firewall's row.
+    # The internet comes in at the modem: the line is the modem's own, in its row, its ISP its supplier.
+    add(client, h, "gear", site["id"], **{"_kind": "0", "name": "modem", "location_id": rack["id"],
+                                          "s.internet.line": True, "s.supplier.vendor_id": isp["id"],
+                                          "s.internet.download": "1000", "s.internet.upload": "40"})
+    modem = next(e for e in entities(client, "network_device") if e["name"] == "modem")
     page = client.get(f"/site-setup/gear?site={site['id']}").data.decode()
-    # A tick list, so a router or firewall with two ISPs has both.
-    assert 'data-when="_kind" data-when-is="0 1 2"><span class="field-label">Internet connections' in page
-    assert f'<input type="checkbox" value="{wan["id"]}" data-multi-item ><span>Fiber</span>' in page
+    row = page.split('data-name="modem"')[1].split("</fieldset>")[0]
+    assert f'<option value="{isp["id"]}" selected>Springfield Cable</option>' in row
+    assert 'name="s.internet.download" value="1000"' in row
+    # Only in a modem's, router's or firewall's row; its fields only once a line comes in, and the
+    # static line's only while Static is on.
     switch_row = page.split('data-name="sw1"')[1].split("</fieldset>")[0]
     assert 'data-when="_kind" data-when-is="0 1 2" hidden>' in switch_row
+    new_row = page.split("data-row-new")[1]
+    assert 'data-when="s.internet.line" data-when-is="1" hidden><span class="field-label">Circuit ID' in new_row
+    assert 'data-when="s.internet.static_ip" data-when-is="1" hidden><span class="field-label">Static IP' in new_row
+    change(client, h, "gear", modem["id"], "s.internet.static_ip", True, site["id"])
+    change(client, h, "gear", modem["id"], "s.internet.public_ips", "203.0.113.26", site["id"])
+    assert change(client, h, "gear", modem["id"], "s.internet.cidr", "203.0.113.26/29", site["id"])["value"] == \
+        "203.0.113.24/29"
+    page = client.get(f"/site-setup/gear?site={site['id']}").data.decode()
+    # Every row its own form, so each row's Dynamic or Static is its own.
+    assert page.count("data-row-form") == page.count("data-row ") + page.count("data-row-new")
+    row = page.split('data-name="modem"')[1].split("</fieldset>")[0]
+    assert 'data-when="s.internet.static_ip" data-when-is="1"><span class="field-label">Static IP' in row
     # A wireless bridge's other end: only in a bridge's row.
     assert 'data-when="_kind" data-when-is="6" hidden><span class="field-label">Other end' in page.split("data-row-new")[1]
     # Wireless networks, then the gear that broadcasts them, ticked in its row.

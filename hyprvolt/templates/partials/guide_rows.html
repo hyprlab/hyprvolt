@@ -16,7 +16,7 @@
   {% if c.kind == 'speed' %}
   {{ speed(c.name, v if v != '' else none, label=c.label, disabled=off) }}
   {% elif c.kind == 'cidr' %}
-  {{ cidr(c.name, v, label=c.label, disabled=off, placeholder=(c.placeholder or '').split('/')[0], prefills=c.prefills or ()) }}
+  {{ cidr(c.name, v, label=c.label, disabled=off, placeholder=(c.placeholder or '').split('/')[0], prefills=c.prefills or (), names=c.name.rsplit('.', 1)[0] ~ '.') }}
   {% elif c.kind == 'iprange' %}
   {{ iprange(c.name, v, label=c.label, disabled=off) }}
   {% elif c.kind == 'select' %}

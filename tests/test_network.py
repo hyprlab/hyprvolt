@@ -23,6 +23,28 @@ def history(client, entity_id):
     return client.get(f"/api/entities/{entity_id}/history").get_json()["history"]
 
 
+def legacy_line(app, client, h, name, **columns):
+    """An internet connection as it was before it was its device's: a
+    network of the kind wan, its columns written straight in."""
+    from hyprvolt.models import db
+    made = make(client, h, "network", name=name, **{"f.kind": "lan"})
+    notes = columns.pop("notes", "")
+    with app.app_context():
+        sets = ", ".join(["kind = 'wan'"] + [f"{k} = :{k}" for k in columns])
+        db.session.execute(db.text(f"UPDATE network_details SET {sets} WHERE entity_id = :i"),
+                           {"i": made["id"], **columns})
+        db.session.execute(db.text("UPDATE entities SET notes = :n WHERE id = :i"), {"n": notes, "i": made["id"]})
+        db.session.commit()
+    return made
+
+
+def column(app, entity, name):
+    from hyprvolt.models import db
+    with app.app_context():
+        return db.session.execute(db.text(f"SELECT {name} FROM network_details WHERE entity_id = :i"),
+                                  {"i": entity["id"]}).scalar()
+
+
 # ———— Subnets, VLANs, IP addresses ————
 
 def test_subnets_are_checked_and_normalized(client, h, admin):
@@ -400,26 +422,12 @@ def test_filters_for_loose_addresses_and_renewals(client, h, admin):
     assert ">example.net<" in due and ">example.org<" not in due
 
 
-def test_internet_connections_have_a_circuit_and_a_filter(client, h, admin):
-    wan = make(client, h, "network", name="Fiber", **{"f.kind": "wan", "f.circuit_id": "SC-88213"})
-    make(client, h, "network", name="Home LAN", **{"f.kind": "lan"})
-    assert wan["fields"]["circuit_id"] == "SC-88213"
-    listed = client.get("/network?f=internet&view=list").data.decode()
-    assert ">Fiber<" in listed and ">Home LAN<" not in listed
-    # A view, not something to see to: its count isn't red.
-    entry = listed.split("Internet connections</span>")[1].split("</a>")[0]
-    assert ">1<" in entry and "count--alert" not in entry
-    # The ISP is a vendor, chosen in the Supplier section, not a line of text.
-    form = client.get(f"/e/form?type=network&id={wan['id']}").data.decode()
-    assert "s.supplier.vendor_id" in form and 'name="f.provider"' not in form
-
-
 def test_a_typed_provider_moves_to_the_notes(app, client, h, admin):
     from hyprvolt.migrate import Migrator
     from hyprvolt.models import db
     from hyprvolt.modules.network import _provider_to_notes
-    wan = make(client, h, "network", name="Internet", notes="Bridge mode.", **{"f.kind": "wan"})
-    bare = make(client, h, "network", name="Backup line", **{"f.kind": "wan"})
+    wan = legacy_line(app, client, h, "Internet", notes="Bridge mode.")
+    bare = legacy_line(app, client, h, "Backup line")
     with app.app_context():
         db.session.execute(db.text("ALTER TABLE network_details ADD COLUMN provider VARCHAR(120)"))
         db.session.execute(db.text("UPDATE network_details SET provider = 'Springfield Cable' WHERE entity_id = :i"),
@@ -454,110 +462,114 @@ def test_a_subnet_is_typed_as_address_and_mask_and_its_dhcp_as_first_and_last(cl
     assert client.get(f"/api/entities/{subnet['id']}").get_json()["entity"]["fields"]["cidr"] == "10.0.30.0/23"
 
 
-def test_an_internet_connection_has_a_download_and_upload_speed(client, h, admin):
-    wan = make(client, h, "network", name="Fiber", **{"f.kind": "wan", "f.download": "1 Gb/s", "f.upload": "40 Mbps"})
-    assert (wan["fields"]["download"], wan["fields"]["upload"]) == (1000, 40)
-    sheet = client.get(f"/e/{wan['id']}/sheet").data.decode()
-    assert "1 Gb/s" in sheet and "40 Mb/s" in sheet
-    # The control: the number and its unit, the megabits in the saved input.
-    assert 'name="f.download" value="1000"' in sheet and '<option value="g" selected>Gb/s</option>' in sheet
-    for raw, mbps in (("2.5 Gb/s", 2500), ("1,500 Mb/s", 1500), ("940", 940), (300, 300)):
-        client.post(f"/api/entities/{wan['id']}", json={"f.download": raw}, headers=h)
-        assert client.get(f"/api/entities/{wan['id']}").get_json()["entity"]["fields"]["download"] == mbps, raw
-    bad = client.post(f"/api/entities/{wan['id']}", json={"f.upload": "fast"}, headers=h)
-    assert bad.status_code == 400 and "940 Mb/s or 1 Gb/s" in bad.get_json()["error"]
+def line(client, h, device, status=200, **values):
+    """Set a device's internet line through the API."""
+    resp = client.post(f"/api/entities/{device['id']}", json={f"s.internet.{k}": v for k, v in values.items()},
+                       headers=h)
+    assert resp.status_code == status, resp.get_json()
+    return resp.get_json()
 
 
-def test_a_static_line_has_its_address_mask_gateway_and_dns(client, h, admin, viewer):
-    wan = make(client, h, "network", name="Fiber", **{"f.kind": "wan", "f.static_ip": True,
-                                                        "f.public_ips": "203.0.113.26", "f.cidr": "203.0.113.26/29",
-                                                        "f.gateway": "203.0.113.25", "f.dns_servers": "203.0.113.53"})
-    assert wan["fields"]["cidr"] == "203.0.113.24/29"
-    bad = client.post(f"/api/entities/{wan['id']}", json={"f.gateway": "203.0.113.1"}, headers=h)
-    assert bad.status_code == 400 and "outside 203.0.113.24/29" in bad.get_json()["error"]
-    bad = client.post(f"/api/entities/{wan['id']}", json={"f.public_ips": "198.51.100.7"}, headers=h)
-    assert bad.status_code == 400 and "static IP 198.51.100.7 is outside" in bad.get_json()["error"]
-    # Its subnet is its own, typed with the mask chosen beside it; not a subnet, nor holding any.
-    form = client.get(f"/e/{wan['id']}/form").data.decode()
-    assert 'data-prefills="f.gateway"' in form and "/29 · 255.255.255.248" in form
-    assert "VLANs and subnets" not in client.get(f"/e/{wan['id']}/sheet").data.decode()
-    assert "Choose a local network" in error(client, h, "subnet", name="WAN", **{"f.cidr": "203.0.113.24/29",
-                                                                                 "f.network": wan["id"]})
+def test_a_modem_router_or_firewall_holds_its_internet_line(client, h, admin, viewer):
+    modem = make(client, h, "network_device", name="Cable modem", **{"f.kind": "modem"})
+    form = client.get(f"/e/{modem['id']}/form").data.decode()
+    assert ">Internet line</p>" in form and 'name="s.internet.line"' in form and "<span>Comes in here</span>" in form
+    assert 'data-when="s.internet.line" data-when-is="1" hidden' in form       # nothing more until it does
+    line(client, h, modem, line=True, circuit_id="SC-88213", download="1 Gb/s", upload="40 Mbps", static_ip=True,
+         public_ips="203.0.113.26", cidr="203.0.113.26/29", gateway="203.0.113.25", dns_servers="203.0.113.53")
+    sheet = client.get(f"/e/{modem['id']}/sheet").data.decode()
+    assert 'name="s.internet.download" value="1000"' in sheet and '<option value="g" selected>Gb/s</option>' in sheet
+    assert 'data-join="/" data-prefills="s.internet.gateway"' in sheet and 'value="203.0.113.24"' in sheet
+    history = client.get(f"/api/entities/{modem['id']}/history").get_json()["history"][0]["changes"]
+    assert {"field": "internet.circuit_id", "label": "Circuit ID", "old": "", "new": "SC-88213"} in history
+    # Checked as a line's: the address and gateway inside its subnet, speeds as speeds.
+    assert "outside 203.0.113.24/29" in line(client, h, modem, 400, gateway="203.0.113.1")["error"]
+    assert "static IP 198.51.100.7 is outside" in line(client, h, modem, 400, public_ips="198.51.100.7")["error"]
+    assert "940 Mb/s or 1 Gb/s" in line(client, h, modem, 400, upload="fast")["error"]
+    # A reader sees what it holds, read only; Dynamic hides the static fields.
+    other, _ = viewer
+    seen = section(other.get(f"/e/{modem['id']}/sheet").data.decode(), "overview")
+    assert "<dt>Circuit ID</dt><dd>SC-88213</dd>" in seen and "<dt>Download</dt><dd>1 Gb/s</dd>" in seen
+    assert "<dt>Subnet</dt><dd>203.0.113.24/29</dd>" in seen
+    line(client, h, modem, static_ip=False)
+    seen = section(other.get(f"/e/{modem['id']}/sheet").data.decode(), "overview")
+    assert "<dt>IP address</dt><dd>Dynamic</dd>" in seen and "203.0.113" not in seen
+    # Not here: kept, but nothing shown to a reader; where the internet comes in is the device.
+    line(client, h, modem, line=False)
+    assert "Internet line" not in section(other.get(f"/e/{modem['id']}/sheet").data.decode(), "overview")
+    line(client, h, modem, line=True)
+    from hyprvolt.modules.network.views import line_ids
+    with client.application.app_context():
+        assert line_ids() == {modem["id"]}
+    # A router or firewall where there is no modem; not a switch, nor a workstation.
+    fw = make(client, h, "firewall", name="fw")
+    assert 'name="s.internet.line"' in client.get(f"/e/{fw['id']}/form").data.decode()
+    switch_form = client.get("/e/form?type=network_device").data.decode()
+    assert 'data-hides="' in switch_form and "internet=" in switch_form.split('data-hides="')[1].split('"')[0]
+    assert "s.internet" not in client.get("/e/form?type=workstation").data.decode()
+    # No network is an internet connection any more: a subnet's network is a local one.
+    assert "Internet connection" not in client.get("/e/form?type=network").data.decode()
     lan = make(client, h, "network", name="Home", **{"f.kind": "lan"})
     choices = client.get("/e/form?type=subnet").data.decode().split('name="f.network"')[1].split("</select>")[0]
-    assert ">Home</option>" in choices and ">Fiber<" not in choices
-    assert "VLANs and subnets" in client.get(f"/e/{lan['id']}/sheet").data.decode()
-    # The editor's switch, and the static fields that follow it.
-    sheet = client.get(f"/e/{wan['id']}/sheet").data.decode()
-    assert '<span class="seg seg--choice" role="radiogroup" aria-label="IP address">' in sheet
-    assert 'name="f.static_ip" value="1" checked' in sheet and "<span>Dynamic</span>" in sheet
-    assert 'data-when="f.static_ip" data-when-is="1">' in sheet          # shown: the line is static
-    # Dynamic: a viewer sees Dynamic and none of the static fields.
-    client.post(f"/api/entities/{wan['id']}", json={"f.static_ip": False}, headers=h)
-    other, _ = viewer
-    seen = section(other.get(f"/e/{wan['id']}/sheet").data.decode(), "overview")
-    assert "Dynamic" in seen and "203.0.113.24/29" not in seen and "203.0.113.26" not in seen
-    assert 'data-when="f.static_ip" data-when-is="1" hidden' in client.get(f"/e/{wan['id']}/sheet").data.decode()
-    # A local network has none of an internet connection's fields.
-    lan = make(client, h, "network", name="Home LAN", **{"f.kind": "lan"})
-    seen = section(other.get(f"/e/{lan['id']}/sheet").data.decode(), "overview")
-    assert "Download" not in seen and "Circuit ID" not in seen and "IP address" not in seen
+    assert ">Home</option>" in choices
 
 
-def test_a_line_comes_in_at_its_modem_router_or_firewall(client, h, admin):
-    fiber = make(client, h, "network", name="Fiber", **{"f.kind": "wan"})
-    lte = make(client, h, "network", name="LTE", **{"f.kind": "wan"})
-    make(client, h, "network", name="Home LAN", **{"f.kind": "lan"})
-    modem = make(client, h, "network_device", name="Modem", **{"f.kind": "modem"})
-    # From the device: its Internet connection section, offering only lines.
-    form = client.get(f"/e/{modem['id']}/form").data.decode()
-    assert 'name="s.internet.lines"' in form and "Fiber" in form and "Home LAN" not in form
-    client.post(f"/api/entities/{modem['id']}", json={"s.internet.line": fiber["id"]}, headers=h)
-    got = client.get(f"/api/entities/{fiber['id']}").get_json()["entity"]["fields"]
-    assert got["comes_in_at"] == modem["id"]
+def test_an_internet_connection_becomes_its_device(app, client, h, admin):
+    from hyprvolt.migrate import Migrator
+    from hyprvolt.models import db
+    from hyprvolt.modules.network import _lines_on_devices
+    isp = make(client, h, "vendor", name="Springfield Cable")
+    other = make(client, h, "vendor", name="Ubiquiti")
+    modem = make(client, h, "network_device", name="Cable modem", **{"f.kind": "modem"})
+    router = make(client, h, "network_device", name="Router", **{"f.kind": "router",
+                                                                 "s.supplier.vendor_id": other["id"]})
+    svc = make(client, h, "service", name="VPN")
+    fiber = legacy_line(app, client, h, "Fiber", notes="Bridge mode.", circuit_id="SC-1", download=1000,
+                        static_ip=1, public_ips="203.0.113.26", cidr="203.0.113.24/29")
+    lte = legacy_line(app, client, h, "LTE", circuit_id="LTE-9")
+    backup = legacy_line(app, client, h, "Backup")
+    loose = legacy_line(app, client, h, "Loose", circuit_id="L-1")
+    client.post(f"/api/entities/{fiber['id']}", json={"s.supplier.vendor_id": isp["id"], "tags": "isp"}, headers=h)
+    client.post(f"/api/entities/{lte['id']}", json={"s.supplier.vendor_id": isp["id"]}, headers=h)
+    post(client, h, "/api/relationships", kind="depends_on", source_id=svc["id"], target_id=fiber["id"])
+    with app.app_context():
+        for source, target in ((fiber, modem), (lte, router), (backup, router)):
+            db.session.execute(db.text("INSERT INTO relationships (kind, source_id, target_id, note, created_at) "
+                                       "VALUES ('comes_in_at', :s, :t, '', CURRENT_TIMESTAMP)"),
+                               {"s": source["id"], "t": target["id"]})
+        db.session.execute(db.text("DELETE FROM settings WHERE key = 'migration:network:lines-on-devices'"))
+        db.session.commit()
+        _lines_on_devices(Migrator("network"))
+        db.session.commit()
+    got = lambda e: client.get(f"/api/entities/{e['id']}").get_json()["entity"]
+    # The fiber line is the modem's now: its fields, ISP, tags, links and notes; the record gone.
+    assert got(fiber)["deleted"] is True
+    sheet = client.get(f"/e/{modem['id']}/sheet").data.decode()
+    assert 'name="s.internet.circuit_id" value="SC-1"' in sheet and 'value="203.0.113.24"' in sheet
+    m = got(modem)
+    assert "isp" in m["tags"] and "From the internet connection Fiber:" in m["notes"] and "Bridge mode." in m["notes"]
     rels = client.get(f"/api/entities/{modem['id']}/relationships").get_json()["relationships"]
-    assert any(r["other"]["id"] == fiber["id"] and r["label"] == "brings in" for r in rels)
-    # Another line chosen: the first no longer comes in there.
-    client.post(f"/api/entities/{modem['id']}", json={"s.internet.line": lte["id"]}, headers=h)
-    assert client.get(f"/api/entities/{fiber['id']}").get_json()["entity"]["fields"]["comes_in_at"] is None
-    assert client.get(f"/api/entities/{lte['id']}").get_json()["entity"]["fields"]["comes_in_at"] == modem["id"]
-    client.post(f"/api/entities/{modem['id']}", json={"s.internet.line": ""}, headers=h)
-    assert client.get(f"/api/entities/{lte['id']}").get_json()["entity"]["fields"]["comes_in_at"] is None
-    # Dual WAN: two lines ticked on one firewall; unticking one leaves the other.
-    fw = make(client, h, "firewall", name="fw")
-    form = client.get(f"/e/{fw['id']}/form").data.decode()
-    assert 'name="s.internet.lines"' in form and "more than one WAN" in form
-    client.post(f"/api/entities/{fw['id']}", json={"s.internet.lines": f"{fiber['id']},{lte['id']}"}, headers=h)
-    lines = lambda: {e["name"] for e in client.get("/api/entities?type=network").get_json()["entities"]
-                     if client.get(f"/api/entities/{e['id']}").get_json()["entity"]["fields"].get("comes_in_at") == fw["id"]}
-    assert lines() == {"Fiber", "LTE"}
-    rels = client.get(f"/api/entities/{fw['id']}/relationships").get_json()["relationships"]
-    assert {r["other"]["name"] for r in rels if r["label"] == "brings in"} == {"Fiber", "LTE"}
-    client.post(f"/api/entities/{fw['id']}", json={"s.internet.lines": str(lte["id"])}, headers=h)
-    assert lines() == {"LTE"}
-    # Ticking a line on another device takes it from this one.
-    client.post(f"/api/entities/{modem['id']}", json={"s.internet.lines": str(lte["id"])}, headers=h)
-    assert lines() == set()
-    # A switch is network gear too, but a workstation has no such section.
-    pc = make(client, h, "workstation", name="pc")
-    assert "s.internet" not in client.get(f"/e/{pc['id']}/form").data.decode()
-    bad = client.post(f"/api/entities/{modem['id']}", json={"s.internet.line": pc["id"]}, headers=h)
-    assert bad.status_code == 400 and "internet connection that exists" in bad.get_json()["error"]
+    assert {r["other"]["name"] for r in rels} >= {"Springfield Cable", "VPN"}
+    # The router had a supplier: it keeps it, and the ISP is noted. A second line becomes a modem of its own.
+    assert 'name="s.internet.circuit_id" value="LTE-9"' in client.get(f"/e/{router['id']}/sheet").data.decode()
+    assert "Internet provider: Springfield Cable" in got(router)["notes"]
+    for e in (backup, loose):
+        assert got(e)["type"] == "network_device" and got(e)["status"] == "deployed" and got(e)["deleted"] is False
+    assert 'name="s.internet.circuit_id" value="L-1"' in client.get(f"/e/{loose['id']}/sheet").data.decode()
 
 
 def test_a_line_with_addresses_becomes_static(app, client, h, admin):
     from hyprvolt.migrate import Migrator
     from hyprvolt.models import db
     from hyprvolt.modules.network import _static_ip
-    old = make(client, h, "network", name="Old line", **{"f.kind": "wan", "f.public_ips": "198.51.100.7"})
-    bare = make(client, h, "network", name="Bare", **{"f.kind": "wan"})
+    old = legacy_line(app, client, h, "Old line", public_ips="198.51.100.7")
+    bare = legacy_line(app, client, h, "Bare")
     with app.app_context():
         db.session.execute(db.text("UPDATE network_details SET static_ip = NULL"))
         db.session.execute(db.text("DELETE FROM settings WHERE key = 'migration:network:static-ip'"))
         db.session.commit()
         _static_ip(Migrator("network"))
-    get = lambda e: client.get(f"/api/entities/{e['id']}").get_json()["entity"]["fields"]["static_ip"]
-    assert get(old) is True and not get(bare)
+    assert column(app, old, "static_ip") == 1 and not column(app, bare, "static_ip")
 
 
 def test_a_typed_subnet_mask_becomes_the_lines_subnet(app, client, h, admin):
@@ -566,7 +578,7 @@ def test_a_typed_subnet_mask_becomes_the_lines_subnet(app, client, h, admin):
     from hyprvolt.modules.network import _wan_subnet
     lines = {"Fiber": ("203.0.113.26", "255.255.255.248"), "Cable": ("198.51.100.7", "/30"),
              "Block": ("192.0.2.8-192.0.2.15", "255.255.255.248")}
-    made = {n: make(client, h, "network", name=n, **{"f.kind": "wan"}) for n in lines}
+    made = {n: legacy_line(app, client, h, n) for n in lines}
     with app.app_context():
         for n, (address, mask) in lines.items():
             db.session.execute(db.text("UPDATE network_details SET public_ips = :a, netmask = :m WHERE entity_id = :i"),
@@ -574,7 +586,7 @@ def test_a_typed_subnet_mask_becomes_the_lines_subnet(app, client, h, admin):
         db.session.execute(db.text("DELETE FROM settings WHERE key = 'migration:network:wan-subnet'"))
         db.session.commit()
         _wan_subnet(Migrator("network"))
-    got = {n: client.get(f"/api/entities/{e['id']}").get_json()["entity"]["fields"]["cidr"] for n, e in made.items()}
+    got = {n: column(app, e, "cidr") for n, e in made.items()}
     assert got == {"Fiber": "203.0.113.24/29", "Cable": "198.51.100.4/30", "Block": None}
 
 
@@ -584,7 +596,7 @@ def test_bandwidth_text_becomes_speeds_or_notes(app, client, h, admin):
     from hyprvolt.modules.network import _bandwidth_speeds
     lines = {"Fiber": "1 Gb/s down, 40 Mb/s up", "Cable": "940/40 Mbps", "LTE": "fast when it works",
              "Office": "500 Mb/s fiber, static IP"}
-    made = {n: make(client, h, "network", name=n, **{"f.kind": "wan"}) for n in lines}
+    made = {n: legacy_line(app, client, h, n) for n in lines}
     with app.app_context():
         for n, text in lines.items():
             db.session.execute(db.text("UPDATE network_details SET bandwidth = :t WHERE entity_id = :i"),
@@ -594,8 +606,7 @@ def test_bandwidth_text_becomes_speeds_or_notes(app, client, h, admin):
         db.session.commit()
         for _ in range(2):
             _bandwidth_speeds(Migrator("network"))
-    got = {n: client.get(f"/api/entities/{made[n]['id']}").get_json()["entity"] for n in lines}
-    speeds = {n: (e["fields"]["download"], e["fields"]["upload"]) for n, e in got.items()}
+    speeds = {n: (column(app, made[n], "download"), column(app, made[n], "upload")) for n in lines}
     assert speeds == {"Fiber": (1000, 40), "Cable": (940, 40), "LTE": (None, None), "Office": (500, None)}
     with app.app_context():
         from hyprvolt.core.models import Entity

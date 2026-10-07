@@ -116,8 +116,8 @@
       <h5>Links made by fields</h5>
       <p>Some form sections are links kept for you, so they show in Relationships as well:
         {%- if hw %} a UPS's Powers, a wireless bridge's or MoCA adapter's other end{% endif %}
-        {%- if net %}, a switch's Networks, an access point's Wireless networks, and an internet connection's
-        Comes in at{% endif %}. Change them in the form; the link follows.</p>
+        {%- if net %}, a switch's Networks and an access point's Wireless networks{% endif %}. Change them in the
+        form; the link follows.</p>
     {% endcall %}
 
     {% if net %}
@@ -196,9 +196,10 @@
     {% if net %}
     {% call pane('networks') %}
       <p class="help-lead">The network is recorded from where the internet comes in, outward.</p>
-      <h5>The internet connection</h5>
-      <p>An internet connection Comes in at a modem, router or firewall. If that device goes down, so does the
-        line, and the network diagram draws the line above it.</p>
+      <h5>Where the internet comes in</h5>
+      <p>An internet line is the modem, router or firewall it comes in at, not a record of its own: its Internet
+        line section holds the circuit ID, speeds and any static address, and its Supplier is the ISP. Everything
+        cabled behind that device goes down with it, and the network diagram draws it first.</p>
       <h5>VLANs, subnets and addresses</h5>
       <p>A subnet can belong to a VLAN. A device's IP addresses place it in a subnet, which is how Hyprvolt
         knows which network a device is on when it labels a cable or suggests a switch.</p>

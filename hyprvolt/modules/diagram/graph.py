@@ -7,9 +7,9 @@ way, over the coax between them. A "connected to" link between two cabled device
 that no cable joins is an edge too, drawn dashed. Everything is read in a
 handful of queries and laid out here, so the template only draws.
 
-The layout is in tiers from the internet side: the internet connections
-(each linked to the device it comes in at), then modems, then routers and
-firewalls, then outwards by distance. Within a tier, each node sits
+The layout is in tiers from the internet side: the devices an internet
+line comes in at, then modems, then routers and firewalls, then outwards
+by distance. Within a tier, each node sits
 near the average place of its neighbors in the tier above, which keeps most
 lines from crossing.
 """
@@ -163,17 +163,6 @@ def network(only=None) -> tuple[dict[int, Node], list[Edge]]:
         devices.setdefault(b.id, b)
         joined.add(frozenset((a.id, b.id)))
         edges.append(Edge(a.id, b.id, cabled=False, vlans=r.note or ""))
-    # Where the internet comes in: each connection, drawn above the device it
-    # plugs into (Network's "comes in at").
-    lines = Relationship.query.filter_by(kind="comes_in_at").all()
-    ends_of = _live_devices({i for r in lines for i in (r.source_id, r.target_id)})
-    for r in lines:
-        line, device = ends_of.get(r.source_id), ends_of.get(r.target_id)
-        if line is None or device is None:
-            continue
-        devices.setdefault(line.id, line)
-        devices.setdefault(device.id, device)
-        edges.append(Edge(line.id, device.id, kind="internet"))
     # A wireless link between two bridges (Hardware's), once each pair.
     air = Relationship.query.filter_by(kind="wireless_link").all()
     ends_of = _live_devices({i for r in air for i in (r.source_id, r.target_id)})
@@ -194,13 +183,15 @@ def network(only=None) -> tuple[dict[int, Node], list[Edge]]:
 
 
 def _rank(nodes) -> dict[int, int]:
-    """How far upstream each device is: the internet connections first, then
-    modems, then routers and firewalls."""
+    """How far upstream each device is: those an internet line comes in at
+    first, then modems, then routers and firewalls."""
     kinds = dict(db.session.query(HardwareDetail.entity_id, HardwareDetail.kind)
                  .filter(HardwareDetail.entity_id.in_(list(nodes))))
     out = {}
+    from hyprvolt.modules.network.views import line_ids
+    lines = line_ids()
     for i, n in nodes.items():
-        if n.entity.type == "network":
+        if i in lines:
             out[i] = -1
         elif n.entity.type == "firewall":
             out[i] = 1
@@ -255,6 +246,8 @@ def layout(nodes: dict[int, Node], edges: list[Edge]) -> tuple[float, float]:
             n.tier, n.x, n.y = t, x0 + pos * (NODE_W + GAP_X), MARGIN + t * (NODE_H + GAP_Y)
             n.label = _fit(n.entity.name, 15)
             n.type_label = views[i].type_label if i in views else ""
+            if i in rank and rank[i] == -1:
+                n.type_label = "Internet comes in"     # where a line from an ISP plugs in
             n.icon = views[i].icon if i in views else ""
     for e in edges:
         route(e, nodes[e.a], nodes[e.b])
