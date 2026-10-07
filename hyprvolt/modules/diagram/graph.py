@@ -90,9 +90,10 @@ def _vlans(port: Port) -> str:
     return ", ".join(bits)
 
 
-def network(only=None) -> tuple[dict[int, Node], list[Edge]]:
+def network(only=None, strict=False) -> tuple[dict[int, Node], list[Edge]]:
     """Every cabled device and the links between them; or, with ``only``
-    (device ids), the links of those devices."""
+    (device ids), the links of those devices, and with ``strict`` only
+    those between two of them (a network's, not what else its switch has)."""
     ports = {p.id: p for p in Port.query.options(joinedload(Port.device), joinedload(Port.vlan))}
     cable_at = {}
     for c in Cable.query:
@@ -174,12 +175,45 @@ def network(only=None) -> tuple[dict[int, Node], list[Edge]]:
         devices.setdefault(a.id, a)
         devices.setdefault(b.id, b)
         edges.append(Edge(a.id, b.id, kind="wireless"))
+    if only is not None and strict:
+        only = _joined(only, edges, devices)
     if only is not None:
-        edges = [e for e in edges if e.a in only or e.b in only]
+        edges = [e for e in edges if (e.a in only and e.b in only) or (not strict and (e.a in only or e.b in only))]
     # A device only on the way (a patch panel) is named on its links, not drawn.
     ends = {i for e in edges for i in (e.a, e.b)}
     nodes = {i: Node(e) for i, e in devices.items() if i in ends}
     return nodes, edges
+
+
+def _joined(members, edges, devices) -> set[int]:
+    """The members (a network's devices) and the devices on the way from
+    each to the most upstream of them, so a switch that carries the network
+    without saying so still joins its devices to the firewall."""
+    from hyprvolt.modules.network import ports
+    from hyprvolt.modules.network.views import line_ids
+    adj: dict[int, set[int]] = {}
+    for e in edges:
+        adj.setdefault(e.a, set()).add(e.b)
+        adj.setdefault(e.b, set()).add(e.a)
+    present = [i for i in members if i in adj and i in devices]
+    if not present:
+        return set(members)
+    lines = line_ids()
+    root = min(present, key=lambda i: (i not in lines, ports._rank(ports.group_of(devices[i])), devices[i].name.lower()))
+    parent, queue = {root: None}, [root]
+    while queue:
+        i = queue.pop(0)
+        for j in sorted(adj.get(i, ())):
+            if j not in parent:
+                parent[j] = i
+                queue.append(j)
+    keep = set(members)
+    for m in present:
+        i = m
+        while i is not None and i in parent:
+            keep.add(i)
+            i = parent[i]
+    return keep
 
 
 def _rank(nodes) -> dict[int, int]:

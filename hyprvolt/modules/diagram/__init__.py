@@ -3,7 +3,7 @@ neighborhood.
 
 The Network diagram page draws every cabled device and the cables between
 them, traced through patch panels, in tiers from the internet side
-(graph.py). Every record with links or cables gets a Neighborhood tab
+(graph.py), or one building or network of a site (parts.py). Every record with links or cables gets a Neighborhood tab
 drawing what it is linked to, in both directions. Both are SVG made on the
 server: no script, and the shared ``.diagram`` component styles them.
 """

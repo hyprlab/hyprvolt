@@ -392,7 +392,7 @@ def setup_after(scope) -> str:
         return ""
     only = unit_devices(scope)
     return render_template("network/cabling_diagram.html",
-                           diagram=Markup(page.render(only=only) if only is not None else page.render()))
+                           diagram=Markup(page.render(only=only, bare=True)))
 
 
 @bp.route("/cables/label", methods=["POST"])

@@ -1,0 +1,24 @@
+{# The Network diagram page (parts.py): which site, and which part of it,
+   above the diagram of it. #}
+{% if sites or links %}
+<div class="diagram-parts">
+  {% if sites %}
+  <label class="field diagram-site"><span class="field-label">Site</span>
+    <select data-go>
+      {% for s in sites %}<option value="{{ s.href }}" {{ 'selected' if scope and scope.id == s.id }}>{{ s.name }}</option>{% endfor %}
+      <option value="{{ everywhere }}" {{ 'selected' if not scope }}>All sites</option>
+    </select></label>
+  {% endif %}
+  {% if links %}
+  <nav class="seg seg--links" aria-label="Part of {{ scope.name if scope else 'the network' }} to draw">
+    {%- for l in links %}
+    {%- if not loop.first and l.group != loop.previtem.group %}<span class="seg-sep" aria-hidden="true"></span>{% endif %}
+    <a href="{{ l.href }}"{% if l.key == part %} class="is-active" aria-current="page"{% endif %}>{{ l.label }}</a>
+    {%- endfor %}
+    <span class="seg-sep" aria-hidden="true"></span>
+    <a href="{{ whole }}"{% if part == 'all' %} class="is-active" aria-current="page"{% endif %}>Whole site</a>
+  </nav>
+  {% endif %}
+</div>
+{% endif %}
+{{ diagram }}

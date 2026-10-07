@@ -291,8 +291,18 @@ another, the cables traced through patch panels and over pairs of MoCA
 adapters (which are named on the link rather than drawn), in tiers from the internet side: modems, then
 routers and firewalls, then outward. A "connected to" link between two
 devices with no cable recorded is drawn dashed. Hovering a link shows its
-ports and VLANs; choosing a device opens it. Every record with links or
-cables also has a Neighborhood tab, drawing what it is linked to on the
+ports and VLANs; choosing a device opens it. Above it, a site with more
+than one place or network chooses what to draw: each building with
+equipment in it (and Not in a building, for what sits in the site itself),
+each network (each VLAN, and each subnet on no VLAN), or Whole site, the
+first drawing. A building is drawn with what its devices are cabled to one
+step beyond, so a link to another building's switch shows; a network with
+its own devices (those with an address in it, the gear that carries it,
+those with a port set to the VLAN, and the access points broadcasting it)
+and the devices on the way between them and the most upstream of them.
+With equipment in more than one site, a Site choice comes first, All sites
+drawing everything. Every record with links or cables also has a
+Neighborhood tab, drawing what it is linked to on the
 left (and cabled to) and what is linked to it on the right. Diagram needs
 Network.
 

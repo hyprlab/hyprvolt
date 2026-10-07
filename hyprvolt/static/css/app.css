@@ -1861,6 +1861,11 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 }
 .seg--links a:hover { color: var(--ink); }
 .seg--links a.is-active { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-1); }
+/* The network diagram's choice of site and part: places, then networks, then the whole site. */
+.diagram-parts { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; margin: 0 0 16px; }
+.diagram-site { flex: 0 1 220px; margin: 0; }
+.seg .seg-sep { align-self: stretch; flex: none; width: 1px; padding: 0; margin: 5px 4px; border-radius: 0;
+                background: var(--line-strong); box-shadow: none; }
 /* A setup guide step done a part at a time: each building's cabling. */
 .guide-units { margin: 0 0 18px; }
 

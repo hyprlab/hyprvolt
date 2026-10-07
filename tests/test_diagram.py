@@ -106,3 +106,44 @@ def test_a_box_shows_the_record_in_brief_as_the_pointer_rests_on_it(client, h, a
         assert f"<dt>{label}</dt><dd>{text}</dd>" in card, label
     assert "<dt>Managed</dt>" not in card and "<dt>Contract</dt>" not in card     # nothing to say
     assert '<span class="tagchip">edge</span>' in card and "In bridge mode." in card
+
+
+def test_the_diagram_draws_a_building_a_network_or_the_whole_site(client, h, admin):
+    site = make(client, h, "site", name="Campus")
+    main = make(client, h, "building", name="Main", location_id=site["id"])
+    annex = make(client, h, "building", name="Annex", location_id=site["id"])
+    servers = make(client, h, "vlan", name="Servers", location_id=main["id"], **{"f.vid": 20})
+    make(client, h, "subnet", name="Servers LAN", location_id=main["id"],
+         **{"f.cidr": "10.0.20.0/24", "f.vlan": servers["id"]})
+    guest = make(client, h, "subnet", name="Guest", location_id=annex["id"], **{"f.cidr": "10.9.0.0/24"})
+    fw = make(client, h, "firewall", name="fw", location_id=main["id"],
+              **{"s.networks.list": f"{servers['id']},{guest['id']}"})
+    srv = make(client, h, "server", name="srv", location_id=main["id"], **{"s.addresses.list": "10.0.20.5"})
+    sw = make(client, h, "network_device", name="sw-annex", location_id=annex["id"], **{"f.kind": "switch"})
+    pc = make(client, h, "workstation", name="guest-pc", location_id=annex["id"], **{"s.addresses.list": "10.9.0.7"})
+    for a, b in ((srv, fw), (sw, fw), (pc, sw)):
+        client.post("/network/cables", json={"device_id": a["id"], "other_device_id": b["id"]}, headers=h)
+    page = client.get("/p/diagram/network").data.decode()
+    seg = page.split('class="seg seg--links"')[1].split("</nav>")[0]
+    # Buildings, then networks (a VLAN, a subnet on none; not the VLAN's own subnet), then the whole site.
+    assert re.findall(r">([^<]+)</a>", seg) == ["Annex", "Main", "Guest", "Servers", "Whole site"]
+    assert 'class="is-active" aria-current="page">Whole site<' in seg
+    names = lambda html: set(re.findall(r'class="diagram-name"[^>]*>([^<]+)<', html))
+    assert names(page) == {"fw", "srv", "sw-annex", "guest-pc"}
+    url = lambda part: f"/p/diagram/network?part={part}&site={site['id']}"
+    # A building: its devices, and what they are cabled to one step beyond (the firewall in Main).
+    assert names(client.get(url(f"b{annex['id']}")).data.decode()) == {"sw-annex", "guest-pc", "fw"}
+    # A network: the devices on it and the gear carrying it, linked to each other only, and what
+    # joins them on the way to the most upstream of them.
+    assert names(client.get(url(f"n{servers['id']}")).data.decode()) == {"fw", "srv"}
+    # The switch between them carries it without saying so: drawn too, joining the PC to the firewall.
+    assert names(client.get(url(f"n{guest['id']}")).data.decode()) == {"fw", "sw-annex", "guest-pc"}
+    # One site: no site choice; a second one with equipment brings it, and All sites.
+    assert 'class="field diagram-site"' not in page
+    cabin = make(client, h, "site", name="Cabin")
+    a = make(client, h, "network_device", name="cabin-sw", location_id=cabin["id"], **{"f.kind": "switch"})
+    b = make(client, h, "workstation", name="cabin-pc", location_id=cabin["id"])
+    client.post("/network/cables", json={"device_id": a["id"], "other_device_id": b["id"]}, headers=h)
+    page = client.get(f"/p/diagram/network?site={cabin['id']}").data.decode()
+    assert '<option value="/p/diagram/network?site=0" >All sites</option>' in page
+    assert names(page) == {"cabin-sw", "cabin-pc"}

@@ -15,10 +15,22 @@ ROW = 58
 COL_GAP = 110
 
 
-def network_page(only=None) -> str:
+def network_page(only=None, bare=False) -> str:
+    """The Network diagram page: the diagram of a site, or of one part of it
+    (a building, a network), chosen above it (``?site=``, ``?part=``).
+    ``bare``: the drawing alone, of ``only`` (device ids) when given, as the
+    setup guide's Cables step shows it."""
+    if bare:
+        return draw(only)
+    from . import parts
+    return parts.page()
+
+
+def draw(only=None, strict=False) -> str:
     """The network diagram; ``only``: the ids of the devices of one part of
-    a site (a building's cabling), and what they are cabled to."""
-    nodes, edges = graph.network(only)
+    a site (a building's cabling), and what they are cabled to, or with
+    ``strict`` (a network's) only the links between them."""
+    nodes, edges = graph.network(only, strict)
     width, height = graph.layout(nodes, edges) if nodes else (0, 0)
     # Top to bottom, left to right: the order a screen reader reads them in.
     ordered = sorted(nodes.values(), key=lambda n: (n.tier, n.x))
