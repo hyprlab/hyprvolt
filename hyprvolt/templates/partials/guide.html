@@ -106,6 +106,14 @@
         <option value="{{ url(step.key, none, new=1) }}" {{ 'selected' if not scope }}>A new site</option>
       </select></label>
     {% endif %}
+    {# A step done a part at a time (SetupStep.units): each building's cabling. #}
+    {% if units %}
+    <nav class="seg seg--links guide-units" aria-label="Part of {{ scope.name if scope else 'the site' }}">
+      {%- for key, label in units %}
+      <a href="{{ url(step.key, scope, unit=key) }}"{% if key == unit %} class="is-active" aria-current="page"{% endif %}>{{ label }}</a>
+      {%- endfor %}
+    </nav>
+    {% endif %}
     {# A module's other way to fill the step: Services' Import from Homepage. #}
     {% if extra %}{{ extra }}{% endif %}
     {% if body %}{{ body }}{% else %}

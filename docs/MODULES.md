@@ -347,6 +347,11 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
   for its choices.
 - `extra(scope)` returns HTML shown above a step's rows: another way to
   fill it, such as Services' Import from Homepage, a button and its dialog.
+- `units(scope)` returns `[(key, label)]` for a step done a part at a
+  time: with two or more, a segmented control of them sits above the rows,
+  the first chosen unless `?unit=` says otherwise, and the step's functions
+  read the chosen key with `guide.unit()`. Network's Cables step is done a
+  building at a time in a site of several networks (`cabling.units`).
 - A `SetupFinish(key, label, text, make, made=None, open_label="")` is
   offered on the guide's last page. `make(site, found, user)` gets what the
   steps recorded in the site, `[{"group", "title", "records"}]`, and returns

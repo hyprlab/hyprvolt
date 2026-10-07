@@ -15,8 +15,10 @@ ROW = 58
 COL_GAP = 110
 
 
-def network_page() -> str:
-    nodes, edges = graph.network()
+def network_page(only=None) -> str:
+    """The network diagram; ``only``: the ids of the devices of one part of
+    a site (a building's cabling), and what they are cabled to."""
+    nodes, edges = graph.network(only)
     width, height = graph.layout(nodes, edges) if nodes else (0, 0)
     # Top to bottom, left to right: the order a screen reader reads them in.
     ordered = sorted(nodes.values(), key=lambda n: (n.tier, n.x))

@@ -245,6 +245,9 @@ class SetupStep:
     grouped: bool = False            # rows under a heading for each kind, in the kinds' order
     joined: Callable | None = None   # joined(entity) -> records shown in its row, not their own,
                                      # and deleted with it: a MoCA adapter's far end, in the pair's
+    units: Callable | None = None    # units(scope) -> [(key, label)]: the step done a part at a time (each
+                                     # building's cabling), two or more a segmented control above the
+                                     # rows; the step's functions read the chosen key with guide.unit()
     extra: Callable | None = None    # extra(scope) -> HTML above the rows: another way to fill the step
     after: Callable | None = None    # after(scope) -> HTML below the rows, once there are any, drawn
                                      # again with them: the cables' network diagram

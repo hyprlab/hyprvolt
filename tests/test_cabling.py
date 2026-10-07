@@ -218,3 +218,44 @@ def test_a_cable_row_folds_to_its_label_and_its_ends_in_label_order(client, h, a
     assert '<code class="slug guide-row-badge is-empty" data-row-badge="label">No label</code>' in page
     assert 'data-in-title="from to label"' in page
     assert page.index("pc-b → sw1") < page.index("pc-a → sw1") < page.index("pc-c → sw1")
+
+
+def test_a_site_of_several_networks_is_cabled_a_building_at_a_time(client, h, admin):
+    site = make(client, h, "site", name="Campus")
+    main = make(client, h, "building", name="Main", location_id=site["id"])
+    annex = make(client, h, "building", name="Annex", location_id=site["id"])
+    sheds = make(client, h, "building", name="Sheds", location_id=site["id"])
+
+    def gear(name, kind, where):
+        return make(client, h, "network_device", name=name, location_id=where["id"], **{"f.kind": kind})
+    # One network: no parts, the step as it was.
+    assert "guide-units" not in client.get(f"/site-setup/cables?site={site['id']}").data.decode()
+    # Each building its own subnet: each its own gateway, switch and devices; a camera in a shed.
+    for b in (main, annex):
+        make(client, h, "subnet", name=f"{b['name']} LAN", location_id=b["id"], **{"f.cidr": "192.168.1.0/24"})
+    d = {n: gear(n, k, b) for n, k, b in (("fw-main", "router", main), ("sw-main", "switch", main),
+                                         ("fw-annex", "router", annex), ("sw-annex", "switch", annex))}
+    d["pc-main"] = make(client, h, "workstation", name="pc-main", location_id=main["id"])
+    d["pc-annex"] = make(client, h, "workstation", name="pc-annex", location_id=annex["id"])
+    d["cam"] = make(client, h, "ip_camera", name="cam-shed", location_id=sheds["id"])
+    post(client, h, "/network/cables", device_id=d["pc-main"]["id"], other_device_id=d["sw-main"]["id"])
+    post(client, h, "/network/cables", device_id=d["sw-main"]["id"], other_device_id=d["sw-annex"]["id"])
+    page = client.get(f"/site-setup/cables?site={site['id']}").data.decode()
+    parts = page.split('class="seg seg--links guide-units"')[1].split("</nav>")[0]
+    assert re.findall(r">([^<]+)</a>", parts) == ["Annex", "Main", "Rest of Campus", "Whole site"]
+    assert 'class="is-active" aria-current="page">Annex<' in parts            # the first, unless chosen
+    # A building's cables: those with an end in it, the one between buildings in both; its ends only.
+    annex_page = client.get(f"/site-setup/cables?site={site['id']}&unit={annex['id']}").data.decode()
+    rows = annex_page.split("data-row-new")[0]
+    assert "sw-main → sw-annex" in rows and "pc-main → sw-main" not in rows
+    new_row = annex_page.split("data-row-new")[1].split("</fieldset>")[0]
+    assert ">pc-annex<" in new_row and ">pc-main<" not in new_row and ">cam-shed<" not in new_row
+    assert f'data-rows-url="/site-setup/cables/rows?site={site["id"]}&amp;unit={annex["id"]}"' in annex_page
+    whole = client.get(f"/site-setup/cables?site={site['id']}&unit=all").data.decode().split("data-row-new")
+    assert "pc-main → sw-main" in whole[0] and ">pc-annex<" in whole[1] and ">cam-shed<" in whole[1]
+    # Suggested for one building: its own gateway and switch, nothing of the other's.
+    html = post(client, h, "/network/cables/suggest", site=site["id"], unit=str(annex["id"]),
+                back="/site-setup/cables")["html"]
+    assert "fw-annex to sw-annex" in html and "pc-annex to sw-annex" in html
+    assert not re.search(r"(fw|sw|pc)-main", html)          # neither suggested nor offered as an end
+    assert f'"unit": "{annex["id"]}"' in annex_page.replace("&#34;", '"')
