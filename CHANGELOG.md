@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.11] — 2026-10-07
+## [1.4.0-beta.12] — 2026-10-07
 
 ### Added
 - Where the internet comes in is the modem, router or firewall the line plugs into: its Internet line section (Not here or Comes in here) holds the line's circuit ID, its download and upload speeds (each a number with Mb/s or Gb/s chosen beside it), and a Dynamic or Static choice for its IP address, Static showing the line's static IP, its subnet (typed like a subnet's range, with the mask chosen beside it, filling in the gateway), gateway and DNS servers. The ISP is the device's Supplier, with the contract for the line, so its support number is a click away. In the setup guide, the Internet connection step adds each ISP and its modem in one row, with the provider, speeds and addresses; the modem is network gear too, so it is also in the Network gear step, where a router or firewall's line can be switched on as well, and a change in either step shows in the other. The network diagram draws that device first, marked Internet comes in, and What breaks counts from it. A site with two ISPs has a modem for each, or a router or firewall holding one line and a modem the other
