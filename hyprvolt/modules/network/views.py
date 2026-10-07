@@ -5,9 +5,11 @@ from flask import Blueprint, abort, jsonify, render_template, request
 
 from sqlalchemy.orm import joinedload
 
+from hyprvolt.core import fields as F
 from hyprvolt.core import present, records, relations, reminders
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.models import Entity, Relationship
+from hyprvolt.manifest import Field
 from hyprvolt.models import db
 from hyprvolt.modules.hardware.models import HardwareDetail
 from hyprvolt.permissions import role
@@ -56,13 +58,6 @@ def network_tab(network: Entity) -> str:
     subnets = _children("network", network.id, "subnet")
     return render_template("network/network.html", network=network, vlans=present.views(vlans),
                            subnets=[(v, addresses.usage(v.entity, grid=False)) for v in present.views(subnets)])
-
-
-def has_contents(network: Entity) -> bool:
-    """An internet connection holds no VLANs or subnets: its own addresses
-    are its fields. One recorded in it before still shows."""
-    d = _detail(network.id)
-    return not (d and d.kind == "wan") or bool(network_count(network))
 
 
 def network_count(network: Entity):
@@ -153,84 +148,91 @@ def records_count(domain: Entity):
     return DnsRecord.query.filter_by(domain_id=domain.id).count() or None
 
 
-# ———— Where the internet comes in: the Internet connection section ————
+# ———— Where the internet comes in: the device's Internet line section ————
 
-#: What a line from the ISP can come in at.
+#: What a line from the ISP can come in at: a modem or ONT, or a router or
+#: firewall where there is no modem. The line is the device's own, not a
+#: record of its own: its fields are kept in a network detail row keyed by
+#: the device, of the kind "wan" while the line comes in there.
 GATEWAY_TYPES = ("network_device", "firewall")
+LINE_ON = ("line", True)
+STATIC = ("static_ip", True)
+LINE_FIELDS = (
+    Field("line", "Internet", "boolean", switch=("Not here", "Comes in here"),
+          help="Whether a line from an ISP plugs into it: the modem or ONT, or the router or firewall where "
+               "there is no modem. The ISP is its Supplier."),
+    Field("circuit_id", "Circuit ID", shown_when=LINE_ON,
+          help="What the ISP calls this line when you report a fault."),
+    Field("download", "Download", "speed", shown_when=LINE_ON,
+          help="The speed the ISP sells, toward you: 1 Gb/s, or 940 Mb/s."),
+    Field("upload", "Upload", "speed", shown_when=LINE_ON, help="The speed away from you: 40 Mb/s."),
+    Field("static_ip", "IP address", "boolean", switch=("Dynamic", "Static"), shown_when=LINE_ON,
+          help="Static: the ISP gave the line a fixed address, with its subnet and gateway, to set on your "
+               "router. Dynamic: the address is handed out by the ISP and can change; there is nothing more "
+               "to record."),
+    Field("public_ips", "Static IP", shown_when=STATIC,
+          help="The address the ISP gave the line: 203.0.113.26, or a range for a block."),
+    Field("cidr", "Subnet", "cidr", shown_when=STATIC, prefills=("gateway",),
+          help="The line's block of addresses from the ISP, with the subnet mask chosen beside it: "
+               "203.0.113.24 and /29 for a mask of 255.255.255.248."),
+    Field("gateway", "Gateway", "ip", shown_when=STATIC,
+          help="The ISP's side of the line, which your router sends everything to."),
+    Field("dns_servers", "DNS servers", shown_when=STATIC, help="The ISP's, if it gave any. Separated by commas."),
+)
 
 
 def is_gateway_gear(etype) -> bool:
     return etype.key in GATEWAY_TYPES
 
 
-def _lines() -> list[Entity]:
-    """Every internet connection: a network of the kind wan."""
-    wan = db.session.query(NetworkDetail.entity_id).filter(NetworkDetail.kind == "wan")
-    return Entity.live().filter(Entity.type == "network", Entity.id.in_(wan)).order_by(Entity.name).all()
-
-
-def _lines_of(device: Entity) -> list[Entity]:
-    """The internet connections that come in at a device: one, or several
-    at a site with more than one ISP (dual WAN)."""
-    ids = [r.source_id for r in Relationship.query.join(Entity, Entity.id == Relationship.source_id)
-           .filter(Relationship.kind == "comes_in_at", Relationship.target_id == device.id,
-                   Entity.deleted_at.is_(None)).order_by(Relationship.id)]
-    return [e for e in (records.live(i) for i in dict.fromkeys(ids)) if e is not None]
-
-
-def internet_choices(name) -> list[tuple[int, str]]:
-    return [(e.id, e.name) for e in _lines()]
+def line_ids() -> set[int]:
+    """The devices a line from an ISP comes in at."""
+    return {i for (i,) in db.session.query(NetworkDetail.entity_id).join(Entity, Entity.id == NetworkDetail.entity_id)
+            .filter(NetworkDetail.kind == "wan", Entity.type.in_(GATEWAY_TYPES), Entity.deleted_at.is_(None))}
 
 
 def internet_values(device) -> dict:
-    return {"lines": ",".join(str(e.id) for e in _lines_of(device))}
+    row = _detail(device.id) if device is not None else None
+    out = {f.key: getattr(row, f.key, None) if row is not None and f.key != "line" else None for f in LINE_FIELDS}
+    out["line"] = row is not None and row.kind == "wan"
+    out["static_ip"] = bool(out["static_ip"])
+    return out
+
+
+def _items(device, values=None) -> list[dict]:
+    values = values if values is not None else internet_values(device)
+    hidden = F.hidden_keys(LINE_FIELDS, values)
+    return [{"field": f, "name": "s.internet." + f.key, "value": values.get(f.key), "choices": None,
+             "prefix": "s.internet.", "hidden": f.key in hidden} for f in LINE_FIELDS]
 
 
 def internet_form(etype, device) -> str:
-    chosen = ",".join(str(e.id) for e in _lines_of(device)) if device is not None else ""
-    return render_template("sheet/multi_section.html", name="s.internet.lines", label="Internet connections",
-                           choices=internet_choices("lines"), value=chosen,
-                           hint="Each line from an ISP that plugs into it: tick two or more for a router or "
-                                "firewall with more than one WAN. A line comes in at one device, so ticking it "
-                                "here takes it from any other. Leave them all unticked for a device further in.",
-                           empty="No internet connections recorded yet: add them in the Internet connection "
-                                 "step or under Network, then tick them here.")
+    return render_template("network/line_form.html", items=_items(device), etype=etype)
 
 
 def internet_save(device, values, user) -> list[dict]:
-    """The lines that come in at the device, kept as each connection's Comes
-    in at: a ticked line points here, and one that did and isn't ticked no
-    longer does. ``lines`` is the ticked ids; ``line``, one id or none, is
-    the same for a single line (the API before dual WAN)."""
-    if "lines" in values:
-        raw = values["lines"]
-        wanted_ids = raw if isinstance(raw, list) else [p for p in str(raw or "").split(",") if p.strip()]
-    elif "line" in values:
-        wanted_ids = [] if values["line"] in (None, "", 0, "0") else [values["line"]]
-    else:
+    """The line's fields, as given; Not here keeps what was typed, hidden,
+    as Dynamic keeps a static line's address."""
+    given = {f: values[f.key] for f in LINE_FIELDS if f.key in values}
+    if not given:
         return []
-    known = {e.id: e for e in _lines()}
-    wanted = []
-    for raw_id in wanted_ids:
-        try:
-            line = known.get(int(raw_id))
-        except (TypeError, ValueError):
-            line = None
-        if line is None:
-            raise Invalid("Choose an internet connection that exists.")
-        if line not in wanted:
-            wanted.append(line)
-    current = _lines_of(device)
-    if {e.id for e in wanted} == {e.id for e in current}:
-        return []
-    for line in current:
-        if line not in wanted:
-            records.update(line, {"f.comes_in_at": ""}, user)
-    for line in wanted:
-        if line not in current:
-            records.update(line, {"f.comes_in_at": device.id}, user)
-    return [{"field": "internet", "label": "Internet connections", "old": ", ".join(e.name for e in current),
-             "new": ", ".join(e.name for e in wanted)}]
+    old = internet_values(device)
+    row = _detail(device.id)
+    if row is None:
+        row = NetworkDetail(entity_id=device.id)
+        db.session.add(row)
+    changes = []
+    for f, raw in given.items():
+        value = F.parse(f, raw)
+        if f.key == "line":
+            row.kind = "wan" if value else None
+        else:
+            setattr(row, f.key, value)
+        if value != old.get(f.key) and not (old.get(f.key) in (None, "") and value in (None, "")):
+            changes.append({"field": "internet." + f.key, "label": f.label if f.key != "line" else "Internet line",
+                            "old": F.display(f, old.get(f.key)), "new": F.display(f, value)})
+    addresses.check_network(device, row)
+    return changes
 
 
 # ———— Wireless networks and the gear that broadcasts them ————
@@ -539,11 +541,6 @@ def setup_delete(cable_id) -> dict:
 
 
 # ———— Sidebar filters and the dashboard ————
-
-def internet_connections(query):
-    wan = db.session.query(NetworkDetail.entity_id).filter(NetworkDetail.kind == "wan")
-    return query.filter(Entity.type == "network", Entity.id.in_(wan))
-
 
 def ips_without_device(query):
     live_ids = db.session.query(Entity.id).filter(Entity.deleted_at.is_(None))

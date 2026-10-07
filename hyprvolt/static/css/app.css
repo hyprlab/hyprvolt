@@ -184,6 +184,9 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .joined { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .joined input[type="text"] { flex: 1 1 0; min-width: 96px; }
 .field .joined select, .joined select { flex: none; width: auto; }
+/* A subnet: its address kept whole (203.0.113.24), the mask's longer label giving way first. */
+.joined[data-join="/"] input[type="text"] { min-width: 124px; }
+.field .joined[data-join="/"] select, .joined[data-join="/"] select { flex: 0 1 auto; min-width: 0; }
 @media (max-width: 560px) {
   .joined[data-join="/"] { flex-wrap: wrap; }
   .field .joined[data-join="/"] select { flex: 1 1 100%; width: 100%; }

@@ -22,11 +22,14 @@ def test_the_diagram_draws_cables_through_patch_panels(client, h, admin):
     assert 'href="/p/diagram/network"' in sidebar
 
 
-def test_the_internet_is_drawn_coming_in_at_its_device(client, h, admin):
-    modem = make(client, h, "network_device", name="modem", **{"f.kind": "modem"})
-    make(client, h, "network", name="Fiber", **{"f.kind": "wan", "f.comes_in_at": modem["id"]})
+def test_where_the_internet_comes_in_is_drawn_first(client, h, admin):
+    # A router the line comes in at, cabled to a modem with none: the router is drawn above, marked.
+    router = make(client, h, "network_device", name="gw", **{"f.kind": "router", "s.internet.line": True})
+    modem = make(client, h, "network_device", name="old-modem", **{"f.kind": "modem"})
+    client.post("/network/cables", json={"device_id": modem["id"], "other_device_id": router["id"]}, headers=h)
     page = client.get("/p/diagram/network").data.decode()
-    assert page.count('class="diagram-node') == 2 and page.index(">Fiber<") < page.index(">modem<")
+    assert page.count('class="diagram-node') == 2 and page.index(">gw<") < page.index(">old-modem<")
+    assert "Internet comes in" in page
 
 
 def test_two_wireless_bridges_are_joined_by_a_dotted_line(client, h, admin):

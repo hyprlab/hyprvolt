@@ -164,4 +164,4 @@ def test_help_explains_links_and_cables_from_the_registry(client, h, admin):
     assert 'data-pane="versus"' in page and "Do I link what is cabled?" in page
     # The kinds of link come from the core and the modules turned on, with which carry a dependency.
     assert "<tr><td>runs on</td><td>runs</td><td>Yes</td></tr>" in page
-    assert "<tr><td>comes in at</td><td>brings in</td><td>Yes</td></tr>" in page
+    assert "<tr><td>is carried by</td><td>carries</td><td>Yes</td></tr>" in page

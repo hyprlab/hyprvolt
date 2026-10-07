@@ -87,6 +87,24 @@ def can_edit_here(entity: Entity) -> bool:
     return bool(getattr(current_user, "can_edit", False)) and entity.deleted_at is None
 
 
+def _sections_shown(entity, etype) -> list[dict]:
+    """For a reader, what the sections that declare their fields
+    (FormSection.fields) hold, read only: those with something in them."""
+    out = []
+    for section in registry().form_sections(etype) if etype else ():
+        if not section.fields or section.values is None:
+            continue
+        values = section.values(entity) or {}
+        hidden = F.hidden_keys(section.fields, values)
+        rows = [(f, F.display(f, values.get(f.key))) for f in section.fields
+                if f.key not in hidden and values.get(f.key) not in (None, "")]
+        if any(v not in (None, "", False) for f, v in ((f, values.get(f.key)) for f in section.fields)
+               if f.key not in hidden):
+            out.append({"section": section, "hidden": False,
+                        "html": Markup(render_template("sheet/section_view.html", rows=rows))})
+    return out
+
+
 def overview_tab(entity: Entity) -> str:
     etype = registry().type(entity.type)
     n_own = len(etype.fields) if etype else 0
@@ -122,7 +140,8 @@ def overview_tab(entity: Entity) -> str:
                            custom=custom, notes=markdown(entity.notes or ""),
                            crumbs=present.crumbs(entity.location_id),
                            status=records.status_label(entity), editable=editable,
-                           sections=edit.get("sections", []), locations=edit.get("locations", []),
+                           sections=edit.get("sections", []) if editable else _sections_shown(entity, etype),
+                           locations=edit.get("locations", []),
                            kinds=kinds_for(entity, etype) if editable else [],
                            access_levels=access.choices(current_user) if editable else [])
 

@@ -23,13 +23,11 @@ def cable(client, h, a, b, **more):
 
 
 def network(client, h):
-    d = {"wan": make(client, h, "network", name="Fiber", **{"f.kind": "wan"}),
-         "modem": make(client, h, "network_device", name="modem", **{"f.kind": "modem"}),
+    d = {"modem": make(client, h, "network_device", name="modem", **{"f.kind": "modem", "s.internet.line": True}),
          "fw": make(client, h, "firewall", name="fw"),
          "core": make(client, h, "network_device", name="core", **{"f.kind": "switch"}),
          "edge": make(client, h, "network_device", name="edge", **{"f.kind": "switch"}),
          "srv": make(client, h, "server", name="srv")}
-    post(client, h, f"/api/entities/{d['wan']['id']}", **{"f.comes_in_at": d["modem"]["id"]})
     # Cabled the "wrong" way round, to show the direction comes from the network, not the cable.
     cable(client, h, d["fw"], d["modem"])
     cable(client, h, d["core"], d["fw"])
@@ -43,8 +41,8 @@ def test_a_device_needs_the_gear_it_is_cabled_to_and_up_to_the_internet(client, 
     needs = tree(client, d["srv"], "dependencies")
     assert needs == [(0, "plugs into", "edge"), (1, "uplinks to", "core"), (2, "uplinks to", "fw"),
                      (3, "uplinks to", "modem")]
-    # The line comes in at the modem: down with it, along with everything behind the modem.
-    assert (0, "brings in", "Fiber") in tree(client, d["modem"], "dependents")
+    # The line comes in at the modem: everything behind it goes down with it.
+    assert (0, "is the uplink for", "fw") in tree(client, d["modem"], "dependents")
     # What breaks with the core switch: the edge switch, and what is plugged into that.
     assert tree(client, d["core"], "dependents") == [(0, "is the uplink for", "edge"), (1, "has plugged in", "srv")]
     # A VM on the server goes down with the switch too.

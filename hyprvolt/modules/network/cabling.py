@@ -24,7 +24,7 @@ from hyprvolt.registry import current as registry
 
 from . import addresses, cable_labels, ports
 from .models import Cable, NetworkDetail, Port
-from .views import bp, carriers_of, setup_ends
+from .views import bp, carriers_of, line_ids, setup_ends
 
 MAX_ROWS = 500
 FAR = 100          # the distance between places with nothing in common
@@ -221,7 +221,7 @@ def plan(scope, unit=None) -> list[dict]:
     For one part of the site (``unit``), its own gateway and core switch."""
     site = Site(scope, unit)
     name = site.name
-    lines = {r.target_id for r in Relationship.query.filter(Relationship.kind == "comes_in_at")}
+    lines = line_ids()
     modems, switches = site.of("modem"), site.of("switch")
     gateways = sorted(site.of("firewall", "router"),
                       key=lambda i: (i not in lines, site.role[i] != "firewall", name[i].lower()))

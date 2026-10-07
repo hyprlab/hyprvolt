@@ -20,7 +20,9 @@ from hyprvolt.models import db
 from . import addresses, cabling, demo, dns, impact, ports, views
 from .models import Cable, DnsRecord, NetworkDetail, Port, PortsRecorded
 
-NETWORK_KINDS = (("lan", "Local network"), ("wan", "Internet connection"), ("vpn", "VPN"), ("other", "Other"))
+#: A network record: a local network or a VPN. An internet line is the modem,
+#: router or firewall it comes in at (views.LINE_FIELDS), not a network.
+NETWORK_KINDS = (("lan", "Local network"), ("vpn", "VPN"), ("other", "Other"))
 IP_STATUSES = (("active", "In use"), ("reserved", "Reserved"), ("retired", "Retired"))
 DOMAIN_STATUSES = (("active", "Active"), ("planned", "Planned"), ("retired", "Expired or given up"))
 
@@ -107,9 +109,6 @@ def _bandwidth_speeds(m):
     m.once("bandwidth-speeds", move)
 
 
-#: The fields only an internet connection has, and those of a static line.
-WAN = ("kind", "wan")
-STATIC = ("static_ip", True)
 
 
 def _static_ip(m):
@@ -160,6 +159,72 @@ def _segments_placed(m):
     m.once("segments-placed", move)
 
 
+def _lines_on_devices(m):
+    """An internet connection was a record of its own that came in at a
+    modem, router or firewall. The line is that device's now: its circuit,
+    speeds and addresses are the device's Internet line, and what was the
+    connection's (its links, supplier, notes, tags, files and secrets) goes
+    to the device, the connection kept in Recently deleted. A line that came
+    in at nothing, or at a device that already has one (a router with two
+    ISPs), becomes a modem of its own instead, keeping all it had."""
+    from hyprvolt.models import utcnow
+
+    def run(sql, **params):
+        return db.session.execute(db.text(sql), params)
+
+    def become_modem(line_id, status):
+        run("UPDATE entities SET type = 'network_device', module = 'hardware', status = :s WHERE id = :i",
+            s={"planned": "ordered", "retired": "retired"}.get(status, "deployed"), i=line_id)
+        if not run("SELECT 1 FROM hardware_details WHERE entity_id = :i", i=line_id).first():
+            run("INSERT INTO hardware_details (entity_id, kind) VALUES (:i, 'modem')", i=line_id)
+        run("DELETE FROM relationships WHERE kind = 'comes_in_at' AND source_id = :i", i=line_id)
+
+    def move():
+        lines = run("SELECT e.id, e.status, e.name, e.notes FROM entities e JOIN network_details d "
+                    "ON d.entity_id = e.id WHERE e.type = 'network' AND d.kind = 'wan' "
+                    "AND e.deleted_at IS NULL ORDER BY e.id").all()
+        for line_id, status, name, notes in lines:
+            device = run("SELECT r.target_id FROM relationships r JOIN entities t ON t.id = r.target_id "
+                         "WHERE r.kind = 'comes_in_at' AND r.source_id = :i AND t.deleted_at IS NULL "
+                         "AND t.type IN ('network_device', 'firewall') ORDER BY r.id", i=line_id).scalar()
+            taken = device is not None and run(
+                "SELECT 1 FROM network_details WHERE entity_id = :d AND kind = 'wan'", d=device).first()
+            if device is None or taken:
+                become_modem(line_id, status)
+                continue
+            # The line's fields, onto the device's own row.
+            cols = "circuit_id, download, upload, static_ip, public_ips, cidr, gateway, dns_servers"
+            run("DELETE FROM network_details WHERE entity_id = :d", d=device)
+            run(f"INSERT INTO network_details (entity_id, kind, {cols}) SELECT :d, 'wan', {cols} "
+                "FROM network_details WHERE entity_id = :i", d=device, i=line_id)
+            run("DELETE FROM relationships WHERE kind = 'comes_in_at' AND source_id = :i", i=line_id)
+            # Its supplier, unless the device has one; its other links, unless the device has them.
+            if run("SELECT 1 FROM relationships WHERE kind = 'supplied_by' AND source_id = :d", d=device).first():
+                isp = run("SELECT t.name FROM relationships r JOIN entities t ON t.id = r.target_id "
+                          "WHERE r.kind = 'supplied_by' AND r.source_id = :i", i=line_id).scalar()
+                run("DELETE FROM relationships WHERE kind = 'supplied_by' AND source_id = :i", i=line_id)
+                if isp:
+                    notes = f"{notes.rstrip()}\n\nInternet provider: {isp}" if notes.strip() else \
+                        f"Internet provider: {isp}"
+            for end, other in (("source_id", "target_id"), ("target_id", "source_id")):
+                run(f"DELETE FROM relationships WHERE {end} = :i AND ({other} = :d OR EXISTS (SELECT 1 FROM "
+                    f"relationships x WHERE x.kind = relationships.kind AND x.{end} = :d "
+                    f"AND x.{other} = relationships.{other}))", i=line_id, d=device)
+                run(f"UPDATE relationships SET {end} = :d WHERE {end} = :i", i=line_id, d=device)
+            run("UPDATE attachments SET entity_id = :d WHERE entity_id = :i", i=line_id, d=device)
+            if m.has_table("vault_secrets"):
+                run("UPDATE vault_secrets SET entity_id = :d WHERE entity_id = :i", i=line_id, d=device)
+            run("INSERT OR IGNORE INTO entity_tags (entity_id, tag_id) SELECT :d, tag_id FROM entity_tags "
+                "WHERE entity_id = :i", i=line_id, d=device)
+            if notes.strip():
+                head = f"From the internet connection {name}:\n\n"
+                run("UPDATE entities SET notes = CASE WHEN notes = '' THEN :head || :n "
+                    "ELSE notes || :gap || :head || :n END WHERE id = :d",
+                    head=head, gap="\n\n", n=notes.strip(), d=device)
+            run("UPDATE entities SET deleted_at = :t WHERE id = :i", t=utcnow(), i=line_id)
+    m.once("lines-on-devices", move)
+
+
 def _wifi(m):
     """Wireless networks: their security, bands, and the subnet they hand
     out addresses in."""
@@ -183,7 +248,7 @@ SEGMENT_PLACES = ("site", "building")
 #: connection, whose own addresses are recorded on it.
 NETWORK_REF = Field("network", "Network", "ref", types=("network",), list=True,
                     only=("kind", ("lan", "vpn", "other", None),
-                          "Choose a local network: an internet connection's subnet is recorded on the connection."))
+                          "Choose a local network or a VPN."))
 
 ICON = ('<circle cx="12" cy="5.5" r="2"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/>'
         '<path d="M12 7.5v4.5M12 12l-5.2 4.8M12 12l5.2 4.8"/>')
@@ -199,17 +264,6 @@ DOMAIN = ('<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3
 #: What goes in each of the module's steps of the site setup guide, and
 #: why: the paragraphs behind the step's info button.
 SETUP_HELP = {
-    "internet": (
-        "An internet connection is one line from an ISP: fiber, cable, a mobile backup. It holds the download "
-        "and upload speeds, the circuit ID the ISP asks for when you report a fault, and, for a static line, "
-        "its address, subnet, gateway and DNS servers. They are not a subnet of their own.",
-        "The ISP itself is a vendor, chosen here as Provider, so its support number is a click away. The "
-        "modem or ONT is network gear, a later step.",
-        "A site with more than one ISP, or a mobile backup, records each line here. In the Network gear "
-        "step, tick every line that plugs into the router or firewall: it can have several.",
-        "A building with its own line chooses that building as Where. If it is its own network as well, "
-        "with its own router and addresses, its VLANs and subnets choose it as Where too, in the next steps.",
-    ),
     "vlans": (
         "A VLAN splits one physical network into separate ones, each with a number from 1 to 4094, such as "
         "Servers or IoT. Record them if your switches and router use them; skip this for one flat network.",
@@ -221,8 +275,8 @@ SETUP_HELP = {
         "A subnet is an address range in use, such as 192.168.1.0/24, with its gateway and DHCP range. Each "
         "IP address recorded later is placed in the subnet that holds it, and the subnet shows which "
         "addresses are used and which are free.",
-        "Only your own networks' ranges go here. An internet connection's static address, subnet and "
-        "gateway from the ISP are recorded on the connection, in the Internet connection step.",
+        "Only your own networks' ranges go here. A static internet line's address, subnet and gateway from "
+        "the ISP are recorded on the modem, router or firewall it comes in at, in the Network gear step.",
         "Where is the site, or a building that is a network of its own. Two such buildings can both use "
         "192.168.1.0/24: an address goes to the subnet of the building its device is in, and a subnet on "
         "a building's VLAN is in that building.",
@@ -264,38 +318,14 @@ module = Module(
     models=(NetworkDetail, Port, Cable, DnsRecord, PortsRecorded),
     migrations=(Step("provider-to-notes", _provider_to_notes), Step("ports-recorded", _ports_recorded),
                 Step("bandwidth-speeds", _bandwidth_speeds), Step("static-ip", _static_ip), Step("wifi", _wifi),
-                Step("wan-subnet", _wan_subnet), Step("segments-placed", _segments_placed)),
+                Step("wan-subnet", _wan_subnet), Step("segments-placed", _segments_placed),
+                Step("lines-on-devices", _lines_on_devices)),
     blueprint=views.bp,
     types=(
         EntityType("network", "Network", "Networks", detail=NetworkDetail, located_in=None, icon=NETWORK,
-                   traits=("supplied",), check=addresses.check_network,
-                   fields=(Field("kind", "Kind", "select", options=NETWORK_KINDS, card=True, list=True),
-                           Field("download", "Download", "speed", shown_when=WAN,
-                                 help="The speed the ISP sells, toward you: 1 Gb/s, or 940 Mb/s."),
-                           Field("upload", "Upload", "speed", shown_when=WAN, help="The speed away from you: 40 Mb/s."),
-                           Field("static_ip", "IP address", "boolean", switch=("Dynamic", "Static"), shown_when=WAN,
-                                 help="Static: the ISP gave the line a fixed address, with its subnet mask, gateway "
-                                      "and DNS servers, to set on your router. Dynamic: the router is given an "
-                                      "address by the ISP, and it can change; there is nothing more to record."),
-                           Field("public_ips", "Static IP", shown_when=STATIC,
-                                 help="The address the ISP gave the line: 203.0.113.26, or a range for a block."),
-                           Field("cidr", "Subnet", "cidr", shown_when=STATIC, prefills=("gateway",),
-                                 help="The line's block of addresses from the ISP, with the subnet mask chosen "
-                                      "beside it: 203.0.113.24 and /29 for a mask of 255.255.255.248. It is "
-                                      "recorded here, not as a subnet."),
-                           Field("gateway", "Gateway", "ip", shown_when=STATIC,
-                                 help="The ISP's side of the line, which your router sends everything to."),
-                           Field("dns_servers", "DNS servers", shown_when=STATIC,
-                                 help="The ISP's, if it gave any. Separated by commas."),
-                           Field("comes_in_at", "Comes in at", "ref", types=views.GATEWAY_TYPES,
-                                 relation="comes_in_at", shown_when=WAN,
-                                 help="The modem, router or firewall the line plugs into. If it goes down, so "
-                                      "does the line."),
-                           Field("circuit_id", "Circuit ID", shown_when=WAN,
-                                 help="For an internet connection: what the ISP calls this line when you report "
-                                      "a fault. The ISP itself goes in Supplier, as a vendor.")),
-                   tabs=(Tab("contents", "VLANs and subnets", views.network_tab, when=views.has_contents,
-                             count=views.network_count),)),
+                   traits=("supplied",),
+                   fields=(Field("kind", "Kind", "select", options=NETWORK_KINDS, card=True, list=True),),
+                   tabs=(Tab("contents", "VLANs and subnets", views.network_tab, count=views.network_count),)),
         EntityType("vlan", "VLAN", "VLANs", detail=NetworkDetail, located_in=SEGMENT_PLACES, icon=VLAN,
                    named_with="location_id",
                    check=addresses.check_vlan,
@@ -339,8 +369,7 @@ module = Module(
                    tabs=(Tab("records", "DNS records", views.records_tab, count=views.records_count),)),
     ),
     search=dns.search,
-    filters=(ListFilter("internet", "Internet connections", views.internet_connections, alert=False),
-             ListFilter("unassigned", "Addresses without a device", views.ips_without_device),
+    filters=(ListFilter("unassigned", "Addresses without a device", views.ips_without_device),
              ListFilter("renewal", "Domain renewal soon", views.renewal_soon)),
     widgets=(Widget("subnets", "Subnets", views.subnets_widget),),
     sheet_tabs=(Tab("addresses", "Addresses", views.addresses_tab, when=views.has_addresses_tab,
@@ -348,9 +377,9 @@ module = Module(
                 Tab("ports", "Cabling", views.ports_tab, when=views.has_ports_tab, count=views.ports_count)),
     form_sections=(FormSection("addresses", "IP addresses", addresses.section_form, addresses.section_save,
                                when=addresses.is_addressable, values=addresses.section_values),
-                   FormSection("internet", "Internet connections", views.internet_form, views.internet_save,
+                   FormSection("internet", "Internet line", views.internet_form, views.internet_save,
                                when=views.is_gateway_gear, values=views.internet_values,
-                               choices=views.internet_choices),
+                               fields=views.LINE_FIELDS),
                    FormSection("wifi", "Wireless networks", views.wifi_form, views.wifi_save,
                                when=views.is_wireless_gear, values=views.wifi_values, choices=views.wifi_choices),
                    FormSection("broadcast", "Broadcast by", views.broadcast_form, views.broadcast_save,
@@ -362,23 +391,10 @@ module = Module(
                                when=views.is_segment, values=views.carriers_values, choices=views.carriers_choices)),
     impact_edges=impact.impact_edges,
     derived_links=impact.derived_links,
-    relation_kinds=(RelationKind("comes_in_at", "comes in at", "brings in", impact="source"),
-                    RelationKind("broadcast_by", "is broadcast by", "broadcasts", impact="source"),
+    relation_kinds=(RelationKind("broadcast_by", "is broadcast by", "broadcasts", impact="source"),
                     RelationKind("carried_by", "is carried by", "carries", impact="source")),
     before_retype=ports.before_retype,
     setup=(
-        SetupStep("internet", "Internet connection", "How the site reaches the internet: each line from an "
-                  "ISP, with the provider chosen from the vendors. Most places have one.", 40,
-                  group="Network",
-                  help=SETUP_HELP["internet"], plan="internet connections",
-                  kinds=(SetupKind("Internet connection", "network", {"f.kind": "wan"}),),
-                  fields=(SetupField("name", placeholder="Fiber"), SetupField("location_id"),
-                          SetupField("s.supplier.vendor_id", "Provider", types=("vendor",)), SetupField("f.circuit_id"),
-                          SetupField("f.download", newline=True), SetupField("f.upload"),
-                          SetupField("f.static_ip", newline=True),
-                          SetupField("f.public_ips", newline=True, placeholder="203.0.113.26"),
-                          SetupField("f.cidr", placeholder="203.0.113.24"), SetupField("f.gateway"),
-                          SetupField("f.dns_servers"))),
         SetupStep("vlans", "VLANs", "The VLANs the network is split into, each with its number. Skip this if "
                   "the network is one flat LAN.", 45, group="Network",
                   help=SETUP_HELP["vlans"], plan="VLANs",

@@ -185,10 +185,10 @@ tab shows it and the dependency view follows it, and unlinking it there
 empties the field. The detail table needs no column for it, and a type whose
 fields are all kept as links needs no detail table.
 
-`only=("kind", ("lan", "vpn", "other", None), "Choose a local network: ...")`
+`only=("kind", ("lan", "vpn", "other", None), "Choose a local network or a VPN.")`
 narrows a `ref` to the records whose field (a column of each type it names)
 has one of the values, and refuses another with the message: a subnet's
-Network is never an internet connection.
+Network is a local network or a VPN.
 
 `also=(("cloud", "Cloud service"),)` gives a `ref` choices that aren't
 records, listed before them: a service's Runs on can be Cloud service. One
@@ -229,8 +229,8 @@ the Overview and the site setup guide.
 `shown_when=("static_ip", True)` shows a field only while an earlier field
 of the type has that value, and hides it again when it hasn't (a field
 following a hidden one is hidden too); what it holds is kept. Network's
-internet connection uses both: its static address, subnet mask, gateway and
-DNS servers follow the Dynamic or Static switch, which follows its kind.
+Internet line section uses both: its static address, subnet, gateway and
+DNS servers follow the Dynamic or Static switch, which follows Comes in here.
 
 A `cidr` with `prefills=("gateway", "dhcp_range")` fills those fields in
 once the subnet is typed, while they are empty or still as it filled them:
@@ -270,8 +270,8 @@ The site setup guide (Set up a site, in the sidebar) walks a site from
 the site itself out to its endpoints, one short step at a time. Its steps
 are the turned-on modules' `setup`, sorted by `order`: Locations has the
 site (10), rooms (20) and racks (30), Contacts vendors (35), Network the
-internet connection (40), VLANs (45) and subnets (50), Hardware network
-gear (60), servers (70) and endpoints (100), Virtual hypervisors (80) and
+VLANs (45) and subnets (50), Hardware network gear (60, where the internet
+comes in), servers (70) and endpoints (100), Virtual hypervisors (80) and
 guests (85), Services services (90), and Network cables (110). A step of a
 new module takes a place between them. `group` is the part of the guide a
 step is in, a heading over its steps: Place, Network, Equipment, What runs
@@ -305,7 +305,7 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
   what the section holds through its `FormSection.values(entity)`.
 - `SetupField(..., kinds=("Modem", "Router", "Firewall"))` puts a column in
   rows of those kinds only, shown as a row's kind is chosen: the Network
-  gear step's Internet connection.
+  gear step's Internet line.
 - `SetupField("s.wifi.list", "Wireless networks", kind="multi")` makes a
   section's choices (`FormSection.choices(name)`) a box each, several ticked
   at once, the ids saved joined by commas.
@@ -317,8 +317,8 @@ SetupStep("gear", "Network gear", "The equipment that ties your network together
   deletes something (a server's hypervisor). A section's `choices(name)`
   returns None for a name that is typed rather than chosen.
 - `SetupField(..., newline=True)` starts a new line of the row, so what
-  belongs together reads together: the internet connection's speeds, then
-  its IP address switch, then the static fields.
+  belongs together reads together: the internet line's speeds, then its IP
+  address switch, then the static fields.
 - `scope=True` marks the step whose record the steps after it are about
   (the site). Only Locations has one.
 - `after=fn` puts the HTML `fn(scope)` returns below a step's rows once
@@ -388,8 +388,16 @@ FormSection("rack", "Rack position", render=rack_form, save=rack_save,
   names (`{"list": "10.0.20.5"}`), so the site setup guide's rows can show
   it. Network's addresses and Contacts' supplier sections have one.
   `choices(name)`, optional, gives the options of a field of it that is a
-  choice, for the guide's column: Network's Internet connections section
-  offers only internet connections, a tick list in the guide as in the form.
+  choice, for the guide's column: Network's Networks section offers the
+  VLANs and subnets, a tick list in the guide as in the form.
+- `fields=(Field(...), ...)`, optional, are the section's own fields, named
+  `s.<key>.<field key>`: the guide's columns take their label and control
+  from them as from a type's fields (a speed, a subnet, a switch), a
+  field's `shown_when` naming another of them, and a reader sees them read
+  only in the Overview. The form's HTML renders them with `input(item)`
+  from `sheet/controls.html` (imported with context), each item's `prefix`
+  `"s.<key>."`. Network's Internet line section on a modem, router or
+  firewall is the example.
 - The API takes the same values as `s.rack.position_u` or nested as
   `"sections": {"rack": {"position_u": 12}}`. A save that doesn't name the
   section leaves its values alone.

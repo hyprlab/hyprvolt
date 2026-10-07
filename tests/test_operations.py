@@ -246,4 +246,4 @@ def test_the_demo_operations(client, h, admin):
     tree = client.get(f"/api/entities/{ups['id']}/dependencies?depth=12").get_json()["tree"]
     assert {"Jellyfin", "Home Assistant", "DNS and ad blocking"} <= tree_names(tree)
     isp = client.get("/api/entities?type=vendor&q=springfield").get_json()["entities"][0]
-    assert ">Internet</a>" in client.get(f"/e/{isp['id']}/sheet?tab=supplies").data.decode()
+    assert ">Cable modem</a>" in client.get(f"/e/{isp['id']}/sheet?tab=supplies").data.decode()
