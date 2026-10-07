@@ -2250,6 +2250,82 @@
     }
   });
 
+  // [data-peek]: a record's box in a diagram. Resting the pointer on it (or
+  // moving the focus to it) shows a card of what it is, from /e/<id>/peek,
+  // beside the box: its kind, place, fields, line, addresses and tags. The
+  // card is read only and lets the pointer through; leaving, scrolling,
+  // zooming, pressing or Escape puts it away. Kept a minute per record.
+  var peekBox = null, peekTimer = null, peekAt = null, peekCache = {};
+  function peekCard() {
+    if (!peekBox) {
+      peekBox = document.createElement("div");
+      peekBox.className = "peek";
+      peekBox.id = "peek";
+      peekBox.setAttribute("role", "tooltip");
+      // A popover, so it shows above the record's window (a modal dialog) too.
+      peekBox.setAttribute("popover", "manual");
+      document.body.appendChild(peekBox);
+    }
+    return peekBox;
+  }
+  function hidePeek() {
+    clearTimeout(peekTimer);
+    if (peekAt) peekAt.removeAttribute("aria-describedby");
+    peekAt = null;
+    if (peekBox && peekBox.matches(":popover-open")) peekBox.hidePopover();
+  }
+  function placePeek(node) {
+    var card = peekCard(), r = node.getBoundingClientRect(), gap = 10;
+    if (card.matches(":popover-open")) card.hidePopover();
+    card.showPopover();             // again each time: above a dialog opened since
+    var w = card.offsetWidth, h = card.offsetHeight;
+    // Above the box if it fits, else below; never off the screen.
+    var top = r.top - h - gap >= 8 ? r.top - h - gap : Math.min(r.bottom + gap, window.innerHeight - h - 8);
+    var left = Math.max(8, Math.min(r.left + r.width / 2 - w / 2, window.innerWidth - w - 8));
+    card.style.top = Math.max(8, top) + "px";
+    card.style.left = left + "px";
+  }
+  function showPeek(node) {
+    var id = node.getAttribute("data-entity"), cached = peekCache[id];
+    peekAt = node;
+    var show = function (html) {
+      if (peekAt !== node || !node.isConnected) return;
+      peekCard().innerHTML = html;
+      node.setAttribute("aria-describedby", "peek");
+      placePeek(node);
+    };
+    if (cached && Date.now() - cached.at < 60000) { show(cached.html); return; }
+    fetchHTML("/e/" + id + "/peek").then(function (html) {
+      peekCache[id] = { html: html, at: Date.now() };
+      show(html);
+    }).catch(function () {});
+  }
+  function peekSoon(node) {
+    clearTimeout(peekTimer);
+    peekTimer = setTimeout(function () { showPeek(node); }, 300);
+  }
+  document.addEventListener("pointerover", function (e) {
+    var node = e.target.closest && e.target.closest("[data-peek]");
+    if (!node || node === peekAt || e.pointerType === "touch") return;
+    hidePeek();
+    peekSoon(node);
+  });
+  document.addEventListener("pointerout", function (e) {
+    var node = e.target.closest && e.target.closest("[data-peek]");
+    if (!node || (e.relatedTarget && node.contains(e.relatedTarget))) return;
+    if (document.activeElement !== node) hidePeek();
+  });
+  document.addEventListener("focusin", function (e) {
+    var node = e.target.closest && e.target.closest("[data-peek]");
+    if (node && node.matches(":focus-visible")) peekSoon(node);
+  });
+  document.addEventListener("focusout", function (e) {
+    if (e.target.closest && e.target.closest("[data-peek]")) hidePeek();
+  });
+  ["pointerdown", "wheel"].forEach(function (type) { document.addEventListener(type, hidePeek, true); });
+  window.addEventListener("scroll", hidePeek, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && peekAt) hidePeek(); });
+
   // [data-zoom]: a diagram drawn on the server, in a frame that opens with all
   // of it showing (never larger than drawn). −, Fit and + zoom it, as do
   // Ctrl/Cmd and the wheel (a trackpad's pinch), about the pointer; zoomed

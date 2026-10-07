@@ -66,3 +66,25 @@ def test_a_page_goes_with_its_module(client, h, admin):
 def test_viewers_see_the_diagram(client, h, admin, viewer):
     other, _ = viewer
     assert other.get("/p/diagram/network").status_code == 200
+
+
+def test_a_box_shows_the_record_in_brief_as_the_pointer_rests_on_it(client, h, admin, viewer):
+    site = make(client, h, "site", name="Home")
+    isp = make(client, h, "vendor", name="Springfield Cable")
+    modem = make(client, h, "network_device", name="modem", location_id=site["id"],
+                 tags=["edge"], notes="In bridge mode.",
+                 **{"f.kind": "modem", "f.model": "S33", "f.managed": False, "s.addresses.list": "192.168.100.1",
+                    "s.supplier.vendor_id": isp["id"], "s.internet.line": True, "s.internet.circuit_id": "SC-1"})
+    fw = make(client, h, "firewall", name="fw")
+    client.post("/network/cables", json={"device_id": modem["id"], "other_device_id": fw["id"]}, headers=h)
+    page = client.get("/p/diagram/network").data.decode()
+    assert f'data-entity="{modem["id"]}" data-peek aria-label="modem, Internet comes in"' in page
+    other, _ = viewer
+    card = other.get(f"/e/{modem['id']}/peek").data.decode()
+    assert '<p class="peek-name">modem</p>' in card and "Network device · Deployed" in card
+    assert '<p class="peek-path">Home</p>' in card
+    for label, text in (("Kind", "Modem"), ("Model", "S33"), ("IP addresses", "192.168.100.1"),
+                        ("Supplier", "Springfield Cable"), ("Circuit ID", "SC-1")):
+        assert f"<dt>{label}</dt><dd>{text}</dd>" in card, label
+    assert "<dt>Managed</dt>" not in card and "<dt>Contract</dt>" not in card     # nothing to say
+    assert '<span class="tagchip">edge</span>' in card and "In bridge mode." in card

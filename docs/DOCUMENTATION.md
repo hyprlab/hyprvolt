@@ -641,7 +641,11 @@ to it, and it opens unfolded next time. The choice is remembered in the browser.
 Every diagram (this one, the Neighborhood tab and the network diagram)
 opens with all of it showing. −, Fit and + above it zoom it, as does
 Ctrl or ⌘ with the scroll wheel, or a trackpad's pinch; zoomed in, drag it
-with the mouse to move around.
+with the mouse to move around. Resting the pointer on a record's box, or moving
+the keyboard focus to it, shows a card of what it is: its kind and status,
+where it is, the fields that have something in them (those the type shows
+on its card first, then its IP addresses, supplier and internet line, then
+the rest, a dozen at most), its tags and the start of its notes.
 
 An editor edits a record where it is shown. In its Overview each field reads
 as its value until it is pointed at or clicked, when it becomes a field to

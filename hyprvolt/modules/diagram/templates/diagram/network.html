@@ -2,7 +2,7 @@
 {% from "partials/diagram_node.html" import node %}
 {% from "partials/macros.html" import zoom_frame %}
 {% if nodes %}
-<p class="hint diagram-legend">{{ nodes|length }} {{ 'device' if nodes|length == 1 else 'devices' }} and {{ edges|length }} {{ 'link' if edges|length == 1 else 'links' }}, from the internet side down. A solid line is a cable, traced through patch panels{% if coax %} and over pairs of MoCA adapters{% endif %}{% if internet %}; a thick one is an internet connection coming in at its device{% endif %}{% if wireless %}; a dotted one is a wireless link between two bridges{% endif %}{% if dashed %}; a dashed one is a "connected to" link with no cable recorded{% endif %}. Hover a line for its ports and VLANs; choose a device to open it.</p>
+<p class="hint diagram-legend">{{ nodes|length }} {{ 'device' if nodes|length == 1 else 'devices' }} and {{ edges|length }} {{ 'link' if edges|length == 1 else 'links' }}, from the internet side down. A solid line is a cable, traced through patch panels{% if coax %} and over pairs of MoCA adapters{% endif %}{% if internet %}; a thick one is an internet connection coming in at its device{% endif %}{% if wireless %}; a dotted one is a wireless link between two bridges{% endif %}{% if dashed %}; a dashed one is a "connected to" link with no cable recorded{% endif %}. Hover a line for its ports and VLANs, and a device for what it is; choose a device to open it.</p>
 {% call zoom_frame() %}
 <svg class="diagram" width="{{ width|round|int }}" height="{{ height|round|int }}" viewBox="0 0 {{ width|round|int }} {{ height|round|int }}" role="img" aria-label="Network diagram">
   {% for e in edges %}

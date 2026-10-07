@@ -1,7 +1,8 @@
-{# One record as a box in a diagram: a link that opens its sheet. #}
+{# One record as a box in a diagram: a link that opens its sheet, and a
+   card of what it is ([data-peek], views.peek) while the pointer rests on it
+   or it has the focus. #}
 {% macro node(id, name, type_label, icon, x, y, w, h, cls='') -%}
-<a class="diagram-node {{ cls }}" href="/e/{{ id }}" data-entity="{{ id }}" transform="translate({{ x|round(1) }} {{ y|round(1) }})">
-  <title>{{ name }}, {{ type_label }}</title>
+<a class="diagram-node {{ cls }}" href="/e/{{ id }}" data-entity="{{ id }}" data-peek aria-label="{{ name }}, {{ type_label }}" transform="translate({{ x|round(1) }} {{ y|round(1) }})">
   <rect width="{{ w }}" height="{{ h }}" rx="10"/>
   <svg class="diagram-icon" x="11" y="14" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">{{ icon|safe }}</svg>
   <text class="diagram-name" x="40" y="21">{{ name }}</text>

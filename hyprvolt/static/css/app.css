@@ -1881,6 +1881,27 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
   white-space: nowrap;
 }
 .diagram-pin.is-placed { visibility: visible; }
+/* A diagram box's hover card (app.js, [data-peek]): what the record is, in brief. */
+.peek {
+  position: fixed; inset: auto; margin: 0; width: max-content; max-width: min(320px, calc(100vw - 16px));
+  padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 10px;
+  background: var(--panel); color: var(--ink); box-shadow: var(--shadow-2);
+  font-size: 12.5px; line-height: 1.45; pointer-events: none; animation: pop-in .12s ease both;
+}
+.peek p { margin: 0; }
+.peek-head { display: flex; align-items: center; gap: 10px; }
+.peek-icon { flex: none; width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 1.6;
+             stroke-linecap: round; stroke-linejoin: round; }
+.peek-title { min-width: 0; }
+.peek-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.peek-kind, .peek-path, .peek-more { color: var(--muted); }
+.peek-path { margin-top: 6px !important; }
+.peek-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 12px; margin: 10px 0 0; }
+.peek-facts dt { color: var(--muted); white-space: nowrap; }
+.peek-facts dd { margin: 0; overflow-wrap: anywhere; font-weight: 500; }
+.peek-more { margin-top: 6px !important; font-size: 12px; }
+.peek-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px !important; }
+.peek-notes { margin-top: 10px !important; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); }
 .diagram-node rect { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1; transition: stroke .15s, fill .15s; }
 .diagram-node:hover rect, .diagram-node:focus-visible rect { stroke: var(--accent); fill: var(--wash); }
 .diagram-node:focus-visible { outline: none; }

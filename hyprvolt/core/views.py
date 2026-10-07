@@ -87,9 +87,9 @@ def can_edit_here(entity: Entity) -> bool:
     return bool(getattr(current_user, "can_edit", False)) and entity.deleted_at is None
 
 
-def _sections_shown(entity, etype) -> list[dict]:
-    """For a reader, what the sections that declare their fields
-    (FormSection.fields) hold, read only: those with something in them."""
+def _section_rows(entity, etype) -> list[tuple]:
+    """(section, [(Field, shown)]) for the sections that declare their
+    fields (FormSection.fields) and hold something: an internet line."""
     out = []
     for section in registry().form_sections(etype) if etype else ():
         if not section.fields or section.values is None:
@@ -98,11 +98,54 @@ def _sections_shown(entity, etype) -> list[dict]:
         hidden = F.hidden_keys(section.fields, values)
         rows = [(f, F.display(f, values.get(f.key))) for f in section.fields
                 if f.key not in hidden and values.get(f.key) not in (None, "")]
-        if any(v not in (None, "", False) for f, v in ((f, values.get(f.key)) for f in section.fields)
-               if f.key not in hidden):
-            out.append({"section": section, "hidden": False,
-                        "html": Markup(render_template("sheet/section_view.html", rows=rows))})
+        if any(values.get(f.key) not in (None, "", False) for f in section.fields if f.key not in hidden):
+            out.append((section, rows))
     return out
+
+
+def _sections_shown(entity, etype) -> list[dict]:
+    """For a reader, what those sections hold, read only."""
+    return [{"section": section, "hidden": False,
+             "html": Markup(render_template("sheet/section_view.html", rows=rows))}
+            for section, rows in _section_rows(entity, etype)]
+
+
+#: The most facts a diagram's hover card lists before "and N more".
+PEEK_FACTS = 12
+
+
+@bp.route("/e/<int:entity_id>/peek")
+@role("viewer")
+def peek(entity_id):
+    """A record in brief, for the card a diagram shows as the pointer rests
+    on its box: what it is and where, the fields with something in them,
+    what its modules' sections say, its tags and the start of its notes."""
+    from .markdown import excerpt
+    entity = entity_or_404(entity_id)
+    reg = registry()
+    etype = reg.type(entity.type)
+    values = records.field_values(entity)
+    n_own = len(etype.fields) if etype else 0
+    hidden = F.hidden_keys(etype.fields, {f.key: v for f, v in values[:n_own]}) if etype else set()
+    key, rest = [], []
+    for n, (f, value) in enumerate(values):
+        if value in (None, "") or f.kind in ("markdown", "longtext") or (n < n_own and f.key in hidden):
+            continue
+        if value is False and not f.switch:
+            continue                     # "Managed: No" says little at a glance
+        (key if f.card or f.list else rest).append((f.label, F.display(f, value, records.live)))
+    # What the type shows on its card first, then its addresses, supplier and line, then the rest
+    # (a serial number, a price) as room allows.
+    sections = []
+    for section in reg.form_sections(etype) if etype else ():
+        if section.peek is not None:
+            sections += [(label, text) for label, text in section.peek(entity) or () if text]
+    for section, rows in _section_rows(entity, etype):
+        sections += [(f.label, shown) for f, shown in rows]
+    facts = key + sections + rest
+    return render_template("sheet/peek.html", entity=entity, view=present.views([entity])[0],
+                           status=records.status_label(entity), facts=facts[:PEEK_FACTS],
+                           more=max(len(facts) - PEEK_FACTS, 0), notes=excerpt(entity.notes or "", 140))
 
 
 def overview_tab(entity: Entity) -> str:
