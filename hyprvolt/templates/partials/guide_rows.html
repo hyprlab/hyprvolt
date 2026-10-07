@@ -70,10 +70,11 @@
      own in every row, not one across the page. #}
   {% for r in rows %}
   {% if r.group and (loop.first or loop.previtem.group != r.group) %}
-  <p class="kicker guide-kind">{{ r.group }}</p>
+  <p class="kicker guide-kind"{% if r.depth %} data-depth="{{ r.depth }}"{% endif %}>{{ r.group }}</p>
   {% endif %}
   <form class="guide-row-form" data-row-form novalidate>
   <fieldset class="guide-row is-collapsed" data-row data-row-id="{{ r.id }}" data-name="{{ r.label }}"
+            {%- if r.depth %} data-depth="{{ r.depth }}"{% endif %}
             {%- if r.in_title %} data-in-title="{{ r.in_title|join(' ') }}"{% endif %}
             data-update="{{ url_for('guide.row_update', key=step.key, row_id=r.id, **site) }}"
             data-delete="{{ url_for('guide.row_delete', key=step.key, row_id=r.id, **site) }}">

@@ -1,0 +1,20 @@
+{# A record in brief (views.peek): the card a diagram shows as the pointer
+   rests on its box. #}
+<div class="peek-head">
+  {% if view.icon %}<svg class="peek-icon" viewBox="0 0 24 24" aria-hidden="true">{{ view.icon|safe }}</svg>{% endif %}
+  <div class="peek-title">
+    <p class="peek-name">{{ entity.name }}</p>
+    <p class="peek-kind">{{ view.type_label }} · {{ status }}</p>
+  </div>
+</div>
+{% if view.path %}<p class="peek-path">{{ view.path }}</p>{% endif %}
+{% if facts %}
+<dl class="peek-facts">
+  {%- for label, text in facts %}
+  <dt>{{ label }}</dt><dd>{{ text }}</dd>
+  {%- endfor %}
+</dl>
+{% endif %}
+{% if more %}<p class="peek-more">and {{ more }} more in the record</p>{% endif %}
+{% if entity.tag_names %}<p class="peek-tags">{% for t in entity.tag_names %}<span class="tagchip">{{ t }}</span>{% endfor %}</p>{% endif %}
+{% if notes %}<p class="peek-notes">{{ notes }}</p>{% endif %}

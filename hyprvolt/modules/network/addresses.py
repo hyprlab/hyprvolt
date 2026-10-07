@@ -364,6 +364,10 @@ def section_values(entity) -> dict:
     return {"list": ", ".join(d.address for _, d in addresses_of(entity))}
 
 
+def section_peek(entity) -> list[tuple[str, str]]:
+    return [("IP addresses", section_values(entity)["list"])]
+
+
 def _takes_from(entity, holder) -> bool:
     """A hypervisor (a type with the ``takes_host_address`` trait) takes an
     address from the machine it runs on: it is that machine's operating

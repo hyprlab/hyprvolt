@@ -506,17 +506,95 @@ def setup_rows(scope) -> list[dict]:
     are the free ends and its own."""
     out, free, only = [], setup_ends(scope), _unit_devices(scope)
     eager = (joinedload(Cable.a).joinedload(Port.device), joinedload(Cable.b).joinedload(Port.device))
-    for c in Cable.query.options(*eager):
-        if only is not None and c.a.device_id not in only and c.b.device_id not in only:
-            continue
-        if c.a.device.deleted_at is None and c.b.device.deleted_at is None:
-            # Folded: its label, then its two ends.
-            out.append({"id": c.id, "label": f"the cable from {c.a.label} to {c.b.label}",
-                        "title": f"{c.a.label} → {c.b.label}", "badge": "label", "in_title": ("from", "to", "label"),
-                        "values": {"from": _end_value(c.a), "to": _end_value(c.b), "label": c.label},
-                        "choices": {"from": _with_end(free, c.a), "to": _with_end(free, c.b)},
-                        "text": {}, "locked": (), "absent": (), "sort": _label_order(c)})
+    cables = [c for c in Cable.query.options(*eager)
+              if (only is None or c.a.device_id in only or c.b.device_id in only)
+              and c.a.device.deleted_at is None and c.b.device.deleted_at is None]
+    tree = _CableTree(cables)
+    for c in cables:
+        up, down = tree.ends(c)
+        # Folded: its label, then its two ends; under the device nearer the internet.
+        out.append({"id": c.id, "label": f"the cable from {c.a.label} to {c.b.label}",
+                    "title": f"{c.a.label} → {c.b.label}", "badge": "label", "in_title": ("from", "to", "label"),
+                    "values": {"from": _end_value(c.a), "to": _end_value(c.b), "label": c.label},
+                    "choices": {"from": _with_end(free, c.a), "to": _with_end(free, c.b)},
+                    "text": {}, "locked": (), "absent": (), "group": tree.heading(up), "depth": tree.depth(up),
+                    "sort": (tree.order[up], not tree.is_gear(down), _label_order(c))})
     return sorted(out, key=lambda r: r["sort"])
+
+
+class _CableTree:
+    """The cabled devices as a tree from where the internet comes in: the
+    device a line comes in at, else a modem, a router or a firewall, then
+    outward along the cables (and over MoCA pairs and wireless bridges),
+    switches before what plugs into them. A part not cabled to it hangs
+    from its own most upstream device."""
+
+    MAX_DEPTH = 6
+
+    def __init__(self, cables):
+        from .impact import _pairs
+        near: dict[int, set[int]] = {}
+        for c in cables:
+            near.setdefault(c.a.device_id, set()).add(c.b.device_id)
+            near.setdefault(c.b.device_id, set()).add(c.a.device_id)
+        for a, b, _ in _pairs():
+            if a in near or b in near:
+                near.setdefault(a, set()).add(b)
+                near.setdefault(b, set()).add(a)
+        self.devices = {e.id: e for e in Entity.query.filter(Entity.id.in_(near), Entity.deleted_at.is_(None))}
+        self.lines = line_ids()
+        self.levels, self.order = {}, {}
+        children: dict[int, list[int]] = {}
+        left = set(self.devices)
+        while left:
+            root = min(left, key=self.rank)
+            self.levels[root], queue, found = 0, [root], [root]
+            while queue:
+                i = queue.pop(0)
+                for j in sorted(near.get(i, ()), key=self.rank):
+                    if j in self.devices and j not in self.levels:
+                        self.levels[j] = self.levels[i] + 1
+                        children.setdefault(i, []).append(j)
+                        queue.append(j)
+                        found.append(j)
+            left -= set(found)
+            stack = [root]                  # in tree order: each device, then what hangs from it
+            while stack:
+                i = stack.pop()
+                self.order[i] = len(self.order)
+                stack.extend(reversed(children.get(i, [])))
+
+    def rank(self, device_id):
+        e = self.devices.get(device_id)
+        if e is None:
+            return (2, (99, ""), "")
+        return (0 if device_id in self.lines else 1, ports._rank(ports.group_of(e)), e.name.lower())
+
+    def is_gear(self, device_id) -> bool:
+        """Network gear, listed before the devices plugged in beside it."""
+        e = self.devices.get(device_id)
+        return e is not None and ports.group_of(e) in ports.ORDER[:ports.ORDER.index("network_device") + 1]
+
+    def ends(self, cable) -> tuple[int, int]:
+        """(the end nearer the internet, the other), as device ids."""
+        a, b = cable.a.device_id, cable.b.device_id
+        if (self.levels.get(a, 99), self.rank(a)) <= (self.levels.get(b, 99), self.rank(b)):
+            return a, b
+        return b, a
+
+    def depth(self, device_id) -> int:
+        return min(self.levels.get(device_id, 0), self.MAX_DEPTH)
+
+    def heading(self, device_id) -> str:
+        """What a group of cables hangs from: "Cable modem · Modem, the internet comes in"."""
+        e = self.devices.get(device_id)
+        if e is None:
+            return ""
+        from hyprvolt.modules.hardware import NETWORK_KINDS
+        kind = dict(NETWORK_KINDS).get(ports.role(e)) if e.type == "network_device" else None
+        etype = registry().type(e.type)
+        what = kind or (etype.label if etype else e.type)
+        return f"{e.name} · {what}" + (", the internet comes in" if device_id in self.lines else "")
 
 
 def _setup_cable_or_404(cable_id) -> Cable:

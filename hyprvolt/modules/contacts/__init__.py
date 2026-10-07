@@ -88,7 +88,8 @@ module = Module(
     ),
     filters=(ListFilter("ending", "Contracts ending soon", views.ending_soon),),
     form_sections=(FormSection("supplier", "Supplier", views.supplier_form, views.supplier_save,
-                               when=views.is_supplied, values=views.supplier_values),),
+                               when=views.is_supplied, values=views.supplier_values,
+                               peek=views.supplier_peek),),
     setup=(SetupStep("vendors", "Vendors", "Internet service providers, domain registrars, equipment sellers, "
                      "warranty providers, software and license vendors, cloud and hosting services, support "
                      "contractors, and utilities.", 35,

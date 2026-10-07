@@ -395,6 +395,10 @@ FormSection("rack", "Rack position", render=rack_form, save=rack_save,
   `choices(name)`, optional, gives the options of a field of it that is a
   choice, for the guide's column: Network's Networks section offers the
   VLANs and subnets, a tick list in the guide as in the form.
+- `peek(entity)`, optional, returns `[(label, text)]`: what the section
+  holds in a line or two, for the card a diagram shows as the pointer rests
+  on a record. Network's addresses ("IP addresses") and Contacts' supplier
+  sections have one; an empty text is left out.
 - `fields=(Field(...), ...)`, optional, are the section's own fields, named
   `s.<key>.<field key>`: the guide's columns take their label and control
   from them as from a type's fields (a speed, a subnet, a switch), a

@@ -40,5 +40,5 @@
   {% endfor %}
 </svg>
 {% endcall %}
-<p class="hint">Each line is a link that carries a dependency; a record reached two ways is drawn once.{% if links|selectattr('loop')|list %} A dashed line leads back into a loop.{% endif %}{% if truncated %} It stops six steps out.{% endif %} Choose a record to open it{% if folds %}, and − or + on it to fold or show what hangs from it{% endif %}.</p>
+<p class="hint">Each line is a link that carries a dependency; a record reached two ways is drawn once.{% if links|selectattr('loop')|list %} A dashed line leads back into a loop.{% endif %}{% if truncated %} It stops six steps out.{% endif %} Rest the pointer on a record to see what it is, and choose it to open it{% if folds %}, and − or + on it to fold or show what hangs from it{% endif %}.</p>
 </div>

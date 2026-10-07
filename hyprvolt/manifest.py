@@ -150,6 +150,8 @@ class FormSection:
     when: Callable | None = None
     values: Callable | None = None   # values(entity) -> {name: value}: what it holds now
     choices: Callable | None = None  # choices(name) -> [(value, label)]: a choice's options, for the guide
+    peek: Callable | None = None     # peek(entity) -> [(label, text)]: what it holds, in a line or two,
+                                     # for the card a diagram shows as the pointer rests on a record
     fields: tuple = ()               # Fields of its own, each named s.<key>.<field key>: the guide's
                                      # columns take their label and control from them as from a type's
                                      # fields, and shown_when names another of them

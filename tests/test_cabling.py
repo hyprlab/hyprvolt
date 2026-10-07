@@ -259,3 +259,25 @@ def test_a_site_of_several_networks_is_cabled_a_building_at_a_time(client, h, ad
     assert "fw-annex to sw-annex" in html and "pc-annex to sw-annex" in html
     assert not re.search(r"(fw|sw|pc)-main", html)          # neither suggested nor offered as an end
     assert f'"unit": "{annex["id"]}"' in annex_page.replace("&#34;", '"')
+
+
+def test_the_cables_hang_from_where_the_internet_comes_in(client, h, admin):
+    client.post("/site-setup/site/rows", json={"values": {"name": "Home"}}, headers=h)
+
+    def gear(name, kind, **more):
+        return make(client, h, "network_device", name=name, **{"f.kind": kind, **more})
+    modem = gear("modem", "modem", **{"s.internet.line": True})
+    fw = make(client, h, "firewall", name="fw")
+    core, office = gear("sw-core", "switch"), gear("sw-office", "switch")
+    srv, pc = make(client, h, "server", name="srv"), make(client, h, "workstation", name="pc")
+    # Made in no order, and cabled either way round.
+    for a, b in ((pc, office), (core, office), (srv, core), (fw, modem), (core, fw)):
+        post(client, h, "/network/cables", device_id=a["id"], other_device_id=b["id"])
+    page = client.get("/site-setup/cables").data.decode().split("data-row-new")[0]
+    heads = re.findall(r'<p class="kicker guide-kind"(?: data-depth="(\d)")?>([^<]+)</p>', page)
+    assert heads == [("", "modem · Modem, the internet comes in"), ("1", "fw · Firewall"),
+                     ("2", "sw-core · Switch"), ("3", "sw-office · Switch"), ("", "Add another")]
+    # Under each, its cables: the switch below it before what plugs in beside it.
+    core_part = page.split("sw-core · Switch</p>")[1].split('<p class="kicker')[0]
+    assert core_part.index("sw-office") < core_part.index("srv")
+    assert 'data-depth="3"' in page.split("sw-office · Switch</p>")[1]

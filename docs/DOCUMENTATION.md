@@ -556,6 +556,12 @@ Back, the steps down the side and Exit setup do the same. On the first step,
 the Site choice picks another site, or a new one; the guide can be run again
 to add what was left out, or for another site.
 
+The Cables step lists the cables as a tree from where the internet comes
+in: under the device a line comes in at (else the modem), its cables, then
+under the router or firewall its cables, then each switch, patch panel and
+so on further in, each level indented a step, the network gear plugged into
+a device before the endpoints beside it, and in label order within them. A
+part cabled to nothing upstream hangs from its own most upstream device.
 Each cable in the Cables step can be moved: choose another From or To in
 its row (a free port, or a device with a port to spare) and the cable keeps
 its label, color and length. Once the site has a cable, the Cables step
@@ -641,7 +647,11 @@ to it, and it opens unfolded next time. The choice is remembered in the browser.
 Every diagram (this one, the Neighborhood tab and the network diagram)
 opens with all of it showing. −, Fit and + above it zoom it, as does
 Ctrl or ⌘ with the scroll wheel, or a trackpad's pinch; zoomed in, drag it
-with the mouse to move around.
+with the mouse to move around. Resting the pointer on a record's box, or moving
+the keyboard focus to it, shows a card of what it is: its kind and status,
+where it is, the fields that have something in them (those the type shows
+on its card first, then its IP addresses, supplier and internet line, then
+the rest, a dozen at most), its tags and the start of its notes.
 
 An editor edits a record where it is shown. In its Overview each field reads
 as its value until it is pointed at or clicked, when it becomes a field to
