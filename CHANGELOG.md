@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.7] — 2026-10-06
+## [1.4.0-beta.8] — 2026-10-07
 
 ### Added
 - In the setup guide, the blank row at the end of a step has a Clear button beside Add once anything is typed or chosen in it: it empties the row without adding it, so moving to another step no longer adds what was half typed
