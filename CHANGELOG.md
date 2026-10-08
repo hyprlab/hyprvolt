@@ -6,6 +6,8 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+## [1.4.0] — 2026-10-08
+
 ### Added
 - The Network diagram page has a choice above the diagram of what to draw: each building with equipment in it, each network (a VLAN, or a subnet on no VLAN), or the whole site, and a Site choice when equipment is in more than one site. A building is drawn with what it is cabled to beyond it; a network with its own devices and those on the way between them
 - The setup guide's Cables step lists the cables as a tree from where the internet comes in: under the modem (or the device a line comes in at) its cables, then under the router or firewall its cables, then each switch and patch panel further in, each level indented a step, network gear before the endpoints beside it, and with two lines each its own top
