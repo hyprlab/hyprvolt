@@ -245,7 +245,7 @@ def test_a_site_of_several_buildings_is_cabled_a_building_at_a_time(client, h, a
     post(client, h, "/network/cables", device_id=d["pc-main"]["id"], other_device_id=d["sw-main"]["id"])
     post(client, h, "/network/cables", device_id=d["sw-main"]["id"], other_device_id=d["sw-annex"]["id"])
     page = client.get(f"/site-setup/cables?site={site['id']}").data.decode()
-    parts = page.split('class="seg seg--links guide-units"')[1].split("</nav>")[0]
+    parts = page.split('class="seg seg--links seg--scroll guide-units"')[1].split("</nav>")[0]
     # Every building with equipment in it, then what is in no building.
     assert re.findall(r">([^<]+)</a>", parts) == ["Annex", "Main", "Sheds", "Not in a building", "Whole site"]
     assert 'class="is-active" aria-current="page">Annex<' in parts            # the first, unless chosen

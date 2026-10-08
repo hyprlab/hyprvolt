@@ -10,13 +10,15 @@
     </select></label>
   {% endif %}
   {% if links %}
-  <nav class="seg seg--links" aria-label="Part of {{ scope.name if scope else 'the network' }} to draw">
+  <nav class="seg seg--links seg--scroll" data-seg-scroll aria-label="Part of {{ scope.name if scope else 'the network' }} to draw">
+    <div class="seg-track">
     {%- for l in links %}
     {%- if not loop.first and l.group != loop.previtem.group %}<span class="seg-sep" aria-hidden="true"></span>{% endif %}
     <a href="{{ l.href }}"{% if l.key == part %} class="is-active" aria-current="page"{% endif %}>{{ l.label }}</a>
     {%- endfor %}
     <span class="seg-sep" aria-hidden="true"></span>
     <a href="{{ whole }}"{% if part == 'all' %} class="is-active" aria-current="page"{% endif %}>Whole site</a>
+    </div>
   </nav>
   {% endif %}
 </div>

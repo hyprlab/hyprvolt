@@ -2250,6 +2250,41 @@
     }
   });
 
+  // [data-seg-scroll]: a segmented control of links that scrolls sideways
+  // when it doesn't fit (the diagram's parts, a guide step's buildings). Its
+  // track fades at an edge while there is more that way, opens with the
+  // chosen one in the middle of it, and a mouse wheel turned over it moves it
+  // along while it can, the page scrolling once it can't.
+  function segEdges(track) {
+    var max = track.scrollWidth - track.clientWidth;
+    track.classList.toggle("can-left", track.scrollLeft > 1);
+    track.classList.toggle("can-right", track.scrollLeft < max - 1);
+  }
+  function initSegScroll(root) {
+    (root || document).querySelectorAll("[data-seg-scroll] .seg-track").forEach(function (track) {
+      if (track.hasAttribute("data-ready")) return;
+      track.setAttribute("data-ready", "");
+      var on = track.querySelector(".is-active");
+      if (on && track.scrollWidth > track.clientWidth) {
+        track.scrollTo({ left: on.offsetLeft - (track.clientWidth - on.offsetWidth) / 2, behavior: "instant" });
+      }
+      segEdges(track);
+      track.addEventListener("scroll", function () { segEdges(track); }, { passive: true });
+      track.addEventListener("wheel", function (e) {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+        var max = track.scrollWidth - track.clientWidth;
+        if ((e.deltaY > 0 && track.scrollLeft < max - 1) || (e.deltaY < 0 && track.scrollLeft > 1)) {
+          track.scrollLeft += e.deltaY;
+          e.preventDefault();
+        }
+      }, { passive: false });
+    });
+  }
+  initSegScroll();
+  window.addEventListener("resize", function () {
+    document.querySelectorAll("[data-seg-scroll] .seg-track").forEach(segEdges);
+  });
+
   // [data-peek]: a record's box in a diagram. Resting the pointer on it (or
   // moving the focus to it) shows a card of what it is, from /e/<id>/peek,
   // beside the box: its kind, place, fields, line, addresses and tags. The

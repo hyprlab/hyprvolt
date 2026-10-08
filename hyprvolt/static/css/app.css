@@ -1861,8 +1861,24 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 }
 .seg--links a:hover { color: var(--ink); }
 .seg--links a.is-active { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-1); }
+/* One that doesn't fit scrolls sideways on one line ([data-seg-scroll],
+   app.js) instead of wrapping: its track has no scrollbar, and fades out at
+   an edge while there is more that way. */
+.seg--scroll { display: flex; width: fit-content; max-width: 100%; min-width: 0; flex-wrap: nowrap; }
+.seg-track {
+  --fade-l: 0px; --fade-r: 0px;
+  position: relative; display: flex; gap: 2px; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
+}
+.seg-track::-webkit-scrollbar { display: none; }
+.seg-track.can-left { --fade-l: 40px; }
+.seg-track.can-right { --fade-r: 40px; }
+.seg--scroll a { flex: none; white-space: nowrap; }
 /* The network diagram's choice of site and part: places, then networks, then the whole site. */
-.diagram-parts { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; margin: 0 0 16px; }
+.diagram-parts { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; margin: 0 0 16px; min-width: 0; }
+.diagram-parts .seg--scroll { flex: 0 1 auto; }
 .diagram-site { flex: 0 1 220px; margin: 0; }
 .seg .seg-sep { align-self: stretch; flex: none; width: 1px; padding: 0; margin: 5px 4px; border-radius: 0;
                 background: var(--line-strong); box-shadow: none; }

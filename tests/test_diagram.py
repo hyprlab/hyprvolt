@@ -124,7 +124,7 @@ def test_the_diagram_draws_a_building_a_network_or_the_whole_site(client, h, adm
     for a, b in ((srv, fw), (sw, fw), (pc, sw)):
         client.post("/network/cables", json={"device_id": a["id"], "other_device_id": b["id"]}, headers=h)
     page = client.get("/p/diagram/network").data.decode()
-    seg = page.split('class="seg seg--links"')[1].split("</nav>")[0]
+    seg = page.split('class="seg seg--links seg--scroll"')[1].split("</nav>")[0]
     # Buildings, then networks (a VLAN, a subnet on none; not the VLAN's own subnet), then the whole site.
     assert re.findall(r">([^<]+)</a>", seg) == ["Annex", "Main", "Guest", "Servers", "Whole site"]
     assert 'class="is-active" aria-current="page">Whole site<' in seg
@@ -201,7 +201,7 @@ def test_a_vpn_tunnel_joins_its_ends(client, h, admin):
     assert "a long-dashed one in the accent is a VPN tunnel" in page
     assert "<title>fw-annex to fw-main over the VPN Main to Annex</title>" in page or \
         "<title>fw-main to fw-annex over the VPN Main to Annex</title>" in page
-    seg = page.split('class="seg seg--links"')[1].split("</nav>")[0]
+    seg = page.split('class="seg seg--links seg--scroll"')[1].split("</nav>")[0]
     assert ">Main to Annex</a>" in seg
     part = client.get(f"/p/diagram/network?site={site['id']}&part=n{vpn['id']}").data.decode()
     assert set(re.findall(r'class="diagram-name"[^>]*>([^<]+)<', part)) == {"fw-main", "fw-annex"}
