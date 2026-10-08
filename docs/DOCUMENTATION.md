@@ -290,7 +290,11 @@ Diagram draws the network from its cables: every device with a cable to
 another, the cables traced through patch panels and over pairs of MoCA
 adapters (which are named on the link rather than drawn), in tiers from the internet side: modems, then
 routers and firewalls, then outward. A "connected to" link between two
-devices with no cable recorded is drawn dashed. Hovering a link shows its
+devices with no cable recorded is drawn dashed. Each device is drawn under
+what it hangs from; a device with more than eight endpoints plugged into it
+(devices with nothing further down) has them as a block under it, up to six
+to a row, joined to it like an org chart, so a flat network stays narrow
+enough to read without zooming. Hovering a link shows its
 ports and VLANs; choosing a device opens it. Above it, a site with more
 than one place or network chooses what to draw: each building with
 equipment in it (and Not in a building, for what sits in the site itself),

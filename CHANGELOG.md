@@ -6,6 +6,9 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Changed
+- The network diagram stays compact when a switch has many devices plugged in: more than eight endpoints under one device are drawn as a block under it, up to six to a row, joined to it like an org chart, instead of one row as wide as all of them. Each device is drawn under what it hangs from, so a wireless bridge's far end sits under its near end rather than across the diagram
+
 ## [1.4.0] — 2026-10-08
 
 ### Added

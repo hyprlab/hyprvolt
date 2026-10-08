@@ -147,3 +147,25 @@ def test_the_diagram_draws_a_building_a_network_or_the_whole_site(client, h, adm
     page = client.get(f"/p/diagram/network?site={cabin['id']}").data.decode()
     assert '<option value="/p/diagram/network?site=0" >All sites</option>' in page
     assert names(page) == {"cabin-sw", "cabin-pc"}
+
+
+def test_a_switch_with_many_endpoints_has_them_as_a_block_not_one_long_row(client, h, admin):
+    sw = make(client, h, "network_device", name="sw", **{"f.kind": "switch"})
+    fw = make(client, h, "firewall", name="fw")
+    client.post("/network/cables", json={"device_id": fw["id"], "other_device_id": sw["id"]}, headers=h)
+    for n in range(20):
+        pc = make(client, h, "workstation", name=f"pc-{n:02d}")
+        client.post("/network/cables", json={"device_id": pc["id"], "other_device_id": sw["id"]}, headers=h)
+    page = client.get("/p/diagram/network").data.decode()
+    at = {}
+    for box in page.split('class="diagram-node')[1:]:
+        x, y = map(float, re.search(r'translate\(([\d.]+) ([\d.]+)\)', box).groups())
+        at[re.search(r'class="diagram-name"[^>]*>([^<]+)<', box).group(1)] = (x, y)
+    pcs = [at[f"pc-{n:02d}"] for n in range(20)]
+    # Twenty under one switch: four rows of five at most six across, not one row of twenty.
+    assert len({y for _, y in pcs}) == 4 and len({x for x, _ in pcs}) <= 6
+    assert all(y > at["sw"][1] for _, y in pcs)
+    width = float(re.search(r'<svg class="diagram" width="(\d+)"', page).group(1))
+    assert width < 6 * 200
+    # Each joined to the switch like an org chart: straight lines, along its row and down.
+    assert re.search(r'<path d="M[\d.]+,[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+"/>', page)
