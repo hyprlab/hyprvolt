@@ -6,6 +6,9 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Added
+- VPN tunnels between networks: a network of the kind VPN has an Ends section ticking the routers, firewalls or servers it runs between, from its form or the setup guide's new VPN tunnels step after Cables. The network diagram draws each tunnel between its ends as a long-dashed line in the accent, named on it (with more than two ends, from the hub to each), the diagram page offers each tunnel as a choice of its own, and an end's What breaks lists the tunnels it takes down
+
 ### Changed
 - The network diagram stays compact when a switch has many devices plugged in: more than eight endpoints under one device are drawn as a block under it, up to six to a row, joined to it like an org chart, instead of one row as wide as all of them. Each device is drawn under what it hangs from, so a wireless bridge's far end sits under its near end rather than across the diagram
 

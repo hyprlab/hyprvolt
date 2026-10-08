@@ -1,6 +1,6 @@
 """The Network diagram page's choice of what to draw: a site (when there is
 more than one), then within it each building with equipment in it, what is
-in no building, each network (a VLAN, or a subnet on none), or the whole
+in no building, each network (a VLAN, a subnet on none, or a VPN tunnel), or the whole
 site, as a segmented control above the diagram.
 
 A building is its cabled devices; a network, the devices on it: those with
@@ -29,16 +29,25 @@ def _sites() -> list[Entity]:
 
 
 def _networks(scope) -> list[Entity]:
-    """The site's VLANs, and its subnets on no VLAN, by name."""
+    """The site's VLANs, its subnets on no VLAN, and the VPN tunnels with
+    an end in it, by name."""
     rows = Entity.live().filter(Entity.type.in_(("vlan", "subnet"))).order_by(Entity.name).all()
     rows = guide.in_site(rows, scope) if scope is not None else rows
     on_vlan = {d.entity_id for d in NetworkDetail.query.filter(
         NetworkDetail.entity_id.in_([e.id for e in rows if e.type == "subnet"]), NetworkDetail.vlan.isnot(None))}
-    return [e for e in rows if e.id not in on_vlan]
+    vpns = (Entity.live().join(NetworkDetail, NetworkDetail.entity_id == Entity.id)
+            .filter(Entity.type == "network", NetworkDetail.kind == "vpn").order_by(Entity.name).all())
+    here = set(cabling.parts(scope)) if scope is not None else None
+    vpns = [v for v in vpns if network_devices(v) and (here is None or network_devices(v) & here)]
+    return [e for e in rows if e.id not in on_vlan] + vpns
 
 
 def network_devices(segment: Entity) -> set[int]:
-    """The devices on a VLAN or a subnet (and a VLAN's subnets)."""
+    """The devices on a VLAN or a subnet (and a VLAN's subnets), or at the
+    ends of a VPN tunnel."""
+    if segment.type == "network":
+        return {r.target_id for r in Relationship.query.filter(Relationship.kind == "vpn_end",
+                                                               Relationship.source_id == segment.id)}
     ids = {segment.id}
     if segment.type == "vlan":
         ids |= {e.id for e in Entity.live().join(NetworkDetail, NetworkDetail.entity_id == Entity.id)

@@ -299,6 +299,15 @@ SETUP_HELP = {
         "them in the network gear step, next. Choose the VLAN or subnet it puts devices on.",
         "Its password goes on the record's Secrets tab, where it is encrypted, not here.",
     ),
+    "vpns": (
+        "A VPN tunnel joins networks over the internet: two sites, or two buildings that are each a network "
+        "of their own, or a hub that every other site connects to. Add each tunnel once, then tick the "
+        "routers, firewalls or servers at its ends, those recorded in the steps before.",
+        "The network diagram draws the tunnel between its ends, and the tunnel depends on them: an end that "
+        "goes down takes it down, and shows in its What breaks. The tunnel's own addresses, such as "
+        "10.8.0.0/24, are a subnet whose Network is the VPN. A remote-access VPN that only laptops and "
+        "phones join has one end, the server.",
+    ),
     "cables": (
         "A cable connects two devices. A device is cabled as a whole unless its ports are recorded one by one "
         "(Record each port, on its Cabling tab), as a switch or patch panel usually is; then its free ports "
@@ -336,7 +345,8 @@ module = Module(
     types=(
         EntityType("network", "Network", "Networks", detail=NetworkDetail, located_in=None, icon=NETWORK,
                    traits=("supplied",),
-                   fields=(Field("kind", "Kind", "select", options=NETWORK_KINDS, card=True, list=True),),
+                   fields=(Field("kind", "Kind", "select", options=NETWORK_KINDS, card=True, list=True,
+                                 hides=("vpn_ends",), hides_when=("lan", "other", "")),),
                    tabs=(Tab("contents", "VLANs and subnets", views.network_tab, count=views.network_count),)),
         EntityType("vlan", "VLAN", "VLANs", detail=NetworkDetail, located_in=SEGMENT_PLACES, icon=VLAN,
                    named_with="location_id",
@@ -400,11 +410,15 @@ module = Module(
                    FormSection("networks", "Networks", views.networks_form, views.networks_save,
                                when=views.is_carrier_gear, values=views.networks_values,
                                choices=views.networks_choices),
+                   FormSection("vpn_ends", "Ends", views.vpn_ends_form, views.vpn_ends_save,
+                               when=views.is_network, values=views.vpn_ends_values, choices=views.vpn_end_choices,
+                               peek=views.vpn_ends_peek),
                    FormSection("carriers", "Carried by", views.carriers_form, views.carriers_save,
                                when=views.is_segment, values=views.carriers_values, choices=views.carriers_choices)),
     impact_edges=impact.impact_edges,
     derived_links=impact.derived_links,
-    relation_kinds=(RelationKind("broadcast_by", "is broadcast by", "broadcasts", impact="source"),
+    relation_kinds=(RelationKind("vpn_end", "ends at", "is an end of", impact="source"),
+                    RelationKind("broadcast_by", "is broadcast by", "broadcasts", impact="source"),
                     RelationKind("carried_by", "is carried by", "carries", impact="source")),
     before_retype=ports.before_retype,
     setup=(
@@ -454,6 +468,15 @@ module = Module(
                   fields=(SetupField("from", "From", choices=views.setup_ends),
                           SetupField("to", "To", choices=views.setup_ends),
                           SetupField("label", "Label", placeholder="Automatic"))),
+        SetupStep("vpns", "VPN tunnels", "The VPNs that join networks over the internet, between sites or "
+                  "buildings: each tunnel once, with the routers, firewalls or servers at its ends.", 115,
+                  group="Endpoints",
+                  help=SETUP_HELP["vpns"], plan="VPN tunnels",
+                  kinds=(SetupKind("VPN tunnel", "network", {"f.kind": "vpn"}),),
+                  fields=(SetupField("name", placeholder="Main to Annex"), SetupField("location_id"),
+                          SetupField("s.vpn_ends.list", "Ends", kind="multi", newline=True,
+                                     placeholder="No routers, firewalls or servers recorded yet: add them in "
+                                                 "Network gear or Servers and storage."))),
     ),
     seed=demo.seed,
 )

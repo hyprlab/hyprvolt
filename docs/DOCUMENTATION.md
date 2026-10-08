@@ -188,6 +188,17 @@ with two ISPs has a modem for each line, or a router or firewall holding
 one line and a modem the other. A modem in bridge mode has no address on
 your network and can be left without one; its line still comes in there.
 A subnet or VLAN is in a local network or a VPN, never in a line.
+
+A VPN tunnel is a network of the kind VPN. Its Ends section ticks the
+routers, firewalls, gateway modems, servers or NAS it runs between, each a
+link from the tunnel ("ends at") that carries a dependency, so a firewall's
+What breaks lists the tunnels it ends. The network diagram draws a tunnel
+as a long-dashed line in the accent between its ends, named on it, and
+with more than two ends, from the most upstream one (the hub) to each of
+the others; it is no cable, so the Cables step and its tree leave it out.
+The tunnel's own addresses are a subnet whose Network is the VPN. The setup
+guide's VPN tunnels step, after Cables, adds them with their ends, and the
+diagram page offers each one among its networks.
 A network device of the kind Wireless bridge links two places
 over the air: each end is its own record, with its own location and IP
 address, and its Wireless link section names the bridge at the other end, a

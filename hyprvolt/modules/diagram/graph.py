@@ -62,7 +62,7 @@ class Edge:
     vlans: str = ""
     path: str = ""
     mid: tuple = (0, 0)
-    kind: str = ""                   # "internet" (a line coming in), "wireless" (bridges), or a cable
+    kind: str = ""                   # "internet" (a line coming in), "wireless" (bridges), "vpn", or a cable
 
     def title(self, nodes) -> str:
         a, b = nodes[self.a].entity.name, nodes[self.b].entity.name
@@ -70,6 +70,8 @@ class Edge:
             return f"{a} comes in at {b}"
         if self.kind == "wireless":
             return f"{a} to {b}, a wireless link"
+        if self.kind == "vpn":
+            return f"{a} to {b} over the VPN {self.vlans}"
         text = f"{a} {self.ends[0]} to {b} {self.ends[1]}".replace("  ", " ").strip() if self.cabled else f"{a} to {b}"
         if self.via:
             text += " through " + ", ".join(self.via)
@@ -78,6 +80,16 @@ class Edge:
         if self.vlans:
             text += f" ({self.vlans})"
         return text if self.cabled else text + ", linked but no cable recorded"
+
+
+def _lines_in() -> set[int]:
+    from hyprvolt.modules.network.views import line_ids
+    return line_ids()
+
+
+def _role_rank(entity):
+    from hyprvolt.modules.network import ports
+    return ports._rank(ports.group_of(entity))
 
 
 def _live_devices(ids) -> dict[int, Entity]:
@@ -181,6 +193,24 @@ def network(only=None, strict=False) -> tuple[dict[int, Node], list[Edge]]:
         devices.setdefault(a.id, a)
         devices.setdefault(b.id, b)
         edges.append(Edge(a.id, b.id, kind="wireless"))
+    # A VPN tunnel between its ends: each end to the most upstream of them
+    # (the hub), drawn as a line of its own and named on it.
+    ends_of_vpn: dict[int, list[int]] = {}
+    for r in Relationship.query.filter_by(kind="vpn_end"):
+        ends_of_vpn.setdefault(r.source_id, []).append(r.target_id)
+    vpns = _live_devices(set(ends_of_vpn))
+    tips = _live_devices({i for ids in ends_of_vpn.values() for i in ids})
+    lines = _lines_in()
+    for vpn_id, ids in ends_of_vpn.items():
+        vpn, ends = vpns.get(vpn_id), [tips[i] for i in dict.fromkeys(ids) if i in tips]
+        if vpn is None or len(ends) < 2:
+            continue
+        hub = min(ends, key=lambda e: (e.id not in lines, _role_rank(e), e.name.lower()))
+        for e in ends:
+            if e.id != hub.id:
+                devices.setdefault(hub.id, hub)
+                devices.setdefault(e.id, e)
+                edges.append(Edge(hub.id, e.id, kind="vpn", vlans=vpn.name))
     if only is not None and strict:
         only = _joined(only, edges, devices)
     if only is not None:

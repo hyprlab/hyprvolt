@@ -317,6 +317,62 @@ def broadcast_save(wifi, values, user) -> list[dict]:
     return [{"field": "broadcast", "label": "Broadcast by", **changed}] if changed else []
 
 
+# ———— VPN tunnels and the devices at their ends ————
+
+#: What a VPN tunnel can end at: a router or firewall, or a modem that is
+#: the gateway, and a server or NAS running the VPN (WireGuard, OpenVPN).
+VPN_END_KINDS = ("router", "modem")
+
+
+def is_network(etype) -> bool:
+    """A network record; the kind's choice hides its Ends but for a VPN."""
+    return etype.key == "network"
+
+
+def vpn_ends() -> list[Entity]:
+    gateways = db.session.query(HardwareDetail.entity_id).filter(HardwareDetail.kind.in_(VPN_END_KINDS))
+    return (Entity.live().filter(Entity.type.in_(("firewall", "server", "nas"))
+                                 | ((Entity.type == "network_device") & Entity.id.in_(gateways)))
+            .order_by(Entity.name).all())
+
+
+def vpn_end_choices(name) -> list[dict]:
+    """The devices a tunnel can end at, under their kind: Routers, Firewalls, Servers."""
+    groups: dict[str, list] = {}
+    for e in vpn_ends():
+        groups.setdefault(ports.group_of(e), []).append((e.id, e.name))
+    return [{"label": ports.group_label(k), "options": groups[k]} for k in sorted(groups, key=ports._rank)]
+
+
+def _ends(vpn) -> str:
+    return ",".join(str(e.id) for e in relations.linked("vpn_end", vpn, "source")) if vpn is not None else ""
+
+
+def vpn_ends_values(vpn) -> dict:
+    return {"list": _ends(vpn)}
+
+
+def vpn_ends_form(etype, vpn) -> str:
+    return render_template("sheet/multi_section.html", name="s.vpn_ends.list", label="Ends",
+                           choices=vpn_end_choices("list"), value=_ends(vpn),
+                           hint="The routers, firewalls or servers the tunnel runs between: each site's or "
+                                "building's end of it. With more than two, the first upstream is the hub.",
+                           empty="No routers, firewalls or servers recorded yet.")
+
+
+def vpn_ends_save(vpn, values, user) -> list[dict]:
+    """The devices a VPN tunnel ends at, ticked."""
+    if "list" not in values:
+        return []
+    changed = relations.set_linked("vpn_end", vpn, "source", values["list"], vpn_ends(),
+                                   "a router, firewall or server", user)
+    return [{"field": "vpn_ends", "label": "Ends", **changed}] if changed else []
+
+
+def vpn_ends_peek(vpn) -> list[tuple[str, str]]:
+    return [("Ends", ", ".join(e.name for e in relations.linked("vpn_end", vpn, "source")))]
+
+
 # ———— VLANs and subnets, and the gear that carries them ————
 
 #: What can carry a VLAN or a subnet: a firewall, and network gear of a

@@ -169,3 +169,42 @@ def test_a_switch_with_many_endpoints_has_them_as_a_block_not_one_long_row(clien
     assert width < 6 * 200
     # Each joined to the switch like an org chart: straight lines, along its row and down.
     assert re.search(r'<path d="M[\d.]+,[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+"/>', page)
+
+
+def test_a_vpn_tunnel_joins_its_ends(client, h, admin):
+    site = make(client, h, "site", name="Campus")
+    main = make(client, h, "building", name="Main", location_id=site["id"])
+    annex = make(client, h, "building", name="Annex", location_id=site["id"])
+    fw1 = make(client, h, "firewall", name="fw-main", location_id=main["id"])
+    fw2 = make(client, h, "firewall", name="fw-annex", location_id=annex["id"])
+    for fw, place in ((fw1, main), (fw2, annex)):
+        pc = make(client, h, "workstation", name=f"pc-{place['name'].lower()}", location_id=place["id"])
+        client.post("/network/cables", json={"device_id": pc["id"], "other_device_id": fw["id"]}, headers=h)
+    # Added in the setup guide's VPN tunnels step, its ends ticked there.
+    page = client.get(f"/site-setup/vpns?site={site['id']}").data.decode()
+    assert "fw-main" in page.split("data-row-new")[1] and 'name="s.vpn_ends.list"' in page
+    resp = client.post(f"/site-setup/vpns/rows?site={site['id']}", headers=h, json={"values": {
+        "name": "Main to Annex", "location_id": site["id"], "s.vpn_ends.list": f"{fw1['id']},{fw2['id']}"}})
+    assert resp.status_code == 200, resp.get_json()
+    vpn = next(e for e in client.get("/api/entities?type=network").get_json()["entities"] if e["name"] == "Main to Annex")
+    assert client.get(f"/api/entities/{vpn['id']}").get_json()["entity"]["fields"]["kind"] == "vpn"
+    # Its form has Ends, hidden for a local network; each end is linked, and the tunnel depends on it.
+    form = client.get(f"/e/{vpn['id']}/form").data.decode()
+    assert 'data-hides="vpn_ends=lan,other,"' in form and "s.vpn_ends.list" in form
+    rels = client.get(f"/api/entities/{fw1['id']}/relationships").get_json()["relationships"]
+    assert any(r["label"] == "is an end of" and r["other"]["name"] == "Main to Annex" for r in rels)
+    breaks = client.get(f"/api/entities/{fw1['id']}/dependencies?direction=dependents").get_json()
+    assert "Main to Annex" in str(breaks)
+    # Drawn between the ends, named on it, and a choice of its own above the diagram.
+    page = client.get("/p/diagram/network").data.decode()
+    assert 'class="diagram-link diagram-link--vpn"' in page and ">Main to Annex</text>" in page
+    assert "a long-dashed one in the accent is a VPN tunnel" in page
+    assert "<title>fw-annex to fw-main over the VPN Main to Annex</title>" in page or \
+        "<title>fw-main to fw-annex over the VPN Main to Annex</title>" in page
+    seg = page.split('class="seg seg--links"')[1].split("</nav>")[0]
+    assert ">Main to Annex</a>" in seg
+    part = client.get(f"/p/diagram/network?site={site['id']}&part=n{vpn['id']}").data.decode()
+    assert set(re.findall(r'class="diagram-name"[^>]*>([^<]+)<', part)) == {"fw-main", "fw-annex"}
+    # A tunnel is no cable: the cable tree and its parts are each building's own.
+    cables = client.get(f"/site-setup/cables?site={site['id']}&unit=all").data.decode()
+    assert "Main to Annex" not in cables.split("data-row-new")[0]
