@@ -79,7 +79,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.guide-extra` | Above a guide step's rows: another way to fill the step (`SetupStep.extra`) |
 | `.tagchip`, `.tagdot` | A tag, the same in every module; a link where it filters. The dot marks tags in the sidebar |
 | `.shell`, `.sidebar`, `.sidebar-head/-scroll/-foot` | The layout. The head and foot stay pinned; only the middle scrolls. |
-| `.navitem`, `.sidebar-label`, `.sidelist`, `.sidelist--nested`, `.sideitem` | Sidebar rows: a module is a `.navitem`; the open module's types and filters are a nested list under it. `.is-active` adds the wash and an inset accent bar. |
+| `.navitem`, `.sidebar-label`, `.sidelist`, `.sidelist--nested`, `.sideitem` | Sidebar rows: a module is a `.navitem`; the open module's types and filters are a nested list under it. `.is-active` makes it the grey pill (the wash in the dark theme), its text bold, with a short rounded accent bar standing just outside its left edge; the same marks the chosen row in Settings, a record's sections and the setup guide's steps. A scrolling list of them lends its rows 10px of side padding so the bar isn't clipped. |
 | `.topbar`, `.context-title`, `.topbar-actions` | The sticky, blurred bar over the content |
 | `.searchpill`, `.viewswitch`, `.menu`/`.menubtn`/`.menupop`/`.menuopt` | Topbar controls |
 | `.card`, `.row`, `.kicker`, `.kicker-icon`, `.facts`, `.is-archived` | Records as cards or list rows. The row's first cell is the type's icon; `.facts` are a card's key fields; archived and deleted records step back with `.is-archived` |

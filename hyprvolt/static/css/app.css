@@ -245,7 +245,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 /* Head and foot are pinned; only the middle scrolls, so the wordmark and the
    account row never scroll out of reach on a long list. */
 .sidebar-head { display: flex; align-items: center; justify-content: space-between; flex: none; padding: 0 8px 16px; }
-.sidebar-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.sidebar-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -10px; padding: 0 10px; }
 .sidebar-close { display: none; }
 
 .nav-primary { display: flex; flex-direction: column; gap: 2px; }
@@ -257,7 +257,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 }
 .navitem svg { width: 18px; height: 18px; }
 .navitem:hover { color: var(--ink); background: var(--hover); }
-.navitem.is-active { color: var(--ink); font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.navitem.is-active { color: var(--ink); font-weight: 650; background: var(--selected); }
 .navitem .count { margin-left: auto; }
 
 .sidebar-label {
@@ -273,7 +273,17 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   transition: background .15s, color .15s;
 }
 .sideitem:hover { color: var(--ink); background: var(--hover); }
-.sideitem.is-active { color: var(--ink); font-weight: 600; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.sideitem.is-active { color: var(--ink); font-weight: 600; background: var(--selected); }
+/* The chosen row in the sidebar, Settings, a record's sections and the
+   setup guide's steps: the grey pill, with a short rounded accent bar
+   standing just outside its left edge. The scrolling lists lend their rows
+   10px of side padding so the bar isn't clipped. */
+.navitem, .sideitem, .settings-navitem, .guide-step { position: relative; }
+.navitem.is-active::before, .sideitem.is-active::before, .settings-navitem.is-active::before,
+.guide-step.is-active::before {
+  content: ""; position: absolute; left: -4px; top: 20%; bottom: 20%;
+  width: 3px; border-radius: 99px; background: var(--accent);
+}
 .sideitem-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .sidelist-empty { padding: 10px; font-size: 13px; color: var(--faint); }
 .count {
@@ -591,7 +601,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .settings-nav-title { font-size: 17px; font-weight: 750; letter-spacing: -0.02em; }
 .settings-nav-close { display: none; }
 .settings-nav-tabs { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.settings-nav-list { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.settings-nav-list { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -10px; padding: 0 10px; }
 .settings-nav-label {
   margin: 14px 0 6px; padding: 0 10px;
   font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--faint);
@@ -607,7 +617,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .settings-navitem span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .settings-navitem-chev { display: none; }
 .settings-navitem:hover { color: var(--ink); background: var(--hover); }
-.settings-navitem.is-active { color: var(--ink); font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.settings-navitem.is-active { color: var(--ink); font-weight: 650; background: var(--selected); }
 .settings-nav-foot { flex: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .settings-nav-version { padding: 8px 10px 0; font-size: 11.5px; font-weight: 550; color: var(--faint); }
 
@@ -641,7 +651,8 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
   .settings-nav-close, .settings-back { display: inline-flex; }
   .settings-navitem { padding: 12px 10px; color: var(--ink); }
   .settings-navitem-chev { display: block; width: 16px; height: 16px; color: var(--faint); }
-  .settings-navitem.is-active { background: none; box-shadow: none; font-weight: 500; }
+  .settings-navitem.is-active { background: none; font-weight: 500; }
+  .settings-navitem.is-active::before { display: none; }
   .settings-main { display: none; }
   .modal--rail.is-showing-pane .settings-nav { display: none; }
   .modal--rail.is-showing-pane .settings-main { display: flex; animation: pane-in .22s cubic-bezier(.2, .8, .3, 1) both; }
@@ -1051,7 +1062,12 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   }
   .sheet-nav .tab-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sheet-nav .tab:hover { background: var(--hover); }
-  .sheet-nav .tab.is-active { font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+  .sheet-nav .tab { position: relative; }
+  .sheet-nav .tab.is-active { font-weight: 650; background: var(--selected); }
+  .sheet-nav .tab.is-active::before {
+    content: ""; position: absolute; left: -4px; top: 20%; bottom: 20%;
+    width: 3px; border-radius: 99px; background: var(--accent);
+  }
 }
 .sheet-article .kicker { margin-bottom: 14px; }
 .sheet-article .kicker::before {
@@ -1699,7 +1715,7 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
   font-size: 13.5px; font-weight: 500; color: var(--muted); transition: background .15s, color .15s;
 }
 .guide-step:hover { color: var(--ink); background: var(--hover); }
-.guide-step.is-active { color: var(--ink); font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.guide-step.is-active { color: var(--ink); font-weight: 650; background: var(--selected); }
 .guide-num {
   display: inline-flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px;
   border-radius: 50%; border: 1px solid var(--line-strong); font-size: 11.5px; font-weight: 650; color: var(--muted);
