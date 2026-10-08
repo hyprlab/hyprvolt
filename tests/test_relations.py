@@ -188,3 +188,21 @@ def test_a_branch_of_the_diagram_folds_away_and_opens_again(client, h, admin):
     again = client.get(f"/e/{srv['id']}/sheet?tab=relationships&fold=D:{hv['id']},nonsense").data.decode()
     assert ">+2</text>" in again
     assert ">web</text>" in client.get(f"/e/{srv['id']}/depmap?fold=").data.decode()
+
+
+def test_many_dependents_are_drawn_as_a_block_not_one_long_row(client, h, admin):
+    sw = make(client, h, "network_device", name="sw", **{"f.kind": "switch"})
+    for n in range(20):
+        pc = make(client, h, "workstation", name=f"pc-{n:02d}")
+        client.post("/network/cables", json={"device_id": pc["id"], "other_device_id": sw["id"]}, headers=h)
+    page = client.get(f"/e/{sw['id']}/depmap").data.decode()
+    at = {}
+    for box in page.split('class="diagram-node')[1:]:
+        x, y = map(float, re.search(r'translate\(([\d.]+) ([\d.]+)\)', box).groups())
+        at[re.search(r'class="diagram-name"[^>]*>([^<]+)<', box).group(1)] = (x, y)
+    pcs = [at[f"pc-{n:02d}"] for n in range(20)]
+    # Twenty plugged in: four rows of five, not one row of twenty; each joined along its row.
+    assert len({y for _, y in pcs}) == 4 and len({x for x, _ in pcs}) == 5
+    assert all(y > at["sw"][1] for _, y in pcs)
+    assert re.search(r'd="M[\d.]+,[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+"', page)
+    assert page.count(">has plugged in</text>") == 20

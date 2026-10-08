@@ -670,7 +670,7 @@ it): choosing it, or Enter on it, folds the branch away and draws the rest
 again closer together, with a +N in its place saying how many records it
 hides, and choosing that shows them again. Collapse all, beside the zoom
 buttons, folds everything past the records next to this one, and Expand all
-opens it all again. The folds last while the record is open, through edits
+opens it all again. A record with more than eight dependents that have none of their own (a switch's endpoints) has them as a block under it, up to six to a row, joined like an org chart, so the diagram stays narrow. The folds last while the record is open, through edits
 to it, and it opens unfolded next time. The choice is remembered in the browser.
 
 Every diagram (this one, the Neighborhood tab and the network diagram)

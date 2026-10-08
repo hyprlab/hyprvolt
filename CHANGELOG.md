@@ -11,7 +11,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ### Changed
 - The choice of building and network above the network diagram, and of building in the setup guide's Cables step, stays on one line when it doesn't fit: it scrolls sideways, with a mouse wheel or a swipe, and fades at an edge while there is more that way, opening with the chosen one in view
-- The network diagram stays compact when a switch has many devices plugged in: more than eight endpoints under one device are drawn as a block under it, up to six to a row, joined to it like an org chart, instead of one row as wide as all of them. Each device is drawn under what it hangs from, so a wireless bridge's far end sits under its near end rather than across the diagram
+- The network diagram, and the dependency diagram in a record's Relationships tab, stay compact when a switch has many devices plugged in: more than eight endpoints under one device are drawn as a block under it, up to six to a row, joined to it like an org chart, instead of one row as wide as all of them (in the dependency diagram, more than eight of what breaks with it that have nothing of their own). In the network diagram each device is drawn under what it hangs from, so a wireless bridge's far end sits under its near end rather than across the diagram
 
 ## [1.4.0] — 2026-10-08
 
