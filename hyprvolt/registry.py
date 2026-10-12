@@ -47,6 +47,9 @@ CORE_FIELDS = {"id", "name", "slug", "status", "location", "location_id", "tags"
 
 EXTENSION = "hyprvolt.registry"
 SETTING = "module:{}:enabled"
+#: The sidebar's Tags, among its groups in the saved order (no module's
+#: group can be named so: a group name is shown, this one never is).
+TAGS_GROUP = "@tags"
 
 
 class ManifestError(Exception):
@@ -79,13 +82,26 @@ class Registry:
         for m in sorted(self.modules.values(), key=lambda m: m.order):
             default.setdefault(m.group, len(default))
 
-        def group_rank(group):
-            return (0, saved_groups.index(group)) if group in saved_groups else (1, default.get(group, 0))
-
         def rank(m):
             own = (0, saved_modules.index(m.id)) if m.id in saved_modules else (1, m.order, m.name)
-            return (group_rank(m.group), own)
+            return (self._group_rank(m.group, saved_groups, default), own)
         return sorted(modules, key=rank)
+
+    def _group_rank(self, group, saved_groups, default):
+        if group in saved_groups:
+            return (0, saved_groups.index(group))
+        return (1, len(default) if group == TAGS_GROUP else default.get(group, 0))
+
+    def tags_at(self, labels: list[str]) -> int:
+        """Where the sidebar's Tags go among its groups (``labels``, in their
+        order): as many groups come before them. Last until an admin moves
+        them in Settings > Modules, saved among the groups as TAGS_GROUP."""
+        saved_groups, _ = self.saved_order()
+        default = {}
+        for m in sorted(self.modules.values(), key=lambda m: m.order):
+            default.setdefault(m.group, len(default))
+        tags = self._group_rank(TAGS_GROUP, saved_groups, default)
+        return sum(1 for label in labels if self._group_rank(label, saved_groups, default) < tags)
 
     def saved_order(self) -> tuple[list[str], list[str]]:
         """The sidebar's groups and modules as an admin ordered them, read

@@ -811,6 +811,7 @@ body.is-sorting { cursor: grabbing; user-select: none; }
 .sort-group + .sort-group { margin-top: 18px; }
 .sort-group-head { display: flex; align-items: center; gap: 6px; margin: 0 0 4px -6px; }
 .sort-group-head .setting-label { margin: 0; }
+.sort-group-note { margin: 0 0 0 30px; }
 .modules-list .manage-item { gap: 10px; }
 .modules-list .sort-handle { margin-left: -6px; }
 .sort-reset { margin-top: 14px; }

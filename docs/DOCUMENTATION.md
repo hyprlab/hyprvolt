@@ -85,8 +85,9 @@ in the database until it is turned back on. A module that needs another is
 off while that one is: Hardware needs Locations, and Virtual and Network
 need Hardware. The knowledge base and Secrets are built in, and stay on.
 
-An admin also sets the sidebar's order there: drag a group, or a module
-within its group, by its handle, or focus the handle and use ↑ and ↓. The
+An admin also sets the sidebar's order there: drag a group, the tags, or a
+module within its group, by its handle, or focus the handle and use ↑ and
+↓. The tags move among the groups as one, and are last until moved. The
 order is saved as it changes, for every account, and Put the default order
 back undoes it. A record's sections from other modules follow the same
 order.

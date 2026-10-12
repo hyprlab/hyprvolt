@@ -75,6 +75,7 @@ def context(active_module=None, active_type=None, active_filter=None, active_tag
         "nav_total": sum(counts.get(k, 0) for k in keys),
         "nav_deleted": deleted,
         "nav_tags": tag_counts(keys),
+        "nav_tags_at": reg.tags_at([g["label"] for g in groups]),
         "nav_special": special,
         "active_tag": active_tag,
         "new_menu": new_menu(),

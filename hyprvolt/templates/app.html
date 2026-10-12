@@ -526,10 +526,21 @@
     {% if current_user.is_admin %}
     <section class="settings-pane" data-pane="modules" id="settings-modules" role="tabpanel" aria-labelledby="settings-tab-modules" tabindex="0">
       <p class="hint">A module that is turned off disappears from the sidebar, search, the dashboard and every record's tabs. Its records stay in the database and come back when it is turned on again.</p>
-      <p class="hint" id="sort-hint">Drag a group or a module by its handle to change the sidebar's order, or focus the handle and use ↑ and ↓. Modules move within their group.</p>
+      <p class="hint" id="sort-hint">Drag a group, the tags or a module by its handle to change the sidebar's order, or focus the handle and use ↑ and ↓. Modules move within their group.</p>
       {% set grip %}<svg viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"/></svg>{% endset %}
+      {# The tags are a group of their own, moved like the others. #}
+      {% set tags_item %}
+        <section class="sort-group" data-sort-item data-group="@tags">
+          <div class="sort-group-head">
+            <button type="button" class="iconbtn iconbtn--sm sort-handle" aria-label="Move the Tags group" aria-describedby="sort-hint">{{ grip }}</button>
+            <p class="setting-label">Tags</p>
+          </div>
+          <p class="hint sort-group-note">Every tag in use, each with how many records have it.</p>
+        </section>
+      {% endset %}
       <div class="sort-groups" data-sortable data-sidebar-order>
         {% for group in admin_module_groups %}
+        {% if loop.index0 == admin_tags_at %}{{ tags_item }}{% endif %}
         <section class="sort-group" data-sort-item data-group="{{ group.label }}">
           <div class="sort-group-head">
             <button type="button" class="iconbtn iconbtn--sm sort-handle" aria-label="Move the {{ group.label }} group" aria-describedby="sort-hint">{{ grip }}</button>
@@ -557,6 +568,7 @@
           </ul>
         </section>
         {% endfor %}
+        {% if admin_tags_at >= admin_module_groups|length %}{{ tags_item }}{% endif %}
       </div>
       <button type="button" class="btn btn--xs btn--ghost sort-reset" id="sidebar-order-reset" {% if not admin_order_custom %}hidden{% endif %}>Put the default order back</button>
       {% if admin_module_errors %}

@@ -28,6 +28,7 @@ from .core.api import like
 from .core.models import Entity, Tag
 from .models import User, db, get_setting, int_setting, set_setting
 from .permissions import ROLES, public, role
+from .registry import TAGS_GROUP
 from .registry import current as registry
 
 bp = Blueprint("main", __name__)
@@ -295,6 +296,7 @@ def _modules_context() -> dict:
         fields.setdefault(cf.entity_type, []).append(cf)
     saved_groups, saved_modules = reg.saved_order()
     return {"admin_modules": modules, "admin_module_groups": groups,
+            "admin_tags_at": reg.tags_at([g["label"] for g in groups]),
             "admin_order_custom": bool(saved_groups or saved_modules),
             "admin_module_errors": sorted(reg.errors.items()),
             "admin_custom_fields": fields, "custom_kind_labels": CUSTOM_KIND_LABELS}
@@ -601,8 +603,9 @@ def admin_module(module_id):
 @bp.route("/admin/sidebar-order", methods=["POST"])
 @role("admin")
 def admin_sidebar_order():
-    """The sidebar's order: its groups, and the modules within each, as an
-    admin arranged them in Settings > Modules. ``reset`` goes back to the
+    """The sidebar's order: its groups (the Tags among them, as
+    TAGS_GROUP), and the modules within each, as an admin arranged them in
+    Settings > Modules. ``reset`` goes back to the
     modules' own order."""
     import json
     from .models import Setting
@@ -613,7 +616,7 @@ def admin_sidebar_order():
         db.session.commit()
         return jsonify(ok=True)
     groups, modules = data.get("groups"), data.get("modules")
-    known_groups = {m.group for m in reg.modules.values()}
+    known_groups = {m.group for m in reg.modules.values()} | {TAGS_GROUP}
     if (not isinstance(groups, list) or not isinstance(modules, list)
             or not all(isinstance(x, str) for x in groups + modules)
             or len(set(groups)) != len(groups) or len(set(modules)) != len(modules)
