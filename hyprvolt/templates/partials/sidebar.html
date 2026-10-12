@@ -1,7 +1,22 @@
 {# The sidebar's scrolling middle: the dashboard, all records and the site
    setup guide, every module with its live count (the open one lists its
-   types and filters), then the tags. #}
+   types and filters), and the tags: a group of their own, last unless an
+   admin moved them (nav_tags_at, Settings > Modules). #}
 {% from "partials/macros.html" import type_icon %}
+{% macro tags_group() %}
+{% if nav_tags %}
+<div class="sidebar-group" data-group="@tags">
+<div class="sidebar-label"><span>Tags</span></div>
+<ul class="sidelist">
+  {% for name, count in nav_tags %}
+  <li><a class="sideitem {{ 'is-active' if active_tag and active_tag|lower == name|lower }}"
+         href="{{ url_for('main.module_list', module_id=module.id, tag=name) if module else url_for('main.all_records', tag=name) }}">
+    <span class="tagdot" aria-hidden="true"></span><span class="sideitem-title">{{ name }}</span><span class="count">{{ count }}</span></a></li>
+  {% endfor %}
+</ul>
+</div>
+{% endif %}
+{% endmacro %}
 <nav class="nav-primary" aria-label="Sections">
   <a class="navitem {{ 'is-active' if nav_special == 'dashboard' }}" href="{{ url_for('main.index') }}">
     <svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="8" rx="1.5"/><rect x="13" y="4" width="7" height="5" rx="1.5"/><rect x="13" y="11" width="7" height="9" rx="1.5"/><rect x="4" y="14" width="7" height="6" rx="1.5"/></svg>
@@ -29,6 +44,7 @@
 </nav>
 
 {% for group in nav_groups %}
+{% if loop.index0 == nav_tags_at %}{{ tags_group() }}{% endif %}
 <div class="sidebar-group" data-group="{{ group.label }}">
 <div class="sidebar-label"><span>{{ group.label }}</span></div>
 <nav class="nav-primary" aria-label="{{ group.label }}">
@@ -65,13 +81,4 @@
 </div>
 {% endfor %}
 
-{% if nav_tags %}
-<div class="sidebar-label"><span>Tags</span></div>
-<ul class="sidelist">
-  {% for name, count in nav_tags %}
-  <li><a class="sideitem {{ 'is-active' if active_tag and active_tag|lower == name|lower }}"
-         href="{{ url_for('main.module_list', module_id=module.id, tag=name) if module else url_for('main.all_records', tag=name) }}">
-    <span class="tagdot" aria-hidden="true"></span><span class="sideitem-title">{{ name }}</span><span class="count">{{ count }}</span></a></li>
-  {% endfor %}
-</ul>
-{% endif %}
+{% if nav_tags_at >= nav_groups|length %}{{ tags_group() }}{% endif %}

@@ -112,3 +112,21 @@ def test_an_admin_reorders_the_sidebar(client, h, admin, editor):
     # Reset puts the modules' own order back.
     client.post("/admin/sidebar-order", json={"reset": True}, headers=h)
     assert _sidebar(client.get("/").data.decode()) == (groups, modules)
+
+
+def test_the_tags_move_among_the_sidebar_groups(client, h, admin):
+    make(client, h, name="pve1", tags="lab")
+    groups, _ = _sidebar(client.get("/").data.decode())
+    assert groups[-1] == "@tags" and len(groups) > 2             # last until moved
+    new_groups = ["@tags"] + groups[:-1]
+    assert client.post("/admin/sidebar-order", json={"groups": new_groups, "modules": []}, headers=h).status_code == 200
+    page = client.get("/").data.decode()
+    assert _sidebar(page)[0] == new_groups
+    settings = page.split("data-sidebar-order")[1].split("sidebar-order-reset")[0]
+    assert settings.index('data-group="@tags"') < settings.index(f'data-group="{groups[0]}"')
+    # Between two groups, and an order saved before the tags could move keeps them last.
+    middle = groups[:1] + ["@tags"] + groups[1:-1]
+    client.post("/admin/sidebar-order", json={"groups": middle, "modules": []}, headers=h)
+    assert _sidebar(client.get("/").data.decode())[0] == middle
+    client.post("/admin/sidebar-order", json={"groups": groups[:-1][::-1], "modules": []}, headers=h)
+    assert _sidebar(client.get("/").data.decode())[0] == groups[:-1][::-1] + ["@tags"]
