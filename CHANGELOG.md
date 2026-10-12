@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.6.0-beta.1] — 2026-10-12
+## [1.6.0-beta.2] — 2026-10-12
 
 ### Added
 - The sidebar's Tags can be moved among its groups in Settings > Modules, dragged by their handle like a group (or moved with ↑ and ↓), for every account; they stay last until moved
