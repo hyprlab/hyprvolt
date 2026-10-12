@@ -9,6 +9,24 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## [1.4.0-beta.14] — 2026-10-07
 
 ### Added
+- Documents can be cross-linked from a list: Choose documents in a document's Linked from tab lists every other document with a filter over it, and those ticked are linked both ways, shown in each one's Linked from tab above the documents that link to it in their text
+- Typing [[ in a document's body or a record's notes lists every document under the cursor, narrowed as a name is typed; Enter, Tab or a click writes the link as [[its-slug]]. Link a document, beside the text while it is edited, opens the same list
+- Add links in a record's Relationships tab takes several records at once: each one picked (type, then Enter) becomes a chip, Link makes them all with the same kind and note, and the form stays open with the kind kept for the next batch
+
+## [1.5.0] — 2026-10-08
+
+### Added
+- VPN tunnels between networks: a network of the kind VPN has an Ends section ticking the routers, firewalls or servers it runs between, from its form or the setup guide's new VPN tunnels step after Cables. The network diagram draws each tunnel between its ends as a long-dashed line in the accent, named on it (with more than two ends, from the hub to each), the diagram page offers each tunnel as a choice of its own, and an end's What breaks lists the tunnels it takes down
+
+### Changed
+- The chosen row in the sidebar, Settings, a record's sections and the setup guide's steps is a grey pill with bold text and a short rounded accent bar just outside its left edge, as in the other apps of the family, instead of a bar inside the pill
+- The choice of building and network above the network diagram, and of building in the setup guide's Cables step, stays on one line when it doesn't fit: it scrolls sideways, with a mouse wheel or a swipe, and fades at an edge while there is more that way, opening with the chosen one in view
+- The network diagram, and the dependency diagram in a record's Relationships tab, stay compact when a switch has many devices plugged in: more than eight endpoints under one device are drawn as a block under it, up to six to a row, joined to it like an org chart, instead of one row as wide as all of them (in the dependency diagram, more than eight of what breaks with it that have nothing of their own). In the network diagram each device is drawn under what it hangs from, so a wireless bridge's far end sits under its near end rather than across the diagram
+
+## [1.4.0] — 2026-10-08
+
+### Added
+- The Network diagram page has a choice above the diagram of what to draw: each building with equipment in it, each network (a VLAN, or a subnet on no VLAN), or the whole site, and a Site choice when equipment is in more than one site. A building is drawn with what it is cabled to beyond it; a network with its own devices and those on the way between them
 - The setup guide's Cables step lists the cables as a tree from where the internet comes in: under the modem (or the device a line comes in at) its cables, then under the router or firewall its cables, then each switch and patch panel further in, each level indented a step, network gear before the endpoints beside it, and with two lines each its own top
 - Resting the pointer on a record in a diagram (the network diagram, the Neighborhood tab and the dependency diagram), or moving the keyboard focus to it, shows a card of what it is: its kind and status, where it is, its fields with something in them, its IP addresses, supplier and internet line, its tags and the start of its notes
 - Where the internet comes in is the modem, router or firewall the line plugs into: its Internet line section (Not here or Comes in here) holds the line's circuit ID, its download and upload speeds (each a number with Mb/s or Gb/s chosen beside it), and a Dynamic or Static choice for its IP address, Static showing the line's static IP, its subnet (typed like a subnet's range, with the mask chosen beside it, filling in the gateway), gateway and DNS servers. The ISP is the device's Supplier, with the contract for the line, so its support number is a click away. In the setup guide, the Internet connection step adds each ISP and its modem in one row, with the provider, speeds and addresses; the modem is network gear too, so it is also in the Network gear step, where a router or firewall's line can be switched on as well, and a change in either step shows in the other. The network diagram draws that device first, marked Internet comes in, and a site with two lines has both side by side in the top row; What breaks counts from it. A site with two ISPs has a modem for each, or a router or firewall holding one line and a modem the other

@@ -1,6 +1,33 @@
-{# The documents that link to this one with [[its-slug]]. #}
+{# The documents cross-linked with this one ("see also", ticked from a list
+   of every document), then the others that link to it with [[its-slug]]. #}
 {% from "partials/macros.html" import entity_link %}
+{% from "sheet/controls.html" import multi %}
+{% if linked %}
+<p class="setting-label">Cross-linked <span class="count">{{ linked|length }}</span></p>
+<ul class="manage-list">
+  {% for d in linked %}
+  <li class="manage-item">
+    <div class="manage-meta">
+      <span class="manage-title">{{ entity_link(d.view.id, d.view.name) }}</span>
+      {% if d.excerpt %}<span class="manage-sub">{{ d.excerpt }}</span>{% endif %}
+    </div>
+    {% if editable %}
+    {% set rest = value.split(',')|reject('equalto', d.view.id|string)|join(',') %}
+    <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/documents/{{ doc.id }}/links"
+            data-body='{{ {"ids": rest}|tojson }}'
+            data-then="sheet" data-done="Cross-link removed" aria-label="Remove this cross-link" title="Remove this cross-link"
+            data-confirm="Remove this cross-link?" data-confirm-go="Remove link"
+            data-confirm-text="{{ doc.name }} and {{ d.view.name }} will no longer be linked. Both documents stay.">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
 {% if rows %}
+<p class="setting-label{{ ' setting-label--spaced' if linked }}">Links here in its text</p>
 <ul class="manage-list">
   {% for d in rows %}
   <li class="manage-item"><div class="manage-meta">
@@ -9,6 +36,34 @@
   </div></li>
   {% endfor %}
 </ul>
-{% else %}
-<p class="hint">No other document links here yet. A link is written as <code>[[{{ doc.slug }}]]</code>.</p>
+{% endif %}
+
+{% if not linked and not rows %}
+<p class="hint">No other document links here yet.{% if editable %} Choose documents to cross-link with it, or link to it in a document's text with <code>[[{{ doc.slug }}]]</code>.{% else %} A link is written in a document's text as <code>[[{{ doc.slug }}]]</code>.{% endif %}</p>
+{% endif %}
+
+{% if editable %}
+{# Folded behind Choose documents; every document is ticked or not, and
+   Save makes the ticked ones the cross-links (data-filter-checks narrows
+   the list as a name is typed). #}
+<button type="button" class="btn btn--ghost linkform-open" data-show="doclinks-{{ doc.id }}">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Choose documents</button>
+<form class="pickform" id="doclinks-{{ doc.id }}" hidden data-api="/documents/{{ doc.id }}/links" data-then="sheet" data-done="Cross-links saved">
+  {% if choices %}
+  <div class="field"><span class="recpick">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+    <input type="search" data-filter-checks placeholder="Filter by name" autocomplete="off" spellcheck="false"
+           aria-label="Filter the documents by name">
+  </span></div>
+  {% endif %}
+  {{ multi("ids", value, choices, label="Documents cross-linked with " ~ doc.name,
+           empty="No other documents yet: write one, then link it here.") }}
+  <p class="hint" data-filter-none hidden>No document matches.</p>
+  <p class="hint">Each one ticked shows here and on the other document as well. A document that links here in its text is listed either way.</p>
+  <div class="linkform-actions">
+    <button class="btn btn--ghost" type="button" data-hide="doclinks-{{ doc.id }}">Cancel</button>
+    {% if choices %}<button class="btn btn--primary" type="submit">Save</button>{% endif %}
+  </div>
+  <p class="form-error" hidden></p>
+</form>
 {% endif %}

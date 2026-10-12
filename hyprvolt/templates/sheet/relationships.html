@@ -46,24 +46,27 @@
 {% endif %}
 
 {% if current_user.can_edit %}
-{# Folded behind Add link until it is wanted; Cancel folds it again. #}
+{# Folded behind Add link until it is wanted; Cancel folds it again. Each
+   record chosen joins the chips under the fields, so one kind of link goes
+   to several at once, and the form stays open for the next (data-keep-open). #}
 <button type="button" class="btn btn--ghost linkform-open" data-show="linkform-{{ entity.id }}">
-  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add link</button>
-<form class="linkform" id="linkform-{{ entity.id }}" hidden data-api="/api/relationships" data-then="sheet" data-done="Linked">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add links</button>
+<form class="linkform" id="linkform-{{ entity.id }}" hidden data-api="/api/relationships" data-then="sheet" data-done="Linked" data-keep-open>
   <input type="hidden" name="entity_id" value="{{ entity.id }}">
   <input type="hidden" name="direction" value="out">
   <input type="hidden" name="other_id" value="">
   <label class="field"><span class="field-label">This record</span>
     <select name="kind">{% for value, label in kinds %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
   </label>
-  <label class="field"><span class="field-label">Record</span>
-    {{ record_pick(exclude=entity.id) }}
+  <label class="field"><span class="field-label">Records</span>
+    {{ record_pick(exclude=entity.id, many=true) }}
   </label>
   <label class="field linkform-note"><span class="field-label">Note</span><input name="note" maxlength="300" placeholder="Optional"></label>
   <div class="linkform-actions">
-    <button class="btn btn--ghost" type="button" data-hide="linkform-{{ entity.id }}">Cancel</button>
+    <button class="btn btn--ghost" type="button" data-hide="linkform-{{ entity.id }}">Done</button>
     <button class="btn btn--primary" type="submit">Link</button>
   </div>
+  <div class="pick-chips" data-pick-chips aria-live="polite" hidden></div>
   <p class="form-error" hidden></p>
 </form>
 {% endif %}

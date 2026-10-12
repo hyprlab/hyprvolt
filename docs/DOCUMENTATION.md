@@ -188,6 +188,17 @@ with two ISPs has a modem for each line, or a router or firewall holding
 one line and a modem the other. A modem in bridge mode has no address on
 your network and can be left without one; its line still comes in there.
 A subnet or VLAN is in a local network or a VPN, never in a line.
+
+A VPN tunnel is a network of the kind VPN. Its Ends section ticks the
+routers, firewalls, gateway modems, servers or NAS it runs between, each a
+link from the tunnel ("ends at") that carries a dependency, so a firewall's
+What breaks lists the tunnels it ends. The network diagram draws a tunnel
+as a long-dashed line in the accent between its ends, named on it, and
+with more than two ends, from the most upstream one (the hub) to each of
+the others; it is no cable, so the Cables step and its tree leave it out.
+The tunnel's own addresses are a subnet whose Network is the VPN. The setup
+guide's VPN tunnels step, after Cables, adds them with their ends, and the
+diagram page offers each one among its networks.
 A network device of the kind Wireless bridge links two places
 over the air: each end is its own record, with its own location and IP
 address, and its Wireless link section names the bridge at the other end, a
@@ -290,9 +301,23 @@ Diagram draws the network from its cables: every device with a cable to
 another, the cables traced through patch panels and over pairs of MoCA
 adapters (which are named on the link rather than drawn), in tiers from the internet side: modems, then
 routers and firewalls, then outward. A "connected to" link between two
-devices with no cable recorded is drawn dashed. Hovering a link shows its
-ports and VLANs; choosing a device opens it. Every record with links or
-cables also has a Neighborhood tab, drawing what it is linked to on the
+devices with no cable recorded is drawn dashed. Each device is drawn under
+what it hangs from; a device with more than eight endpoints plugged into it
+(devices with nothing further down) has them as a block under it, up to six
+to a row, joined to it like an org chart, so a flat network stays narrow
+enough to read without zooming. Hovering a link shows its
+ports and VLANs; choosing a device opens it. Above it, a site with more
+than one place or network chooses what to draw: each building with
+equipment in it (and Not in a building, for what sits in the site itself),
+each network (each VLAN, and each subnet on no VLAN), or Whole site, the
+first drawing. A building is drawn with what its devices are cabled to one
+step beyond, so a link to another building's switch shows; a network with
+its own devices (those with an address in it, the gear that carries it,
+those with a port set to the VLAN, and the access points broadcasting it)
+and the devices on the way between them and the most upstream of them.
+With equipment in more than one site, a Site choice comes first, All sites
+drawing everything. Every record with links or cables also has a
+Neighborhood tab, drawing what it is linked to on the
 left (and cabled to) and what is linked to it on the right. Diagram needs
 Network.
 
@@ -339,7 +364,11 @@ Documents are Markdown pages: runbooks, how-tos, manuals. A document can
 stand alone, be attached to records (their Documents tab), and link to any
 record by writing its slug in double brackets, `[[pve1]]` or `[[pve1|the
 main host]]`. A link to a slug that matches nothing is struck through, so a
-broken link shows.
+broken link shows. Typing `[[` in a document's body or a record's notes lists every
+document under the cursor, narrowed by what is typed after the brackets
+(a name or a slug); Enter, Tab or a click writes `[[its-slug]]`, and Escape
+leaves the text as typed. Link a document, beside the text while it is
+edited, types the brackets and opens the same list.
 
 - **Headings** keep their levels: `#` and `##` are sections, `###` and
   below subsections. Each heading gets an anchor, `h-` and its words (a
@@ -357,8 +386,14 @@ to the pages before and after it. The sidebar's Top-level pages filter
 hides the pages, leaving the documents they belong to. Pages nest eight deep
 at most, and a document can't be a page of itself or of one of its pages.
 
-A document's Linked from tab lists the documents that link to it; another
-record's Documents tab lists those that mention it.
+A document's Linked from tab lists the documents cross-linked with it, then
+those that link to it in their text; another record's Documents tab lists
+those that mention it. Choose documents, under the lists, opens every other
+document as a list of boxes with a filter over it: those ticked are
+cross-linked when saved, and those unticked no longer are. A cross-link
+reads the same from both documents, shows in each one's Linked from tab, and
+is a "see also" link in Relationships too. Undo puts the previous choice
+back.
 
 Search reads attached files too: a text file (notes, configs, scripts, CSV,
 JSON, logs) or a PDF is read when it is uploaded, and its words find the
@@ -630,8 +665,12 @@ so its cable makes it need nothing. None of this is stored: it follows the
 cables as they are, and a link that says the same is shown once. The tab
 lists the devices a device is cabled to under Cabled to, read-only, with the
 ports, any patch panels and the cable labels; the cable is changed in the
-Cabling tab. The form for a new link opens from Add link. It
-opens as a drawing, and List and Diagram switch between that and two nested
+Cabling tab. The form for new links opens from Add links: choose the kind
+of link, then type a record's name and press Enter (or click it) for each
+record, as many as needed; each becomes a chip under the form, its × or
+Backspace in the empty field taking it out. Link makes them all, with the
+same kind and note, and the form stays open with the kind kept for the next
+batch until Done. The dependency view opens as a drawing, and List and Diagram switch between that and two nested
 lists. In the drawing, the record sits in the middle, what it needs above
 it and what breaks below it, a row for each step further away. A dashed
 line through the record divides the two, What it needs named just above it
@@ -645,7 +684,7 @@ it): choosing it, or Enter on it, folds the branch away and draws the rest
 again closer together, with a +N in its place saying how many records it
 hides, and choosing that shows them again. Collapse all, beside the zoom
 buttons, folds everything past the records next to this one, and Expand all
-opens it all again. The folds last while the record is open, through edits
+opens it all again. A record with more than eight dependents that have none of their own (a switch's endpoints) has them as a block under it, up to six to a row, joined like an org chart, so the diagram stays narrow. The folds last while the record is open, through edits
 to it, and it opens unfolded next time. The choice is remembered in the browser.
 
 Every diagram (this one, the Neighborhood tab and the network diagram)

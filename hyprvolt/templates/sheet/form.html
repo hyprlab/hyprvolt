@@ -96,7 +96,7 @@
   <div data-step="Notes">
   <div class="field form-notes">
     {{ head('ef-notes', 'Notes', 'Anything else worth knowing, written in Markdown. Link to another record by writing its slug in double brackets: [[its-slug]].') }}
-    <textarea id="ef-notes" name="notes" rows="4" placeholder="Markdown. Link to a record with [[its-slug]]." aria-describedby="ef-notes-help">{{ entity.notes if entity else '' }}</textarea>
+    <textarea id="ef-notes" name="notes" rows="4" placeholder="Markdown. Link to a record with [[its-slug]]; [[ lists the documents." data-md-links aria-describedby="ef-notes-help">{{ entity.notes if entity else '' }}</textarea>
   </div>
   </div>
   {% if entity %}

@@ -1,13 +1,21 @@
 """The Documents tab every record has: the documents attached to it, and
 the ones that mention it with [[its-slug]]. And a document's pages: its
 path, the pages under it, the pages either side, and what links to it."""
-from flask import render_template
+from flask import Blueprint, abort, jsonify, render_template, request
+from flask_login import current_user
+from sqlalchemy import func
 
-from hyprvolt.core import access, present, records
+from hyprvolt.core import access, present, records, relations
 from hyprvolt.core.fields import Invalid
 from hyprvolt.core.markdown import excerpt
 from hyprvolt.core.models import Entity, Relationship
 from hyprvolt.models import db
+from hyprvolt.permissions import role
+
+bp = Blueprint("documents", __name__)
+
+#: Two documents cross-linked: "see also", the same from both ends.
+SEE_ALSO = "see_also"
 
 #: How deep pages may nest: a manual, its chapters, their sections...
 MAX_DEPTH = 8
@@ -123,10 +131,116 @@ def page_overview(entity: Entity) -> tuple[str, str]:
 
 # ———— Linked from ————
 
+def _cross_rels(doc: Entity) -> list[Relationship]:
+    return Relationship.query.filter(Relationship.kind == SEE_ALSO,
+                                     (Relationship.source_id == doc.id) | (Relationship.target_id == doc.id)).all()
+
+
+def _other_end(rel, doc) -> int:
+    return rel.target_id if rel.source_id == doc.id else rel.source_id
+
+
+def cross_linked(doc: Entity) -> list[Entity]:
+    """The documents cross-linked with this one, whichever end it was linked
+    from, those the reader may see, by name."""
+    found = {}
+    for rel in _cross_rels(doc):
+        other = records.live(_other_end(rel, doc))
+        if other is not None and other.type == "document":
+            found[other.id] = other
+    return sorted(found.values(), key=lambda e: e.name.lower())
+
+
+def _documents(doc: Entity) -> list[Entity]:
+    """Every other document the reader may see, by name."""
+    return (Entity.live().filter(Entity.type == "document", Entity.id != doc.id)
+            .order_by(func.lower(Entity.name)).all())
+
+
+def link_choices(doc: Entity) -> list[tuple[int, str]]:
+    """Every other document to tick, a page named with what it is a page of."""
+    docs = _documents(doc)
+    names = {e.id: e.name for e in docs} | {doc.id: doc.name}
+    out = []
+    for e in docs:
+        d = _body(e.id)
+        parent = names.get(d.parent) if d is not None and d.parent else None
+        out.append((e.id, f"{e.name} · {parent}" if parent else e.name))
+    return out
+
+
+def set_cross_links(doc: Entity, raw, user=None) -> list[int]:
+    """Make the documents ticked (``raw``, ids) the ones cross-linked with
+    ``doc``: one no longer ticked is unlinked, one newly ticked linked. A
+    link to a document out of sight (deleted, restricted) is left alone.
+    Returns the ids linked before, for Undo."""
+    offered = {e.id: e for e in _documents(doc)}
+    wanted = []
+    for i in relations.chosen_ids(raw):
+        if i not in offered:
+            raise Invalid("Choose documents that exist.")
+        wanted.append(offered[i])
+    want = {e.id for e in wanted}
+    before = [e.id for e in cross_linked(doc)]
+    for rel in _cross_rels(doc):
+        if _other_end(rel, doc) in offered and _other_end(rel, doc) not in want:
+            relations.unlink(rel, user)
+    for e in wanted:
+        if e.id not in before:
+            relations.link(SEE_ALSO, doc, e, user=user)
+    return before
+
+
 def linked_tab(doc: Entity) -> str:
-    return render_template("documents/linked.html", doc=doc,
-                           rows=[{"view": present.View(d), "excerpt": excerpt(_text(d.id))} for d in mentions(doc)])
+    linked = cross_linked(doc)
+    ids = {e.id for e in linked}
+
+    def row(d):
+        return {"view": present.View(d), "excerpt": excerpt(_text(d.id))}
+    editable = bool(getattr(current_user, "can_edit", False)) and doc.deleted_at is None
+    return render_template("documents/linked.html", doc=doc, linked=[row(d) for d in linked],
+                           rows=[row(d) for d in mentions(doc) if d.id not in ids], editable=editable,
+                           choices=link_choices(doc) if editable else [],
+                           value=",".join(str(i) for i in sorted(ids)))
 
 
 def linked_count(doc: Entity):
-    return len(mentions(doc)) or None
+    return len({e.id for e in cross_linked(doc)} | {e.id for e in mentions(doc)}) or None
+
+
+@bp.route("/choices")
+@role("viewer")
+def choices():
+    """Every document the reader may see, for the list a Markdown field opens
+    at [[ (app.js): its name, its slug, and what it is a page of. ``exclude``
+    leaves out the one being written."""
+    docs = Entity.live().filter(Entity.type == "document").order_by(func.lower(Entity.name)).all()
+    names = {e.id: e.name for e in docs}
+    exclude = request.args.get("exclude", type=int)
+    out = []
+    for e in docs:
+        if e.id == exclude:
+            continue
+        d = _body(e.id)
+        parent = names.get(d.parent) if d is not None and d.parent else None
+        out.append({"id": e.id, "name": e.name, "slug": e.slug, "parent": parent or ""})
+    return jsonify(documents=out)
+
+
+@bp.route("/<int:entity_id>/links", methods=["POST"])
+@role("editor")
+def save_links(entity_id):
+    """``ids``: the documents to cross-link with this one, every other
+    unlinked. The answer's undo puts back the ones linked before."""
+    doc = records.live(entity_id)
+    if doc is None or doc.type != "document":
+        abort(404)
+    data = request.get_json(silent=True) or {}
+    try:
+        before = set_cross_links(doc, data.get("ids"), current_user._get_current_object())
+    except Invalid as err:
+        db.session.rollback()
+        return jsonify(error=str(err)), 400
+    db.session.commit()
+    return jsonify(ok=True, undo={"url": f"/documents/{doc.id}/links",
+                                  "body": {"ids": ",".join(str(i) for i in before)}})

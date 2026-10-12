@@ -245,7 +245,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 /* Head and foot are pinned; only the middle scrolls, so the wordmark and the
    account row never scroll out of reach on a long list. */
 .sidebar-head { display: flex; align-items: center; justify-content: space-between; flex: none; padding: 0 8px 16px; }
-.sidebar-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.sidebar-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -10px; padding: 0 10px; }
 .sidebar-close { display: none; }
 
 .nav-primary { display: flex; flex-direction: column; gap: 2px; }
@@ -257,7 +257,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 }
 .navitem svg { width: 18px; height: 18px; }
 .navitem:hover { color: var(--ink); background: var(--hover); }
-.navitem.is-active { color: var(--ink); font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.navitem.is-active { color: var(--ink); font-weight: 650; background: var(--selected); }
 .navitem .count { margin-left: auto; }
 
 .sidebar-label {
@@ -273,7 +273,17 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
   transition: background .15s, color .15s;
 }
 .sideitem:hover { color: var(--ink); background: var(--hover); }
-.sideitem.is-active { color: var(--ink); font-weight: 600; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.sideitem.is-active { color: var(--ink); font-weight: 600; background: var(--selected); }
+/* The chosen row in the sidebar, Settings, a record's sections and the
+   setup guide's steps: the grey pill, with a short rounded accent bar
+   standing just outside its left edge. The scrolling lists lend their rows
+   10px of side padding so the bar isn't clipped. */
+.navitem, .sideitem, .settings-navitem, .guide-step { position: relative; }
+.navitem.is-active::before, .sideitem.is-active::before, .settings-navitem.is-active::before,
+.guide-step.is-active::before {
+  content: ""; position: absolute; left: -4px; top: 20%; bottom: 20%;
+  width: 3px; border-radius: 99px; background: var(--accent);
+}
 .sideitem-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .sidelist-empty { padding: 10px; font-size: 13px; color: var(--faint); }
 .count {
@@ -591,7 +601,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .settings-nav-title { font-size: 17px; font-weight: 750; letter-spacing: -0.02em; }
 .settings-nav-close { display: none; }
 .settings-nav-tabs { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.settings-nav-list { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.settings-nav-list { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -10px; padding: 0 10px; }
 .settings-nav-label {
   margin: 14px 0 6px; padding: 0 10px;
   font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--faint);
@@ -607,7 +617,7 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .settings-navitem span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .settings-navitem-chev { display: none; }
 .settings-navitem:hover { color: var(--ink); background: var(--hover); }
-.settings-navitem.is-active { color: var(--ink); font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.settings-navitem.is-active { color: var(--ink); font-weight: 650; background: var(--selected); }
 .settings-nav-foot { flex: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .settings-nav-version { padding: 8px 10px 0; font-size: 11.5px; font-weight: 550; color: var(--faint); }
 
@@ -641,7 +651,8 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
   .settings-nav-close, .settings-back { display: inline-flex; }
   .settings-navitem { padding: 12px 10px; color: var(--ink); }
   .settings-navitem-chev { display: block; width: 16px; height: 16px; color: var(--faint); }
-  .settings-navitem.is-active { background: none; box-shadow: none; font-weight: 500; }
+  .settings-navitem.is-active { background: none; font-weight: 500; }
+  .settings-navitem.is-active::before { display: none; }
   .settings-main { display: none; }
   .modal--rail.is-showing-pane .settings-nav { display: none; }
   .modal--rail.is-showing-pane .settings-main { display: flex; animation: pane-in .22s cubic-bezier(.2, .8, .3, 1) both; }
@@ -1051,7 +1062,12 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
   }
   .sheet-nav .tab-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sheet-nav .tab:hover { background: var(--hover); }
-  .sheet-nav .tab.is-active { font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+  .sheet-nav .tab { position: relative; }
+  .sheet-nav .tab.is-active { font-weight: 650; background: var(--selected); }
+  .sheet-nav .tab.is-active::before {
+    content: ""; position: absolute; left: -4px; top: 20%; bottom: 20%;
+    width: 3px; border-radius: 99px; background: var(--accent);
+  }
 }
 .sheet-article .kicker { margin-bottom: 14px; }
 .sheet-article .kicker::before {
@@ -1189,12 +1205,17 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 }
 .prose-edit .prose-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--wash); }
 .prose-edit.is-editing > .prose, .prose-edit.is-editing > .kv-empty { display: none; }
-.prose-edit.is-editing [data-prose-edit] { visibility: hidden; }
+.prose-edit.is-editing [data-prose-edit] { display: none; }
+.prose-edit-tools { display: flex; gap: 6px; margin-left: auto; }
+.prose-edit:not(.is-editing) .prose-link { display: none; }
+/* The documents a Markdown field offers at [[ (app.js), under the cursor. */
+.md-pop { width: min(380px, 100%); max-height: min(300px, 45vh); }
 .prose-edit.sheet-prose { margin-top: 18px; }
 .prose-edit.sheet-prose .prose-edit-head { margin-bottom: 4px; }
 .sheet-notes.prose-edit.is-empty:not(.is-editing) { padding: 0; background: none; border-left-color: transparent; margin-bottom: 14px; }
 .prose-edit.is-empty:not(.is-editing) .setting-label { display: none; }
 .prose-edit.is-empty:not(.is-editing) .prose-edit-head { justify-content: flex-start; }
+.prose-edit.is-empty:not(.is-editing) .prose-edit-tools { margin-left: 0; }
 
 /* Banners at the top of a sheet: archived, deleted. */
 .banner {
@@ -1274,6 +1295,26 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 .linkform-open { margin: 16px 0 22px; }
 .linkform-open svg { width: 16px; height: 16px; }
 @media (max-width: 700px) { .linkform { grid-template-columns: 1fr; } }
+/* The records chosen in a picker that takes several (record_pick, many),
+   across the form under its fields; each chip's × takes it out. */
+.pick-chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.pick-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px 3px 10px; font-size: 13px; color: var(--ink); cursor: pointer; }
+.pick-chip svg { width: 14px; height: 14px; color: var(--faint); }
+.pick-chip:hover { border-color: var(--line-strong); }
+.pick-chip:hover svg { color: var(--danger); }
+/* A long list of records to tick, with a filter over it (a document's
+   cross-links): in columns, scrolling inside the form. */
+.pickform {
+  display: flex; flex-direction: column; gap: 12px;
+  margin: 20px 0 26px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+}
+.pickform .multi {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 20px;
+  max-height: 340px; overflow-y: auto; padding: 2px;
+}
+.pickform .multi .check { min-width: 0; }
+.pickform .multi .check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pickform .linkform-actions { justify-content: flex-end; }
 /* A field that finds a record as it is typed in (record_pick): a search
    icon inside it, and the records that match under it, each with its kind
    and place. */
@@ -1699,7 +1740,7 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
   font-size: 13.5px; font-weight: 500; color: var(--muted); transition: background .15s, color .15s;
 }
 .guide-step:hover { color: var(--ink); background: var(--hover); }
-.guide-step.is-active { color: var(--ink); font-weight: 650; background: var(--selected); box-shadow: inset 3px 0 0 var(--accent); }
+.guide-step.is-active { color: var(--ink); font-weight: 650; background: var(--selected); }
 .guide-num {
   display: inline-flex; align-items: center; justify-content: center; flex: none; width: 22px; height: 22px;
   border-radius: 50%; border: 1px solid var(--line-strong); font-size: 11.5px; font-weight: 650; color: var(--muted);
@@ -1861,6 +1902,27 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 }
 .seg--links a:hover { color: var(--ink); }
 .seg--links a.is-active { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-1); }
+/* One that doesn't fit scrolls sideways on one line ([data-seg-scroll],
+   app.js) instead of wrapping: its track has no scrollbar, and fades out at
+   an edge while there is more that way. */
+.seg--scroll { display: flex; width: fit-content; max-width: 100%; min-width: 0; flex-wrap: nowrap; }
+.seg-track {
+  --fade-l: 0px; --fade-r: 0px;
+  position: relative; display: flex; gap: 2px; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade-l), #000 calc(100% - var(--fade-r)), transparent);
+}
+.seg-track::-webkit-scrollbar { display: none; }
+.seg-track.can-left { --fade-l: 40px; }
+.seg-track.can-right { --fade-r: 40px; }
+.seg--scroll a { flex: none; white-space: nowrap; }
+/* The network diagram's choice of site and part: places, then networks, then the whole site. */
+.diagram-parts { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; margin: 0 0 16px; min-width: 0; }
+.diagram-parts .seg--scroll { flex: 0 1 auto; }
+.diagram-site { flex: 0 1 220px; margin: 0; }
+.seg .seg-sep { align-self: stretch; flex: none; width: 1px; padding: 0; margin: 5px 4px; border-radius: 0;
+                background: var(--line-strong); box-shadow: none; }
 /* A setup guide step done a part at a time: each building's cabling. */
 .guide-units { margin: 0 0 18px; }
 
@@ -1923,6 +1985,9 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 .diagram-link:hover path { stroke: var(--accent); stroke-width: 2.4; }
 .diagram-link--loose path { stroke-dasharray: 5 4; }
 .diagram-link--wireless path { stroke-dasharray: 1.5 5; stroke-linecap: round; stroke-width: 2.4; }
+/* A VPN tunnel between its ends: long dashes in the accent, named on it. */
+.diagram-link--vpn path { stroke: var(--accent); stroke-dasharray: 9 5; stroke-width: 1.8; opacity: .85; }
+.diagram-link--vpn text { fill: var(--ink); }
 .diagram-link--internet path { stroke-width: 3; }
 /* An invisible wider copy of each line under it: what the pointer hovers,
    the same 16 px on screen at any zoom. */

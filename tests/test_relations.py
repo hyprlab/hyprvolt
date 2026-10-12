@@ -30,6 +30,28 @@ def test_links_are_checked(client, h, admin):
                                                                "target_id": 999}, headers=h).get_json()["error"]
 
 
+def test_one_kind_of_link_goes_to_several_records_at_once(client, h, admin):
+    app, db1, db2 = make(client, h, name="app"), make(client, h, name="db1"), make(client, h, name="db2")
+    form = {"entity_id": app["id"], "direction": "out", "kind": "depends_on:out", "note": "primary"}
+    resp = client.post("/api/relationships", json={**form, "other_id": f"{db1['id']},{db2['id']}"}, headers=h)
+    assert resp.status_code == 200 and resp.get_json()["message"] == "Linked to 2 records"
+    rels = client.get(f"/api/entities/{app['id']}/relationships").get_json()["relationships"]
+    assert sorted((r["label"], r["other"]["name"], r["note"]) for r in rels) == [
+        ("depends on", "db1", "primary"), ("depends on", "db2", "primary")]
+    # The other way round, and one bad id leaves nothing made.
+    web = make(client, h, name="web")
+    resp = client.post("/api/relationships", json={**form, "kind": "depends_on:in", "other_id": f"{web['id']},{app['id']}"},
+                       headers=h)
+    assert resp.status_code == 400 and "itself" in resp.get_json()["error"]
+    assert client.get(f"/api/entities/{web['id']}/relationships").get_json()["relationships"] == []
+    assert client.post("/api/relationships", json={**form, "other_id": ""}, headers=h).status_code == 400
+    # The sheet's form takes several, and the picker leaves out those chosen.
+    tab = section(client.get(f"/e/{app['id']}/sheet").data.decode(), "relationships")
+    assert "data-pick-many" in tab and "data-pick-chips" in tab and "data-keep-open" in tab
+    found = client.get(f"/search?pick=1&q=db&exclude={app['id']},{db1['id']}").get_json()["groups"]
+    assert [i["title"] for g in found for i in g["items"]] == ["db2"]
+
+
 def test_removing_a_link_can_be_undone(client, h, admin):
     a, b = make(client, h, name="a"), make(client, h, name="b")
     rel = link(client, h, "depends_on", a, b)["relationship"]
@@ -188,3 +210,21 @@ def test_a_branch_of_the_diagram_folds_away_and_opens_again(client, h, admin):
     again = client.get(f"/e/{srv['id']}/sheet?tab=relationships&fold=D:{hv['id']},nonsense").data.decode()
     assert ">+2</text>" in again
     assert ">web</text>" in client.get(f"/e/{srv['id']}/depmap?fold=").data.decode()
+
+
+def test_many_dependents_are_drawn_as_a_block_not_one_long_row(client, h, admin):
+    sw = make(client, h, "network_device", name="sw", **{"f.kind": "switch"})
+    for n in range(20):
+        pc = make(client, h, "workstation", name=f"pc-{n:02d}")
+        client.post("/network/cables", json={"device_id": pc["id"], "other_device_id": sw["id"]}, headers=h)
+    page = client.get(f"/e/{sw['id']}/depmap").data.decode()
+    at = {}
+    for box in page.split('class="diagram-node')[1:]:
+        x, y = map(float, re.search(r'translate\(([\d.]+) ([\d.]+)\)', box).groups())
+        at[re.search(r'class="diagram-name"[^>]*>([^<]+)<', box).group(1)] = (x, y)
+    pcs = [at[f"pc-{n:02d}"] for n in range(20)]
+    # Twenty plugged in: four rows of five, not one row of twenty; each joined along its row.
+    assert len({y for _, y in pcs}) == 4 and len({x for x, _ in pcs}) == 5
+    assert all(y > at["sw"][1] for _, y in pcs)
+    assert re.search(r'd="M[\d.]+,[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+"', page)
+    assert page.count(">has plugged in</text>") == 20

@@ -1266,11 +1266,31 @@
       if (target && data && typeof data.html === "string") target.innerHTML = data.html;
       if (done) toast(done);
     } else if (then === "sheet") {
-      refreshSheet();
+      // data-keep-open: the form (by its id) is open again in the sheet
+      // drawn afresh, its choices kept, for the next (Add links).
+      var reopen = el.hasAttribute("data-keep-open") && el.id ? keepOpen(el) : null;
+      Promise.resolve(refreshSheet()).then(reopen);
       if (data && data.undo) offerUndo(done, data.undo, refreshSheet);
     } else if (done) {
       offerUndo(done, data && data.undo);
     }
+  }
+
+  function keepOpen(form) {
+    var id = form.id, kept = {};
+    form.querySelectorAll("select[name]").forEach(function (sel) { kept[sel.name] = sel.value; });
+    return function () {
+      var fresh = document.getElementById(id);
+      if (!fresh) return;
+      fresh.hidden = false;
+      document.querySelectorAll('[data-show="' + id + '"]').forEach(function (b) { b.hidden = true; });
+      Object.keys(kept).forEach(function (name) {
+        var sel = fresh.elements[name];
+        if (sel) sel.value = kept[name];
+      });
+      var first = fresh.querySelector("input[data-pick]") || fresh.querySelector("select, input:not([type=hidden])");
+      if (first) first.focus({ preventScroll: true });
+    };
   }
 
   function submitApiForm(form) {
@@ -1600,6 +1620,24 @@
     }).map(function (c) { return c.value; }).join(",");
     input.dispatchEvent(new Event("change", { bubbles: true }));
   });
+  // A long one with a filter (input[data-filter-checks] in the same form:
+  // the documents to cross-link): only the boxes whose names hold what is
+  // typed stay in sight, and [data-filter-none] says when none do. Enter
+  // in the filter doesn't send the form.
+  document.addEventListener("input", function (e) {
+    var input = e.target;
+    if (!input.matches || !input.matches("input[data-filter-checks]") || !input.form) return;
+    var q = input.value.trim().toLowerCase(), shown = 0;
+    input.form.querySelectorAll("[data-multi] .check").forEach(function (c) {
+      c.hidden = !!q && c.textContent.toLowerCase().indexOf(q) === -1;
+      if (!c.hidden) shown++;
+    });
+    var none = input.form.querySelector("[data-filter-none]");
+    if (none) none.hidden = shown > 0;
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && e.target.matches && e.target.matches("input[data-filter-checks]")) e.preventDefault();
+  });
 
   // A text field that offers a catalog's names as it is typed in
   // ([data-suggest]: operating systems, core/catalogs.py): the names that
@@ -1744,7 +1782,11 @@
   // chosen one's id goes into the form's field named by data-pick-into
   // (other_id), its name stays in the field; typing again clears the
   // choice. data-pick-types limits the kinds, data-pick-exclude leaves one
-  // out, data-pick-submit sends the form once one is chosen.
+  // out, data-pick-submit sends the form once one is chosen. data-pick-many
+  // keeps choosing: each one chosen becomes a chip in the form's
+  // [data-pick-chips] (its × takes it out again, as Backspace in the empty
+  // field takes out the last), its id joins the comma list in the field,
+  // and the field empties for the next.
   var pickPop = null, pickFor = null, pickItems = [], pickAt = -1, pickTimer = null, pickSeq = 0;
   function pickField(input) {
     return input.form && input.form.elements[input.getAttribute("data-pick-into") || "other_id"];
@@ -1834,7 +1876,10 @@
     }
     var url = "/search?pick=1&q=" + encodeURIComponent(q);
     if (input.getAttribute("data-pick-types")) url += "&types=" + encodeURIComponent(input.getAttribute("data-pick-types"));
-    if (input.getAttribute("data-pick-exclude")) url += "&exclude=" + encodeURIComponent(input.getAttribute("data-pick-exclude"));
+    var exclude = [input.getAttribute("data-pick-exclude")];
+    if (input.hasAttribute("data-pick-many")) exclude.push(pickChosen(input).join(","));
+    exclude = exclude.filter(Boolean).join(",");
+    if (exclude) url += "&exclude=" + encodeURIComponent(exclude);
     // Debounced, and sequenced so a slow answer to an old query never
     // replaces the answer to the current one.
     pickTimer = setTimeout(function () {
@@ -1847,9 +1892,60 @@
       }).catch(function () {});
     }, 150);
   }
+  function pickChosen(input) {
+    var field = pickField(input);
+    return field && field.value ? field.value.split(",") : [];
+  }
+  function pickChips(input) {
+    return input.form && input.form.querySelector("[data-pick-chips]");
+  }
+  function pickAdd(input, id, title) {
+    var field = pickField(input), chips = pickChips(input);
+    var chosen = pickChosen(input);
+    if (!field || chosen.indexOf(id) !== -1) return;
+    chosen.push(id);
+    field.value = chosen.join(",");
+    if (!chips) return;
+    var chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "tagchip pick-chip";
+    chip.setAttribute("data-pick-remove", id);
+    chip.setAttribute("aria-label", "Take out " + title);
+    chip.title = "Take out";
+    chip.textContent = title;
+    var x = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    x.setAttribute("viewBox", "0 0 24 24");
+    x.setAttribute("aria-hidden", "true");
+    x.innerHTML = '<path d="M7 7l10 10M17 7 7 17"/>';
+    chip.appendChild(x);
+    chips.appendChild(chip);
+    chips.hidden = false;
+  }
+  function pickRemove(input, id) {
+    var field = pickField(input), chips = pickChips(input);
+    if (field) field.value = pickChosen(input).filter(function (c) { return c !== id; }).join(",");
+    if (!chips) return;
+    var chip = chips.querySelector('[data-pick-remove="' + id + '"]');
+    if (chip) chip.remove();
+    chips.hidden = !chips.children.length;
+  }
+  document.addEventListener("click", function (e) {
+    var chip = e.target.closest && e.target.closest("[data-pick-remove]");
+    if (!chip || !chip.form) return;
+    var input = chip.form.querySelector("input[data-pick-many]");
+    if (!input) return;
+    pickRemove(input, chip.getAttribute("data-pick-remove"));
+    input.focus();
+  });
   function pickChoose(opt) {
     var input = pickFor;
     if (!input) return;
+    if (input.hasAttribute("data-pick-many")) {
+      pickAdd(input, opt.getAttribute("data-pick-id"), opt.getAttribute("data-pick-title"));
+      input.value = "";
+      pickClose();
+      return;
+    }
     var field = pickField(input);
     if (field) field.value = opt.getAttribute("data-pick-id");
     input.value = opt.getAttribute("data-pick-title");
@@ -1861,7 +1957,7 @@
     var input = e.target;
     if (!input.matches || !input.matches("input[data-pick]")) return;
     var field = pickField(input);
-    if (field) field.value = "";      // typed again: no longer the one chosen
+    if (field && !input.hasAttribute("data-pick-many")) field.value = "";   // typed again: no longer the one chosen
     input.classList.remove("is-picked");
     pickSearch(input);
   });
@@ -1886,8 +1982,192 @@
       e.preventDefault();
       e.stopPropagation();
       pickClose();
+    } else if (e.key === "Enter" && input.hasAttribute("data-pick-many") && input.value.trim()) {
+      e.preventDefault();          // still searching: Enter picks once the list is there
+    } else if (e.key === "Backspace" && input.hasAttribute("data-pick-many") && !input.value) {
+      var last = pickChosen(input).pop();
+      if (last) { e.preventDefault(); pickRemove(input, last); }
     }
   }, true);
+
+  // Document links in Markdown (textarea[data-md-links]: a document's body,
+  // a record's notes): typing [[ opens a list of every document at the
+  // cursor, narrowed by what is typed after the brackets (its name or its
+  // slug); Enter, Tab or a click writes [[its-slug]], Escape leaves the
+  // text as typed. A [data-md-link] button beside the text types the [[.
+  var mdPop = null, mdFor = null, mdStart = -1, mdDocs = [], mdItems = [], mdAt = -1, mdSeq = 0;
+  function mdClose() {
+    mdSeq++;
+    if (mdPop) mdPop.hidden = true;
+    if (mdFor) {
+      mdFor.setAttribute("aria-expanded", "false");
+      mdFor.removeAttribute("aria-activedescendant");
+    }
+    mdFor = null;
+    mdStart = -1;
+  }
+  // Where the cursor is in a textarea, from a copy of its text laid out the
+  // same way, up to the cursor.
+  function mdCaret(text, pos) {
+    var cs = getComputedStyle(text), copy = document.createElement("div");
+    ["boxSizing", "width", "fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "wordSpacing",
+     "tabSize", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "borderTopWidth", "borderRightWidth",
+     "borderBottomWidth", "borderLeftWidth"].forEach(function (p) { copy.style[p] = cs[p]; });
+    copy.style.position = "absolute";
+    copy.style.visibility = "hidden";
+    copy.style.whiteSpace = "pre-wrap";
+    copy.style.overflowWrap = "break-word";
+    copy.textContent = text.value.slice(0, pos);
+    var mark = document.createElement("span");
+    mark.textContent = "\u200b";
+    copy.appendChild(mark);
+    document.body.appendChild(copy);
+    var at = { left: mark.offsetLeft - text.scrollLeft, top: mark.offsetTop + mark.offsetHeight - text.scrollTop };
+    copy.remove();
+    return at;
+  }
+  function mdQuery() {
+    var end = mdFor.selectionStart;
+    if (end < mdStart || mdFor.selectionEnd !== end) return null;
+    var q = mdFor.value.slice(mdStart, end);
+    return /[\]|\n]/.test(q) ? null : q;
+  }
+  function mdShow() {
+    var q = mdQuery();
+    if (q === null) { mdClose(); return; }
+    var words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    var found = mdDocs.filter(function (d) {
+      var hay = (d.name + " " + d.slug + " " + d.parent).toLowerCase();
+      return words.every(function (w) { return hay.indexOf(w) !== -1; });
+    });
+    if (!mdPop) {
+      mdPop = document.createElement("div");
+      mdPop.className = "menupop menupop--scroll suggest-pop md-pop";
+      mdPop.id = "md-pop";
+      mdPop.setAttribute("role", "listbox");
+      mdPop.setAttribute("aria-label", "Documents to link to");
+      mdPop.addEventListener("mousedown", function (e) { e.preventDefault(); });
+      mdPop.addEventListener("click", function (e) {
+        e.preventDefault();
+        var opt = e.target.closest("[data-md-slug]");
+        if (opt) mdInsert(opt);
+      });
+    }
+    mdPop.textContent = "";
+    mdItems = [];
+    var head = document.createElement("p");
+    head.className = "menupop-head";
+    head.textContent = "Link a document";
+    mdPop.appendChild(head);
+    found.slice(0, 100).forEach(function (d) {
+      var el = document.createElement("div");
+      el.className = "menuopt pick-opt";
+      el.id = "md-" + mdItems.length;
+      el.setAttribute("role", "option");
+      el.setAttribute("data-md-slug", d.slug);
+      var title = document.createElement("span");
+      title.className = "pick-opt-title";
+      title.textContent = d.name;
+      var meta = document.createElement("span");
+      meta.className = "pick-opt-meta";
+      meta.textContent = (d.parent ? d.parent + " · " : "") + "[[" + d.slug + "]]";
+      el.appendChild(title);
+      el.appendChild(meta);
+      mdPop.appendChild(el);
+      mdItems.push(el);
+    });
+    if (!found.length) {
+      var none = document.createElement("p");
+      none.className = "menupop-head pick-note";
+      none.textContent = mdDocs.length ? "No document matches “" + q + "”" : "No other documents yet";
+      mdPop.appendChild(none);
+    }
+    // Under the cursor, inside the box the text is in, kept within it.
+    var holder = mdFor.parentNode;
+    holder.classList.add("has-suggest");
+    if (mdPop.parentNode !== holder) holder.appendChild(mdPop);
+    mdPop.hidden = false;
+    var at = mdCaret(mdFor, mdStart);
+    var room = holder.clientWidth - mdPop.offsetWidth;
+    mdPop.style.left = Math.max(0, Math.min(mdFor.offsetLeft + at.left, room)) + "px";
+    mdPop.style.top = (mdFor.offsetTop + Math.min(at.top, mdFor.clientHeight) + 4) + "px";
+    mdFor.setAttribute("aria-controls", "md-pop");
+    mdFor.setAttribute("aria-expanded", "true");
+    mdMark(mdItems.length ? 0 : -1);
+  }
+  function mdMark(n) {
+    mdAt = n;
+    mdItems.forEach(function (el, i) { el.classList.toggle("is-current", i === n); });
+    if (n >= 0 && mdItems[n]) {
+      mdFor.setAttribute("aria-activedescendant", mdItems[n].id);
+      mdItems[n].scrollIntoView({ block: "nearest" });
+    } else if (mdFor) mdFor.removeAttribute("aria-activedescendant");
+  }
+  function mdOpen(text, start) {
+    mdFor = text;
+    mdStart = start;
+    var seq = ++mdSeq;
+    var sheetRoot = text.closest(".sheet-content");
+    var url = "/documents/choices" + (sheetRoot ? "?exclude=" + sheetRoot.getAttribute("data-id") : "");
+    get(url).then(function (data) {
+      if (seq !== mdSeq || mdFor !== text) return;
+      mdDocs = data.documents || [];
+      mdShow();
+    }).catch(function (err) { mdClose(); toastError(err); });
+  }
+  function mdInsert(opt) {
+    var text = mdFor, start = mdStart, end = text.selectionStart;
+    var close = text.value.slice(end, end + 2) === "]]" ? 2 : 0;
+    var words = opt.getAttribute("data-md-slug") + "]]";
+    mdClose();
+    text.focus();
+    text.setSelectionRange(start, end + close);
+    // As typing would, so Undo in the text takes it out again.
+    if (!document.execCommand("insertText", false, words)) {
+      text.setRangeText(words, text.selectionStart, end + close, "end");
+      text.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  }
+  document.addEventListener("input", function (e) {
+    var text = e.target;
+    if (!text.matches || !text.matches("textarea[data-md-links]")) return;
+    if (mdFor === text) { if (mdPop && !mdPop.hidden) mdShow(); return; }     // else still loading
+    var at = text.selectionStart;
+    if (at >= 2 && text.value.slice(at - 2, at) === "[[" && text.value.slice(at - 3, at - 2) !== "[") mdOpen(text, at);
+  });
+  document.addEventListener("focusout", function (e) {
+    if (mdFor && e.target === mdFor) mdClose();
+  });
+  document.addEventListener("keydown", function (e) {
+    var text = e.target;
+    if (text !== mdFor || !mdPop || mdPop.hidden) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (mdItems.length) mdMark((mdAt + (e.key === "ArrowDown" ? 1 : -1) + mdItems.length) % mdItems.length);
+    } else if ((e.key === "Enter" || e.key === "Tab") && mdAt >= 0 && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      mdInsert(mdItems[mdAt]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      mdClose();
+    }
+  }, true);
+  document.addEventListener("mousedown", function (e) {
+    if (e.target.closest && e.target.closest("[data-md-link]")) e.preventDefault();   // the text keeps the focus
+  });
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest("[data-md-link]");
+    if (!btn) return;
+    var box = btn.closest("[data-prose]"), text = box && box.querySelector("textarea[data-md-links]");
+    if (!text) return;
+    text.focus();
+    if (!document.execCommand("insertText", false, "[[")) {
+      text.setRangeText("[[", text.selectionStart, text.selectionEnd, "end");
+      text.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  });
 
   // A subnet that fills in others ([data-prefills]: a gateway, a DHCP
   // range): once it is typed, the first host becomes the gateway and the
@@ -2248,6 +2528,41 @@
       input.files = e.dataTransfer.files;
       submitApiForm(zone);
     }
+  });
+
+  // [data-seg-scroll]: a segmented control of links that scrolls sideways
+  // when it doesn't fit (the diagram's parts, a guide step's buildings). Its
+  // track fades at an edge while there is more that way, opens with the
+  // chosen one in the middle of it, and a mouse wheel turned over it moves it
+  // along while it can, the page scrolling once it can't.
+  function segEdges(track) {
+    var max = track.scrollWidth - track.clientWidth;
+    track.classList.toggle("can-left", track.scrollLeft > 1);
+    track.classList.toggle("can-right", track.scrollLeft < max - 1);
+  }
+  function initSegScroll(root) {
+    (root || document).querySelectorAll("[data-seg-scroll] .seg-track").forEach(function (track) {
+      if (track.hasAttribute("data-ready")) return;
+      track.setAttribute("data-ready", "");
+      var on = track.querySelector(".is-active");
+      if (on && track.scrollWidth > track.clientWidth) {
+        track.scrollTo({ left: on.offsetLeft - (track.clientWidth - on.offsetWidth) / 2, behavior: "instant" });
+      }
+      segEdges(track);
+      track.addEventListener("scroll", function () { segEdges(track); }, { passive: true });
+      track.addEventListener("wheel", function (e) {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+        var max = track.scrollWidth - track.clientWidth;
+        if ((e.deltaY > 0 && track.scrollLeft < max - 1) || (e.deltaY < 0 && track.scrollLeft > 1)) {
+          track.scrollLeft += e.deltaY;
+          e.preventDefault();
+        }
+      }, { passive: false });
+    });
+  }
+  initSegScroll();
+  window.addEventListener("resize", function () {
+    document.querySelectorAll("[data-seg-scroll] .seg-track").forEach(segEdges);
   });
 
   // [data-peek]: a record's box in a diagram. Resting the pointer on it (or
@@ -2828,7 +3143,7 @@
     }
   });
   function refreshSheet() {
-    if (current && sheet && sheet.open) openEntity(current.id, { tab: current.tab, keepScroll: true, nav: "replace" });
+    if (current && sheet && sheet.open) return openEntity(current.id, { tab: current.tab, keepScroll: true, nav: "replace" });
   }
 
   function updateSheetBar() {
@@ -3225,6 +3540,7 @@
       var text = e.target;
       if (!text.matches || !text.matches(".prose-input") || isDirty(text)) return;
       var box = text.closest("[data-prose]");
+      if (e.relatedTarget && box.contains(e.relatedTarget)) return;    // to its Link a document
       box.classList.remove("is-editing");
       text.hidden = true;
     });

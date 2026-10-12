@@ -308,7 +308,7 @@ def search():
     """Records whose name, slug, notes, tags or field values contain the
     query, grouped by module, then whatever each module's own search adds.
     ``pick=1`` (choosing a record for a link) returns records only, limited to
-    ``types``."""
+    ``types`` and without the ids in ``exclude``."""
     query = (request.args.get("q") or "").strip()
     if len(query) < 2:
         return jsonify(groups=[])
@@ -321,10 +321,11 @@ def search():
             .order_by(Entity.archived.asc(), (func.lower(Entity.name) == query.lower()).desc(),
                       Entity.updated_at.desc())
             .limit(30).all())
-    exclude = request.args.get("exclude", type=int)
+    # Left out: the record being linked, and those chosen already ("3,5").
+    exclude = {int(i) for i in (request.args.get("exclude") or "").split(",") if i.strip().isdigit()}
     groups, by_module = [], {}
     for e in rows:
-        if e.id == exclude:
+        if e.id in exclude:
             continue
         etype = reg.type(e.type)
         if e.module not in by_module:

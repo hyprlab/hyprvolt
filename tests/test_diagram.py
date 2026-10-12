@@ -106,3 +106,105 @@ def test_a_box_shows_the_record_in_brief_as_the_pointer_rests_on_it(client, h, a
         assert f"<dt>{label}</dt><dd>{text}</dd>" in card, label
     assert "<dt>Managed</dt>" not in card and "<dt>Contract</dt>" not in card     # nothing to say
     assert '<span class="tagchip">edge</span>' in card and "In bridge mode." in card
+
+
+def test_the_diagram_draws_a_building_a_network_or_the_whole_site(client, h, admin):
+    site = make(client, h, "site", name="Campus")
+    main = make(client, h, "building", name="Main", location_id=site["id"])
+    annex = make(client, h, "building", name="Annex", location_id=site["id"])
+    servers = make(client, h, "vlan", name="Servers", location_id=main["id"], **{"f.vid": 20})
+    make(client, h, "subnet", name="Servers LAN", location_id=main["id"],
+         **{"f.cidr": "10.0.20.0/24", "f.vlan": servers["id"]})
+    guest = make(client, h, "subnet", name="Guest", location_id=annex["id"], **{"f.cidr": "10.9.0.0/24"})
+    fw = make(client, h, "firewall", name="fw", location_id=main["id"],
+              **{"s.networks.list": f"{servers['id']},{guest['id']}"})
+    srv = make(client, h, "server", name="srv", location_id=main["id"], **{"s.addresses.list": "10.0.20.5"})
+    sw = make(client, h, "network_device", name="sw-annex", location_id=annex["id"], **{"f.kind": "switch"})
+    pc = make(client, h, "workstation", name="guest-pc", location_id=annex["id"], **{"s.addresses.list": "10.9.0.7"})
+    for a, b in ((srv, fw), (sw, fw), (pc, sw)):
+        client.post("/network/cables", json={"device_id": a["id"], "other_device_id": b["id"]}, headers=h)
+    page = client.get("/p/diagram/network").data.decode()
+    seg = page.split('class="seg seg--links seg--scroll"')[1].split("</nav>")[0]
+    # Buildings, then networks (a VLAN, a subnet on none; not the VLAN's own subnet), then the whole site.
+    assert re.findall(r">([^<]+)</a>", seg) == ["Annex", "Main", "Guest", "Servers", "Whole site"]
+    assert 'class="is-active" aria-current="page">Whole site<' in seg
+    names = lambda html: set(re.findall(r'class="diagram-name"[^>]*>([^<]+)<', html))
+    assert names(page) == {"fw", "srv", "sw-annex", "guest-pc"}
+    url = lambda part: f"/p/diagram/network?part={part}&site={site['id']}"
+    # A building: its devices, and what they are cabled to one step beyond (the firewall in Main).
+    assert names(client.get(url(f"b{annex['id']}")).data.decode()) == {"sw-annex", "guest-pc", "fw"}
+    # A network: the devices on it and the gear carrying it, linked to each other only, and what
+    # joins them on the way to the most upstream of them.
+    assert names(client.get(url(f"n{servers['id']}")).data.decode()) == {"fw", "srv"}
+    # The switch between them carries it without saying so: drawn too, joining the PC to the firewall.
+    assert names(client.get(url(f"n{guest['id']}")).data.decode()) == {"fw", "sw-annex", "guest-pc"}
+    # One site: no site choice; a second one with equipment brings it, and All sites.
+    assert 'class="field diagram-site"' not in page
+    cabin = make(client, h, "site", name="Cabin")
+    a = make(client, h, "network_device", name="cabin-sw", location_id=cabin["id"], **{"f.kind": "switch"})
+    b = make(client, h, "workstation", name="cabin-pc", location_id=cabin["id"])
+    client.post("/network/cables", json={"device_id": a["id"], "other_device_id": b["id"]}, headers=h)
+    page = client.get(f"/p/diagram/network?site={cabin['id']}").data.decode()
+    assert '<option value="/p/diagram/network?site=0" >All sites</option>' in page
+    assert names(page) == {"cabin-sw", "cabin-pc"}
+
+
+def test_a_switch_with_many_endpoints_has_them_as_a_block_not_one_long_row(client, h, admin):
+    sw = make(client, h, "network_device", name="sw", **{"f.kind": "switch"})
+    fw = make(client, h, "firewall", name="fw")
+    client.post("/network/cables", json={"device_id": fw["id"], "other_device_id": sw["id"]}, headers=h)
+    for n in range(20):
+        pc = make(client, h, "workstation", name=f"pc-{n:02d}")
+        client.post("/network/cables", json={"device_id": pc["id"], "other_device_id": sw["id"]}, headers=h)
+    page = client.get("/p/diagram/network").data.decode()
+    at = {}
+    for box in page.split('class="diagram-node')[1:]:
+        x, y = map(float, re.search(r'translate\(([\d.]+) ([\d.]+)\)', box).groups())
+        at[re.search(r'class="diagram-name"[^>]*>([^<]+)<', box).group(1)] = (x, y)
+    pcs = [at[f"pc-{n:02d}"] for n in range(20)]
+    # Twenty under one switch: four rows of five at most six across, not one row of twenty.
+    assert len({y for _, y in pcs}) == 4 and len({x for x, _ in pcs}) <= 6
+    assert all(y > at["sw"][1] for _, y in pcs)
+    width = float(re.search(r'<svg class="diagram" width="(\d+)"', page).group(1))
+    assert width < 6 * 200
+    # Each joined to the switch like an org chart: straight lines, along its row and down.
+    assert re.search(r'<path d="M[\d.]+,[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+ H[\d.]+ V[\d.]+"/>', page)
+
+
+def test_a_vpn_tunnel_joins_its_ends(client, h, admin):
+    site = make(client, h, "site", name="Campus")
+    main = make(client, h, "building", name="Main", location_id=site["id"])
+    annex = make(client, h, "building", name="Annex", location_id=site["id"])
+    fw1 = make(client, h, "firewall", name="fw-main", location_id=main["id"])
+    fw2 = make(client, h, "firewall", name="fw-annex", location_id=annex["id"])
+    for fw, place in ((fw1, main), (fw2, annex)):
+        pc = make(client, h, "workstation", name=f"pc-{place['name'].lower()}", location_id=place["id"])
+        client.post("/network/cables", json={"device_id": pc["id"], "other_device_id": fw["id"]}, headers=h)
+    # Added in the setup guide's VPN tunnels step, its ends ticked there.
+    page = client.get(f"/site-setup/vpns?site={site['id']}").data.decode()
+    assert "fw-main" in page.split("data-row-new")[1] and 'name="s.vpn_ends.list"' in page
+    resp = client.post(f"/site-setup/vpns/rows?site={site['id']}", headers=h, json={"values": {
+        "name": "Main to Annex", "location_id": site["id"], "s.vpn_ends.list": f"{fw1['id']},{fw2['id']}"}})
+    assert resp.status_code == 200, resp.get_json()
+    vpn = next(e for e in client.get("/api/entities?type=network").get_json()["entities"] if e["name"] == "Main to Annex")
+    assert client.get(f"/api/entities/{vpn['id']}").get_json()["entity"]["fields"]["kind"] == "vpn"
+    # Its form has Ends, hidden for a local network; each end is linked, and the tunnel depends on it.
+    form = client.get(f"/e/{vpn['id']}/form").data.decode()
+    assert 'data-hides="vpn_ends=lan,other,"' in form and "s.vpn_ends.list" in form
+    rels = client.get(f"/api/entities/{fw1['id']}/relationships").get_json()["relationships"]
+    assert any(r["label"] == "is an end of" and r["other"]["name"] == "Main to Annex" for r in rels)
+    breaks = client.get(f"/api/entities/{fw1['id']}/dependencies?direction=dependents").get_json()
+    assert "Main to Annex" in str(breaks)
+    # Drawn between the ends, named on it, and a choice of its own above the diagram.
+    page = client.get("/p/diagram/network").data.decode()
+    assert 'class="diagram-link diagram-link--vpn"' in page and ">Main to Annex</text>" in page
+    assert "a long-dashed one in the accent is a VPN tunnel" in page
+    assert "<title>fw-annex to fw-main over the VPN Main to Annex</title>" in page or \
+        "<title>fw-main to fw-annex over the VPN Main to Annex</title>" in page
+    seg = page.split('class="seg seg--links seg--scroll"')[1].split("</nav>")[0]
+    assert ">Main to Annex</a>" in seg
+    part = client.get(f"/p/diagram/network?site={site['id']}&part=n{vpn['id']}").data.decode()
+    assert set(re.findall(r'class="diagram-name"[^>]*>([^<]+)<', part)) == {"fw-main", "fw-annex"}
+    # A tunnel is no cable: the cable tree and its parts are each building's own.
+    cables = client.get(f"/site-setup/cables?site={site['id']}&unit=all").data.decode()
+    assert "Main to Annex" not in cables.split("data-row-new")[0]

@@ -272,7 +272,7 @@ are the turned-on modules' `setup`, sorted by `order`: Locations has the
 site (10), rooms (20) and racks (30), Contacts vendors (35), Network the
 internet connections (40, the devices a line comes in at), VLANs (45) and
 subnets (50), Hardware network gear (60), servers (70) and endpoints (100), Virtual hypervisors (80) and
-guests (85), Services services (90), and Network cables (110). A step of a
+guests (85), Services services (90), Network cables (110) and VPN tunnels (115). A step of a
 new module takes a place between them. `group` is the part of the guide a
 step is in, a heading over its steps: Place, Network, Equipment, What runs
 or Endpoints. `help` is a few paragraphs behind the step's What goes here

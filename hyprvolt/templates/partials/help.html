@@ -100,8 +100,10 @@
       <p class="help-lead">A link joins two records and reads both ways: "vm1 runs on pve1" is "pve1 runs vm1"
         from the other end.</p>
       <h5>Adding one</h5>
-      <p>In a record's Relationships tab, Add link opens the form. Choose how this record relates to the other
-        one, then the record, and an optional note. Removing a link asks first, and can be undone.</p>
+      <p>In a record's Relationships tab, Add links opens the form. Choose how this record relates to the
+        others, then type each record's name and press Enter: each one chosen becomes a chip, so one kind of
+        link goes to several records at once, with an optional note. Link makes them all and keeps the form
+        open for the next kind until Done. Removing a link asks first, and can be undone.</p>
       <h5>Which links carry a dependency</h5>
       <p>Only some kinds of link mean one record stops working when the other goes down. Those are the ones
         followed to answer "What breaks".</p>
@@ -207,6 +209,9 @@
       <p>When a building has its own internet line, router and addresses, choose that building as the Where of
         its VLANs and subnets. Its devices' addresses are then in its subnets, so two buildings can both use
         192.168.1.0/24 without a clash.</p>
+      <h5>VPN tunnels</h5>
+      <p>A VPN is a network of the kind VPN whose Ends are the routers, firewalls or servers it runs between,
+        such as each building's firewall. The diagram draws it between them, and it goes down with either end.</p>
       <h5>Which switch carries which network</h5>
       <p>A switch, router or firewall lists the VLANs and subnets it carries in its Networks section. A
         network then depends on the gear that carries it, so a switch's What breaks lists its networks.</p>

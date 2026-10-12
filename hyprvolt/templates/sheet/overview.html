@@ -7,10 +7,13 @@
 <section class="prose-edit {{ cls }}{{ ' is-empty' if not raw }}" data-prose data-field data-live="prose-{{ name }}">
   <div class="prose-edit-head">
     {% if label %}<p class="setting-label">{{ label }}</p>{% endif %}
-    <button type="button" class="btn btn--xs btn--ghost" data-prose-edit>{{ 'Edit' if raw else 'Add ' ~ (label or 'text')|lower }}</button>
+    <span class="prose-edit-tools">
+      <button type="button" class="btn btn--xs btn--ghost prose-link" data-md-link title="Or type [[ in the text">Link a document</button>
+      <button type="button" class="btn btn--xs btn--ghost" data-prose-edit>{{ 'Edit' if raw else 'Add ' ~ (label or 'text')|lower }}</button>
+    </span>
   </div>
   {% if html %}<div class="prose">{{ html }}</div>{% elif not raw %}{% else %}<p class="kv-empty">{{ empty }}</p>{% endif %}
-  <textarea name="{{ name }}" class="prose-input mono" rows="10" spellcheck="true" aria-label="{{ label or 'Text' }}" data-save hidden>{{ raw }}</textarea>
+  <textarea name="{{ name }}" class="prose-input mono" rows="10" spellcheck="true" aria-label="{{ label or 'Text' }}" data-save data-md-links hidden>{{ raw }}</textarea>
 </section>
 {%- endmacro %}
 {% macro edit_row(item) -%}

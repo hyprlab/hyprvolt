@@ -122,7 +122,7 @@
 {% elif f.kind == 'longtext' %}
   <textarea name="{{ item.name }}" rows="{{ 2 if save else 4 }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}{{ empty }}>{{ v or '' }}</textarea>
 {% elif f.kind == 'markdown' %}
-  <textarea name="{{ item.name }}" rows="16" class="mono{{ ' ' ~ cls if cls }}" spellcheck="true" {{ described(id, f.help) }} {{ 'required' if f.required }}{% if save %} data-save{% endif %}>{{ v or '' }}</textarea>
+  <textarea name="{{ item.name }}" rows="16" class="mono{{ ' ' ~ cls if cls }}" spellcheck="true" data-md-links {{ described(id, f.help) }} {{ 'required' if f.required }}{% if save %} data-save{% endif %}>{{ v or '' }}</textarea>
 {% elif f.kind == 'select' %}
   <select name="{{ item.name }}" {{ described(id, f.help) }} {{ 'required' if f.required }}{{ extra }}
           {%- if f.hides %} data-hides="{% for k, when in f.hide_rules() %}{{ ' ' if not loop.first }}{{ k }}={{ when|join(',') }}{% endfor %}"{% endif %}>
