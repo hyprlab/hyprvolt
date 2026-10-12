@@ -364,7 +364,11 @@ Documents are Markdown pages: runbooks, how-tos, manuals. A document can
 stand alone, be attached to records (their Documents tab), and link to any
 record by writing its slug in double brackets, `[[pve1]]` or `[[pve1|the
 main host]]`. A link to a slug that matches nothing is struck through, so a
-broken link shows.
+broken link shows. Typing `[[` in a document's body or a record's notes lists every
+document under the cursor, narrowed by what is typed after the brackets
+(a name or a slug); Enter, Tab or a click writes `[[its-slug]]`, and Escape
+leaves the text as typed. Link a document, beside the text while it is
+edited, types the brackets and opens the same list.
 
 - **Headings** keep their levels: `#` and `##` are sections, `###` and
   below subsections. Each heading gets an anchor, `h-` and its words (a
@@ -382,8 +386,14 @@ to the pages before and after it. The sidebar's Top-level pages filter
 hides the pages, leaving the documents they belong to. Pages nest eight deep
 at most, and a document can't be a page of itself or of one of its pages.
 
-A document's Linked from tab lists the documents that link to it; another
-record's Documents tab lists those that mention it.
+A document's Linked from tab lists the documents cross-linked with it, then
+those that link to it in their text; another record's Documents tab lists
+those that mention it. Choose documents, under the lists, opens every other
+document as a list of boxes with a filter over it: those ticked are
+cross-linked when saved, and those unticked no longer are. A cross-link
+reads the same from both documents, shows in each one's Linked from tab, and
+is a "see also" link in Relationships too. Undo puts the previous choice
+back.
 
 Search reads attached files too: a text file (notes, configs, scripts, CSV,
 JSON, logs) or a PDF is read when it is uploaded, and its words find the
@@ -655,8 +665,12 @@ so its cable makes it need nothing. None of this is stored: it follows the
 cables as they are, and a link that says the same is shown once. The tab
 lists the devices a device is cabled to under Cabled to, read-only, with the
 ports, any patch panels and the cable labels; the cable is changed in the
-Cabling tab. The form for a new link opens from Add link. It
-opens as a drawing, and List and Diagram switch between that and two nested
+Cabling tab. The form for new links opens from Add links: choose the kind
+of link, then type a record's name and press Enter (or click it) for each
+record, as many as needed; each becomes a chip under the form, its × or
+Backspace in the empty field taking it out. Link makes them all, with the
+same kind and note, and the form stays open with the kind kept for the next
+batch until Done. The dependency view opens as a drawing, and List and Diagram switch between that and two nested
 lists. In the drawing, the record sits in the middle, what it needs above
 it and what breaks below it, a row for each step further away. A dashed
 line through the record divides the two, What it needs named just above it

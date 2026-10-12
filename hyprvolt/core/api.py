@@ -310,25 +310,40 @@ def relationship_create():
     data = _body()
     if "direction" in data:
         # From the sheet's form: "kind:out" reads from this record, "kind:in"
-        # the other way round.
+        # the other way round. other_id may name several ("3,5,8"), each
+        # linked the same way.
         kind, _, direction = str(data.get("kind") or "").partition(":")
         direction = direction or data["direction"]
-        here, other = data.get("entity_id"), data.get("other_id")
-        if not other:
+        here = data.get("entity_id")
+        try:
+            others = relations.chosen_ids(data.get("other_id"))
+        except Invalid as err:
+            return _fail(err)
+        if not others:
             return jsonify(error="Choose the record to link to."), 400
-        data = {**data, "kind": kind, "source_id": here if direction == "out" else other,
-                "target_id": other if direction == "out" else here}
-    source, target = records.live(data.get("source_id")), records.live(data.get("target_id"))
-    if source is None or target is None:
-        return jsonify(error="Both ends of a link must be records that exist."), 400
-    try:
-        rel = relations.link(data.get("kind") or "", source, target, data.get("note") or "")
-    except Invalid as err:
-        return _fail(err)
+        pairs = [(here, o) if direction == "out" else (o, here) for o in others]
+        data = {**data, "kind": kind}
+    else:
+        pairs = [(data.get("source_id"), data.get("target_id"))]
+    made = []
+    for source_id, target_id in pairs:
+        source, target = records.live(source_id), records.live(target_id)
+        if source is None or target is None:
+            db.session.rollback()
+            return jsonify(error="Both ends of a link must be records that exist."), 400
+        try:
+            made.append((relations.link(data.get("kind") or "", source, target, data.get("note") or ""),
+                         source, target))
+        except Invalid as err:
+            return _fail(err)
     db.session.commit()
-    kind = registry().kinds[rel.kind]
-    return jsonify(ok=True, relationship={"id": rel.id, "kind": rel.kind, "label": kind.label,
-                                          "source_id": source.id, "target_id": target.id, "note": rel.note})
+    kind = registry().kinds[made[0][0].kind]
+    out = [{"id": rel.id, "kind": rel.kind, "label": kind.label, "source_id": source.id,
+            "target_id": target.id, "note": rel.note} for rel, source, target in made]
+    answer = {"ok": True, "relationship": out[0], "relationships": out}
+    if len(out) > 1:
+        answer["message"] = f"Linked to {len(out)} records"
+    return jsonify(answer)
 
 
 @bp.route("/relationships/<int:rel_id>/delete", methods=["POST"])

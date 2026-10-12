@@ -4,13 +4,14 @@ record ("documented by"), and link to records with ``[[slug]]``.
 A document can be a page of another ("Part of"), in an order of its own:
 the parent lists its pages, and each page shows its path and the pages
 either side of it (views.page_overview). A document's Linked from tab lists
-the documents that mention it.
+the documents that mention it, and those cross-linked with it ("see also",
+ticked from a list of every document; the same link from both ends).
 
 Built in (``core=True``): the Documents tab every record has comes from here,
 so it can't be turned off.
 """
 from hyprvolt.core.models import EntityDetail
-from hyprvolt.manifest import EntityType, Field, ListFilter, Module, SetupFinish, Step, Tab
+from hyprvolt.manifest import EntityType, Field, ListFilter, Module, RelationKind, SetupFinish, Step, Tab
 from hyprvolt.models import db
 
 ICON = '<path d="M7 3.5h7l4 4V20a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 7 20V3.5Z"/><path d="M14 3.5V8h4M10 12h5M10 15.5h5"/>'
@@ -38,6 +39,7 @@ module = Module(
     order=900,
     core=True,
     migrations=(Step("document-pages", _pages),),
+    relation_kinds=(RelationKind("see_also", "see also", "see also"),),
     types=(
         EntityType(
             "document", "Document", "Documents", detail=DocumentBody, located_in=(),
@@ -56,7 +58,8 @@ module = Module(
                     Field("body", "Body", "markdown",
                           help="Markdown. # and ## make headings, and a page with three or more gets a "
                                "contents list. ```bash starts a code block colored for that language; "
-                               "- [ ] and - [x] make a task list. Link to a record with [[its-slug]]."),),
+                               "- [ ] and - [x] make a task list. Link to a record with [[its-slug]]: typing [[ "
+                               "lists the documents to choose from."),),
         ),
     ),
     filters=(ListFilter("top", "Top-level pages", lambda q: views.top_level(q)),),
@@ -73,3 +76,5 @@ module = Module(
 )
 
 from . import demo, runbook, views  # noqa: E402  (after DocumentBody, which views imports)
+
+module.blueprint = views.bp      # /documents/choices, /documents/<id>/links

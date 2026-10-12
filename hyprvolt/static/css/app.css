@@ -1205,12 +1205,17 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 }
 .prose-edit .prose-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--wash); }
 .prose-edit.is-editing > .prose, .prose-edit.is-editing > .kv-empty { display: none; }
-.prose-edit.is-editing [data-prose-edit] { visibility: hidden; }
+.prose-edit.is-editing [data-prose-edit] { display: none; }
+.prose-edit-tools { display: flex; gap: 6px; margin-left: auto; }
+.prose-edit:not(.is-editing) .prose-link { display: none; }
+/* The documents a Markdown field offers at [[ (app.js), under the cursor. */
+.md-pop { width: min(380px, 100%); max-height: min(300px, 45vh); }
 .prose-edit.sheet-prose { margin-top: 18px; }
 .prose-edit.sheet-prose .prose-edit-head { margin-bottom: 4px; }
 .sheet-notes.prose-edit.is-empty:not(.is-editing) { padding: 0; background: none; border-left-color: transparent; margin-bottom: 14px; }
 .prose-edit.is-empty:not(.is-editing) .setting-label { display: none; }
 .prose-edit.is-empty:not(.is-editing) .prose-edit-head { justify-content: flex-start; }
+.prose-edit.is-empty:not(.is-editing) .prose-edit-tools { margin-left: 0; }
 
 /* Banners at the top of a sheet: archived, deleted. */
 .banner {
@@ -1290,6 +1295,26 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 .linkform-open { margin: 16px 0 22px; }
 .linkform-open svg { width: 16px; height: 16px; }
 @media (max-width: 700px) { .linkform { grid-template-columns: 1fr; } }
+/* The records chosen in a picker that takes several (record_pick, many),
+   across the form under its fields; each chip's × takes it out. */
+.pick-chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.pick-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px 3px 10px; font-size: 13px; color: var(--ink); cursor: pointer; }
+.pick-chip svg { width: 14px; height: 14px; color: var(--faint); }
+.pick-chip:hover { border-color: var(--line-strong); }
+.pick-chip:hover svg { color: var(--danger); }
+/* A long list of records to tick, with a filter over it (a document's
+   cross-links): in columns, scrolling inside the form. */
+.pickform {
+  display: flex; flex-direction: column; gap: 12px;
+  margin: 20px 0 26px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+}
+.pickform .multi {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 20px;
+  max-height: 340px; overflow-y: auto; padding: 2px;
+}
+.pickform .multi .check { min-width: 0; }
+.pickform .multi .check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pickform .linkform-actions { justify-content: flex-end; }
 /* A field that finds a record as it is typed in (record_pick): a search
    icon inside it, and the records that match under it, each with its kind
    and place. */

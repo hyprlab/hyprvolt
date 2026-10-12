@@ -116,5 +116,62 @@ def test_a_document_lists_the_documents_that_link_to_it(client, h, admin):
     make(client, h, "document", name="Setup", **{"f.body": "Terms are in [[glossary]]."})
     make(client, h, "document", name="Unrelated", **{"f.body": "Nothing here, [[glossary-2]] is another."})
     tab = section(client.get(f"/e/{target['id']}/sheet?tab=linked").data.decode(), "linked")
-    assert ">Setup</a>" in tab and "Unrelated" not in tab
+    listed, choices = tab.split('class="pickform"')
+    assert ">Setup</a>" in listed and "Unrelated" not in listed
+    assert "<span>Unrelated</span>" in choices                    # offered to cross-link
     assert 'data-tab="linked"' in client.get(f"/e/{target['id']}/sheet").data.decode()
+
+
+def test_documents_are_cross_linked_from_a_list_and_read_from_both_ends(client, h, admin, editor):
+    a = make(client, h, "document", name="Network runbook")
+    b = make(client, h, "document", name="Firewall rules")
+    c = make(client, h, "document", name="VPN setup", **{"f.parent": b["id"]})
+    make(client, h, "document", name="Wiki index", **{"f.body": "Start at [[network-runbook]]."})
+    hidden = make(client, h, "document", name="Admin notes", access="private")
+    tab = section(client.get(f"/e/{a['id']}/sheet").data.decode(), "linked")
+    assert "<span>VPN setup · Firewall rules</span>" in tab              # a page says whose
+    assert "<span>Network runbook</span>" not in tab                     # not itself
+
+    resp = client.post(f"/documents/{a['id']}/links", json={"ids": f"{b['id']},{c['id']},{hidden['id']}"}, headers=h)
+    assert resp.status_code == 200 and resp.get_json()["undo"]["body"] == {"ids": ""}
+    tab = section(client.get(f"/e/{a['id']}/sheet").data.decode(), "linked")
+    listed = tab.split('class="pickform"')[0]
+    assert ">Firewall rules</a>" in listed and ">VPN setup</a>" in listed
+    assert listed.index(">Wiki index</a>") > listed.index("Links here in its text")   # mentioned, not cross-linked
+    assert 'data-tab="linked"' in client.get(f"/e/{a['id']}/sheet").data.decode()
+    # The same link from the other end, and in Relationships as "see also".
+    back = client.get(f"/e/{b['id']}/sheet").data.decode()
+    assert ">Network runbook</a>" in section(back, "linked") and ">see also<" in section(back, "relationships")
+
+    # Unticked from the other end: gone from both. The one out of the
+    # editor's sight is left alone.
+    other, oh = editor
+    resp = other.post(f"/documents/{a['id']}/links", json={"ids": str(c["id"])}, headers=oh)
+    assert resp.status_code == 200
+    assert ">Firewall rules</a>" not in section(client.get(f"/e/{a['id']}/sheet").data.decode(), "linked").split('class="pickform"')[0]
+    assert ">Admin notes</a>" in section(client.get(f"/e/{a['id']}/sheet").data.decode(), "linked")
+    # Undo puts back what was there.
+    undo = resp.get_json()["undo"]
+    assert other.post(undo["url"], json=undo["body"], headers=oh).status_code == 200
+    assert ">Firewall rules</a>" in section(client.get(f"/e/{a['id']}/sheet").data.decode(), "linked")
+
+    assert client.post(f"/documents/{a['id']}/links", json={"ids": "99999"}, headers=h).status_code == 400
+    server = make(client, h, "server", name="srv1")
+    assert client.post(f"/documents/{server['id']}/links", json={"ids": ""}, headers=h).status_code == 404
+    client.post("/admin/users/2/role", json={"role": "viewer"}, headers=h)
+    v, vh = editor
+    assert v.post(f"/documents/{a['id']}/links", json={"ids": ""}, headers=vh).status_code == 403
+    assert 'class="pickform"' not in v.get(f"/e/{a['id']}/sheet").data.decode()
+
+
+def test_a_markdown_field_offers_every_document_to_link(client, h, admin, viewer):
+    manual = make(client, h, "document", name="Manual", slug="manual")
+    make(client, h, "document", name="Install", slug="install", **{"f.parent": manual["id"]})
+    make(client, h, "document", name="Admin notes", slug="admin-notes", access="private")
+    found = client.get(f"/documents/choices?exclude={manual['id']}").get_json()["documents"]
+    assert [(d["name"], d["slug"], d["parent"]) for d in found] == [("Admin notes", "admin-notes", ""),
+                                                                    ("Install", "install", "Manual")]
+    v, _ = viewer
+    assert [d["slug"] for d in v.get("/documents/choices").get_json()["documents"]] == ["install", "manual"]
+    sheet = client.get(f"/e/{manual['id']}/sheet").data.decode()
+    assert "data-md-links" in sheet and "data-md-link" in sheet

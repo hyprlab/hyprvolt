@@ -30,6 +30,28 @@ def test_links_are_checked(client, h, admin):
                                                                "target_id": 999}, headers=h).get_json()["error"]
 
 
+def test_one_kind_of_link_goes_to_several_records_at_once(client, h, admin):
+    app, db1, db2 = make(client, h, name="app"), make(client, h, name="db1"), make(client, h, name="db2")
+    form = {"entity_id": app["id"], "direction": "out", "kind": "depends_on:out", "note": "primary"}
+    resp = client.post("/api/relationships", json={**form, "other_id": f"{db1['id']},{db2['id']}"}, headers=h)
+    assert resp.status_code == 200 and resp.get_json()["message"] == "Linked to 2 records"
+    rels = client.get(f"/api/entities/{app['id']}/relationships").get_json()["relationships"]
+    assert sorted((r["label"], r["other"]["name"], r["note"]) for r in rels) == [
+        ("depends on", "db1", "primary"), ("depends on", "db2", "primary")]
+    # The other way round, and one bad id leaves nothing made.
+    web = make(client, h, name="web")
+    resp = client.post("/api/relationships", json={**form, "kind": "depends_on:in", "other_id": f"{web['id']},{app['id']}"},
+                       headers=h)
+    assert resp.status_code == 400 and "itself" in resp.get_json()["error"]
+    assert client.get(f"/api/entities/{web['id']}/relationships").get_json()["relationships"] == []
+    assert client.post("/api/relationships", json={**form, "other_id": ""}, headers=h).status_code == 400
+    # The sheet's form takes several, and the picker leaves out those chosen.
+    tab = section(client.get(f"/e/{app['id']}/sheet").data.decode(), "relationships")
+    assert "data-pick-many" in tab and "data-pick-chips" in tab and "data-keep-open" in tab
+    found = client.get(f"/search?pick=1&q=db&exclude={app['id']},{db1['id']}").get_json()["groups"]
+    assert [i["title"] for g in found for i in g["items"]] == ["db2"]
+
+
 def test_removing_a_link_can_be_undone(client, h, admin):
     a, b = make(client, h, name="a"), make(client, h, name="b")
     rel = link(client, h, "depends_on", a, b)["relationship"]
