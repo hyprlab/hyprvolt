@@ -6,7 +6,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
-## [1.4.0-beta.14] — 2026-10-07
+## [1.6.0-beta.1] — 2026-10-12
 
 ### Added
 - Documents can be cross-linked from a list: Choose documents in a document's Linked from tab lists every other document with a filter over it, and those ticked are linked both ways, shown in each one's Linked from tab above the documents that link to it in their text
