@@ -388,6 +388,9 @@ button.menuopt { width: 100%; text-align: left; }
 .suggest-pop { top: calc(100% + 4px); left: 0; right: auto; width: max(100%, 280px); max-height: min(340px, 50vh); }
 .suggest-pop .menuopt { cursor: pointer; padding: 7px 10px; font-size: 13.5px; }
 .suggest-pop .menuopt.is-current { background: var(--wash); color: var(--ink); }
+/* A record's tags (input[data-tags]): every tag, a tick beside each it has. */
+.tag-pop .tag-opt { justify-content: space-between; }
+.tag-pop .tag-opt.is-active { font-weight: 650; }
 .suggest-pop .suggest-custom { margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0; font-style: italic; }
 .menupop-head {
   padding: 6px 10px 8px; font-size: 11px; font-weight: 700;

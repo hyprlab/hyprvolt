@@ -100,7 +100,7 @@
     </select></dd></div>
   {% endif %}
   <div data-field><dt><label for="ov-tags">Tags</label></dt><dd class="kv-edit">
-    <input id="ov-tags" name="tags" class="kv-input" value="{{ entity.tag_names|join(', ') }}" placeholder="None" title="Separated by commas" autocomplete="off" data-save></dd></div>
+    <input id="ov-tags" name="tags" class="kv-input" value="{{ entity.tag_names|join(', ') }}" placeholder="None" title="Choose from the list, or type a new one" autocomplete="off" spellcheck="false" data-tags data-save role="combobox" aria-autocomplete="list" aria-expanded="false"></dd></div>
   <div data-field><dt><label for="ov-slug">Slug</label></dt><dd class="kv-edit">
     <input id="ov-slug" name="slug" class="kv-input mono" value="{{ entity.slug }}" maxlength="119" spellcheck="false" autocomplete="off" data-save></dd></div>
 </dl>

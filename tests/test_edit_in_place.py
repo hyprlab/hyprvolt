@@ -52,3 +52,12 @@ def test_a_card_is_drawn_on_its_own_for_the_list(client, h, admin):
     assert f'data-item="{g["id"]}"' in card and 'class="card' in card
     row = client.get(f"/e/{g['id']}/card?view=list").get_data(as_text=True)
     assert 'class="row' in row and "Blue box" in row
+
+
+def test_the_tags_field_offers_every_tag(client, h, admin):
+    make(client, h, name="pve1", tags="lab")
+    rec = make(client, h, name="nas1", tags="storage, lab")
+    sheet = client.get(f"/e/{rec['id']}/sheet").data.decode()
+    assert 'id="ov-tags" name="tags"' in sheet and "data-tags" in sheet.split('id="ov-tags"')[1].split(">")[0]
+    assert "data-tags" in client.get("/e/form?type=gadget").data.decode()
+    assert [t["name"] for t in client.get("/api/tags").get_json()["tags"]] == ["lab", "storage"]

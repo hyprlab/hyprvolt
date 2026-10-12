@@ -7,6 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
+- A record's Tags field lists every tag in use as soon as the cursor is in it, a tick beside each the record has: a click or Enter ticks or unticks one, typing narrows the list, and a name no tag has yet is offered as a new tag
 - The sidebar's Tags can be moved among its groups in Settings > Modules, dragged by their handle like a group (or moved with ↑ and ↓), for every account; they stay last until moved
 - Documents can be cross-linked from a list: Choose documents in a document's Linked from tab lists every other document with a filter over it, and those ticked are linked both ways, shown in each one's Linked from tab above the documents that link to it in their text
 - Typing [[ in a document's body or a record's notes lists every document under the cursor, narrowed as a name is typed; Enter, Tab or a click writes the link as [[its-slug]]. Link a document, beside the text while it is edited, opens the same list

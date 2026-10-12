@@ -708,6 +708,13 @@ open once, and closing it again discards the change. Notes and other long
 text show formatted, with an Edit button that opens them as Markdown. `e`
 puts the cursor in the first field.
 
+Tags, here and in the New record window, drop down a list of every tag in
+use once the cursor is in the field, a tick beside each the record has. A
+click, or the arrow keys and Enter, ticks or unticks one, and each tick is
+saved at once. Typing narrows the list; a name no tag has yet is offered as
+a new tag, which Enter adds. The field itself stays the tags separated by
+commas, and can still be typed in.
+
 New records are made in the New record window, from New at the top of the
 page or the `n` key. It starts with what kind of record: type to search
 (by name, plural or module, and by the kinds a type comes in, so "switch"

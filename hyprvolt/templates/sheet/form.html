@@ -48,8 +48,9 @@
     </div>
     {% endif %}
     <div class="field">
-      {{ head('ef-tags', 'Tags', 'Words that group records of any kind, such as lab, production or critical, separated by commas. The sidebar lists every tag; choose one to see everything that has it.') }}
-      <input id="ef-tags" name="tags" value="{{ tags }}" autocomplete="off" placeholder="Separated by commas" aria-describedby="ef-tags-help">
+      {{ head('ef-tags', 'Tags', 'Words that group records of any kind, such as lab, production or critical. The field lists every tag in use: tick the ones it has, or type a name to add a new one. The sidebar lists every tag; choose one to see everything that has it.') }}
+      <input id="ef-tags" name="tags" value="{{ tags }}" autocomplete="off" spellcheck="false" placeholder="Choose or type a new one" aria-describedby="ef-tags-help"
+             data-tags role="combobox" aria-autocomplete="list" aria-expanded="false">
     </div>
     <div class="field">
       {{ head('ef-slug', 'Slug', 'A short, fixed name for the record in links and documents: lower-case letters, digits and dashes. It is made from the name unless you set one. A document links to the record by writing [[its-slug]], and the link keeps working if the record is renamed.') }}

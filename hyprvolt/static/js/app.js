@@ -2169,6 +2169,169 @@
     }
   });
 
+  // A record's tags (input[data-tags]): with the cursor in the field, every
+  // tag in use drops down under it, a tick beside each the record has; a
+  // click, or the arrow keys and Enter, ticks or unticks one. What is typed
+  // after the last comma narrows the list, and a name no tag has yet is
+  // offered as a new one. The field stays the comma list that is saved,
+  // and each tick is a change of it, saved as any other.
+  var tagPop = null, tagFor = null, tagAll = [], tagItems = [], tagAt = -1, tagTyping = false, tagSeq = 0;
+  function tagParts(input) {
+    var value = input.value, items = value.split(",").map(function (t) { return t.trim(); }).filter(Boolean);
+    var query = tagTyping && !/(^|,)\s*$/.test(value) ? items[items.length - 1] || "" : "";
+    return { chosen: query ? items.slice(0, -1) : items, query: query };
+  }
+  function tagIndex(list, name) {
+    var low = name.toLowerCase();
+    for (var i = 0; i < list.length; i++) if (list[i].toLowerCase() === low) return i;
+    return -1;
+  }
+  function tagClose() {
+    tagSeq++;
+    if (tagPop) tagPop.hidden = true;
+    if (tagFor) {
+      tagFor.setAttribute("aria-expanded", "false");
+      tagFor.removeAttribute("aria-activedescendant");
+    }
+    tagFor = null;
+  }
+  function tagMark(n) {
+    tagAt = n;
+    tagItems.forEach(function (el, i) { el.classList.toggle("is-current", i === n); });
+    if (n >= 0 && tagItems[n]) {
+      tagFor.setAttribute("aria-activedescendant", tagItems[n].id);
+      tagItems[n].scrollIntoView({ block: "nearest" });
+    } else if (tagFor) tagFor.removeAttribute("aria-activedescendant");
+  }
+  function tagShow(input, keep) {
+    if (!tagPop) {
+      tagPop = document.createElement("div");
+      tagPop.className = "menupop menupop--scroll suggest-pop tag-pop";
+      tagPop.id = "tag-pop";
+      tagPop.setAttribute("role", "listbox");
+      tagPop.setAttribute("aria-multiselectable", "true");
+      tagPop.setAttribute("aria-label", "Tags");
+      tagPop.addEventListener("mousedown", function (e) { e.preventDefault(); });
+      tagPop.addEventListener("click", function (e) {
+        e.preventDefault();
+        var opt = e.target.closest("[data-tag]");
+        if (opt) tagToggle(opt);
+      });
+    }
+    var parts = tagParts(input), q = parts.query.toLowerCase();
+    // The record's own tags are offered too, even one no other record has.
+    var names = tagAll.slice();
+    parts.chosen.forEach(function (t) { if (tagIndex(names, t) === -1) names.push(t); });
+    names.sort(function (a, b) { return a.toLowerCase().localeCompare(b.toLowerCase()); });
+    var shown = names.filter(function (t) { return !q || t.toLowerCase().indexOf(q) !== -1; });
+    tagPop.textContent = "";
+    tagItems = [];
+    function option(name, label, isNew) {
+      var on = !isNew && tagIndex(parts.chosen, name) !== -1;
+      var el = document.createElement("div");
+      el.className = "menuopt tag-opt" + (on ? " is-active" : "") + (isNew ? " suggest-custom" : "");
+      el.id = "tag-" + tagItems.length;
+      el.setAttribute("role", "option");
+      el.setAttribute("aria-selected", on ? "true" : "false");
+      el.setAttribute("data-tag", name);
+      var text = document.createElement("span");
+      text.textContent = label;
+      el.appendChild(text);
+      el.insertAdjacentHTML("beforeend", isNew
+        ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
+        : '<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>');
+      tagPop.appendChild(el);
+      tagItems.push(el);
+    }
+    var head = document.createElement("p");
+    head.className = "menupop-head";
+    head.textContent = names.length ? "Tags" : "No tags yet";
+    tagPop.appendChild(head);
+    shown.forEach(function (t) { option(t, t, false); });
+    if (parts.query && tagIndex(names, parts.query) === -1) option(parts.query, "Add “" + parts.query + "” as a new tag", true);
+    if (!tagItems.length) {
+      var hint = document.createElement("p");
+      hint.className = "menupop-head pick-note";
+      hint.textContent = "Type a name to add a tag";
+      tagPop.appendChild(hint);
+    }
+    var holder = input.parentNode;
+    holder.classList.add("has-suggest");
+    if (tagPop.parentNode !== holder) input.insertAdjacentElement("afterend", tagPop);
+    tagFor = input;
+    input.setAttribute("aria-controls", "tag-pop");
+    input.setAttribute("aria-expanded", "true");
+    tagPop.hidden = false;
+    // Typing marks the first that matches, so Enter takes it; otherwise the
+    // mark stays where it was.
+    tagMark(parts.query ? 0 : Math.min(keep === undefined ? -1 : keep, tagItems.length - 1));
+  }
+  function tagOpen(input) {
+    tagFor = input;
+    var seq = ++tagSeq;
+    get("/api/tags").then(function (data) {
+      if (seq !== tagSeq || document.activeElement !== input) return;
+      tagAll = (data.tags || []).map(function (t) { return t.name; });
+      tagShow(input);
+    }).catch(function () { tagFor = null; });
+  }
+  function tagToggle(opt) {
+    var input = tagFor;
+    if (!input) return;
+    var name = opt.getAttribute("data-tag"), parts = tagParts(input), chosen = parts.chosen;
+    var at = tagIndex(chosen, name);
+    if (at === -1) chosen.push(name); else chosen.splice(at, 1);
+    if (tagIndex(tagAll, name) === -1) tagAll.push(name);
+    // A comma after the last, so what is typed next starts another tag.
+    input.value = chosen.length ? chosen.join(", ") + ", " : "";
+    tagTyping = false;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    tagShow(input, parts.query ? -1 : tagItems.indexOf(opt));
+  }
+  document.addEventListener("focusin", function (e) {
+    if (e.target.matches && e.target.matches("input[data-tags]")) { tagTyping = false; tagOpen(e.target); }
+  });
+  // Closed with Escape: a click in the field opens it again.
+  document.addEventListener("click", function (e) {
+    var input = e.target.closest && e.target.closest("input[data-tags]");
+    if (input && tagFor !== input) { tagTyping = false; tagOpen(input); }
+  });
+  document.addEventListener("input", function (e) {
+    var input = e.target;
+    if (!input.matches || !input.matches("input[data-tags]")) return;
+    tagTyping = true;
+    if (tagFor === input && tagPop && !tagPop.hidden) tagShow(input); else tagOpen(input);
+  });
+  document.addEventListener("focusout", function (e) {
+    var input = e.target;
+    if (!input.matches || !input.matches("input[data-tags]")) return;
+    if (tagFor === input) tagClose();
+    // The comma left for the next tag goes once the field is left.
+    var clean = input.value.replace(/[,\s]+$/, "");
+    if (clean !== input.value) {
+      if (input.defaultValue === input.value) input.defaultValue = clean;
+      input.value = clean;
+    }
+  });
+  // Before the field's own Enter (save it, or go to the next step) and a
+  // dialog's Escape.
+  document.addEventListener("keydown", function (e) {
+    var input = e.target;
+    if (input !== tagFor || !tagPop || tagPop.hidden) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (tagItems.length) tagMark((tagAt + (e.key === "ArrowDown" ? 1 : -1) + tagItems.length) % tagItems.length);
+    } else if (e.key === "Enter" && tagAt >= 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      tagToggle(tagItems[tagAt]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      tagClose();
+    }
+  }, true);
+
   // A subnet that fills in others ([data-prefills]: a gateway, a DHCP
   // range): once it is typed, the first host becomes the gateway and the
   // upper half of it the DHCP range, leaving the lower half for fixed
