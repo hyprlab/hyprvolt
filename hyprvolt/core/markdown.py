@@ -3,6 +3,8 @@
 ``[[pve1]]`` links to the record whose slug is ``pve1``, showing its name;
 ``[[pve1|the main host]]`` shows other words. A slug that matches nothing is
 struck through, so a broken link is visible rather than silently plain text.
+Both carry the slug and the record's name (``data-wiki``, ``data-name``), so
+the page editor in app.js can write them back as ``[[...]]``.
 
 The Markdown is converted, then passed through ``sanitize_html()`` like any
 HTML the app did not write itself: raw HTML typed into a document can't run.
@@ -30,6 +32,9 @@ EXTENSIONS = ["extra", "sane_lists", "toc"]
 CONTENTS_AT = 3
 CODE_BLOCK = re.compile(r'<pre><code class="language-([A-Za-z0-9_+#.-]{1,30})">(.*?)</code></pre>', re.S)
 TASK = re.compile(r"<li>(<p>)?\[([ xX])\] ")
+TOP_HEADING = re.compile(r'<h2 id="([^"]+)"')
+RECORD_LINK = re.compile(r'<a href="/e/([0-9]+)"')
+MISSING_LINK = re.compile(r'<a href="/missing/([a-z0-9][a-z0-9-]{0,118})"[^>]*>(.*?)</a>', re.S)
 FORMATTER = HtmlFormatter(nowrap=True, classprefix="hl-")
 
 
@@ -63,14 +68,28 @@ def render(text: str) -> Markup:
         label = m.group(2) or (entity.name if entity else m.group(1))
         if entity:
             return f"[{_md_text(label)}](/e/{entity.id})"
-        return f"<s>{escape(label)}</s>"
+        return f"[{_md_text(label)}](/missing/{m.group(1)})"     # struck through below
 
     md = md_lib.Markdown(extensions=EXTENSIONS, output_format="html",
                          extension_configs={"toc": {"slugify": _anchor, "toc_depth": "1-4"}})
     html = sanitize_html(md.convert(WIKI_LINK.sub(link, text)))
+    by_id = {e.id: e for e in found.values()}
+    html = RECORD_LINK.sub(lambda m: _wiki_record(m, by_id), html)
+    html = MISSING_LINK.sub(r'<s data-wiki="\1" data-name="\1">\2</s>', html)
+    # A top-level heading is shown as an h2 under the page's title; the
+    # editor writes it back as one.
+    tops = {t["id"] for t in md.toc_tokens if t["level"] == 1}
+    html = TOP_HEADING.sub(lambda m: m.group(0) + (' data-level="1"' if m.group(1) in tops else ""), html)
     html = CODE_BLOCK.sub(_highlight, html)
     html = TASK.sub(_task, html)
     return Markup(_contents(md.toc_tokens) + html)
+
+
+def _wiki_record(m, by_id) -> str:
+    entity = by_id.get(int(m.group(1)))
+    if entity is None:
+        return m.group(0)
+    return f'<a href="/e/{entity.id}" data-wiki="{escape(entity.slug)}" data-name="{escape(entity.name)}"'
 
 
 def _highlight(m) -> str:

@@ -11,13 +11,13 @@ def render(app, text):
 
 def test_markdown_is_rendered_and_sanitized(app, client, h, admin):
     html = render(app, "# Restore\n\nRun `zfs rollback`.\n\n<script>alert(1)</script><img src=x onerror=alert(1)>")
-    assert '<h2 id="h-restore">Restore</h2>' in html and "<code>zfs rollback</code>" in html
+    assert '<h2 id="h-restore" data-level="1">Restore</h2>' in html and "<code>zfs rollback</code>" in html
     assert "<script" not in html and "onerror" not in html
 
 
 def test_headings_keep_their_levels_and_get_anchors(app, client, h, admin):
     html = render(app, "# Setup\n\n## Install\n\n### Options\n\nSee [install](#h-install).")
-    assert '<h2 id="h-setup">' in html and '<h2 id="h-install">' in html and '<h3 id="h-options">' in html
+    assert '<h2 id="h-setup" data-level="1">' in html and '<h2 id="h-install">' in html and '<h3 id="h-options">' in html
     # Three headings or more: a contents list at the top, linking to each.
     assert html.startswith('<nav class="doc-contents"') and '<a href="#h-options">Options</a>' in html
     assert '<a href="#h-install">install</a>' in html            # same page: no new tab
@@ -48,10 +48,24 @@ def test_slug_links_resolve_to_records(app, client, h, admin):
     host = make(client, h, name="pve1")
     html = render(app, "Runs on [[pve1]], see [[pve1|the host]]. Also [[nowhere]].")
     assert f'href="/e/{host["id"]}"' in html and ">pve1</a>" in html and ">the host</a>" in html
-    assert "<s>nowhere</s>" in html
+    # Each carries its slug and the record's name, for the page editor to write back.
+    assert html.count('data-wiki="pve1" data-name="pve1"') == 2
+    assert '<s data-wiki="nowhere" data-name="nowhere">nowhere</s>' in html
     # A deleted record no longer resolves.
     client.post(f"/api/entities/{host['id']}/delete", headers=h)
-    assert "<s>pve1</s>" in render(app, "[[pve1]]")
+    assert '<s data-wiki="pve1" data-name="pve1">pve1</s>' in render(app, "[[pve1]]")
+
+
+def test_markdown_is_rendered_for_the_page_editor(client, h, admin, viewer):
+    host = make(client, h, name="Main host", slug="pve1")
+    resp = client.post("/api/markdown", json={"text": "# Hi\n\nOn [[pve1]] and [[gone|elsewhere]]."}, headers=h)
+    html = resp.get_json()["html"]
+    assert '<h2 id="h-hi" data-level="1">Hi</h2>' in html
+    assert f'<a href="/e/{host["id"]}" data-wiki="pve1" data-name="Main host"' in html
+    assert '<s data-wiki="gone" data-name="gone">elsewhere</s>' in html
+    assert client.post("/api/markdown", json={}, headers=h).status_code == 400
+    other, oh = viewer
+    assert other.post("/api/markdown", json={"text": "x"}, headers=oh).status_code == 403
 
 
 def test_link_labels_cannot_inject_markup(app, client, h, admin):

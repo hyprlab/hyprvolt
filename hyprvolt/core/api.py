@@ -602,6 +602,23 @@ def tag_restore():
     return jsonify(ok=True)
 
 
+# ———— Markdown ————
+
+@bp.route("/markdown", methods=["POST"])
+@role("editor")
+def markdown_preview():
+    """Markdown rendered as a page shows it: what the page editor (app.js)
+    shows after the Markdown was changed, and how it checks it can write a
+    page back without losing anything."""
+    from .markdown import render
+    text = _body().get("text")
+    if not isinstance(text, str):
+        return jsonify(error="Send the text to render."), 400
+    if len(text) > F.MAX_LONG:
+        return jsonify(error=f"Text is limited to {F.MAX_LONG} characters."), 400
+    return jsonify(html=str(render(text)))
+
+
 # ———— Custom fields ————
 
 KEY_RE = re.compile(r"^[a-z][a-z0-9_]{0,39}$")

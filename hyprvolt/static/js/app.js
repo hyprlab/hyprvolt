@@ -790,6 +790,7 @@
   document.addEventListener("click", function (e) {
     var a = e.target.closest("a[data-entity], .prose a[href^='/e/']");
     if (!a || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if (a.closest("[data-prose-view][contenteditable='true']")) return;    // being edited (see "The page editor")
     var id = parseInt(a.getAttribute("data-entity") || a.getAttribute("href").slice(3), 10);
     if (!id) return;
     e.preventDefault();
@@ -1993,11 +1994,13 @@
     }
   }, true);
 
-  // Document links in Markdown (textarea[data-md-links]: a document's body,
-  // a record's notes): typing [[ opens a list of every document at the
-  // cursor, narrowed by what is typed after the brackets (its name or its
-  // slug); Enter, Tab or a click writes [[its-slug]], Escape leaves the
-  // text as typed. A [data-md-link] button beside the text types the [[.
+  // Document links in Markdown (textarea[data-md-links], or a page being
+  // edited, [data-prose-view]): typing [[ opens a list of every document at
+  // the cursor, narrowed by what is typed after the brackets (its name or
+  // its slug); Enter, Tab or a click writes [[its-slug]] (on a page, a link
+  // showing its name), Escape leaves the text as typed. The toolbar's Link
+  // a document button types the [[. On a page, mdStart is the text node and
+  // the offset after the brackets.
   var mdPop = null, mdFor = null, mdStart = -1, mdDocs = [], mdItems = [], mdAt = -1, mdSeq = 0;
   function mdClose() {
     mdSeq++;
@@ -2030,6 +2033,12 @@
     return at;
   }
   function mdQuery() {
+    if (mdFor.isContentEditable) {
+      var sel = getSelection();
+      if (!sel.isCollapsed || sel.anchorNode !== mdStart.node || sel.anchorOffset < mdStart.offset) return null;
+      var typed = mdStart.node.nodeValue.slice(mdStart.offset, sel.anchorOffset);
+      return /[\]|\n]/.test(typed) ? null : typed;
+    }
     var end = mdFor.selectionStart;
     if (end < mdStart || mdFor.selectionEnd !== end) return null;
     var q = mdFor.value.slice(mdStart, end);
@@ -2068,6 +2077,8 @@
       el.id = "md-" + mdItems.length;
       el.setAttribute("role", "option");
       el.setAttribute("data-md-slug", d.slug);
+      el.setAttribute("data-md-id", d.id);
+      el.setAttribute("data-md-name", d.name);
       var title = document.createElement("span");
       title.className = "pick-opt-title";
       title.textContent = d.name;
@@ -2090,10 +2101,18 @@
     holder.classList.add("has-suggest");
     if (mdPop.parentNode !== holder) holder.appendChild(mdPop);
     mdPop.hidden = false;
-    var at = mdCaret(mdFor, mdStart);
     var room = holder.clientWidth - mdPop.offsetWidth;
-    mdPop.style.left = Math.max(0, Math.min(mdFor.offsetLeft + at.left, room)) + "px";
-    mdPop.style.top = (mdFor.offsetTop + Math.min(at.top, mdFor.clientHeight) + 4) + "px";
+    if (mdFor.isContentEditable) {
+      var caret = document.createRange(), outer = holder.getBoundingClientRect();
+      caret.setStart(mdStart.node, mdStart.offset);
+      var r = caret.getBoundingClientRect();
+      mdPop.style.left = Math.max(0, Math.min(r.left - outer.left, room)) + "px";
+      mdPop.style.top = (r.bottom - outer.top + 4) + "px";
+    } else {
+      var at = mdCaret(mdFor, mdStart);
+      mdPop.style.left = Math.max(0, Math.min(mdFor.offsetLeft + at.left, room)) + "px";
+      mdPop.style.top = (mdFor.offsetTop + Math.min(at.top, mdFor.clientHeight) + 4) + "px";
+    }
     mdFor.setAttribute("aria-controls", "md-pop");
     mdFor.setAttribute("aria-expanded", "true");
     mdMark(mdItems.length ? 0 : -1);
@@ -2119,6 +2138,21 @@
     }).catch(function (err) { mdClose(); toastError(err); });
   }
   function mdInsert(opt) {
+    if (mdFor.isContentEditable) {
+      var view = mdFor, sel = getSelection(), range = document.createRange();
+      var node = mdStart.node, end = sel.anchorNode === node ? sel.anchorOffset : mdStart.offset;
+      if (node.nodeValue.slice(end, end + 2) === "]]") end += 2;
+      range.setStart(node, mdStart.offset - 2);
+      range.setEnd(node, end);
+      mdClose();
+      view.focus();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand("insertHTML", false, '<a href="/e/' + parseInt(opt.getAttribute("data-md-id"), 10) +
+        '" data-wiki="' + htmlText(opt.getAttribute("data-md-slug")) + '" data-name="' + htmlText(opt.getAttribute("data-md-name")) +
+        '">' + htmlText(opt.getAttribute("data-md-name")) + "</a>\u00a0");
+      return;
+    }
     var text = mdFor, start = mdStart, end = text.selectionStart;
     var close = text.value.slice(end, end + 2) === "]]" ? 2 : 0;
     var words = opt.getAttribute("data-md-slug") + "]]";
@@ -2133,6 +2167,13 @@
   }
   document.addEventListener("input", function (e) {
     var text = e.target;
+    if (text.isContentEditable && text.matches("[data-prose-view]")) {
+      if (mdFor === text) { if (mdPop && !mdPop.hidden) mdShow(); return; }
+      var sel = getSelection(), node = sel.anchorNode, off = sel.anchorOffset;
+      if (sel.isCollapsed && node && node.nodeType === 3 && off >= 2 && node.nodeValue.slice(off - 2, off) === "[[" &&
+          node.nodeValue.charAt(off - 3) !== "[") mdOpen(text, { node: node, offset: off });
+      return;
+    }
     if (!text.matches || !text.matches("textarea[data-md-links]")) return;
     if (mdFor === text) { if (mdPop && !mdPop.hidden) mdShow(); return; }     // else still loading
     var at = text.selectionStart;
@@ -2157,19 +2198,630 @@
       mdClose();
     }
   }, true);
+
+  /* ————— The page editor ————— */
+  // Long text ([data-prose]: a document's body, a record's notes) is edited
+  // where it is read. Its formatted page ([data-prose-view]) takes the
+  // typing, and every change is written back as Markdown (mdFromHTML) into
+  // the hidden text box, which saves as any field does when the cursor
+  // leaves. Before a page is made editable, the Markdown it would be written
+  // back as is rendered by the server and compared with the page: text with
+  // Markdown the editor can't keep (footnotes, raw HTML) is edited as
+  // Markdown instead, so nothing is lost. The toolbar ([data-md-toolbar])
+  // formats the page, or writes Markdown into a text box; its Markdown button
+  // switches between the two, remembered in this browser.
+  var MD_BLOCK = /^(P|H[1-6]|UL|OL|LI|BLOCKQUOTE|PRE|HR|TABLE|DIV|NAV|FIGURE|SECTION)$/;
+  function mdIsBlock(n) { return n.nodeType === 1 && MD_BLOCK.test(n.tagName); }
+  function htmlText(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function mdFromHTML(root) {
+    return mdBlocks(root).join("\n\n").replace(/\n{3,}/g, "\n\n").replace(/^\n+|\s+$/g, "");
+  }
+  // A container's blocks, each a string of Markdown; loose text and inline
+  // elements between blocks (as contenteditable leaves them) make paragraphs.
+  function mdBlocks(el) {
+    var out = [], run = [];
+    function flush() {
+      var text = mdLines(mdInline(run)).replace(/^[ \t\n]+|[ \t\n]+$/g, "");
+      if (text) out.push(text);
+      run = [];
+    }
+    Array.prototype.forEach.call(el.childNodes, function (n) {
+      if (!mdIsBlock(n)) { run.push(n); return; }
+      flush();
+      var block = mdBlock(n);
+      if (block) out.push(block);
+    });
+    flush();
+    return out;
+  }
+  function mdBlock(n) {
+    var tag = n.tagName;
+    if (tag === "NAV") return "";     // the contents list, made by the server
+    // A list or a code block made inside a paragraph (as Chrome does) is
+    // its own block.
+    if (/^(P|H[1-6])$/.test(tag) && Array.prototype.some.call(n.childNodes, mdIsBlock)) return mdBlocks(n).join("\n\n");
+    if (tag === "P") return mdLines(mdInline(n.childNodes)).replace(/^[ \t\n]+|[ \t\n]+$/g, "");
+    if (/^H[1-6]$/.test(tag)) {
+      var words = mdInline(n.childNodes).replace(/\s*\n\s*/g, " ").trim();
+      var level = n.getAttribute("data-level") === "1" ? 1 : +tag.charAt(1);    // a # shown as an h2
+      return words ? "######".slice(0, level) + " " + words.replace(/#+$/, function (m) { return "\\" + m; }) : "";
+    }
+    if (tag === "HR") return "---";
+    if (tag === "PRE") return mdFence(n);
+    if (tag === "BLOCKQUOTE") {
+      var inner = mdBlocks(n).join("\n\n");
+      return inner ? inner.split("\n").map(function (l) { return l ? "> " + l : ">"; }).join("\n") : "";
+    }
+    if (tag === "UL" || tag === "OL") return mdList(n);
+    if (tag === "TABLE") return mdTable(n);
+    return mdBlocks(n).join("\n\n");
+  }
+  // A line that would start a heading, a quote, a list or a definition
+  // where none was meant is escaped.
+  function mdLines(text) {
+    return text.split("\n").map(function (line) {
+      return line.replace(/^(\s*)(#|>|[-+](?=\s|$)|-{3,}|(\d+)\.(?=\s|$)|:(?=\s))/, function (m, sp, mark, num) {
+        if (num) return sp + num + "\\.";
+        if (mark === ":") return sp + "&#58;";
+        return sp + "\\" + mark;
+      });
+    }).join("\n");
+  }
+  function mdInline(nodes) {
+    var out = "";
+    Array.prototype.forEach.call(nodes, function (n) { out += mdSpan(n); });
+    return out;
+  }
+  function mdSpan(n) {
+    if (n.nodeType === 3) {
+      var v = n.nodeValue;
+      if (n.previousSibling && n.previousSibling.nodeName === "BR") v = v.replace(/^\n/, "");
+      return mdEscape(v);
+    }
+    if (n.nodeType !== 1) return "";
+    switch (n.tagName) {
+      case "BR": return mdNextContent(n) ? "  \n" : "";     // one at the end only holds a line open
+      case "STRONG": case "B": return mdWrap("**", mdInline(n.childNodes));
+      case "EM": case "I": return mdWrap("*", mdInline(n.childNodes));
+      case "CODE": return mdCodeSpan(n.textContent);
+      case "A": return mdLink(n);
+      case "S": return n.hasAttribute("data-wiki") ? mdWiki(n) : mdRaw(n);
+      case "IMG": return "![" + mdEscape(n.getAttribute("alt") || "") + "](" + mdUrl(n.getAttribute("src") || "") + ")";
+      case "INPUT":
+        if (n.type !== "checkbox") return "";
+        var next = n.nextSibling;
+        return (n.checked ? "[x]" : "[ ]") + (next && next.nodeType === 3 && /^\s/.test(next.nodeValue) ? "" : " ");
+      case "U": case "MARK": case "SMALL": case "SUP": case "SUB": case "Q": return mdRaw(n);
+      default: return mdInline(n.childNodes);       // a span, a font: what is in it
+    }
+  }
+  function mdNextContent(n) {
+    for (var s = n.nextSibling; s; s = s.nextSibling) {
+      if (s.nodeType === 1 || (s.nodeType === 3 && s.nodeValue.trim())) return true;
+    }
+    return false;
+  }
+  function mdEscape(s) {
+    s = s.replace(/\u00a0/g, " ").replace(/\u200b/g, "");
+    return s.replace(/[\\`*_[\]<&]/g, function (c, i) {
+      if (c === "_") return /\w/.test(s.charAt(i - 1)) && /\w/.test(s.charAt(i + 1)) ? c : "\\_";
+      if (c === "<") return /[A-Za-z/!?]/.test(s.charAt(i + 1)) ? "&lt;" : c;
+      if (c === "&") return /^&#?\w+;/.test(s.slice(i)) ? "&amp;" : c;
+      return "\\" + c;
+    });
+  }
+  // Emphasis around the words, with the spaces at its ends outside it.
+  function mdWrap(mark, inner) {
+    var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(inner);
+    return m[2] ? m[1] + mark + m[2] + mark + m[3] : inner;
+  }
+  function mdCodeSpan(text) {
+    text = text.replace(/\u00a0/g, " ").replace(/\u200b/g, "");
+    if (!text) return "";
+    var ticks = "`";
+    while (text.indexOf(ticks) !== -1) ticks += "`";
+    return ticks + (/^`|`$/.test(text) ? " " + text + " " : text) + ticks;
+  }
+  function mdUrl(href) {
+    var depth = 0, balanced = true;
+    for (var i = 0; i < href.length; i++) {
+      if (href[i] === "(") depth++;
+      else if (href[i] === ")" && --depth < 0) balanced = false;
+    }
+    href = href.replace(/ /g, "%20").replace(/</g, "%3C").replace(/>/g, "%3E");
+    return balanced && depth === 0 ? href : href.replace(/\(/g, "%28").replace(/\)/g, "%29");
+  }
+  function mdLink(a) {
+    if (a.hasAttribute("data-wiki")) return mdWiki(a);
+    var words = mdInline(a.childNodes);
+    return words.trim() ? "[" + words + "](" + mdUrl(a.getAttribute("href") || "") + ")" : "";
+  }
+  // A link to a record by its slug: [[slug]] while it shows the record's
+  // name, [[slug|other words]] when it doesn't.
+  function mdWiki(el) {
+    var slug = el.getAttribute("data-wiki"), name = el.getAttribute("data-name");
+    var plain = !el.children.length && el.textContent === name;
+    if (plain) return "[[" + slug + "]]";
+    var words = mdInline(el.childNodes);
+    if (!words.trim()) return "";
+    if (/^[^\]\n]{1,200}$/.test(words)) return "[[" + slug + "|" + words + "]]";
+    return el.tagName === "A" ? "[" + words + "](" + mdUrl(el.getAttribute("href") || "") + ")" : words;
+  }
+  function mdRaw(el) {
+    var tag = el.tagName.toLowerCase();
+    return "<" + tag + ">" + mdInline(el.childNodes) + "</" + tag + ">";
+  }
+  // Text as it reads in a code block: a break is a new line.
+  function mdPlain(el) {
+    var out = "";
+    Array.prototype.forEach.call(el.childNodes, function (n) {
+      if (n.nodeType === 3) out += n.nodeValue;
+      else if (n.nodeName === "BR") out += "\n";
+      else if (n.nodeType === 1) out += (mdIsBlock(n) && out && !/\n$/.test(out) ? "\n" : "") + mdPlain(n);
+    });
+    return out;
+  }
+  function mdFence(pre) {
+    var code = pre.querySelector("code"), text = mdPlain(code || pre).replace(/\u00a0/g, " ").replace(/\n+$/, "");
+    if (!text.trim()) return "";
+    var lang = pre.getAttribute("data-lang") || ((code && /language-(\S+)/.exec(code.className)) || [])[1] || "";
+    var fence = "```";
+    while (text.indexOf(fence) !== -1) fence += "`";
+    return fence + lang + "\n" + text + "\n" + fence;
+  }
+  function mdList(list) {
+    var ordered = list.tagName === "OL", items = [], n = 0;
+    var loose = Array.prototype.some.call(list.children, function (li) { return !!li.querySelector(":scope > p"); });
+    function indent(text) { return text.split("\n").map(function (l, i) { return i && l ? "    " + l : l; }).join("\n"); }
+    Array.prototype.forEach.call(list.children, function (li) {
+      if (li.tagName === "UL" || li.tagName === "OL") {      // a list indented straight into a list
+        var nested = mdList(li);
+        if (nested && items.length) items[items.length - 1] += "\n    " + indent(nested);
+        else if (nested) items.push(nested);
+        return;
+      }
+      var body = mdBlocks(li).join(loose ? "\n\n" : "\n");
+      if (!body.trim()) return;
+      n++;
+      items.push((ordered ? n + ". " : "- ") + indent(body));
+    });
+    return items.join(loose ? "\n\n" : "\n");
+  }
+  function mdTable(table) {
+    var rows = Array.prototype.filter.call(table.querySelectorAll("tr"), function (tr) { return tr.closest("table") === table; });
+    if (!rows.length) return "";
+    var cells = rows.map(function (tr) {
+      return Array.prototype.map.call(tr.children, function (c) {
+        return mdInline(c.childNodes).replace(/\s*\n\s*/g, " ").replace(/\|/g, "\\|").trim();
+      });
+    });
+    var width = Math.max.apply(null, cells.map(function (r) { return r.length; }));
+    var line = function (r) {
+      var all = r.slice();
+      while (all.length < width) all.push("");
+      return "| " + all.join(" | ") + " |";
+    };
+    var sep = "|" + new Array(width + 1).join(" --- |");
+    return [line(cells[0]), sep].concat(cells.slice(1).map(line)).join("\n");
+  }
+
+  var mdMode = "page";
+  try { mdMode = localStorage.getItem("md-mode") === "source" ? "source" : "page"; } catch (_) {}
+  function proseParts(box) {
+    return { view: box.querySelector("[data-prose-view]"), text: box.querySelector("textarea"),
+             toggle: box.querySelector("[data-md-source]"), note: box.querySelector(".prose-note") };
+  }
+  // Every page editor in scope not started yet: checked, then made editable.
+  function proseInit(scope) {
+    if (!scope) return;
+    scope.querySelectorAll("[data-prose]:not([data-prose-ready])").forEach(function (box) {
+      var p = proseParts(box);
+      if (!p.view || !p.text) return;
+      box.setAttribute("data-prose-ready", "");
+      box.mdShown = p.text.value;
+      if (mdMode === "source") { proseSource(box); return; }
+      proseCheck(box).then(function (ok) {
+        if (!box.isConnected) return;
+        if (ok) proseVisual(box); else proseSource(box, true);
+      });
+    });
+  }
+  // Whether the page, written back as Markdown, comes out the same.
+  function proseCheck(box) {
+    var p = proseParts(box), before = p.view.innerHTML, md = mdFromHTML(p.view);
+    if (!p.text.value.trim() || md === p.text.value) return Promise.resolve(true);
+    return api("/api/markdown", { text: md }).then(function (data) {
+      var fresh = document.createElement("div");
+      fresh.innerHTML = data.html;
+      return fresh.innerHTML === before;
+    }, function () { return false; });
+  }
+  function proseVisual(box) {
+    var p = proseParts(box);
+    box.classList.add("is-visual");
+    box.classList.remove("is-source");
+    // The contents list goes above the page: it is the server's, not the text's.
+    var nav = p.view.querySelector(":scope > nav.doc-contents");
+    if (nav) p.view.parentNode.insertBefore(nav, p.view);
+    p.view.querySelectorAll("li.task input").forEach(function (input) {
+      input.disabled = false;
+      input.setAttribute("contenteditable", "false");
+    });
+    proseRoom(p.view);
+    box.mdFirst = mdFromHTML(p.view);
+    p.view.hidden = false;
+    p.view.contentEditable = "true";
+    p.view.spellcheck = true;
+    p.text.hidden = true;
+    if (p.note) p.note.hidden = true;
+    if (p.toggle) { p.toggle.disabled = false; p.toggle.setAttribute("aria-pressed", "false"); }
+    box.classList.toggle("is-blank", !p.text.value.trim());
+  }
+  function proseSource(box, forced) {
+    var p = proseParts(box);
+    box.classList.add("is-source");
+    box.classList.remove("is-visual", "is-blank");
+    p.view.contentEditable = "false";
+    p.view.hidden = true;
+    p.text.hidden = false;
+    autosize(p.text);
+    if (p.note) p.note.hidden = !forced;
+    if (p.toggle) {
+      p.toggle.setAttribute("aria-pressed", "true");
+      p.toggle.disabled = !!forced;
+      p.toggle.title = forced ? "This text can only be edited as Markdown" : "Show the text as a page";
+    }
+  }
+  // A page that ends in a code block, a table or a divider gets an empty
+  // paragraph after it, or nothing could be typed below it. Empty, it adds
+  // nothing to the Markdown.
+  function proseRoom(view) {
+    var last = view.lastElementChild;
+    if (last && /^(PRE|TABLE|HR|BLOCKQUOTE)$/.test(last.tagName)) {
+      var p = document.createElement("p");
+      p.appendChild(document.createElement("br"));
+      view.appendChild(p);
+    }
+  }
+  // The page, written back into the text box. Unchanged, it keeps the
+  // Markdown as it was typed.
+  function proseSync(box) {
+    var p = proseParts(box), md = mdFromHTML(p.view);
+    p.text.value = md === box.mdFirst ? p.text.defaultValue : md;
+    box.mdShown = p.text.value;
+    box.classList.toggle("is-blank", !md);
+  }
+  function proseToggle(box) {
+    var p = proseParts(box);
+    if (box.classList.contains("is-visual")) {
+      proseSource(box);
+      p.text.focus();
+      mdRemember("source");
+      return;
+    }
+    mdRemember("page");
+    var shown = p.text.value === box.mdShown ? Promise.resolve(null)
+      : api("/api/markdown", { text: p.text.value }).then(function (data) { return data.html; });
+    shown.then(function (html) {
+      if (html !== null) { p.view.innerHTML = html; box.mdShown = p.text.value; }
+      return proseCheck(box);
+    }).then(function (ok) {
+      if (ok) { proseVisual(box); proseFocus(box, true); }
+      else proseSource(box, true);
+    }).catch(toastError);
+  }
+  function mdRemember(mode) {
+    mdMode = mode;
+    try { localStorage.setItem("md-mode", mode); } catch (_) {}
+  }
+  function proseFocus(box, atEnd) {
+    var p = proseParts(box);
+    if (!box.classList.contains("is-visual")) { p.text.focus(); return; }
+    p.view.focus();
+    if (!atEnd) return;
+    // Inside the last block, at its end (before a closing break).
+    var at = p.view, r = document.createRange();
+    while (at.lastElementChild && !/^(BR|IMG|HR|INPUT)$/.test(at.lastElementChild.tagName)) at = at.lastElementChild;
+    if (at.lastChild && at.lastChild.nodeName === "BR") r.setStartBefore(at.lastChild);
+    else { r.selectNodeContents(at); r.collapse(false); }
+    var sel = getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+  // The cursor left the text, or a box was ticked: what changed is saved.
+  function proseLeave(box) {
+    var p = proseParts(box);
+    if (box.classList.contains("is-visual")) {
+      proseSync(box);
+      if (p.text.value !== p.text.defaultValue) p.text.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    if (!p.text.value.trim()) box.classList.remove("is-open");
+  }
+
+  // ——— The toolbar ———
+  function mdBlockAt(view) {
+    var sel = getSelection(), n = sel.rangeCount ? sel.anchorNode : null;
+    while (n && n !== view) {
+      if (n.nodeType === 1 && /^(P|H[1-6]|PRE|LI|DIV)$/.test(n.tagName)) return n;
+      n = n.parentNode;
+    }
+    return null;
+  }
+  function mdInside(view, tag) {
+    var sel = getSelection(), n = sel.rangeCount ? sel.anchorNode : null;
+    while (n && n !== view) {
+      if (n.nodeType === 1 && n.tagName === tag) return n;
+      n = n.parentNode;
+    }
+    return null;
+  }
+  function mdPage(box, cmd) {
+    var view = proseParts(box).view;
+    if (!view.contains(document.activeElement) && document.activeElement !== view) proseFocus(box, true);
+    var block = mdBlockAt(view);
+    switch (cmd) {
+      case "bold": case "italic": document.execCommand(cmd); break;
+      case "h2": case "h3": case "pre":
+        document.execCommand("formatBlock", false, block && block.tagName === cmd.toUpperCase() ? "<p>" : "<" + cmd + ">");
+        break;
+      case "quote":
+        if (mdInside(view, "BLOCKQUOTE")) document.execCommand("outdent");
+        else document.execCommand("formatBlock", false, "<blockquote>");
+        break;
+      case "ul": document.execCommand("insertUnorderedList"); break;
+      case "ol": document.execCommand("insertOrderedList"); break;
+      case "task": mdTaskToggle(view); break;
+      case "code": mdCodeToggle(view); break;
+      case "hr": document.execCommand("insertHorizontalRule"); break;
+      case "link": mdLinkAsk(box); return;
+      case "doc": document.execCommand("insertText", false, "[["); return;
+    }
+    proseSync(box);
+    mdToolState(box);
+  }
+  function mdTaskToggle(view) {
+    var li = mdInside(view, "LI");
+    if (!li) {
+      document.execCommand("insertUnorderedList");
+      li = mdInside(view, "LI");
+      if (!li) return;
+    }
+    var list = li.parentNode, box = li.querySelector(":scope > input, :scope > p > input");
+    var on = !box;
+    Array.prototype.forEach.call(list.children, function (item) {
+      if (item.tagName !== "LI") return;
+      var input = item.querySelector(":scope > input, :scope > p > input");
+      if (on && !input) {
+        input = document.createElement("input");
+        input.type = "checkbox";
+        input.setAttribute("contenteditable", "false");
+        var at = item.querySelector(":scope > p") || item;
+        at.insertBefore(document.createTextNode(" "), at.firstChild);
+        at.insertBefore(input, at.firstChild);
+        item.classList.add("task");
+      } else if (!on && input) {
+        var after = input.nextSibling;
+        if (after && after.nodeType === 3) after.nodeValue = after.nodeValue.replace(/^\s/, "");
+        input.remove();
+        item.classList.remove("task");
+      }
+    });
+  }
+  function mdCodeToggle(view) {
+    var sel = getSelection();
+    if (!sel.rangeCount) return;
+    var code = mdInside(view, "CODE");
+    if (code && !code.closest("pre")) {
+      var r = document.createRange();
+      r.selectNode(code);
+      sel.removeAllRanges();
+      sel.addRange(r);
+      document.execCommand("insertText", false, code.textContent);
+      return;
+    }
+    var words = sel.toString();
+    document.execCommand("insertHTML", false, "<code data-new>" + htmlText(words || "code") + "</code>");
+    var made = view.querySelector("code[data-new]");
+    if (made) {
+      made.removeAttribute("data-new");
+      if (!words) {
+        var range = document.createRange();
+        range.selectNodeContents(made);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+  }
+  // A link's address, asked for in a small bar under the toolbar; the
+  // selection is kept and given back.
+  var mdLinkBar = null, mdLinkRange = null, mdLinkBox = null;
+  function mdLinkAsk(box) {
+    var sel = getSelection(), view = proseParts(box).view;
+    if (!sel.rangeCount || !view.contains(sel.anchorNode)) return;
+    mdLinkRange = sel.getRangeAt(0).cloneRange();
+    mdLinkBox = box;
+    var a = mdInside(view, "A");
+    if (!mdLinkBar) {
+      mdLinkBar = document.createElement("form");
+      mdLinkBar.className = "md-linkbar";
+      mdLinkBar.innerHTML = '<input type="text" inputmode="url" placeholder="https://" aria-label="Link address" autocomplete="off" spellcheck="false">' +
+        '<button type="submit" class="btn btn--xs btn--primary">Link</button>' +
+        '<button type="button" class="btn btn--xs btn--ghost" data-md-unlink>Remove</button>';
+      mdLinkBar.addEventListener("submit", function (e) {
+        e.preventDefault();
+        mdLinkApply(mdLinkBar.querySelector("input").value.trim());
+      });
+      mdLinkBar.querySelector("[data-md-unlink]").addEventListener("click", function () { mdLinkApply(""); });
+      mdLinkBar.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        e.preventDefault();
+        e.stopPropagation();
+        mdLinkClose(true);
+      });
+      mdLinkBar.addEventListener("focusout", function (e) {
+        if (!e.relatedTarget || !mdLinkBar.contains(e.relatedTarget)) mdLinkClose(false);
+      });
+    }
+    var head = box.querySelector(".prose-edit-head");
+    head.parentNode.insertBefore(mdLinkBar, head.nextSibling);
+    var rect = mdLinkRange.getBoundingClientRect(), outer = box.getBoundingClientRect();
+    mdLinkBar.style.top = Math.max(0, (rect.bottom || outer.top) - outer.top + 6) + "px";
+    mdLinkBar.style.left = Math.max(0, Math.min((rect.left || outer.left) - outer.left, outer.width - 420)) + "px";
+    mdLinkBar.hidden = false;
+    mdLinkBar.querySelector("[data-md-unlink]").hidden = !a;
+    var input = mdLinkBar.querySelector("input");
+    input.value = a ? a.getAttribute("href") || "" : "";
+    input.focus();
+    input.select();
+  }
+  function mdLinkClose(refocus) {
+    if (!mdLinkBar || mdLinkBar.hidden) return;
+    mdLinkBar.hidden = true;
+    var box = mdLinkBox;
+    if (refocus && box && mdLinkRange) mdRestore(box);
+    else if (box && !box.contains(document.activeElement)) proseLeave(box);
+  }
+  function mdRestore(box) {
+    var view = proseParts(box).view, sel = getSelection();
+    view.focus();
+    sel.removeAllRanges();
+    sel.addRange(mdLinkRange);
+  }
+  function mdLinkApply(url) {
+    var box = mdLinkBox;
+    if (url && !/^(https?:|mailto:|\/|#)/i.test(url)) url = (/^[^\s@]+@[^\s@]+$/.test(url) ? "mailto:" : "https://") + url;
+    mdLinkBar.hidden = true;
+    mdRestore(box);
+    var view = proseParts(box).view, a = mdInside(view, "A"), sel = getSelection();
+    if (a && sel.isCollapsed) {
+      var r = document.createRange();
+      r.selectNodeContents(a);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+    if (!url) document.execCommand("unlink");
+    else if (sel.isCollapsed) document.execCommand("insertHTML", false, '<a href="' + htmlText(url) + '">' + htmlText(url) + "</a>");
+    else document.execCommand("createLink", false, url);
+    proseSync(box);
+  }
+  // The buttons say what the cursor is in.
+  function mdToolState(box) {
+    if (!box.classList.contains("is-visual")) return;
+    var view = proseParts(box).view, block = mdBlockAt(view), li = mdInside(view, "LI");
+    var task = !!li && li.classList.contains("task");
+    var on = {
+      bold: document.queryCommandState("bold"), italic: document.queryCommandState("italic"),
+      h2: !!block && block.tagName === "H2", h3: !!block && block.tagName === "H3",
+      pre: !!mdInside(view, "PRE"), quote: !!mdInside(view, "BLOCKQUOTE"),
+      code: !!mdInside(view, "CODE") && !mdInside(view, "PRE"), link: !!mdInside(view, "A"),
+      ul: !!mdInside(view, "UL") && !task, ol: !!mdInside(view, "OL"), task: task
+    };
+    box.querySelectorAll("[data-md]").forEach(function (b) {
+      var key = b.getAttribute("data-md");
+      if (key in on) b.setAttribute("aria-pressed", on[key] ? "true" : "false");
+    });
+  }
+  function mdClearState(box) {
+    box.querySelectorAll("[data-md][aria-pressed]").forEach(function (b) { b.removeAttribute("aria-pressed"); });
+  }
+
+  // The same buttons over a text box write the Markdown, as typing would.
+  function mdText(text, cmd) {
+    var v = text.value, s = text.selectionStart, e = text.selectionEnd, chosen = v.slice(s, e);
+    function put(from, to, words, selFrom, selTo) {
+      text.focus();
+      text.setSelectionRange(from, to);
+      if (!document.execCommand("insertText", false, words)) {
+        text.setRangeText(words, from, to, "end");
+        text.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      text.setSelectionRange(selFrom, selTo);
+    }
+    function wrap(mark, stand) {
+      var before = v.slice(s - mark.length, s), after = v.slice(e, e + mark.length);
+      if (before === mark && after === mark) { put(s - mark.length, e + mark.length, chosen, s - mark.length, e - mark.length); return; }
+      var words = chosen || stand;
+      put(s, e, mark + words + mark, s + mark.length, s + mark.length + words.length);
+    }
+    function lines(prefix, test) {
+      var from = v.lastIndexOf("\n", s - 1) + 1, to = v.indexOf("\n", e);
+      if (to === -1) to = v.length;
+      var all = v.slice(from, to).split("\n"), off = all.every(function (l) { return test.test(l); });
+      var made = all.map(function (l, i) { return off ? l.replace(test, "") : prefix(i) + l.replace(/^(#{1,6} |> |- \[[ xX]\] |- |\d+\. )/, ""); }).join("\n");
+      put(from, to, made, all.length > 1 ? from : from + made.length, from + made.length);
+    }
+    switch (cmd) {
+      case "bold": wrap("**", "bold"); break;
+      case "italic": wrap("*", "italic"); break;
+      case "code": wrap("`", "code"); break;
+      case "h2": lines(function () { return "## "; }, /^## /); break;
+      case "h3": lines(function () { return "### "; }, /^### /); break;
+      case "quote": lines(function () { return "> "; }, /^> ?/); break;
+      case "ul": lines(function () { return "- "; }, /^- (?!\[[ xX]\] )/); break;
+      case "ol": lines(function (i) { return (i + 1) + ". "; }, /^\d+\. /); break;
+      case "task": lines(function () { return "- [ ] "; }, /^- \[[ xX]\] /); break;
+      case "pre": {
+        var body = chosen || "code", lead = s && v.charAt(s - 1) !== "\n" ? "\n" : "";
+        put(s, e, lead + "```\n" + body + "\n```\n", s + lead.length + 4, s + lead.length + 4 + body.length);
+        break;
+      }
+      case "hr": {
+        var gap = s && v.charAt(s - 1) !== "\n" ? "\n\n" : (s && v.charAt(s - 2) !== "\n" ? "\n" : "");
+        put(s, e, gap + "---\n\n", s + gap.length + 5, s + gap.length + 5);
+        break;
+      }
+      case "link": {
+        var label = chosen || "words";
+        var at = s + label.length + 3;
+        put(s, e, "[" + label + "](https://)", at, at + 8);
+        break;
+      }
+      case "doc": put(s, e, "[[", s + 2, s + 2); break;
+    }
+  }
+  function mdTarget(btn) {
+    var box = btn.closest("[data-prose]");
+    if (box) return { box: box };
+    var field = btn.closest(".field");
+    return { text: field && field.querySelector("textarea[data-md-links]") };
+  }
   document.addEventListener("mousedown", function (e) {
-    if (e.target.closest && e.target.closest("[data-md-link]")) e.preventDefault();   // the text keeps the focus
+    // The text keeps the focus and the selection.
+    if (e.target.closest && e.target.closest("[data-md-toolbar] button")) e.preventDefault();
   });
   document.addEventListener("click", function (e) {
-    var btn = e.target.closest && e.target.closest("[data-md-link]");
+    var btn = e.target.closest && e.target.closest("[data-md-toolbar] button");
     if (!btn) return;
-    var box = btn.closest("[data-prose]"), text = box && box.querySelector("textarea[data-md-links]");
-    if (!text) return;
-    text.focus();
-    if (!document.execCommand("insertText", false, "[[")) {
-      text.setRangeText("[[", text.selectionStart, text.selectionEnd, "end");
-      text.dispatchEvent(new Event("input", { bubbles: true }));
+    var to = mdTarget(btn);
+    if (btn.hasAttribute("data-md-source")) { if (to.box) proseToggle(to.box); return; }
+    var cmd = btn.getAttribute("data-md");
+    if (to.box && to.box.classList.contains("is-visual")) mdPage(to.box, cmd);
+    else if (to.box) mdText(proseParts(to.box).text, cmd);
+    else if (to.text) mdText(to.text, cmd);
+  });
+  // Ctrl/Cmd with B, I, K or E, as the buttons' titles say.
+  var MD_KEYS = { b: "bold", i: "italic", k: "link", e: "code" };
+  document.addEventListener("keydown", function (e) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+    var cmd = MD_KEYS[e.key.toLowerCase()], t = e.target;
+    if (!cmd || !t.closest) return;
+    var view = t.closest("[data-prose-view]");
+    if (view && view.isContentEditable) {
+      e.preventDefault();
+      mdPage(view.closest("[data-prose]"), cmd);
+    } else if (t.matches("textarea[data-md-links]")) {
+      e.preventDefault();
+      mdText(t, cmd);
     }
+  });
+  document.addEventListener("selectionchange", function () {
+    var sel = getSelection(), n = sel.rangeCount ? sel.anchorNode : null;
+    var view = n && (n.nodeType === 1 ? n : n.parentNode).closest && (n.nodeType === 1 ? n : n.parentNode).closest("[data-prose-view]");
+    document.querySelectorAll("[data-prose].is-visual").forEach(function (box) {
+      if (view && box.contains(view)) mdToolState(box); else mdClearState(box);
+    });
   });
 
   // A record's tags (input[data-tags]): with the cursor in the field, every
@@ -3249,6 +3901,7 @@
     return fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview") + foldQuery(id)).then(function (html) {
       sheetArticle.innerHTML = html;
       applyViews(sheetArticle);
+      proseInit(sheetArticle);
       var root = sheetArticle.querySelector(".sheet-content");
       current = {
         id: id,
@@ -3655,6 +4308,7 @@
         var old = sheetArticle.querySelector('[data-live="' + part.getAttribute("data-live") + '"]');
         if (old && !old.contains(document.activeElement)) old.replaceWith(part);
       });
+      proseInit(sheetArticle);
       var root = fresh.querySelector(".sheet-content"), here = sheetArticle.querySelector(".sheet-content");
       if (root && here) {
         current.name = root.getAttribute("data-name");
@@ -3689,26 +4343,80 @@
       if (isDirty(el)) saveField(el);
     });
     sheetArticle.addEventListener("click", function (e) {
+      // Folded notes open at their Add button.
       var btn = e.target.closest("[data-prose-edit]");
-      if (!btn) return;
-      var box = btn.closest("[data-prose]"), text = box.querySelector("textarea");
-      box.classList.add("is-editing");
-      text.hidden = false;
-      autosize(text);
-      text.focus();
+      if (btn) {
+        var box = btn.closest("[data-prose]");
+        box.classList.add("is-open");
+        proseFocus(box, true);
+        return;
+      }
+      if (e.target.closest("[data-prose-view] li.task input")) { e.preventDefault(); return; }    // ticked at mousedown
+      // On a page being edited a click puts the cursor in a link; with
+      // Ctrl/Cmd it opens it.
+      var a = e.target.closest("[data-prose-view] a[href]");
+      if (!a || !a.closest("[data-prose-view]").isContentEditable) return;
+      e.preventDefault();
+      if (!(e.ctrlKey || e.metaKey)) return;
+      var id = /^\/e\/(\d+)$/.exec(a.getAttribute("href"));
+      if (id) openEntity(parseInt(id[1], 10));
+      else window.open(a.href, "_blank", "noopener");
+    }, true);
+    // A checklist's box is ticked here, not by the browser (which doesn't
+    // reliably, inside text being edited), and saved at once.
+    sheetArticle.addEventListener("mousedown", function (e) {
+      var input = e.target.closest && e.target.closest("[data-prose-view] li.task input");
+      if (!input || !input.closest("[data-prose-view]").isContentEditable) return;
+      e.preventDefault();
+      input.checked = !input.checked;
+      input.setAttribute("aria-label", input.checked ? "Done" : "Not done");
+      proseLeave(input.closest("[data-prose]"));
     });
+    sheetArticle.addEventListener("mouseover", function (e) {
+      var a = e.target.closest && e.target.closest("[data-prose-view] a[href]");
+      if (a && !a.title && a.closest("[data-prose-view]").isContentEditable) a.title = "Ctrl/Cmd+click to open";
+    });
+    // Typing on an empty page starts a paragraph, as Enter does after one.
+    try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch (_) {}
+    sheetArticle.addEventListener("focusin", function (e) {
+      var view = e.target;
+      if (!view.matches || !view.matches("[data-prose-view]") || !view.isContentEditable || view.textContent.trim() || view.querySelector("img, hr, input")) return;
+      view.innerHTML = "<p><br></p>";
+      var r = document.createRange();
+      r.setStart(view.firstChild, 0);
+      getSelection().removeAllRanges();
+      getSelection().addRange(r);
+    });
+    // Every change on a page is written back into its text box at once, so
+    // a save, a reload or a closed tab has it.
     sheetArticle.addEventListener("input", function (e) {
       if (e.target.matches(".prose-input")) autosize(e.target);
+      var view = e.target.closest && e.target.closest("[data-prose-view]");
+      if (view && view.isContentEditable) {
+        proseRoom(view);
+        proseSync(view.closest("[data-prose]"));
+      }
     });
-    // Left unchanged, long text goes back to showing formatted; changed, it
-    // is saved (above) and comes back formatted from the server.
+    // Enter in a code block is a new line in it, not a new block.
+    sheetArticle.addEventListener("keydown", function (e) {
+      var view = e.target.closest && e.target.closest("[data-prose-view]");
+      if (e.key !== "Enter" || e.shiftKey || !view || !view.isContentEditable || (mdPop && !mdPop.hidden && mdFor === view)) return;
+      var pre = mdInside(view, "PRE");
+      if (!pre) return;
+      e.preventDefault();
+      var sel = getSelection(), tail = document.createRange(), r = sel.getRangeAt(0);
+      tail.selectNodeContents(pre);
+      tail.setStart(r.endContainer, r.endOffset);
+      var atEnd = !tail.toString().replace(/\n$/, "").length;
+      document.execCommand("insertText", false, atEnd && !/\n$/.test(tail.toString()) ? "\n\n" : "\n");
+      if (atEnd && !/\n$/.test(tail.toString())) sel.modify("move", "backward", "character");
+    });
+    // Leaving the text (not for its toolbar or link bar) saves it.
     sheetArticle.addEventListener("focusout", function (e) {
-      var text = e.target;
-      if (!text.matches || !text.matches(".prose-input") || isDirty(text)) return;
-      var box = text.closest("[data-prose]");
-      if (e.relatedTarget && box.contains(e.relatedTarget)) return;    // to its Link a document
-      box.classList.remove("is-editing");
-      text.hidden = true;
+      var box = e.target.closest && e.target.closest("[data-prose]");
+      if (!box || (e.relatedTarget && box.contains(e.relatedTarget))) return;
+      if (mdFor && box.contains(mdFor) && mdPop && !mdPop.hidden) return;
+      proseLeave(box);
     });
   }
   function autosize(text) {
@@ -3801,6 +4509,7 @@
   /* ————— Keyboard ————— */
   document.addEventListener("keydown", function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      if (e.defaultPrevented) return;      // a link, in text being written ("The page editor")
       e.preventDefault();
       openPalette();
       return;

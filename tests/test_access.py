@@ -55,7 +55,7 @@ def test_a_private_document_is_hidden_from_a_viewer_everywhere(client, h, admin,
     lines = other.get(f"/api/entities/{page['id']}/history").get_json()["history"]
     assert "Private manual" not in str(lines) and "a restricted record" in str(lines)
     # The link in the open document is struck through, as for a record that isn't there.
-    assert "<s>private-manual</s>" in other.get(f"/e/{open_doc['id']}/sheet").data.decode()
+    assert '<s data-wiki="private-manual" data-name="private-manual">private-manual</s>' in other.get(f"/e/{open_doc['id']}/sheet").data.decode()
     # Its slug can't be taken over or probed by name.
     taken = other.post("/api/entities/by-slug/private-manual", json={"type": "document", "name": "x"}, headers=oh)
     assert taken.status_code == 403                       # a viewer writes nothing

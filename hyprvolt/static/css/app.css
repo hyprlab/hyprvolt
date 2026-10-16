@@ -1132,6 +1132,7 @@ html[data-theme="light"] .tech-tile-name { color: #000; }
 /* The sections' links in the sheet: a row that scrolls sideways on a phone,
    kept under the bar while the record scrolls, and a rail on a wide screen. */
 @media (max-width: 900px) {
+  .sheet { --sheet-tabs: 42px; }
   .sheet-nav { position: sticky; top: var(--sheet-bar); z-index: 4; background: var(--surface); margin: 0 -20px; padding: 0 20px; }
   .sheet-nav .tabs { margin-bottom: 0; }
   .sheet-sections { padding-top: 22px; }
@@ -1203,27 +1204,61 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 }
 /* A module's form section (a rack position), edited in place. */
 .kv-section { margin-top: 4px; }
-/* Long text: formatted, until Edit opens it as Markdown. Empty notes are
-   only their button. */
-.prose-edit-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+/* Long text, edited where it is read (app.js, "The page editor"): the page
+   takes the typing, with the formatting toolbar in its heading row, which
+   stays in view down a long page. Markdown shows the text box instead.
+   Folded notes that are empty are only their Add button. */
+.prose-edit { position: relative; }
+.prose-edit-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
 .prose-edit-head .setting-label { margin: 0; }
+.prose-edit:focus-within .prose-edit-head {
+  position: sticky; top: 0; z-index: 3; margin-inline: -8px; padding: 6px 8px;
+  background: var(--surface); border-radius: var(--radius-sm);
+}
+.sheet-notes.prose-edit:focus-within .prose-edit-head { background: var(--panel); }
+@media (max-width: 900px) { .prose-edit:focus-within .prose-edit-head { top: calc(var(--sheet-bar) + var(--sheet-tabs)); } }
+.md-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1px; margin-left: auto; opacity: .6; transition: opacity .15s; }
+.prose-edit:hover .md-toolbar, .prose-edit:focus-within .md-toolbar, .field .md-toolbar { opacity: 1; }
+.field .md-toolbar { margin: 0 0 6px -4px; }
+.md-tool.iconbtn--sm svg { width: 16px; height: 16px; }
+.md-glyph { font-size: 14px; font-weight: 700; line-height: 1; color: inherit; }
+.md-glyph--italic { font-family: Georgia, serif; font-style: italic; font-weight: 600; font-size: 15px; }
+.md-glyph--h2, .md-glyph--h3 { font-size: 12px; font-weight: 750; letter-spacing: -.02em; }
+.md-toolbar-sep { width: 1px; height: 16px; margin: 0 5px; background: var(--line-strong); }
+.md-source { margin-left: 6px; }
+.md-source[aria-pressed="true"] { background: var(--wash); color: var(--ink); }
+.md-source[disabled] { opacity: .5; cursor: default; }
+.prose-editor {
+  position: relative; min-height: 2.6em; margin: 6px -9px 0; padding: 4px 8px;
+  border: 1px solid transparent; border-radius: var(--radius-sm); transition: border-color .15s, box-shadow .15s;
+}
+.prose-edit.is-visual .prose-editor:hover { border-color: var(--line-strong); }
+.prose-edit.is-visual .prose-editor:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--wash); }
+.prose-edit.is-blank .prose-editor::before {
+  content: attr(data-placeholder); position: absolute; top: 4px; left: 8px; color: var(--faint); pointer-events: none;
+}
+.prose-editor > :last-child { margin-bottom: .4em; }
+.prose-editor li.task input { cursor: pointer; }
+.prose-edit.is-visual .prose-editor a { cursor: text; }
 .prose-edit .prose-input {
   display: block; width: 100%; margin-top: 8px; padding: 10px 12px; resize: vertical; line-height: 1.6;
   font-size: 13.5px; color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: var(--radius-sm);
 }
 .prose-edit .prose-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--wash); }
-.prose-edit.is-editing > .prose, .prose-edit.is-editing > .kv-empty { display: none; }
-.prose-edit.is-editing [data-prose-edit] { display: none; }
-.prose-edit-tools { display: flex; gap: 6px; margin-left: auto; }
-.prose-edit:not(.is-editing) .prose-link { display: none; }
+.prose-note { margin: 6px 0 0; }
+/* A link's address, asked for under the toolbar. */
+.md-linkbar { position: absolute; z-index: 6; display: flex; gap: 6px; align-items: center; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); box-shadow: var(--shadow-2); }
+.md-linkbar input { width: min(320px, 60vw); padding: 5px 8px; font-size: 13.5px; }
 /* The documents a Markdown field offers at [[ (app.js), under the cursor. */
 .md-pop { width: min(380px, 100%); max-height: min(300px, 45vh); }
 .prose-edit.sheet-prose { margin-top: 18px; }
 .prose-edit.sheet-prose .prose-edit-head { margin-bottom: 4px; }
-.sheet-notes.prose-edit.is-empty:not(.is-editing) { padding: 0; background: none; border-left-color: transparent; margin-bottom: 14px; }
-.prose-edit.is-empty:not(.is-editing) .setting-label { display: none; }
-.prose-edit.is-empty:not(.is-editing) .prose-edit-head { justify-content: flex-start; }
-.prose-edit.is-empty:not(.is-editing) .prose-edit-tools { margin-left: 0; }
+.prose-add { display: none; }
+.prose-edit.is-folding.is-empty:not(.is-open) .prose-add { display: inline-flex; }
+.prose-edit.is-folding.is-empty:not(.is-open) :is(.setting-label, .md-toolbar, .prose-editor, .prose-input, .prose-note) { display: none; }
+.sheet-notes.prose-edit.is-folding.is-empty:not(.is-open) { padding: 0; background: none; border-left-color: transparent; margin-bottom: 14px; }
+.prose-edit.is-folding.is-empty:not(.is-open) .prose-edit-head { justify-content: flex-start; }
 
 /* Banners at the top of a sheet: archived, deleted. */
 .banner {

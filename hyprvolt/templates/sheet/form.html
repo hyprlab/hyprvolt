@@ -5,7 +5,7 @@
    Each part is a data-step, a step of the New record window (its name in
    the rail; an empty one belongs to the step before); a new record's form
    leaves its error and Create button to the window's foot. #}
-{% from "sheet/controls.html" import tip, head, described, input with context %}
+{% from "sheet/controls.html" import tip, head, described, input, md_toolbar with context %}
 
 <form class="entity-form" id="entity-form" data-id="{{ entity.id if entity else '' }}" data-type="{{ etype.key }}"
       data-title="{{ ('Edit ' ~ entity.name) if entity else ('New ' ~ etype.text()) }}" novalidate>
@@ -97,6 +97,7 @@
   <div data-step="Notes">
   <div class="field form-notes">
     {{ head('ef-notes', 'Notes', 'Anything else worth knowing, written in Markdown. Link to another record by writing its slug in double brackets: [[its-slug]].') }}
+    {{ md_toolbar('Notes') }}
     <textarea id="ef-notes" name="notes" rows="4" placeholder="Markdown. Link to a record with [[its-slug]]; [[ lists the documents." data-md-links aria-describedby="ef-notes-help">{{ entity.notes if entity else '' }}</textarea>
   </div>
   </div>

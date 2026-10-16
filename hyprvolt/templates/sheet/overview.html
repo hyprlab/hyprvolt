@@ -1,19 +1,22 @@
 {% from "partials/macros.html" import crumbs as crumb_nav, entity_link, tag_chips %}
-{% from "sheet/controls.html" import control, tip, when with context %}
+{% from "sheet/controls.html" import control, md_toolbar, tip, when with context %}
 {# Read as a page, or, for an editor, edited in place: each field is its
    control, saved when it changes (app.js, "Editing in place"). The parts
    marked data-live are redrawn after a save. #}
-{% macro prose_edit(name, label, html, raw, empty, cls='') -%}
-<section class="prose-edit {{ cls }}{{ ' is-empty' if not raw }}" data-prose data-field data-live="prose-{{ name }}">
+{# Long text, edited where it is read (app.js, "The page editor"): the page
+   itself takes the typing, and the Markdown it makes is saved from the
+   hidden text box. Folded (the notes), empty text is only its Add button. #}
+{% macro prose_edit(name, label, html, raw, fold=false, cls='') -%}
+<section class="prose-edit {{ cls }}{{ ' is-empty is-blank' if not raw }}{{ ' is-folding' if fold }}" data-prose data-field data-live="prose-{{ name }}">
   <div class="prose-edit-head">
     {% if label %}<p class="setting-label">{{ label }}</p>{% endif %}
-    <span class="prose-edit-tools">
-      <button type="button" class="btn btn--xs btn--ghost prose-link" data-md-link title="Or type [[ in the text">Link a document</button>
-      <button type="button" class="btn btn--xs btn--ghost" data-prose-edit>{{ 'Edit' if raw else 'Add ' ~ (label or 'text')|lower }}</button>
-    </span>
+    {{ md_toolbar(label or 'Text', toggle=true) }}
+    {% if fold %}<button type="button" class="btn btn--xs btn--ghost prose-add" data-prose-edit>Add {{ (label or 'text')|lower }}</button>{% endif %}
   </div>
-  {% if html %}<div class="prose">{{ html }}</div>{% elif not raw %}{% else %}<p class="kv-empty">{{ empty }}</p>{% endif %}
-  <textarea name="{{ name }}" class="prose-input mono" rows="10" spellcheck="true" aria-label="{{ label or 'Text' }}" data-save data-md-links hidden>{{ raw }}</textarea>
+  <p class="hint prose-note" hidden>This text uses Markdown the page editor can't keep, so it is edited as Markdown.</p>
+  <div class="prose prose-editor" data-prose-view role="textbox" aria-multiline="true" aria-label="{{ label or 'Text' }}"
+       data-placeholder="Write here. Type [[ to link a document.">{{ html }}</div>
+  <textarea name="{{ name }}" class="prose-input mono" rows="10" spellcheck="true" aria-label="{{ label or 'Text' }} as Markdown" data-save data-md-links hidden>{{ raw }}</textarea>
 </section>
 {%- endmacro %}
 {% macro edit_row(item) -%}
@@ -69,7 +72,7 @@
 </section>
 {% endif %}
 {% if editable %}
-{{ prose_edit('notes', 'Notes', notes, entity.notes or '', 'Nothing written yet.', 'sheet-notes') }}
+{{ prose_edit('notes', 'Notes', notes, entity.notes or '', fold=true, cls='sheet-notes') }}
 <div data-live="above">{{ above }}</div>
 <dl class="kv kv--edit">
   {% if kinds %}
@@ -123,7 +126,7 @@
 {% endfor %}
 
 {% for f, html, ctl in prose %}
-{{ prose_edit(ctl.name, f.label, html, ctl.value or '', 'Nothing written yet.', 'sheet-prose') }}
+{{ prose_edit(ctl.name, f.label, html, ctl.value or '', cls='sheet-prose') }}
 {% endfor %}
 
 <div data-live="below">{{ below }}</div>

@@ -376,8 +376,9 @@ main host]]`. A link to a slug that matches nothing is struck through, so a
 broken link shows. Typing `[[` in a document's body or a record's notes lists every
 document under the cursor, narrowed by what is typed after the brackets
 (a name or a slug); Enter, Tab or a click writes `[[its-slug]]`, and Escape
-leaves the text as typed. Link a document, beside the text while it is
-edited, types the brackets and opens the same list.
+leaves the text as typed. On a page being edited the choice becomes a link
+showing the document's name. The toolbar's Link a document button types the
+brackets and opens the same list.
 
 - **Headings** keep their levels: `#` and `##` are sections, `###` and
   below subsections. Each heading gets an anchor, `h-` and its words (a
@@ -527,6 +528,7 @@ so in `notices`, a list of sentences, beside the record.
 | `GET /api/entities/<id>/history`, `/relationships`, `/dependencies` | Its history, its links, what depends on it (`direction=dependencies` for the other way) |
 | `GET /api/catalogs/<key>` | A list of known names a field offers as it is typed in, under group headings: `os`, operating systems |
 | `POST /api/relationships`, `POST /api/relationships/<id>/delete` | Link two records (`kind`, `source_id`, `target_id`), unlink |
+| `POST /api/markdown` | Markdown (`text`) rendered as a page shows it, as `html`; for editors |
 | `GET /api/tags`, `GET /api/custom-fields` | Tags in use and those added in Settings > Tags (with a count of 0 while no record has them), custom field definitions |
 | `GET /api/entities/<id>/attachments`, `POST` the same | A record's files, the featured image aside; upload with multipart `file` parts. An image also has `thumb` and `large` |
 | `POST /api/entities/<id>/image` | Its featured image: upload one as a multipart `file` part, or send `{"attachment_id": null}` to remove it. The answer's `undo` brings back the one replaced or removed |
@@ -712,9 +714,24 @@ is saved when the cursor leaves the field, on Enter, or when the record is
 closed or another one opened, and the list behind it follows. A change that
 can't be saved (a required field left empty, a number out of range) says why
 under the field and keeps what was typed; closing the record then keeps it
-open once, and closing it again discards the change. Notes and other long
-text show formatted, with an Edit button that opens them as Markdown. `e`
-puts the cursor in the first field.
+open once, and closing it again discards the change. `e` puts the cursor in
+the first field.
+
+Notes, a document's body and other long text are edited as the page they
+show: click into it and type. The toolbar above it makes headings, bold,
+italic, code, links (Ctrl or ⌘ with B, I, E and K), lists, checklists,
+quotes, code blocks and dividers, and links a document; a checklist's box
+is ticked with a click. Enter in a code block starts a new line in it. A
+link opens with Ctrl or ⌘ and a click, since a plain click puts the cursor
+in it. The text is saved as Markdown when the cursor leaves it, written in
+a standard way: `**bold**`, `*italic*`, `-` for a list item. A part not
+changed keeps its Markdown as it was typed. Markdown, at the end of the
+toolbar, shows and edits the text as Markdown instead, and the choice is
+remembered in that browser. Text with Markdown the page can't rebuild
+exactly (footnotes, HTML, a definition list) opens as Markdown and says so,
+so nothing in it is lost. Empty notes are an Add notes button until
+something is written. In the New record window the same toolbar writes
+Markdown into the text box.
 
 Tags, here and in the New record window, drop down a list of every tag in
 use once the cursor is in the field, a tick beside each the record has. A

@@ -42,7 +42,9 @@ def test_other_modules_sections_and_long_text_are_edited_in_place(client, h, adm
     assert '<option value="nas" >NAS</option>' in html and "data-retype" in html
     doc = make(client, h, "document", name="Runbook", **{"f.body": "# Steps\n\nReboot it."})
     html = sheet(client, doc["id"])
-    assert 'data-prose' in html and 'name="f.body"' in html and '<h2 id="h-steps">' in html and ">Edit</button>" in html
+    assert 'data-prose' in html and 'name="f.body"' in html and '<h2 id="h-steps" data-level="1">' in html
+    # The page itself is edited, under its toolbar; no Edit button opens it.
+    assert "data-prose-view" in html and "data-md-toolbar" in html and ">Edit</button>" not in html
     assert 'name="access"' in html
 
 
