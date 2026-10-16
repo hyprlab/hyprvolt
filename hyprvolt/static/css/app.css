@@ -1221,7 +1221,7 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 /* Shown only while the text is being edited; its room is kept, so the text doesn't move. */
 .prose-edit:not(:focus-within) .md-toolbar { visibility: hidden; }
 /* A page with a contents list: the label, the list, then the toolbar over the text. */
-.prose-edit > .setting-label { margin: 0 0 8px; }
+.prose-edit > .setting-label { margin: 0 0 14px; }
 .prose-edit.has-contents > .doc-contents { margin-bottom: 4px; }
 .field .md-toolbar { margin: 0 0 6px -4px; }
 .md-tool.iconbtn--sm svg { width: 16px; height: 16px; }
@@ -1544,14 +1544,18 @@ button.ipcell { cursor: pointer; }
 .prose h4 { font-size: 17.5px; }
 .prose h5 { font-size: 15.5px; }
 .prose h6 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-/* The contents list of a longer page, linking to its headings. */
-.doc-contents { margin: 0 0 1.6em; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel); font-size: 14.5px; line-height: 1.5; }
-.doc-contents .setting-label { margin: 0 0 6px; }
-.doc-contents ol { margin: 0; padding-left: 1.2em; }
+/* The contents list of a longer page, linking to its headings: part of the
+   page's text, not a box apart from it. */
+.doc-contents { margin: 0 0 1.4em; font-size: 15px; line-height: 1.55; }
+.doc-contents .setting-label { margin: 0 0 4px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; text-transform: none; color: var(--ink); }
+.doc-contents ol { margin: 0; padding-left: 1.3em; color: var(--muted); }
 .doc-contents ol ol { margin-top: 2px; }
-.doc-contents li { margin: 2px 0; }
-.doc-contents a { text-decoration: none; }
-.doc-contents a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+.doc-contents li { margin: 3px 0; }
+.doc-contents a {
+  color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong);
+  text-decoration-thickness: 1px; text-underline-offset: 3px;
+}
+.doc-contents a:hover { text-decoration-color: var(--accent); text-decoration-thickness: 2px; }
 /* A document's pages, and the pages either side of the one open. */
 .doc-pages { list-style: none; padding: 0; }
 .doc-pager { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
