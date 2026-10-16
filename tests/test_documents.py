@@ -20,6 +20,10 @@ def test_headings_keep_their_levels_and_get_anchors(app, client, h, admin):
     assert '<h2 id="h-setup" data-level="1">' in html and '<h2 id="h-install">' in html and '<h3 id="h-options">' in html
     # Three headings or more: a contents list at the top, linking to each.
     assert html.startswith('<nav class="doc-contents"') and '<a href="#h-options">Options</a>' in html
+    # An info button says where it comes from; its id follows the headings, so
+    # the same text renders the same (the page editor compares renderings).
+    assert 'class="infotip" popovertarget="contents-help-' in html and "Filled in from the headings" in html
+    assert render(app, "# Setup\n\n## Install\n\n### Options\n\nOther words.").split("<ol>")[0] == html.split("<ol>")[0]
     assert '<a href="#h-install">install</a>' in html            # same page: no new tab
     assert "doc-contents" not in render(app, "## Only one")
 

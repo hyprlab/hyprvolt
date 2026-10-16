@@ -1219,7 +1219,7 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 .sheet-notes.prose-edit:focus-within .prose-edit-head { background: var(--panel); }
 @media (max-width: 900px) { .prose-edit:focus-within .prose-edit-head { top: calc(var(--sheet-bar) + var(--sheet-tabs)); } }
 .md-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1px; margin-left: -4px; }
-.prose-edit:not(:focus-within):not(.is-dirty) .md-toolbar { visibility: hidden; }
+.prose-edit:not(.is-dirty):not(:has([data-prose-view]:focus, .prose-input:focus, .md-toolbar :focus, .md-linkbar :focus)) .md-toolbar { visibility: hidden; }
 .prose-save { display: none; margin-left: auto; }
 .prose-edit.is-dirty .prose-save { display: inline-flex; }
 /* The label, a page's contents list if it has one, then the toolbar over the text. */
@@ -1549,6 +1549,7 @@ button.ipcell { cursor: pointer; }
 /* The contents list of a longer page, linking to its headings: part of the
    page's text, not a box apart from it. */
 .doc-contents { margin: 0 0 1.4em; font-size: 15px; line-height: 1.55; }
+.doc-contents-head { display: flex; align-items: center; gap: 5px; }
 .doc-contents .setting-label { margin: 0 0 4px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; text-transform: none; color: var(--ink); }
 .doc-contents ol { margin: 0; padding-left: 1.3em; color: var(--muted); }
 .doc-contents ol ol { margin-top: 2px; }

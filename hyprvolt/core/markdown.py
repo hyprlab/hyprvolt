@@ -14,6 +14,7 @@ contents list; fenced code is colored by Pygments for its language; and
 ``- [ ]`` and ``- [x]`` list items become checkboxes.
 """
 import re
+import zlib
 from html import escape, unescape
 
 import markdown as md_lib
@@ -111,9 +112,15 @@ def _task(m) -> str:
     return f'<li class="task">{m.group(1) or ""}{box}'
 
 
+CONTENTS_HELP = ("Filled in from the headings in the text below, each a link to its part. It shows once "
+                 "there are three or more headings, and follows them as they change.")
+
+
 def _contents(tokens) -> str:
     """A contents list for a page with enough headings, linking to their
-    anchors. Built here, with every name escaped."""
+    anchors, with an info button saying where it comes from. Built here,
+    with every name escaped. The help's id comes from the headings, not
+    chance: the page editor compares two renderings of the same text."""
     def count(items):
         return sum(1 + count(t["children"]) for t in items)
 
@@ -123,7 +130,16 @@ def _contents(tokens) -> str:
                        for t in nodes)
     if count(tokens) < CONTENTS_AT:
         return ""
-    return f'<nav class="doc-contents" aria-label="Contents"><p class="setting-label">Contents</p><ol>{items(tokens)}</ol></nav>'
+    help_id = f"contents-help-{zlib.crc32(' '.join(_ids(tokens)).encode()):08x}"
+    tip = (f'<button type="button" class="infotip" popovertarget="{help_id}" aria-label="About the contents">'
+           '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></svg>'
+           f'</button><span class="infotip-pop" id="{help_id}" popover>{escape(CONTENTS_HELP)}</span>')
+    return (f'<nav class="doc-contents" aria-label="Contents"><p class="setting-label doc-contents-head">Contents{tip}</p>'
+            f'<ol>{items(tokens)}</ol></nav>')
+
+
+def _ids(tokens) -> list[str]:
+    return [i for t in tokens for i in [t["id"]] + _ids(t["children"])]
 
 
 
