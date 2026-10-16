@@ -28,6 +28,9 @@ class Tag(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(60, collation="NOCASE"), unique=True, nullable=False)
+    # Added in Settings > Tags: offered and listed while no record has it.
+    # Any other tag is shown only while a record has it.
+    kept = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
 
 
 class Entity(db.Model):

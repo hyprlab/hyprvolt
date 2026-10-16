@@ -660,14 +660,31 @@ def _tag(name: str) -> Tag:
 # label, a tag's name belongs to the instance.
 
 def tag_usage() -> list[tuple[Tag, int]]:
-    """Every tag a record carries, with how many carry it, archived records
-    counted and deleted ones not, by name."""
+    """Every tag a record carries or an admin added, with how many carry it,
+    archived records counted and deleted ones not, by name."""
     count = func.count(Entity.id)
     return (db.session.query(Tag, count)
-            .join(entity_tags, entity_tags.c.tag_id == Tag.id)
-            .join(Entity, Entity.id == entity_tags.c.entity_id)
-            .filter(Entity.deleted_at.is_(None))
-            .group_by(Tag.id).order_by(func.lower(Tag.name)).all())
+            .outerjoin(entity_tags, entity_tags.c.tag_id == Tag.id)
+            .outerjoin(Entity, (Entity.id == entity_tags.c.entity_id) & Entity.deleted_at.is_(None))
+            .group_by(Tag.id).having(Tag.kept.is_(True) | (count > 0))
+            .order_by(func.lower(Tag.name)).all())
+
+
+def add_tag(name) -> Tag:
+    """A tag no record has yet, kept until it is removed."""
+    names = parse_tags([name])
+    if not names:
+        raise Invalid("Give the tag a name.")
+    tag = Tag.query.filter(Tag.name == names[0]).first()   # NOCASE
+    if tag is not None and (tag.kept or Entity.query.filter(
+            Entity.deleted_at.is_(None), Entity.tags.any(Tag.id == tag.id)).first()):
+        raise Invalid(f"There is a tag named {tag.name} already.")
+    if tag is None:
+        tag = Tag(name=names[0])
+        db.session.add(tag)
+    tag.kept = True
+    db.session.flush()
+    return tag
 
 
 def _carrying(tag: Tag) -> list[Entity]:
@@ -693,10 +710,11 @@ def rename_tag(tag: Tag, name) -> tuple[str, dict | None]:
         had = {e.id for e in carriers if other in e.tags}
         for e in carriers:
             e.tags = [t for t in e.tags if t.id != tag.id] + ([] if e.id in had else [other])
+        other.kept = other.kept or tag.kept
         db.session.delete(tag)
         message = f"Merged into {other.name}"
         undo = {"url": "/api/tags/restore",
-                "body": {"name": old, "ids": [e.id for e in carriers],
+                "body": {"name": old, "ids": [e.id for e in carriers], "kept": tag.kept,
                          "drop": other.name, "drop_ids": [e.id for e in carriers if e.id not in had]}}
     db.session.flush()
     for e in carriers:
@@ -713,12 +731,12 @@ def remove_tag(tag: Tag) -> tuple[str, dict]:
     db.session.flush()
     for e in carriers:
         reindex(e)
-    live_count = sum(1 for e in carriers if e.deleted_at is None)
-    return (f"{tag.name} removed from {live_count} {'record' if live_count == 1 else 'records'}",
-            {"url": "/api/tags/restore", "body": {"name": tag.name, "ids": [e.id for e in carriers]}})
+    n = sum(1 for e in carriers if e.deleted_at is None)
+    return (f"{tag.name} removed" + (f" from {n} {'record' if n == 1 else 'records'}" if n else ""),
+            {"url": "/api/tags/restore", "body": {"name": tag.name, "ids": [e.id for e in carriers], "kept": tag.kept}})
 
 
-def restore_tag(name, ids, drop=None, drop_ids=()) -> None:
+def restore_tag(name, ids, drop=None, drop_ids=(), kept=False) -> None:
     """Undo for the two above: put the tag ``name`` back on the records
     ``ids``, and take ``drop`` (the tag it was merged into) off ``drop_ids``."""
     names = parse_tags([name])
@@ -726,6 +744,7 @@ def restore_tag(name, ids, drop=None, drop_ids=()) -> None:
         raise Invalid("Nothing to restore.")
     ids, drop_ids = {int(i) for i in ids or ()}, {int(i) for i in drop_ids or ()}
     tag = _tag(names[0])
+    tag.kept = tag.kept or bool(kept)
     into = Tag.query.filter(Tag.name == drop).first() if drop else None
     for e in Entity.query.filter(Entity.id.in_(ids | drop_ids)):
         tags = [t for t in e.tags if not (into is not None and t.id == into.id and e.id in drop_ids)]

@@ -131,7 +131,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.about-hero`, `.tech-stack`, `.release-list` | The About section |
 | `.auth-card`, `.auth-mark`, `.flash`, `.wizard`, `.wiz-*`, `.error-code` | Sign-in, setup and error pages |
 | `.ptr` | Pull to refresh on touch devices |
-| `.modules-list`, `.module-icon`, `.customform` | Settings > Modules and Settings > Custom fields |
+| `.modules-list`, `.module-icon`, `.customform` | Settings > Modules, and the add form under the hint in Settings > Custom fields and Settings > Tags |
 
 ## Interface rules
 

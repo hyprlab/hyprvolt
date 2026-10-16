@@ -622,15 +622,23 @@
     </section>
 
     <section class="settings-pane" data-pane="tags" id="settings-tags" role="tabpanel" aria-labelledby="settings-tab-tags" tabindex="0">
-      <p class="hint">Every tag a record has, and how many have it. A new name changes the tag on all of them; the name of another tag merges the two. Removing a tag takes it off every record.</p>
+      <p class="hint">Every tag, and how many records have it. A new name changes the tag on all of them; the name of another tag merges the two. Removing a tag takes it off every record.</p>
+      <form class="stack customform" data-api="/api/tags" data-then="reload">
+        <label class="field field--narrow"><span class="field-label">New tag</span>
+          <input name="name" maxlength="60" required placeholder="production" autocomplete="off" spellcheck="false"></label>
+        <p class="form-error" hidden></p>
+        <button class="btn btn--primary" type="submit">Add tag</button>
+      </form>
       {% if admin_tags %}
+      <p class="setting-label setting-label--spaced">Tags</p>
       <ul class="manage-list">
         {% for tag, count in admin_tags %}
         <li class="manage-item" data-row>
           <form class="manage-meta" data-api="/api/tags/{{ tag.id }}/rename" data-then="reload">
             <input class="kv-input manage-title-input" name="name" value="{{ tag.name }}" maxlength="60" required
                    autocomplete="off" spellcheck="false" data-autosubmit aria-label="Name of the tag {{ tag.name }}">
-            <a class="manage-sub" href="{{ url_for('main.all_records', tag=tag.name) }}">{{ count }} {{ 'record' if count == 1 else 'records' }}</a>
+            {% if count %}<a class="manage-sub" href="{{ url_for('main.all_records', tag=tag.name) }}">{{ count }} {{ 'record' if count == 1 else 'records' }}</a>
+            {% else %}<span class="manage-sub">No records yet</span>{% endif %}
             <p class="manage-sub form-error" hidden></p>
           </form>
           <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/api/tags/{{ tag.id }}/delete" data-then="reload"
@@ -641,7 +649,7 @@
         {% endfor %}
       </ul>
       {% else %}
-      <p class="hint">No record has a tag yet. Tags are added in a record's Tags field.</p>
+      <p class="hint">No tags yet. Add one here, or in a record's Tags field.</p>
       {% endif %}
     </section>
     {% endif %}

@@ -530,8 +530,9 @@ def attachment_thumb(att_id, size):
 
 # ———— Tags ————
 
-def tag_counts(type_keys=None) -> list[tuple[str, int]]:
-    """Tags in use on live, unarchived entities, with how many carry each."""
+def tag_counts(type_keys=None, kept=False) -> list[tuple[str, int]]:
+    """Tags in use on live, unarchived entities, with how many carry each;
+    with ``kept``, also those added in Settings > Tags that none has."""
     keys = type_keys if type_keys is not None else registry().enabled_type_keys()
     rows = (db.session.query(Tag.name, func.count(Entity.id))
             .join(entity_tags, entity_tags.c.tag_id == Tag.id)
@@ -539,13 +540,31 @@ def tag_counts(type_keys=None) -> list[tuple[str, int]]:
             .filter(Entity.deleted_at.is_(None), Entity.archived.is_(False), Entity.type.in_(keys),
                     Entity.access.notin_(access.hidden()))
             .group_by(Tag.id).order_by(func.lower(Tag.name)).all())
-    return [(name, count) for name, count in rows]
+    out = [(name, count) for name, count in rows]
+    if kept:
+        used = {name.lower() for name, _ in out}
+        out += [(name, 0) for (name,) in db.session.query(Tag.name).filter(Tag.kept.is_(True))
+                if name.lower() not in used]
+        out.sort(key=lambda row: row[0].lower())
+    return out
 
 
 @bp.route("/tags")
 @role("viewer")
 def tags():
-    return jsonify(tags=[{"name": n, "count": c} for n, c in tag_counts()])
+    return jsonify(tags=[{"name": n, "count": c} for n, c in tag_counts(kept=True)])
+
+
+@bp.route("/tags", methods=["POST"])
+@role("admin")
+def tag_create():
+    """Add a tag before any record has it, so it is offered to choose."""
+    try:
+        tag = records.add_tag(_body().get("name"))
+    except Invalid as err:
+        return _fail(err)
+    db.session.commit()
+    return jsonify(ok=True, tag={"id": tag.id, "name": tag.name})
 
 
 @bp.route("/tags/<int:tag_id>/rename", methods=["POST"])
@@ -575,7 +594,8 @@ def tag_delete(tag_id):
 def tag_restore():
     data = _body()
     try:
-        records.restore_tag(data.get("name"), data.get("ids"), data.get("drop"), data.get("drop_ids"))
+        records.restore_tag(data.get("name"), data.get("ids"), data.get("drop"), data.get("drop_ids"),
+                            bool(data.get("kept")))
     except (Invalid, TypeError, ValueError):
         return _fail(Invalid("Nothing to restore."))
     db.session.commit()

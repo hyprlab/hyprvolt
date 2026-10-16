@@ -359,10 +359,13 @@ a number, a date, a choice list, a web address, or yes or no. They appear in
 the record's form and Overview, and search finds their values. Removing one
 removes its values too, with Undo.
 
-Settings > Tags lists every tag a record has, with how many have it; the
-count opens them. Typing a new name over a tag renames it on all of them, and
-the name of another tag merges the two into that one. Removing a tag takes it
-off every record. Each comes with Undo. Only admins see this section.
+Settings > Tags lists every tag, with how many records have it; the count
+opens them. A tag added there is offered in every record's Tags field before
+any record has it, and stays until it is removed; a tag typed into a record
+is listed only while a record has it. Typing a new name over a tag renames it
+on all of them, and the name of another tag merges the two into that one.
+Removing a tag takes it off every record. Each comes with Undo. Only admins
+see this section.
 
 ## The knowledge base
 
@@ -524,7 +527,7 @@ so in `notices`, a list of sentences, beside the record.
 | `GET /api/entities/<id>/history`, `/relationships`, `/dependencies` | Its history, its links, what depends on it (`direction=dependencies` for the other way) |
 | `GET /api/catalogs/<key>` | A list of known names a field offers as it is typed in, under group headings: `os`, operating systems |
 | `POST /api/relationships`, `POST /api/relationships/<id>/delete` | Link two records (`kind`, `source_id`, `target_id`), unlink |
-| `GET /api/tags`, `GET /api/custom-fields` | Tags in use, custom field definitions |
+| `GET /api/tags`, `GET /api/custom-fields` | Tags in use and those added in Settings > Tags (with a count of 0 while no record has them), custom field definitions |
 | `GET /api/entities/<id>/attachments`, `POST` the same | A record's files, the featured image aside; upload with multipart `file` parts. An image also has `thumb` and `large` |
 | `POST /api/entities/<id>/image` | Its featured image: upload one as a multipart `file` part, or send `{"attachment_id": null}` to remove it. The answer's `undo` brings back the one replaced or removed |
 | `POST /api/attachments/<id>/delete`, `/restore` | Remove a file (kept until the purge), bring it back |

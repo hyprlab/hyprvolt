@@ -1,5 +1,5 @@
-"""Settings > Tags: renaming a tag on every record, merging two, removing
-one, each with Undo, and who may."""
+"""Settings > Tags: adding a tag before any record has it, renaming one on
+every record, merging two, removing one, each with Undo, and who may."""
 from .conftest import make
 
 
@@ -80,4 +80,50 @@ def test_only_admins_edit_tags(client, h, admin, editor):
     tid = tag_id(client, "prod")
     assert other.post(f"/api/tags/{tid}/rename", json={"name": "x"}, headers=oh).status_code == 403
     assert other.post(f"/api/tags/{tid}/delete", headers=oh).status_code == 403
+    assert other.post("/api/tags", json={"name": "x"}, headers=oh).status_code == 403
     assert 'id="settings-tags"' not in other.get("/").get_data(as_text=True)
+
+
+def test_a_tag_added_here_is_offered_before_any_record_has_it(client, h, admin):
+    resp = client.post("/api/tags", json={"name": " staging "}, headers=h)
+    assert resp.status_code == 200 and resp.get_json()["tag"]["name"] == "staging"
+    assert counts(client) == {"staging": 0}
+    pane = client.get("/").get_data(as_text=True).split('id="settings-tags"')[1].split("</section>")[0]
+    assert 'value="staging"' in pane and "No records yet" in pane
+    # The sidebar lists only tags in use; the tag stays kept when its last record lets go.
+    assert 'sideitem-title">staging<' not in client.get("/").get_data(as_text=True)
+    a = make(client, h, name="A", tags="staging")
+    assert 'sideitem-title">staging<' in client.get("/").get_data(as_text=True)
+    client.post(f"/api/entities/{a['id']}", json={"tags": ""}, headers=h)
+    assert counts(client) == {"staging": 0}
+    resp = client.post(f"/api/tags/{tag_id(client, 'staging')}/delete", headers=h).get_json()
+    assert resp["message"] == "staging removed" and counts(client) == {}
+    client.post(resp["undo"]["url"], json=resp["undo"]["body"], headers=h)
+    assert counts(client) == {"staging": 0}
+
+
+def test_a_tag_typed_in_a_record_goes_when_its_last_record_lets_go(client, h, admin):
+    a = make(client, h, name="A", tags="tpyo")
+    client.post(f"/api/entities/{a['id']}", json={"tags": "typo"}, headers=h)
+    assert counts(client) == {"typo": 1}
+    assert 'value="tpyo"' not in client.get("/").get_data(as_text=True)
+
+
+def test_adding_a_tag_that_exists_says_so(client, h, admin):
+    make(client, h, name="A", tags="prod")
+    resp = client.post("/api/tags", json={"name": "PROD"}, headers=h)
+    assert resp.status_code == 400 and resp.get_json()["error"] == "There is a tag named prod already."
+    assert client.post("/api/tags", json={"name": ""}, headers=h).get_json()["error"] == "Give the tag a name."
+    # One no record has any more is simply kept.
+    a = make(client, h, name="B", tags="old")
+    client.post(f"/api/entities/{a['id']}", json={"tags": ""}, headers=h)
+    assert client.post("/api/tags", json={"name": "Old"}, headers=h).status_code == 200
+    assert counts(client) == {"old": 0, "prod": 1}
+
+
+def test_merging_a_kept_tag_keeps_the_one_it_joins(client, h, admin):
+    client.post("/api/tags", json={"name": "staging"}, headers=h)
+    a = make(client, h, name="A", tags="stage")
+    client.post(f"/api/tags/{tag_id(client, 'staging')}/rename", json={"name": "stage"}, headers=h)
+    client.post(f"/api/entities/{a['id']}", json={"tags": ""}, headers=h)
+    assert counts(client) == {"stage": 0}

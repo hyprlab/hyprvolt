@@ -321,6 +321,8 @@ def _migrate(app: Flask) -> None:
     core.add_column("entities", "image_id", "INTEGER")
     # All of a record's sections on one page, or one at a time.
     core.add_column("users", "record_scroll", "BOOLEAN NOT NULL DEFAULT 1")
+    # Tags an admin adds in Settings > Tags before any record has them.
+    core.add_column("tags", "kept", "BOOLEAN NOT NULL DEFAULT 0")
 
 
 def _start_worker(app: Flask) -> None:

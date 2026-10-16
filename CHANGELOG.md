@@ -7,7 +7,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 ## Unreleased
 
 ### Added
-- Settings > Tags, for admins, lists every tag with how many records have it: a tag is renamed on every record by typing over its name, merged into another by giving it that one's name, or removed from every record, each with Undo
+- Settings > Tags, for admins, lists every tag with how many records have it: a tag is renamed on every record by typing over its name, merged into another by giving it that one's name, or removed from every record, each with Undo. A tag added there is offered in every record's Tags field before any record has it
 
 ## [1.6.0] — 2026-10-16
 
