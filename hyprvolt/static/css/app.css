@@ -766,6 +766,10 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .manage-title { font-size: 14px; font-weight: 620; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .manage-sub { font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .manage-sub.form-error { color: var(--danger); white-space: normal; }
+/* A row's name edited in place (Settings > Tags), lined up with its sub line. */
+.manage-title-input { flex: none; font-size: 14px; font-weight: 620; }
+a.manage-sub { align-self: flex-start; max-width: 100%; text-decoration: none; }
+a.manage-sub:hover { color: var(--ink); text-decoration: underline; }
 .manage-item .avatar { width: 30px; height: 30px; font-size: 13px; }
 /* A list of things to review before an import, each with its choices under
    it: what was read, why it was matched, and what to do with it. */

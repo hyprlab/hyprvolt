@@ -87,18 +87,21 @@
   }
   function toastError(err) { toast(err.message || String(err), null, null, true); }
 
-  // Carries a toast across a reload, for changes the page has to be rebuilt for.
-  function queueToast(message) {
-    try { sessionStorage.setItem("app-toast", message); } catch (_) {}
+  // Carries a toast across a reload, for changes the page has to be rebuilt
+  // for, with its Undo when it has one (renaming a tag everywhere).
+  function queueToast(message, undo) {
+    try { sessionStorage.setItem("app-toast", JSON.stringify({ message: message, undo: undo || null })); } catch (_) {}
   }
   function reloadWith(message) { queueToast(message); location.reload(); }
   try {
-    var pending = sessionStorage.getItem("app-toast");
+    var pending = JSON.parse(sessionStorage.getItem("app-toast") || "null");
     if (pending) {
       sessionStorage.removeItem("app-toast");
-      setTimeout(function () { toast(pending); }, 250);
+      setTimeout(function () { offerUndo(pending.message, pending.undo); }, 250);
     }
-  } catch (_) {}
+  } catch (_) {
+    try { sessionStorage.removeItem("app-toast"); } catch (e) {}
+  }
 
   /* ————— Theme ————— */
   var media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -1250,7 +1253,7 @@
     // the element's fixed message.
     var done = (data && typeof data.message === "string" && data.message) || el.getAttribute("data-done");
     if (then === "reload") {
-      if (done) queueToast(done);
+      if (done) queueToast(done, data && data.undo);
       location.reload();
     } else if (then === "go") {
       if (done) queueToast(done);

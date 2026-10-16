@@ -190,6 +190,7 @@
   ('security', 'Security', 'Instance', '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3M12 14.5v2.5"/>'),
   ('modules', 'Modules', 'Instance', '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M16.5 13.5v6M13.5 16.5h6"/>'),
   ('fields', 'Custom fields', 'Instance', '<path d="M4 6.5h9M4 12h6M4 17.5h9M15.5 9.5l4-4M17 14.5v6M14 17.5h6"/>'),
+  ('tags', 'Tags', 'Instance', '<path d="M4 12.2V5a1 1 0 0 1 1-1h7.2l7.8 7.8-8.2 8.2L4 12.2Z"/><path d="M8.5 8.5h.01"/>'),
 ] if current_user.is_admin else []) %}
 {# Sections modules add (their manifest's settings_pane). A namespace,
    because a set inside a loop doesn't outlive the loop. #}
@@ -618,6 +619,30 @@
         {% endfor %}
       </ul>
       {% endfor %}{% endfor %}{% endfor %}
+    </section>
+
+    <section class="settings-pane" data-pane="tags" id="settings-tags" role="tabpanel" aria-labelledby="settings-tab-tags" tabindex="0">
+      <p class="hint">Every tag a record has, and how many have it. A new name changes the tag on all of them; the name of another tag merges the two. Removing a tag takes it off every record.</p>
+      {% if admin_tags %}
+      <ul class="manage-list">
+        {% for tag, count in admin_tags %}
+        <li class="manage-item" data-row>
+          <form class="manage-meta" data-api="/api/tags/{{ tag.id }}/rename" data-then="reload">
+            <input class="kv-input manage-title-input" name="name" value="{{ tag.name }}" maxlength="60" required
+                   autocomplete="off" spellcheck="false" data-autosubmit aria-label="Name of the tag {{ tag.name }}">
+            <a class="manage-sub" href="{{ url_for('main.all_records', tag=tag.name) }}">{{ count }} {{ 'record' if count == 1 else 'records' }}</a>
+            <p class="manage-sub form-error" hidden></p>
+          </form>
+          <button class="iconbtn iconbtn--sm iconbtn--danger" data-api-post="/api/tags/{{ tag.id }}/delete" data-then="reload"
+                  aria-label="Remove the tag {{ tag.name }}" title="Remove the tag from every record">
+            <svg viewBox="0 0 24 24"><path d="M5.5 7.5h13M9.5 7V5h5v2M7 7.5l.8 12a1 1 0 0 0 1 .9h6.4a1 1 0 0 0 1-.9l.8-12"/></svg>
+          </button>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="hint">No record has a tag yet. Tags are added in a record's Tags field.</p>
+      {% endif %}
     </section>
     {% endif %}
 

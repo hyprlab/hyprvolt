@@ -277,8 +277,9 @@ CUSTOM_KIND_LABELS = {"text": "Text", "number": "Number", "date": "Date", "selec
 
 
 def _modules_context() -> dict:
-    """Settings > Modules and Settings > Custom fields."""
+    """Settings > Modules, Custom fields and Tags."""
     from .core.models import CustomField
+    from .core.records import tag_usage
     reg = registry()
     counts = shell.type_counts()
     enabled = reg.enabled_ids()
@@ -299,7 +300,8 @@ def _modules_context() -> dict:
             "admin_tags_at": reg.tags_at([g["label"] for g in groups]),
             "admin_order_custom": bool(saved_groups or saved_modules),
             "admin_module_errors": sorted(reg.errors.items()),
-            "admin_custom_fields": fields, "custom_kind_labels": CUSTOM_KIND_LABELS}
+            "admin_custom_fields": fields, "custom_kind_labels": CUSTOM_KIND_LABELS,
+            "admin_tags": tag_usage()}
 
 
 # ———— Search (the Ctrl/Cmd+K palette) ————

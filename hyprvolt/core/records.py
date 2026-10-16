@@ -14,13 +14,14 @@ import uuid
 
 from flask_login import current_user
 from sqlalchemy import delete as sql_delete
+from sqlalchemy import func
 from sqlalchemy.orm import aliased
 
 from ..models import db, int_setting, utcnow
 from ..registry import current as registry
 from . import access
 from . import fields as F
-from .models import AuditLog, CustomField, CustomValue, Entity, Relationship, Tag
+from .models import AuditLog, CustomField, CustomValue, Entity, Relationship, Tag, entity_tags
 from .fields import Invalid
 
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,118}$")
@@ -651,6 +652,90 @@ def _tag(name: str) -> Tag:
         db.session.add(tag)
         db.session.flush()
     return tag
+
+
+# ———— Tags across records (Settings > Tags) ————
+# A tag renamed, merged or removed changes every record carrying it, deleted
+# ones too, without a line in each one's history: like a custom field's
+# label, a tag's name belongs to the instance.
+
+def tag_usage() -> list[tuple[Tag, int]]:
+    """Every tag a record carries, with how many carry it, archived records
+    counted and deleted ones not, by name."""
+    count = func.count(Entity.id)
+    return (db.session.query(Tag, count)
+            .join(entity_tags, entity_tags.c.tag_id == Tag.id)
+            .join(Entity, Entity.id == entity_tags.c.entity_id)
+            .filter(Entity.deleted_at.is_(None))
+            .group_by(Tag.id).order_by(func.lower(Tag.name)).all())
+
+
+def _carrying(tag: Tag) -> list[Entity]:
+    return Entity.query.filter(Entity.tags.any(Tag.id == tag.id)).all()
+
+
+def rename_tag(tag: Tag, name) -> tuple[str, dict | None]:
+    """Give ``tag`` a new name on every record. A name another tag has
+    already merges the two. Returns what happened, said for a person, and
+    the undo."""
+    name = " ".join(str(name or "").split())[:60]
+    if not name:
+        raise Invalid("Give the tag a name.")
+    if name == tag.name:
+        return "", None
+    old = tag.name
+    carriers = _carrying(tag)
+    other = Tag.query.filter(Tag.name == name, Tag.id != tag.id).first()   # NOCASE
+    if other is None:
+        tag.name = name
+        message, undo = f"Renamed to {name}", {"url": f"/api/tags/{tag.id}/rename", "body": {"name": old}}
+    else:
+        had = {e.id for e in carriers if other in e.tags}
+        for e in carriers:
+            e.tags = [t for t in e.tags if t.id != tag.id] + ([] if e.id in had else [other])
+        db.session.delete(tag)
+        message = f"Merged into {other.name}"
+        undo = {"url": "/api/tags/restore",
+                "body": {"name": old, "ids": [e.id for e in carriers],
+                         "drop": other.name, "drop_ids": [e.id for e in carriers if e.id not in had]}}
+    db.session.flush()
+    for e in carriers:
+        reindex(e)
+    return message, undo
+
+
+def remove_tag(tag: Tag) -> tuple[str, dict]:
+    """Take ``tag`` off every record and forget it."""
+    carriers = _carrying(tag)
+    for e in carriers:
+        e.tags = [t for t in e.tags if t.id != tag.id]
+    db.session.delete(tag)
+    db.session.flush()
+    for e in carriers:
+        reindex(e)
+    live_count = sum(1 for e in carriers if e.deleted_at is None)
+    return (f"{tag.name} removed from {live_count} {'record' if live_count == 1 else 'records'}",
+            {"url": "/api/tags/restore", "body": {"name": tag.name, "ids": [e.id for e in carriers]}})
+
+
+def restore_tag(name, ids, drop=None, drop_ids=()) -> None:
+    """Undo for the two above: put the tag ``name`` back on the records
+    ``ids``, and take ``drop`` (the tag it was merged into) off ``drop_ids``."""
+    names = parse_tags([name])
+    if not names:
+        raise Invalid("Nothing to restore.")
+    ids, drop_ids = {int(i) for i in ids or ()}, {int(i) for i in drop_ids or ()}
+    tag = _tag(names[0])
+    into = Tag.query.filter(Tag.name == drop).first() if drop else None
+    for e in Entity.query.filter(Entity.id.in_(ids | drop_ids)):
+        tags = [t for t in e.tags if not (into is not None and t.id == into.id and e.id in drop_ids)]
+        if e.id in ids and tag not in tags:
+            tags.append(tag)
+        if len(tags) > MAX_TAGS:
+            continue
+        e.tags = tags
+        db.session.flush()
+        reindex(e)
 
 
 def slugify(text: str) -> str:

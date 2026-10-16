@@ -359,6 +359,11 @@ a number, a date, a choice list, a web address, or yes or no. They appear in
 the record's form and Overview, and search finds their values. Removing one
 removes its values too, with Undo.
 
+Settings > Tags lists every tag a record has, with how many have it; the
+count opens them. Typing a new name over a tag renames it on all of them, and
+the name of another tag merges the two into that one. Removing a tag takes it
+off every record. Each comes with Undo. Only admins see this section.
+
 ## The knowledge base
 
 Documents are Markdown pages: runbooks, how-tos, manuals. A document can

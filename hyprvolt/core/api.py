@@ -548,6 +548,40 @@ def tags():
     return jsonify(tags=[{"name": n, "count": c} for n, c in tag_counts()])
 
 
+@bp.route("/tags/<int:tag_id>/rename", methods=["POST"])
+@role("admin")
+def tag_rename(tag_id):
+    """Rename a tag on every record; a name another tag has merges them."""
+    tag = db.get_or_404(Tag, tag_id)
+    try:
+        message, undo = records.rename_tag(tag, _body().get("name"))
+    except Invalid as err:
+        return _fail(err)
+    db.session.commit()
+    return jsonify(ok=True, message=message, undo=undo)
+
+
+@bp.route("/tags/<int:tag_id>/delete", methods=["POST"])
+@role("admin")
+def tag_delete(tag_id):
+    """Take a tag off every record. Undo puts it back on the same ones."""
+    message, undo = records.remove_tag(db.get_or_404(Tag, tag_id))
+    db.session.commit()
+    return jsonify(ok=True, message=message, undo=undo)
+
+
+@bp.route("/tags/restore", methods=["POST"])
+@role("admin")
+def tag_restore():
+    data = _body()
+    try:
+        records.restore_tag(data.get("name"), data.get("ids"), data.get("drop"), data.get("drop_ids"))
+    except (Invalid, TypeError, ValueError):
+        return _fail(Invalid("Nothing to restore."))
+    db.session.commit()
+    return jsonify(ok=True)
+
+
 # ———— Custom fields ————
 
 KEY_RE = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
