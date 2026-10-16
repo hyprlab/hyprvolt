@@ -5,18 +5,20 @@
    marked data-live are redrawn after a save. #}
 {# Long text, edited where it is read (app.js, "The page editor"): the page
    itself takes the typing, and the Markdown it makes is saved from the
-   hidden text box. Folded (the notes), empty text is only its Add button. #}
+   hidden text box when Save is pressed, never on its own. Folded (the
+   notes), empty text is only its Add button. #}
 {% macro prose_edit(name, label, html, raw, fold=false, cls='') -%}
 <section class="prose-edit {{ cls }}{{ ' is-empty is-blank' if not raw }}{{ ' is-folding' if fold }}" data-prose data-field data-live="prose-{{ name }}">
+  {% if label %}<p class="setting-label">{{ label }}</p>{% endif %}
   <div class="prose-edit-head">
-    {% if label %}<p class="setting-label">{{ label }}</p>{% endif %}
     {{ md_toolbar(label or 'Text', toggle=true) }}
+    <button type="button" class="btn btn--xs btn--primary prose-save" data-prose-save title="Save (Ctrl/Cmd+S)">Save</button>
     {% if fold %}<button type="button" class="btn btn--xs btn--ghost prose-add" data-prose-edit>Add {{ (label or 'text')|lower }}</button>{% endif %}
   </div>
   <p class="hint prose-note" hidden>This text uses Markdown the page editor can't keep, so it is edited as Markdown.</p>
   <div class="prose prose-editor" data-prose-view role="textbox" aria-multiline="true" aria-label="{{ label or 'Text' }}"
        data-placeholder="Write here. Type [[ to link a document.">{{ html }}</div>
-  <textarea name="{{ name }}" class="prose-input mono" rows="10" spellcheck="true" aria-label="{{ label or 'Text' }} as Markdown" data-save data-md-links hidden>{{ raw }}</textarea>
+  <textarea name="{{ name }}" class="prose-input mono" rows="10" spellcheck="true" aria-label="{{ label or 'Text' }} as Markdown" data-md-links hidden>{{ raw }}</textarea>
 </section>
 {%- endmacro %}
 {% macro edit_row(item) -%}

@@ -45,6 +45,9 @@ def test_other_modules_sections_and_long_text_are_edited_in_place(client, h, adm
     assert 'data-prose' in html and 'name="f.body"' in html and '<h2 id="h-steps" data-level="1">' in html
     # The page itself is edited, under its toolbar; no Edit button opens it.
     assert "data-prose-view" in html and "data-md-toolbar" in html and ">Edit</button>" not in html
+    # Long text is saved by its Save button, not when the cursor leaves it as a field is.
+    body = html.split('name="f.body"', 1)[1].split(">", 1)[0]
+    assert "data-save" not in body and "data-prose-save" in html
     assert 'name="access"' in html
 
 

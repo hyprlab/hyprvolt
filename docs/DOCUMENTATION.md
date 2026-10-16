@@ -724,7 +724,13 @@ italic, code, links (Ctrl or ⌘ with B, I, E and K), lists, checklists,
 quotes, code blocks and dividers, and links a document; a checklist's box
 is ticked with a click. Enter in a code block starts a new line in it. A
 link opens with Ctrl or ⌘ and a click, since a plain click puts the cursor
-in it. The text is saved as Markdown when the cursor leaves it, written in
+in it. Unlike a field, the text isn't saved on its own: once something in it
+changes, Save appears at the right of the toolbar, and Save or Ctrl or ⌘ with
+S saves it. Clicking elsewhere leaves the change on the page, unsaved, with
+Save still showing. Closing the record or opening another with a change
+unsaved asks whether to save or discard it, or to stay; after the browser's
+Back, only save or discard. A reload or a closed tab gets the browser's own
+warning. The text is saved as Markdown, written in
 a standard way: `**bold**`, `*italic*`, `-` for a list item. A part not
 changed keeps its Markdown as it was typed. Markdown, at the end of the
 toolbar, shows and edits the text as Markdown instead, and the choice is

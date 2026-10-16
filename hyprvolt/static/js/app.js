@@ -209,6 +209,11 @@
   var SHEET_EXIT_MS = 300;   // keep in step with the sheet-out animation
   var sheetExitTimer = null;
   function closeDialog(dialog, then, force) {
+    // Long text with changes not saved asks first: save, discard or stay.
+    if (dialog.id === "sheet" && !force) {
+      var unsaved = proseUnsaved();
+      if (unsaved.length) { askUnsaved(unsaved, function () { closeDialog(dialog, then); }); return; }
+    }
     // A record being edited saves what is still unsaved before it goes; if
     // that fails it stays open once, with the error at the field.
     if (dialog.id === "sheet" && !force && editsPending()) {
@@ -2203,8 +2208,9 @@
   // Long text ([data-prose]: a document's body, a record's notes) is edited
   // where it is read. Its formatted page ([data-prose-view]) takes the
   // typing, and every change is written back as Markdown (mdFromHTML) into
-  // the hidden text box, which saves as any field does when the cursor
-  // leaves. Before a page is made editable, the Markdown it would be written
+  // the hidden text box. Unlike a field, it is saved only by its Save button
+  // (or Ctrl/Cmd+S), shown once something changed; leaving the record with
+  // changes unsaved asks whether to save or discard them (proseUnsaved). Before a page is made editable, the Markdown it would be written
   // back as is rendered by the server and compared with the page: text with
   // Markdown the editor can't keep (footnotes, raw HTML) is edited as
   // Markdown instead, so nothing is lost. The toolbar ([data-md-toolbar])
@@ -2415,18 +2421,18 @@
   }
   // Every page editor in scope not started yet: checked, then made editable.
   function proseInit(scope) {
-    if (!scope) return;
-    scope.querySelectorAll("[data-prose]:not([data-prose-ready])").forEach(function (box) {
+    if (!scope) return Promise.resolve();
+    return Promise.all(Array.prototype.map.call(scope.querySelectorAll("[data-prose]:not([data-prose-ready])"), function (box) {
       var p = proseParts(box);
-      if (!p.view || !p.text) return;
+      if (!p.view || !p.text) return null;
       box.setAttribute("data-prose-ready", "");
       box.mdShown = p.text.value;
-      if (mdMode === "source") { proseSource(box); return; }
-      proseCheck(box).then(function (ok) {
+      if (mdMode === "source") { proseSource(box); return null; }
+      return proseCheck(box).then(function (ok) {
         if (!box.isConnected) return;
         if (ok) proseVisual(box); else proseSource(box, true);
       });
-    });
+    }));
   }
   // Whether the page, written back as Markdown, comes out the same.
   function proseCheck(box) {
@@ -2446,9 +2452,7 @@
     // label, above the toolbar, which stays right over the text it formats.
     var nav = p.view.querySelector(":scope > nav.doc-contents"), head = box.querySelector(".prose-edit-head");
     if (nav && head) {
-      var label = head.querySelector(".setting-label");
       box.insertBefore(nav, head);
-      if (label) box.insertBefore(label, nav);
       box.classList.add("has-contents");
     }
     p.view.querySelectorAll("li.task input").forEach(function (input) {
@@ -2498,6 +2502,75 @@
     p.text.value = md === box.mdFirst ? p.text.defaultValue : md;
     box.mdShown = p.text.value;
     box.classList.toggle("is-blank", !md);
+    proseDirty(box);
+  }
+  function proseDirty(box) {
+    var text = proseParts(box).text;
+    box.classList.toggle("is-dirty", text.value !== text.defaultValue);
+  }
+  // Save: the text, as any field saves (the server's answer under it if it
+  // fails). True when it went.
+  function proseSave(box) {
+    var p = proseParts(box), btn = box.querySelector("[data-prose-save]");
+    if (box.classList.contains("is-visual")) proseSync(box);
+    if (p.text.value === p.text.defaultValue) { proseDirty(box); return Promise.resolve(true); }
+    if (btn) btn.disabled = true;
+    return saveField(p.text).then(function (ok) {
+      if (btn) btn.disabled = false;
+      if (ok && box.classList.contains("is-visual")) box.mdFirst = mdFromHTML(p.view);
+      proseDirty(box);
+      return ok;
+    });
+  }
+  // Every text in the open record with changes not saved.
+  function proseUnsaved() {
+    if (!sheetArticle) return [];
+    return Array.prototype.filter.call(sheetArticle.querySelectorAll("[data-prose][data-prose-ready]"), function (box) {
+      if (box.mdDiscarded) return false;      // on its way out, its page still as typed
+      if (box.classList.contains("is-visual")) proseSync(box);
+      var text = proseParts(box).text;
+      return text.value !== text.defaultValue;
+    });
+  }
+  // Leaving with text unsaved: Save, Discard, or (unless the leaving can't
+  // be stopped, a Back already taken) Cancel to keep editing.
+  function askUnsaved(boxes, proceed, noCancel) {
+    var names = boxes.map(function (box) {
+      var label = box.querySelector(".setting-label");
+      return label ? label.textContent.trim().toLowerCase() : "text";
+    });
+    var which = names.length === 1 ? names[0] : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+    askFirst("Save your changes?", "Your changes to the " + which + " aren't saved.", "Save", function () {
+      Promise.all(boxes.map(proseSave)).then(function (oks) { if (oks.every(Boolean)) proceed(); });
+    }, { primary: true, noCancel: noCancel, alt: ["Discard", function () {
+      boxes.forEach(function (box) {
+        var text = proseParts(box).text;
+        text.value = text.defaultValue;
+        box.classList.remove("is-dirty");
+        box.mdDiscarded = true;
+      });
+      proceed();
+    }] });
+  }
+  // What is being written survives the record being drawn again (another
+  // tab, after an action): kept before, put back after.
+  function proseKeep() {
+    return proseUnsaved().map(function (box) {
+      var p = proseParts(box);
+      return { name: p.text.name, value: p.text.value, html: p.view.innerHTML, visual: box.classList.contains("is-visual") };
+    });
+  }
+  function proseRestore(kept) {
+    kept.forEach(function (k) {
+      var text = sheetArticle.querySelector('[data-prose] textarea[name="' + CSS.escape(k.name) + '"]');
+      var box = text && text.closest("[data-prose]");
+      if (!box) return;
+      if (k.visual && box.classList.contains("is-visual")) proseParts(box).view.innerHTML = k.html;
+      else if (!k.visual && box.classList.contains("is-visual")) proseSource(box);
+      text.value = k.value;
+      box.mdShown = k.value;
+      proseDirty(box);
+    });
   }
   function proseToggle(box) {
     var p = proseParts(box);
@@ -2536,14 +2609,12 @@
     sel.removeAllRanges();
     sel.addRange(r);
   }
-  // The cursor left the text, or a box was ticked: what changed is saved.
+  // The cursor left the text: it stays as it is, saved or not. Notes left
+  // empty fold away again.
   function proseLeave(box) {
     var p = proseParts(box);
-    if (box.classList.contains("is-visual")) {
-      proseSync(box);
-      if (p.text.value !== p.text.defaultValue) p.text.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-    if (!p.text.value.trim()) box.classList.remove("is-open");
+    if (box.classList.contains("is-visual")) proseSync(box);
+    if (!p.text.value.trim() && !box.classList.contains("is-dirty")) box.classList.remove("is-open");
   }
 
   // ——— The toolbar ———
@@ -2795,7 +2866,11 @@
   }
   document.addEventListener("mousedown", function (e) {
     // The text keeps the focus and the selection.
-    if (e.target.closest && e.target.closest("[data-md-toolbar] button")) e.preventDefault();
+    if (e.target.closest && e.target.closest("[data-md-toolbar] button, [data-prose-save]")) e.preventDefault();
+  });
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest("[data-prose-save]");
+    if (btn) proseSave(btn.closest("[data-prose]"));
   });
   document.addEventListener("click", function (e) {
     var btn = e.target.closest && e.target.closest("[data-md-toolbar] button");
@@ -2812,6 +2887,12 @@
   document.addEventListener("keydown", function (e) {
     if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
     var cmd = MD_KEYS[e.key.toLowerCase()], t = e.target;
+    var box = t.closest && t.closest("[data-prose]");
+    if (e.key.toLowerCase() === "s" && box) {       // Save, not the browser's Save page
+      e.preventDefault();
+      proseSave(box);
+      return;
+    }
     if (!cmd || !t.closest) return;
     var view = t.closest("[data-prose-view]");
     if (view && view.isContentEditable) {
@@ -3703,23 +3784,46 @@
     askFirst(btn.getAttribute("data-confirm"), btn.getAttribute("data-confirm-text"),
              btn.getAttribute("data-confirm-go") || "Remove", go);
   }
-  // With no ``go``, it only tells: why it can't be done, and OK.
-  function askFirst(question, detail, goLabel, go) {
+  // With no ``go``, it only tells: why it can't be done, and OK. Options:
+  // primary (the go button isn't a danger), alt ([label, fn], a second
+  // choice beside it) and noCancel (one of them must be chosen).
+  function askFirst(question, detail, goLabel, go, opts) {
+    opts = opts || {};
     if (!confirmModal) { if (go) go(); return; }
     document.getElementById("confirm-title").textContent = question;
     var text = document.getElementById("confirm-text");
     text.textContent = detail || "";
     text.hidden = !text.textContent;
-    var yes = document.getElementById("confirm-go");
+    var yes = document.getElementById("confirm-go"), alt = document.getElementById("confirm-alt");
+    var cancel = confirmModal.querySelector("[data-close]");
     yes.hidden = !go;
-    confirmModal.querySelector("[data-close]").textContent = go ? "Cancel" : "OK";
+    yes.classList.toggle("btn--primary", !!opts.primary);
+    yes.classList.toggle("btn--danger", !opts.primary);
+    cancel.textContent = go ? "Cancel" : "OK";
+    cancel.hidden = !!opts.noCancel;
+    confirmModal.toggleAttribute("data-locked", !!opts.noCancel);
     yes.textContent = goLabel || "";
     yes.onclick = function () {
-      yes.onclick = null;
+      yes.onclick = alt.onclick = null;
       confirmModal.close();
       go();
     };
+    alt.hidden = !opts.alt;
+    if (opts.alt) {
+      alt.textContent = opts.alt[0];
+      alt.onclick = function () {
+        yes.onclick = alt.onclick = null;
+        confirmModal.close();
+        opts.alt[1]();
+      };
+    }
     confirmModal.showModal();
+    if (opts.noCancel) yes.focus();
+  }
+  if (confirmModal) {
+    confirmModal.addEventListener("cancel", function (e) {    // Escape, when a choice must be made
+      if (confirmModal.hasAttribute("data-locked")) e.preventDefault();
+    });
   }
 
   document.addEventListener("click", function (e) {
@@ -3886,6 +3990,17 @@
   function openEntity(id, opts) {
     if (!sheet) return;
     opts = opts || {};
+    // Leaving a record with long text unsaved asks first; the same record
+    // drawn again (another tab, after an action) keeps it as it is.
+    var leavingRecord = sheet.open && current && current.id !== id;
+    if (!opts.asked && leavingRecord) {
+      var unsaved = proseUnsaved();
+      if (unsaved.length) {
+        askUnsaved(unsaved, function () { openEntity(id, Object.assign({}, opts, { asked: true })); }, opts.nav === "pop");
+        return Promise.resolve();
+      }
+    }
+    var kept = sheet.open && !leavingRecord ? proseKeep() : [];
     // Leaving a record (another record, another tab) saves it first.
     if (!opts.flushed && sheet.open && editsPending()) {
       var next = Object.assign({}, opts, { flushed: true });
@@ -3907,7 +4022,7 @@
     return fetchHTML("/e/" + id + "/sheet?tab=" + encodeURIComponent(opts.tab || "overview") + foldQuery(id)).then(function (html) {
       sheetArticle.innerHTML = html;
       applyViews(sheetArticle);
-      proseInit(sheetArticle);
+      proseInit(sheetArticle).then(function () { proseRestore(kept); });
       var root = sheetArticle.querySelector(".sheet-content");
       current = {
         id: id,
@@ -3961,10 +4076,14 @@
       if (id) openEntity(id, { tab: params.get("tab"), fromURL: true });
     } else if (sheet && sheet.open) {
       leaving = "closing";
-      flushEdits().then(function (ok) {
-        if (!ok) toast("Some changes weren't saved.", null, null, true);
-        closeDialog(sheet, null, true);
-      });
+      var leave = function () {
+        flushEdits().then(function (ok) {
+          if (!ok) toast("Some changes weren't saved.", null, null, true);
+          closeDialog(sheet, null, true);
+        });
+      };
+      var unsaved = proseUnsaved();
+      if (unsaved.length) askUnsaved(unsaved, leave, true); else leave();
     }
   });
   function refreshSheet() {
@@ -4312,7 +4431,7 @@
       fresh.innerHTML = html;
       fresh.querySelectorAll("[data-live]").forEach(function (part) {
         var old = sheetArticle.querySelector('[data-live="' + part.getAttribute("data-live") + '"]');
-        if (old && !old.contains(document.activeElement)) old.replaceWith(part);
+        if (old && !old.contains(document.activeElement) && !old.classList.contains("is-dirty")) old.replaceWith(part);
       });
       proseInit(sheetArticle);
       var root = fresh.querySelector(".sheet-content"), here = sheetArticle.querySelector(".sheet-content");
@@ -4369,14 +4488,14 @@
       else window.open(a.href, "_blank", "noopener");
     }, true);
     // A checklist's box is ticked here, not by the browser (which doesn't
-    // reliably, inside text being edited), and saved at once.
+    // reliably, inside text being edited).
     sheetArticle.addEventListener("mousedown", function (e) {
       var input = e.target.closest && e.target.closest("[data-prose-view] li.task input");
       if (!input || !input.closest("[data-prose-view]").isContentEditable) return;
       e.preventDefault();
       input.checked = !input.checked;
       input.setAttribute("aria-label", input.checked ? "Done" : "Not done");
-      proseLeave(input.closest("[data-prose]"));
+      proseSync(input.closest("[data-prose]"));
     });
     sheetArticle.addEventListener("mouseover", function (e) {
       var a = e.target.closest && e.target.closest("[data-prose-view] a[href]");
@@ -4396,7 +4515,7 @@
     // Every change on a page is written back into its text box at once, so
     // a save, a reload or a closed tab has it.
     sheetArticle.addEventListener("input", function (e) {
-      if (e.target.matches(".prose-input")) autosize(e.target);
+      if (e.target.matches(".prose-input")) { autosize(e.target); proseDirty(e.target.closest("[data-prose]")); }
       var view = e.target.closest && e.target.closest("[data-prose-view]");
       if (view && view.isContentEditable) {
         proseRoom(view);
@@ -4417,7 +4536,7 @@
       document.execCommand("insertText", false, atEnd && !/\n$/.test(tail.toString()) ? "\n\n" : "\n");
       if (atEnd && !/\n$/.test(tail.toString())) sel.modify("move", "backward", "character");
     });
-    // Leaving the text (not for its toolbar or link bar) saves it.
+    // Leaving the text (not for its toolbar or link bar) keeps it as it is.
     sheetArticle.addEventListener("focusout", function (e) {
       var box = e.target.closest && e.target.closest("[data-prose]");
       if (!box || (e.relatedTarget && box.contains(e.relatedTarget))) return;
@@ -4429,7 +4548,14 @@
     text.style.height = "auto";
     text.style.height = Math.max(text.scrollHeight + 2, 160) + "px";
   }
-  // A reload or a closed tab still sends what was typed.
+  // Long text isn't saved on its own: a reload or a closed tab with some
+  // unsaved gets the browser's own warning.
+  window.addEventListener("beforeunload", function (e) {
+    if (!proseUnsaved().length) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
+  // A reload or a closed tab still sends what was typed in a field.
   window.addEventListener("pagehide", function () {
     var seen = [];
     saveControls().filter(isDirty).forEach(function (el) {
