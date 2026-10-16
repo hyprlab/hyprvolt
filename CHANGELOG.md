@@ -6,6 +6,8 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+## [1.6.0] — 2026-10-16
+
 ### Added
 - A record's Tags field lists every tag in use as soon as the cursor is in it, a tick beside each the record has: a click or Enter ticks or unticks one, typing narrows the list, and a name no tag has yet is offered as a new tag
 - The sidebar's Tags can be moved among its groups in Settings > Modules, dragged by their handle like a group (or moved with ↑ and ↓), for every account; they stay last until moved
