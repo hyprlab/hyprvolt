@@ -9,6 +9,9 @@ All notable changes to Hyprvolt are documented here. The format follows
 ### Added
 - A document's body, a record's notes and other long text are edited where they are read: click into the page and type, with a toolbar for headings, bold, italic, code, links, lists, checklists, quotes, code blocks, dividers and document links. No Edit button, and no Markdown in sight unless the toolbar's Markdown button asks for it. Changes are kept until Save (or Ctrl/Cmd+S); closing the record with changes unsaved asks whether to save or discard them. Text with Markdown the page can't keep exactly (footnotes, HTML) opens as Markdown, so nothing is lost
 - The New record window's Markdown boxes have the same toolbar, writing the Markdown
+
+### Changed
+- A longer page's contents list is set in the page's own text instead of a box, with an info button saying it is filled in from the page's headings
 - Settings > Tags, for admins, lists every tag with how many records have it: a tag is renamed on every record by typing over its name, merged into another by giving it that one's name, or removed from every record, each with Undo. A tag added there is offered in every record's Tags field before any record has it
 
 ## [1.6.0] — 2026-10-16
