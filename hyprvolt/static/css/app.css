@@ -1546,7 +1546,7 @@ button.ipcell { cursor: pointer; }
 .prose h6 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 /* The contents list of a longer page, linking to its headings: part of the
    page's text, not a box apart from it. */
-.doc-contents { margin: 0 0 1.4em; font-size: 15px; line-height: 1.55; }
+.doc-contents { margin: 0 0 1.4em; padding-bottom: 1.1em; border-bottom: 1px solid var(--line); font-size: 15px; line-height: 1.55; }
 .doc-contents .setting-label { margin: 0 0 4px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; text-transform: none; color: var(--ink); }
 .doc-contents ol { margin: 0; padding-left: 1.3em; color: var(--muted); }
 .doc-contents ol ol { margin-top: 2px; }
