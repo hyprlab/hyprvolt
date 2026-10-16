@@ -718,7 +718,8 @@ open once, and closing it again discards the change. `e` puts the cursor in
 the first field.
 
 Notes, a document's body and other long text are edited as the page they
-show: click into it and type. The toolbar above it makes headings, bold,
+show: click into it and type. The toolbar that appears above it while it is
+being edited makes headings, bold,
 italic, code, links (Ctrl or ⌘ with B, I, E and K), lists, checklists,
 quotes, code blocks and dividers, and links a document; a checklist's box
 is ticked with a click. Enter in a code block starts a new line in it. A

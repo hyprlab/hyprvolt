@@ -1205,20 +1205,24 @@ input[type=checkbox].kv-input { flex: none; margin: 6px 0; width: 15px; height: 
 /* A module's form section (a rack position), edited in place. */
 .kv-section { margin-top: 4px; }
 /* Long text, edited where it is read (app.js, "The page editor"): the page
-   takes the typing, with the formatting toolbar in its heading row, which
-   stays in view down a long page. Markdown shows the text box instead.
+   takes the typing, with the formatting toolbar in its heading row, shown
+   while the text is edited and kept in view down a long page. Markdown shows the text box instead.
    Folded notes that are empty are only their Add button. */
 .prose-edit { position: relative; }
-.prose-edit-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
-.prose-edit-head .setting-label { margin: 0; }
-.prose-edit:focus-within .prose-edit-head {
-  position: sticky; top: 0; z-index: 3; margin-inline: -8px; padding: 6px 8px;
-  background: var(--surface); border-radius: var(--radius-sm);
+.prose-edit-head {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px;
+  margin-inline: -8px; padding: 4px 8px; border-radius: var(--radius-sm);
 }
+.prose-edit-head .setting-label { margin: 0; }
+.prose-edit:focus-within .prose-edit-head { position: sticky; top: 0; z-index: 3; background: var(--surface); }
 .sheet-notes.prose-edit:focus-within .prose-edit-head { background: var(--panel); }
 @media (max-width: 900px) { .prose-edit:focus-within .prose-edit-head { top: calc(var(--sheet-bar) + var(--sheet-tabs)); } }
-.md-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1px; margin-left: auto; opacity: .6; transition: opacity .15s; }
-.prose-edit:hover .md-toolbar, .prose-edit:focus-within .md-toolbar, .field .md-toolbar { opacity: 1; }
+.md-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1px; margin-left: auto; }
+/* Shown only while the text is being edited; its room is kept, so the text doesn't move. */
+.prose-edit:not(:focus-within) .md-toolbar { visibility: hidden; }
+/* A page with a contents list: the label, the list, then the toolbar over the text. */
+.prose-edit > .setting-label { margin: 0 0 8px; }
+.prose-edit.has-contents > .doc-contents { margin-bottom: 4px; }
 .field .md-toolbar { margin: 0 0 6px -4px; }
 .md-tool.iconbtn--sm svg { width: 16px; height: 16px; }
 .md-glyph { font-size: 14px; font-weight: 700; line-height: 1; color: inherit; }

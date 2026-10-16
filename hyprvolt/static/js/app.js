@@ -2442,9 +2442,15 @@
     var p = proseParts(box);
     box.classList.add("is-visual");
     box.classList.remove("is-source");
-    // The contents list goes above the page: it is the server's, not the text's.
-    var nav = p.view.querySelector(":scope > nav.doc-contents");
-    if (nav) p.view.parentNode.insertBefore(nav, p.view);
+    // The contents list is the server's, not the text's: it goes under the
+    // label, above the toolbar, which stays right over the text it formats.
+    var nav = p.view.querySelector(":scope > nav.doc-contents"), head = box.querySelector(".prose-edit-head");
+    if (nav && head) {
+      var label = head.querySelector(".setting-label");
+      box.insertBefore(nav, head);
+      if (label) box.insertBefore(label, nav);
+      box.classList.add("has-contents");
+    }
     p.view.querySelectorAll("li.task input").forEach(function (input) {
       input.disabled = false;
       input.setAttribute("contenteditable", "false");
