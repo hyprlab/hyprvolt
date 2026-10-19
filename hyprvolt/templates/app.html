@@ -79,6 +79,55 @@
         {% endif %}
         {% endif %}
 
+        {% if page == 'list' and facets %}
+        {% set tick %}<svg class="tick" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>{% endset %}
+        <div class="menu" id="filter-menu">
+          <button class="menubtn {{ 'is-filtered' if facets.active }}" aria-haspopup="true" aria-expanded="false" title="Filter">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+            <span class="menubtn-label">Filter</span>
+            {% if facets.active %}<span class="count" aria-label="{{ facets.active }} in use">{{ facets.active }}</span>{% endif %}
+            <svg class="chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
+          </button>
+          <div class="menupop menupop--scroll filterpop" role="menu" hidden>
+            {% if facets.statuses|length > 1 or status %}
+            <p class="menupop-head">Status</p>
+            {% for value, label, n in facets.statuses %}
+            {% set on = status == value %}
+            <a class="menuopt {{ 'is-active' if on }}" role="menuitemcheckbox" aria-checked="{{ 'true' if on else 'false' }}" href="{{ url_with(status=None if on else value) }}">
+              <span>{{ label }}</span><span class="count">{{ n }}</span>{{ tick }}</a>
+            {% endfor %}
+            {% endif %}
+            {% if facets.tags %}
+            <p class="menupop-head">Tag</p>
+            {% for name, n in facets.tags %}
+            {% set on = tag and tag|lower == name|lower %}
+            <a class="menuopt {{ 'is-active' if on }}" role="menuitemcheckbox" aria-checked="{{ 'true' if on else 'false' }}" href="{{ url_with(tag=None if on else name) }}">
+              <span class="tagdot" aria-hidden="true"></span><span>{{ name }}</span><span class="count">{{ n }}</span>{{ tick }}</a>
+            {% endfor %}
+            {% endif %}
+            {% if facets.types %}
+            <p class="menupop-head">Type</p>
+            {% for t, n in facets.types %}
+            {% set on = etype and etype.key == t.key %}
+            <a class="menuopt {{ 'is-active' if on }}" role="menuitemcheckbox" aria-checked="{{ 'true' if on else 'false' }}" href="{{ url_with(type=None if on else t.key) }}">
+              <span>{{ t.plural }}</span><span class="count">{{ n }}</span>{{ tick }}</a>
+            {% endfor %}
+            {% endif %}
+            {% if facets.archived or archived %}
+            <p class="menupop-head">Show</p>
+            <a class="menuopt {{ 'is-active' if archived }}" role="menuitemcheckbox" aria-checked="{{ 'true' if archived else 'false' }}" href="{{ url_with(archived=None if archived else 1) }}">
+              <span>Archived only</span>{% if facets.archived %}<span class="count">{{ facets.archived }}</span>{% endif %}{{ tick }}</a>
+            {% endif %}
+            {% if not (facets.types or facets.statuses|length > 1 or status or facets.tags or facets.archived or archived) %}
+            <p class="menupop-note">Nothing here to filter by.</p>
+            {% endif %}
+            {% if facets.active %}
+            <a class="menuopt filterpop-clear" role="menuitem" href="{{ url_with(type=None, status=None, tag=None, archived=None) }}"><span>Clear filters</span></a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
         {% if page == 'list' and not deleted %}
         <div class="menu" id="sort-menu">
           <button class="menubtn" aria-haspopup="true" aria-expanded="false" title="Sort">

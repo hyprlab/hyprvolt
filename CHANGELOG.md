@@ -6,6 +6,12 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Added
+- A Filter button above every list narrows it by status, tag, type, or to archived records only, each with how many records it would show. The button shows how many filters are in use, and Clear filters takes them all off
+
+### Fixed
+- A tag in the sidebar lists that tag's records across every module, instead of filtering whichever module was open
+
 ## [1.7.0] — 2026-10-16
 
 ### Added

@@ -1,7 +1,9 @@
 {# The sidebar's scrolling middle: the dashboard, all records and the site
    setup guide, every module with its live count (the open one lists its
    types and filters), and the tags: a group of their own, last unless an
-   admin moved them (nav_tags_at, Settings > Modules). #}
+   admin moved them (nav_tags_at, Settings > Modules). A tag here lists its
+   records across every module, whichever list is open; the Filter menu in
+   the topbar narrows a list by tag. #}
 {% from "partials/macros.html" import type_icon %}
 {% macro tags_group() %}
 {% if nav_tags %}
@@ -10,7 +12,7 @@
 <ul class="sidelist">
   {% for name, count in nav_tags %}
   <li><a class="sideitem {{ 'is-active' if active_tag and active_tag|lower == name|lower }}"
-         href="{{ url_for('main.module_list', module_id=module.id, tag=name) if module else url_for('main.all_records', tag=name) }}">
+         href="{{ url_for('main.all_records', tag=name) }}">
     <span class="tagdot" aria-hidden="true"></span><span class="sideitem-title">{{ name }}</span><span class="count">{{ count }}</span></a></li>
   {% endfor %}
 </ul>

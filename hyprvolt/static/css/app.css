@@ -409,6 +409,22 @@ button.menuopt { width: 100%; text-align: left; }
 .menuopt:hover { background: var(--wash); color: var(--ink); }
 .menuopt.is-active { color: var(--ink); font-weight: 700; }
 .menuopt.is-active .tick { opacity: 1; }
+/* The Filter menu on a list: a head per kind of filter, a count beside each value. */
+.filterpop { width: 260px; }
+.filterpop .menupop-head:not(:first-child) { margin-top: 6px; }
+.filterpop .menuopt { padding: 7px 10px; font-size: 13.5px; }
+.filterpop .menuopt > span:first-child:not(.tagdot), .filterpop .menuopt .tagdot + span {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.filterpop .menuopt .count, .filterpop .menuopt .tagdot { flex: none; }
+.filterpop .filterpop-clear { margin-top: 6px; border-top: 1px solid var(--line); border-radius: 0; color: var(--ink); }
+.menupop-note { padding: 4px 10px 8px; font-size: 13px; color: var(--faint); }
+.menubtn.is-filtered { color: var(--ink); border-color: var(--line-strong); }
+.menubtn .count { padding: 0 5px; min-width: 18px; background: var(--wash); color: var(--ink); }
+/* On a phone the button sits mid-bar, so the menu spans the screen under the topbar. */
+@media (max-width: 700px) {
+  .filterpop { position: fixed; top: 60px; left: 12px; right: 12px; width: auto; }
+}
 
 /* ————— Records: the list and grid the app starts from ————— */
 .records { padding: clamp(18px, 3vw, 34px) clamp(16px, 3.5vw, 36px) 60px; }

@@ -25,7 +25,7 @@ from . import __version__
 from .auth import EMAIL_RE, MIN_PASSWORD, siteverify, turnstile_config
 from .core import access, present, shell
 from .core.api import like
-from .core.models import Entity, Tag
+from .core.models import Entity, Tag, entity_tags
 from .models import User, db, get_setting, int_setting, set_setting
 from .permissions import ROLES, public, role
 from .registry import TAGS_GROUP
@@ -142,6 +142,47 @@ def _list_query(module, a):
     return query.order_by(order, Entity.id.desc())
 
 
+def _facets(module, a) -> dict:
+    """What the Filter menu offers on a list: each kind of filter with the
+    values the records here have and how many have each, counted with every
+    other filter in force, so a count is what choosing it would show."""
+    reg = registry()
+
+    def without(**changes):
+        return _list_query(module, {**a, **changes}).order_by(None)
+
+    types = []
+    if module is not None and len(module.types) > 1:
+        counts = dict(without(etype=None).with_entities(Entity.type, func.count(Entity.id))
+                      .group_by(Entity.type).all())
+        types = [(t, counts.get(t.key, 0)) for t in module.types
+                 if counts.get(t.key) or (a["etype"] and a["etype"].key == t.key)]
+    labels, statuses = {}, {}
+    rows = (without(status=None).with_entities(Entity.type, Entity.status, func.count(Entity.id))
+            .group_by(Entity.type, Entity.status).all())
+    for key, value, count in rows:
+        etype = reg.type(key)
+        labels.setdefault(value, dict(etype.statuses).get(value, value) if etype else value)
+        statuses[value] = statuses.get(value, 0) + count
+    tags = (without(tag=None).join(entity_tags, entity_tags.c.entity_id == Entity.id)
+            .join(Tag, Tag.id == entity_tags.c.tag_id)
+            .with_entities(Tag.name, func.count(Entity.id))
+            .group_by(Tag.id).order_by(func.lower(Tag.name)).all())
+    # What is chosen stays offered, to be unticked, even when nothing here has it.
+    if a["status"] and a["status"] not in statuses:
+        statuses[a["status"]] = 0
+        labels[a["status"]] = a["status"]
+    if a["tag"] and not any(name.lower() == a["tag"].lower() for name, _ in tags):
+        tags = sorted(tags + [(a["tag"], 0)], key=lambda t: t[0].lower())
+    return {
+        "types": types,
+        "statuses": sorted(((v, labels[v], n) for v, n in statuses.items()), key=lambda s: s[1].lower()),
+        "tags": tags,
+        "archived": without(archived=True).count() if not a["archived"] else 0,
+        "active": sum(1 for on in (a["etype"] and types, a["status"], a["tag"], a["archived"]) if on),
+    }
+
+
 def records_listed(name: str, limit: int):
     """What the list at ``/<name>`` (or ``/all``) shows with the request's
     filters, every page of it up to ``limit``: (module, args, records).
@@ -196,12 +237,18 @@ def _render_list(module):
     if a["due"]:
         title = "Coming up"
     context["title"] = title
+    if not a["deleted"]:
+        context["facets"] = _facets(module, a)
     context["location_entity"] = db.session.get(Entity, a["location"]) if a["location"] else None
+    # A tag in the sidebar is a list of its own, across every module; a tag
+    # chosen in a module's Filter menu narrows that module, and the module
+    # stays the highlighted row.
+    sidebar_tag = a["tag"] if module is None else None
     special = "deleted" if a["deleted"] else ("all" if module is None and not a["tag"] else None)
     return render_template("app.html", **context,
                            **shell.context(active_module=module, active_type=a["etype"].key if a["etype"] else None,
                                            active_filter=a["filter"].key if a["filter"] else None,
-                                           active_tag=a["tag"], special=special),
+                                           active_tag=sidebar_tag, special=special),
                            **_admin_context())
 
 

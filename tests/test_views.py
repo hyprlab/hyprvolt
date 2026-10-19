@@ -18,8 +18,31 @@ def test_a_module_list_and_its_sidebar(client, h, admin):
     make(client, h, name="Blue box", tags="lab", **{"f.color": "blue"})
     body = client.get("/example?view=list").data.decode()
     assert "Blue box" in body and "blue" in body            # the list field shows in the row
-    assert 'href="/example?tag=lab"' in body                 # tags filter within the module
+    assert 'href="/all?tag=lab"' in body                     # a sidebar tag is a list of its own
+    assert 'href="/example?view=list&amp;tag=lab"' in body   # the Filter menu narrows the module
     assert client.get("/nosuchmodule").status_code == 404
+
+
+def test_the_filter_menu_narrows_the_list_and_counts_each_choice(client, h, admin):
+    make(client, h, name="Blue box", tags="lab, prod")
+    make(client, h, name="Red box", tags="lab", status="retired")
+    make(client, h, "crate", name="Big crate", tags="prod")
+    body = client.get("/example?view=list").data.decode()
+    menu = body.split('id="filter-menu"')[1].split('id="sort-menu"')[0]
+    assert "Gadgets</span><span class=\"count\">2<" in menu and "Crates</span><span class=\"count\">1<" in menu
+    assert "lab</span><span class=\"count\">2<" in menu and "prod</span><span class=\"count\">2<" in menu
+    assert "Retired</span><span class=\"count\">1<" in menu
+    # With a tag chosen the module stays the open row, the counts follow, and the tag clears.
+    body = client.get("/example?view=list&tag=prod").data.decode()
+    menu = body.split('id="filter-menu"')[1].split('id="sort-menu"')[0]
+    assert "Blue box" in body and "Big crate" in body and "Red box" not in body
+    assert "Gadgets</span><span class=\"count\">1<" in menu and 'aria-label="1 in use"' in menu
+    assert 'href="/example?view=list"' in menu and "Clear filters" in menu
+    sidebar = body.split('class="sidebar-group" data-group="@tags"')[1]
+    assert 'sideitem is-active' not in sidebar.split("</ul>")[0]
+    # From the sidebar, the tag lists every module's records and is the open row.
+    body = client.get("/all?tag=prod").data.decode()
+    assert 'sideitem is-active' in body.split('data-group="@tags"')[1].split("</ul>")[0]
 
 
 def test_the_new_record_window_offers_every_enabled_module_on_every_page(client, h, admin):

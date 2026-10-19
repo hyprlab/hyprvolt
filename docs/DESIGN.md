@@ -81,7 +81,7 @@ Long-form text uses `.prose` at 16.5px and 1.72.
 | `.shell`, `.sidebar`, `.sidebar-head/-scroll/-foot` | The layout. The head and foot stay pinned; only the middle scrolls. |
 | `.navitem`, `.sidebar-label`, `.sidelist`, `.sidelist--nested`, `.sideitem` | Sidebar rows: a module is a `.navitem`; the open module's types and filters are a nested list under it. `.is-active` makes it the grey pill (the wash in the dark theme), its text bold, with a short rounded accent bar standing just outside its left edge; the same marks the chosen row in Settings, a record's sections and the setup guide's steps. A scrolling list of them lends its rows 10px of side padding so the bar isn't clipped. |
 | `.topbar`, `.context-title`, `.topbar-actions` | The sticky, blurred bar over the content |
-| `.searchpill`, `.viewswitch`, `.menu`/`.menubtn`/`.menupop`/`.menuopt` | Topbar controls |
+| `.searchpill`, `.viewswitch`, `.menu`/`.menubtn`/`.menupop`/`.menuopt` | Topbar controls. The Filter menu (`.filterpop`) is a `.menupop` with a `.menupop-head` per kind of filter and a `.count` beside each value; the button carries a `.count` of the filters in use |
 | `.card`, `.row`, `.kicker`, `.kicker-icon`, `.facts`, `.is-archived` | Records as cards or list rows. The row's first cell is the type's icon; `.facts` are a card's key fields; archived and deleted records step back with `.is-archived` |
 | `.card-image` | A record's featured image across the top of its card, always 16:9 so the grid doesn't move as pictures load |
 | `.dash`, `.dash-section`, `.tiles`, `.tile`, `.widgets`, `.widget`, `.widget--wide` | The dashboard: one tile per module with its count, then the cards (Coming up and the modules' widgets), `--wide` across the row |
