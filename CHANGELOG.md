@@ -6,6 +6,8 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+## [1.11.0] — 2026-10-30
+
 ### Added
 - A 4 × 1 in asset tag also shows the equipment's management IP, under its serial number: the Management IP of the hypervisor a server runs, or else the record's own IP addresses
 
