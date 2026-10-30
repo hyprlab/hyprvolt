@@ -6,6 +6,8 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+## [1.9.0] — 2026-10-30
+
 ### Added
 - A document downloads as a PDF in one click, from the download button at the top of the record (or d): laid out as paper, with its status, last update, tags, the date printed and a link back, a contents list with page numbers, colored code, tables that fit the page, its pictures, the title and page number at the foot of each page, and bookmarks for its headings
 - The printer button beside it (or p) opens the same layout to print, choose Letter or A4, or take in the document's pages: all of them, in order, each from a new page behind one contents list, links between them leading there in the PDF
