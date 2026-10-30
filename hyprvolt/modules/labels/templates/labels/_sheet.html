@@ -1,8 +1,9 @@
 {# The labels themselves, in real units (app.css, .labels): on the page,
    and in the PDF made from it. A 4 × 1 in asset tag carries the
    organization and its logo, the asset tag in large type (the name when
-   there is none), the make and model, serial and management IP, and no
-   place, which goes out of date when it moves (the QR code has it); the others the
+   there is none), its name, serial, management IP and MAC address; no
+   place, which goes out of date when it moves, and no make and model,
+   which its nameplate has (the QR code has both); the others the
    name, kind, a code and the place. #}
 <div class="labels labels--{{ size }}">
   {% for l in labels %}
@@ -13,9 +14,9 @@
       {% if owner %}<span class="tag-owner">Property of {{ owner }}</span>{% endif %}
       <span class="tag-id">{{ l.asset_tag or l.view.name }}</span>
       {% if l.asset_tag %}<span class="tag-name">{{ l.view.name }}</span>{% endif %}
-      {% if l.make %}<span class="tag-line">{{ l.make }}</span>{% endif %}
       {% if l.serial %}<span class="tag-line">S/N <span class="tag-serial">{{ l.serial }}</span></span>{% endif %}
       {% if l.ip %}<span class="tag-line">Mgmt IP <span class="tag-serial">{{ l.ip }}</span></span>{% endif %}
+      {% if l.mac %}<span class="tag-line">MAC <span class="tag-serial">{{ l.mac }}</span></span>{% endif %}
     </div>
     {{ l.qr }}
   </div>

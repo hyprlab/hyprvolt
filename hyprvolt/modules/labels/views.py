@@ -1,9 +1,10 @@
 """Printable asset labels: one per record of a list, each with a QR code
 that opens the record (``/e/<id>``), its name, kind, asset tag or serial,
 and where it is. A 4 × 1 in asset tag adds the organization and its logo
-(brand.py), the asset tag in large type, the make and model, the serial and
-the management IP (its hypervisor's, or its own IP addresses), in type
-large enough for a thermal printer, so without the place.
+(brand.py), the asset tag in large type, the name, the serial, the
+management IP (its hypervisor's, or its own IP addresses) and its MAC
+address, in type large enough for a thermal printer: no place or make and
+model, which the device's own nameplate and the QR code have.
 
 The page is offered in every list's export menu, with the list's filters,
 so the labels are for exactly what the list shows; ``?id=`` makes the one
@@ -55,14 +56,6 @@ def _value(detail, key) -> str:
     return str(value).strip() if value not in (None, "") else ""
 
 
-def _make(detail) -> str:
-    """"Dell PowerEdge R740": the manufacturer, unless the model names it."""
-    maker, model = _value(detail, "manufacturer"), _value(detail, "model")
-    if maker and model.lower().startswith(maker.lower()):
-        return model
-    return " ".join(p for p in (maker, model) if p)
-
-
 #: Where a form section other modules add holds the management IP, first
 #: found first: the Management IP of the hypervisor a server runs (Virtual),
 #: then the record's own IP addresses (Network), which are a device's
@@ -79,6 +72,33 @@ def _management_ip(entity) -> str:
         if key in sections and (found := (sections[key].values(entity) or {}).get(value)):
             return str(found)
     return ""
+
+
+def _mac(entity, ip: str) -> str:
+    """The MAC address Network records for the device: the one on the
+    management IP's address record (the device's own, or its hypervisor's),
+    else the first of its ports that has one. "" with Network off."""
+    from hyprvolt.core import relations
+    from hyprvolt.core.models import Entity
+    from hyprvolt.registry import current as registry
+    if not registry().is_enabled("network"):
+        return ""
+    try:
+        from hyprvolt.modules.network.models import NetworkDetail, Port
+    except ImportError:
+        return ""
+    holders = [entity.id] + [e.id for e in relations.linked("runs_on", entity, "target") if e.type == "hypervisor"]
+    found = (db.session.query(NetworkDetail.address, NetworkDetail.mac)
+             .join(Entity, Entity.id == NetworkDetail.entity_id)
+             .filter(Entity.type == "ip_address", Entity.deleted_at.is_(None), NetworkDetail.assigned.in_(holders),
+                     NetworkDetail.mac.isnot(None), NetworkDetail.mac != "").all())
+    first = ip.split(",")[0].strip()
+    mac = next((m for a, m in found if a == first), None) or next((m for _, m in found), None)
+    if mac is None:
+        port = (Port.query.filter(Port.device_id == entity.id, Port.mac != "")
+                .order_by(Port.position, Port.id).first())
+        mac = port.mac if port else ""
+    return mac.strip().upper()
 
 
 def taggable(entity) -> str:
@@ -132,10 +152,10 @@ def _context() -> dict:
         code_label, code = _code(detail)
         # The innermost two places (a rack in a room) say where to find it.
         where = " › ".join(v.path.split(" › ")[-2:]) if v.path else ""
+        ip = _management_ip(entities[v.id]) if size == TAG else ""
         labels.append({"view": v, "code_label": code_label, "code": code, "where": where,
                        "asset_tag": _value(detail, "asset_tag"), "serial": _value(detail, "serial"),
-                       "make": _make(detail), "qr": qr(f"{base}/e/{v.id}"),
-                       "ip": _management_ip(entities[v.id]) if size == TAG else ""})
+                       "qr": qr(f"{base}/e/{v.id}"), "ip": ip, "mac": _mac(entities[v.id], ip) if size == TAG else ""})
     return dict(labels=labels, more=more, limit=LIMIT, size=size, sizes=SIZES, roll=size in ROLLS, what=what,
                 sizes_url={key: _with(size=key) for key, _ in SIZES}, back=back, back_label=back_label,
                 pdf_url=_with("labels.pdf_copy", size=size),

@@ -6,6 +6,12 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Added
+- A 4 × 1 in asset tag shows the equipment's MAC address, under its management IP: the one recorded on the management IP's address record, or else on the first of its ports that has one
+
+### Changed
+- A 4 × 1 in asset tag no longer shows the make and model, to make room for the MAC address at a size a label printer prints cleanly. The device's own nameplate has them, and the QR code opens the record
+
 ## [1.11.1] — 2026-10-30
 
 ### Changed

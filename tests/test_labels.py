@@ -52,8 +52,9 @@ def test_an_asset_tag_carries_the_equipment_and_the_organization(client, h, admi
     assert 'Mgmt IP <span class="tag-serial">10.0.20.11</span>' in page
     assert "labels--4x1" in page and page.count('class="label tag"') == 1
     assert '<span class="tag-id">HV-0042</span>' in page and ">srv1<" in page
-    assert "Dell PowerEdge R740" in page and ">8XK2LM3<" in page
-    assert "Home › Server room" not in page                # out of date once it moves
+    assert ">8XK2LM3<" in page and "MAC <span" not in page
+    # Its nameplate has the make and model, and the place goes out of date once it moves.
+    assert "Dell PowerEdge R740" not in page and "Home › Server room" not in page
     assert "tag-owner" not in page and 'class="tag-logo"' not in page and "logo in Settings > Asset labels" in page
     assert f'href="/e/{srv["id"]}"' in page and "Back to the record" in page
     assert f"/labels/print.pdf?id={srv['id']}&amp;size=4x1" in page
@@ -88,6 +89,34 @@ def test_a_server_running_a_hypervisor_is_tagged_with_the_hypervisors_management
     assert resp.status_code == 200
     page = client.get(f"/p/labels/print?id={srv['id']}").data.decode()
     assert "172.16.128.20" in page and "10.0.20.11" not in page
+
+
+def test_an_asset_tag_carries_the_mac_address_of_the_management_ip(app, client, h, admin):
+    from hyprvolt.core.models import Entity
+    from hyprvolt.models import db
+    from hyprvolt.modules.network.models import NetworkDetail
+
+    def set_mac(address, mac):
+        with app.app_context():
+            detail = (db.session.query(NetworkDetail).join(Entity, Entity.id == NetworkDetail.entity_id)
+                      .filter(Entity.type == "ip_address", NetworkDetail.address == address).one())
+            detail.mac = mac
+            db.session.commit()
+
+    srv = make(client, h, "server", name="vmsvr1", **{"s.addresses.list": "10.0.20.11", "s.hypervisor.on": True,
+                                                      "s.hypervisor.platform": "vmware",
+                                                      "s.hypervisor.address": "172.16.128.20"})
+    tag = lambda: client.get(f"/p/labels/print?id={srv['id']}").data.decode()       # noqa: E731
+    # Its ports first, while no address has one.
+    client.post(f"/network/devices/{srv['id']}/ports", json={"prefix": "eth", "first": 0, "last": 1}, headers=h)
+    port = client.get(f"/network/devices/{srv['id']}/ports").get_json()["ports"][1]
+    client.post("/network/ports/edit", json={"port_id": port["id"], "mac": "00:1a:2b:3c:4d:5f"}, headers=h)
+    assert 'MAC <span class="tag-serial">00:1A:2B:3C:4D:5F</span>' in tag()
+    # Then the iDRAC's address, then the management IP's, which wins.
+    set_mac("10.0.20.11", "aa:aa:aa:00:00:01")
+    assert "AA:AA:AA:00:00:01" in tag()
+    set_mac("172.16.128.20", "bb:bb:bb:00:00:02")
+    assert "BB:BB:BB:00:00:02" in tag() and "AA:AA:AA" not in tag()
 
 
 def test_a_record_with_no_asset_tag_is_tagged_by_its_name(client, h, admin):
