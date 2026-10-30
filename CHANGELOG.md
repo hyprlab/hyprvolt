@@ -8,6 +8,7 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ### Changed
 - The small text on a 4 × 1 in asset tag is 2 pt larger, as thermal label printers broke it up. The tag no longer shows the place, which goes out of date when the equipment moves; its QR code opens the record with the place as it is now
+- Labels and asset tags print the asset tag, serial number and IP address in Inter, like the rest of the label, with a slashed zero so a 0 is never read as an O
 
 ## [1.11.0] — 2026-10-30
 

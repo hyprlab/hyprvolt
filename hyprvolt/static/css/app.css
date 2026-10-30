@@ -2082,7 +2082,7 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 /* ————— Printable labels, in real units: a sheet prints as it shows ————— */
 .labels-tools { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
 .labels-tools .hint { margin: 0; }
-.labels { display: grid; gap: 0; width: max-content; max-width: 100%; overflow: auto; }
+.labels { display: grid; gap: 0; font-family: var(--font); width: max-content; max-width: 100%; overflow: auto; }
 .label {
   display: flex; align-items: center; gap: 2mm; padding: 2mm 2.5mm; overflow: hidden;
   background: #fff; color: #000; outline: 1px dashed var(--line-strong); break-inside: avoid;
@@ -2092,7 +2092,7 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 .label-text { flex: 1 1 0; display: flex; flex-direction: column; min-width: 0; overflow: hidden; line-height: 1.2; }
 .label-name { font-weight: 700; font-size: 10pt; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .label-meta, .label-code { font-size: 7pt; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.label-code { font-family: var(--mono); font-weight: 600; }
+.label-code { font-weight: 600; font-variant-numeric: tabular-nums slashed-zero; }
 /* Avery 5160 and L7160: three across; a label printer: one 62 × 29 mm label a page. */
 .labels--5160 { --qr: calc(1in - 4mm); page: labels-5160; grid-template-columns: repeat(3, 2.625in); grid-auto-rows: 1in; column-gap: .125in; }
 .labels--l7160 { --qr: 34.1mm; page: labels-l7160; grid-template-columns: repeat(3, 63.5mm); grid-auto-rows: 38.1mm; column-gap: 2.5mm; }
@@ -2112,10 +2112,11 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 .tag-text { line-height: 1.08; }
 .tag-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag-owner { font-size: 7.5pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.tag-id { font-family: var(--mono); font-size: 14pt; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
+.tag-id { font-size: 14pt; font-weight: 700; line-height: 1.1; }
 .tag-name { font-size: 9pt; font-weight: 700; }
 .tag-line { font-size: 8pt; }
-.tag-serial { font-family: var(--mono); }
+/* Codes in Inter, its zero slashed so it is never read as an O. */
+.tag-id, .tag-serial { font-variant-numeric: tabular-nums slashed-zero; }
 /* Settings > Asset labels: the logo as it is, on white like the tag. */
 .tag-logo-preview { display: inline-flex; padding: 10px 14px; margin-bottom: 4px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
 .tag-logo-preview img { display: block; height: 64px; width: auto; max-width: 220px; object-fit: contain; }
