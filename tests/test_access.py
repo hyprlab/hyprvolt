@@ -34,13 +34,15 @@ def test_a_private_document_is_hidden_from_a_viewer_everywhere(client, h, admin,
     for url in (f"/api/entities/{private['id']}", f"/e/{private['id']}/sheet", f"/e/{private['id']}",
                 "/api/entities/by-slug/private-manual", f"/api/entities/{private['id']}/history",
                 f"/api/entities/{private['id']}/attachments", f"/attachments/{att['id']}",
-                f"/api/entities/{private['id']}/relationships", f"/api/entities/{editors['id']}"):
+                f"/api/entities/{private['id']}/relationships", f"/api/entities/{editors['id']}",
+                f"/documents/{private['id']}/print"):
         assert other.get(url).status_code == 404, url
     for url in ("/api/entities?limit=500", "/api/entities?slug=private-manual", "/api/entities?q=" + SECRET_WORD,
                 "/documents?view=list", "/all?view=list", "/search?q=manual", "/search?q=" + SECRET_WORD,
                 "/export/documents.csv", "/api/tags", "/", f"/e/{server['id']}/sheet?tab=documents",
                 f"/e/{server['id']}/sheet?tab=relationships", f"/e/{open_doc['id']}/sheet",
-                f"/e/{open_doc['id']}/sheet?tab=linked", "/p/labels/print?list=all"):
+                f"/e/{open_doc['id']}/sheet?tab=linked", "/p/labels/print?list=all",
+                f"/documents/{open_doc['id']}/print?pages=1"):
         status, body = seen(other, url)
         assert status == 200, url
         assert "Private manual" not in body and "Editors manual" not in body and SECRET_WORD not in body, url

@@ -1243,7 +1243,7 @@
   //   [data-copy="text"]         copies the text; [data-copy-url] posts first
   //                              and copies the answer's value
   //   input[data-autosubmit]     submits its form when it changes
-  //   [data-print]               prints the page (a sheet of labels)
+  //   [data-print]               prints the page (a sheet of labels, a document's printed copy)
   //   .infotip[popovertarget]    opens its help (a native popover) beside it
   //   [data-gallery]             its [data-gallery-item] links open in the
   //                              picture viewer (see "Picture viewer")
@@ -4029,7 +4029,8 @@
         tab: root.getAttribute("data-tab"),
         name: root.getAttribute("data-name"),
         archived: root.getAttribute("data-archived") === "1",
-        deleted: root.getAttribute("data-deleted") === "1"
+        deleted: root.getAttribute("data-deleted") === "1",
+        printed: root.getAttribute("data-printed") || ""
       };
       updateSheetBar();
       if (!sheet.open) {
@@ -4102,6 +4103,9 @@
     }
     if (edit) edit.hidden = current.deleted;
     if (del) del.hidden = current.deleted;
+    var printed = document.getElementById("sheet-print");
+    printed.hidden = !current.printed;
+    printed.setAttribute("href", current.printed || "#");
   }
 
   function openSibling(step) {
@@ -4655,6 +4659,7 @@
       else if (e.key === "e") { e.preventDefault(); editCurrent(); }
       else if (e.key === "a") { e.preventDefault(); toggleArchive(); }
       else if (e.key === "c") { e.preventDefault(); copyLink(); }
+      else if (e.key === "p" && current && current.printed) { e.preventDefault(); location.href = current.printed; }
       else if (/^[1-9]$/.test(e.key)) {
         var tabs = sheetArticle.querySelectorAll(".tab[data-tab]");
         var tab = tabs[parseInt(e.key, 10) - 1];

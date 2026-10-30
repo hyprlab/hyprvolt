@@ -396,6 +396,17 @@ to the pages before and after it. The sidebar's Top-level pages filter
 hides the pages, leaving the documents they belong to. Pages nest eight deep
 at most, and a document can't be a page of itself or of one of its pages.
 
+The printer button at the top of a document (or `p`) opens it laid out as
+paper, to print or, with Save as PDF chosen as the printer, to keep as a PDF
+named after the document. The copy starts with the document's status, last
+update, tags, the date printed and its address in the app, then a contents
+list once there are three headings; page numbers go in the bottom margin.
+A document with pages offers "With its pages": every page under it, in
+order, each from the top of a new sheet, behind one contents list, and a
+link to one of those pages leads to it inside the PDF. Paper size comes from
+the print dialog; turning off the browser's own headers and footers there
+gives the cleanest copy.
+
 A document's Linked from tab lists the documents cross-linked with it, then
 those that link to it in their text; another record's Documents tab lists
 those that mention it. Choose documents, under the lists, opens every other

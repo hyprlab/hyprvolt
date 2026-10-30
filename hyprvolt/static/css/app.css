@@ -2110,3 +2110,91 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
   .labels--62x29 { row-gap: 0; }
   .labels--62x29 .label { break-after: page; }
 }
+
+/* ————— A document as paper (documents/print.html): a printed copy or a PDF ————— */
+/* The sheet is white paper in either theme, so its colors are the light
+   theme's, set on it; sizes are in points, so the screen shows what prints. */
+.printdoc-page { background: var(--bg); }
+.printdoc-tools {
+  position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+  padding: 12px max(16px, calc((100% - 8.5in) / 2)); background: var(--bg); border-bottom: 1px solid var(--line);
+}
+.printdoc-tools svg { width: 16px; height: 16px; }
+.printdoc-tools-hint { margin: 0 auto 0 0; }
+.printdoc { display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 28px 16px 72px; }
+.printdoc-sheet {
+  color-scheme: light; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  --ink: #191917; --muted: #55554F; --faint: #61615A; --line: #E4E4DD; --line-strong: #D4D4CC;
+  --field: #F4F4F0; --wash: rgb(255 214 10 / .17); --accent: #FFD60A; --danger: #AC362E;
+  --code-kw: #7A3E9D; --code-str: #2F6B2B; --code-com: #61615A; --code-num: #9A4A12;
+  --code-fn: #1F5FA8; --code-bi: #7D5A00; --code-var: #A1334F;
+  width: 100%; max-width: 8.5in; min-height: 5in; box-sizing: border-box; padding: .8in .85in;
+  background: #fff; color: var(--ink); border-radius: 3px; box-shadow: var(--shadow-2);
+}
+.printdoc-head::before { content: ""; display: block; width: 30pt; height: 3.5pt; margin-bottom: 14pt; background: var(--accent); border-radius: 2pt; }
+.printdoc-kicker { margin: 0; font-size: 7.5pt; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); }
+.printdoc-title { margin: 5pt 0 16pt; font-size: 25pt; font-weight: 780; letter-spacing: -0.03em; line-height: 1.12; text-wrap: balance; }
+.printdoc-head--page .printdoc-title { font-size: 19pt; margin-bottom: 14pt; }
+.printdoc-meta {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(1.35in, 1fr)); gap: 8pt 16pt;
+  margin: 0 0 20pt; padding: 9pt 0; border-block: 1px solid var(--line);
+}
+.printdoc-meta dt { font-size: 6.5pt; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); }
+.printdoc-meta dd { margin: 2pt 0 0; font-size: 8.5pt; line-height: 1.35; overflow-wrap: anywhere; }
+.printdoc-meta-source { grid-column: span 2; }
+.printdoc-meta a { color: inherit; }
+.printdoc-flags { margin: -8pt 0 14pt; font-size: 8.5pt; }
+.printdoc .is-flagged { font-weight: 700; color: var(--danger); }
+/* Contents: the headings of one document, or each page of a manual with its
+   top headings run on under it. */
+.printdoc-contents { margin: 0 0 22pt; font-size: 9.5pt; line-height: 1.5; break-inside: avoid; }
+.printdoc-contents-head { margin: 0 0 5pt; font-size: 10.5pt; font-weight: 720; }
+.printdoc-contents ol { margin: 0; padding-left: 1.4em; color: var(--muted); }
+.printdoc-contents li { margin: 2pt 0; }
+.printdoc-contents a { color: var(--ink); text-decoration: none; }
+.printdoc-contents a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+.printdoc-toc { list-style: none; padding: 0 !important; }
+.printdoc-toc-page { padding-left: calc(var(--depth) * 14pt); margin: 0 0 5pt !important; font-weight: 650; }
+.printdoc-toc-headings { list-style: none; display: flex; flex-wrap: wrap; padding: 0 !important; font-size: 8.5pt; font-weight: 450; }
+.printdoc-toc-headings li { margin: 0; }
+.printdoc-toc-headings li + li::before { content: "·"; margin: 0 6pt; color: var(--faint); }
+.printdoc-toc-headings a { color: var(--muted); }
+/* The text, set for paper: smaller type, tighter leading, nothing cut off
+   at the edge (code and tables wrap), headings kept with what follows. */
+.printdoc-body.prose { font-size: 10.5pt; line-height: 1.62; overflow-wrap: break-word; }
+.printdoc-body > :first-child { margin-top: 0; }
+.printdoc-body p, .printdoc-body li { orphans: 3; widows: 3; }
+.printdoc-body h2 { font-size: 15.5pt; margin-top: 20pt; }
+.printdoc-body h3 { font-size: 12.5pt; margin-top: 16pt; }
+.printdoc-body h4 { font-size: 11pt; }
+.printdoc-body h5 { font-size: 10.5pt; }
+.printdoc-body h6 { font-size: 8pt; }
+.printdoc-body :is(h2, h3, h4, h5, h6) { break-after: avoid; break-inside: avoid; }
+.printdoc-body a { text-decoration-thickness: 1.5px; }
+.printdoc-body pre { font-size: 8.3pt; line-height: 1.5; white-space: pre-wrap; overflow: visible; overflow-wrap: anywhere; break-inside: avoid; }
+.printdoc-body pre[data-lang]::before { font-size: 6.5pt; }
+.printdoc-body table { display: table; font-size: 8.8pt; break-inside: auto; }
+.printdoc-body th { background: var(--field); }
+.printdoc-body tr, .printdoc-body img, .printdoc-body figure, .printdoc-body blockquote { break-inside: avoid; }
+.printdoc-body img { max-width: 100%; }
+.printdoc-empty { color: var(--faint); font-style: italic; }
+@media (max-width: 640px) {
+  .printdoc-tools { position: static; }
+  .printdoc { padding: 16px 10px 48px; gap: 16px; }
+  .printdoc-sheet { padding: 28px 22px; }
+}
+/* Printed: no tools, the sheets one after another on the paper the print
+   dialog chose, each page of a manual from the top of a new sheet, and the
+   page number in the bottom margin. */
+.printdoc { page: printdoc; }
+@page printdoc {
+  margin: 17mm 18mm 19mm;
+  @bottom-right { content: counter(page) " / " counter(pages); font-family: "Inter", sans-serif; font-size: 7.5pt; color: #61615A; }
+}
+@media print {
+  .printdoc-page { background: #fff; }
+  .printdoc-tools { display: none; }
+  .printdoc { display: block; padding: 0; }
+  .printdoc-sheet { max-width: none; min-height: 0; padding: 0; border-radius: 0; box-shadow: none; }
+  .printdoc-sheet + .printdoc-sheet { break-before: page; }
+}

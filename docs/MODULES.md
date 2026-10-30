@@ -157,6 +157,10 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
 - `overview(entity)` returns two pieces of HTML (render a template), shown
   above the Overview's fields and below its Markdown: a document's page
   path, and its pages with the ones either side.
+- `printed(entity)` returns the URL of a page of the module's own laid out to
+  print the record or save it as a PDF; the sheet's bar then shows a printer
+  button (and `p`) that opens it. Documents use it (`/documents/<id>/print`,
+  the `.printdoc` component).
 
 A `Field` has a `key` that must be a column of the detail table, a `label`,
 and a `kind`:

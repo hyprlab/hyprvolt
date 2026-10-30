@@ -1,6 +1,7 @@
 """The Documents tab every record has: the documents attached to it, and
 the ones that mention it with [[its-slug]]. And a document's pages: its
-path, the pages under it, the pages either side, and what links to it."""
+path, the pages under it, the pages either side, and what links to it.
+Its printed copy is in printed.py."""
 from flask import Blueprint, abort, jsonify, render_template, request
 from flask_login import current_user
 from sqlalchemy import func
@@ -244,3 +245,12 @@ def save_links(entity_id):
     db.session.commit()
     return jsonify(ok=True, undo={"url": f"/documents/{doc.id}/links",
                                   "body": {"ids": ",".join(str(i) for i in before)}})
+
+
+@bp.route("/<int:entity_id>/print")
+@role("viewer")
+def print_copy(entity_id):
+    """The document laid out as paper, to print or save as a PDF; with
+    ``pages=1``, every page under it too (printed.py)."""
+    from . import printed
+    return printed.page(entity_id)

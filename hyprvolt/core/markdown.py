@@ -54,8 +54,16 @@ def slugs_in(text: str) -> set[str]:
 
 
 def render(text: str) -> Markup:
+    html, tokens = parts(text)
+    return Markup(_contents(tokens)) + html
+
+
+def parts(text: str) -> tuple[Markup, list]:
+    """The text as HTML without its contents list, and its headings
+    (Python-Markdown's toc tokens: level, id, name, children), for a page
+    that lays them out itself (the printed copy)."""
     if not (text or "").strip():
-        return Markup("")
+        return Markup(""), []
     from ..registry import current as registry
     from .models import Entity
     wanted = slugs_in(text)
@@ -83,7 +91,7 @@ def render(text: str) -> Markup:
     html = TOP_HEADING.sub(lambda m: m.group(0) + (' data-level="1"' if m.group(1) in tops else ""), html)
     html = CODE_BLOCK.sub(_highlight, html)
     html = TASK.sub(_task, html)
-    return Markup(_contents(md.toc_tokens) + html)
+    return Markup(html), md.toc_tokens
 
 
 def _wiki_record(m, by_id) -> str:

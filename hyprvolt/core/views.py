@@ -65,6 +65,7 @@ def sheet(entity_id):
         sections=[(t, Markup(t.render(entity))) for t in (tabs if scroll else [tab])], scroll=scroll, crumbs=present.crumbs(entity.location_id),
         status=records.status_label(entity), icon=present.icon(etype),
         purge_days=int_setting("purge_days", 30), editable=etype is not None and can_edit_here(entity),
+        printed=etype.printed(entity) if etype and etype.printed and not entity.deleted_at else "",
     )
 
 

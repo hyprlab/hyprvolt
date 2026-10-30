@@ -193,3 +193,41 @@ def test_a_markdown_field_offers_every_document_to_link(client, h, admin, viewer
     assert [d["slug"] for d in v.get("/documents/choices").get_json()["documents"]] == ["install", "manual"]
     sheet = client.get(f"/e/{manual['id']}/sheet").data.decode()
     assert "data-md-links" in sheet and "data-md-link" in sheet
+
+
+def test_a_document_prints_as_paper(client, h, admin, viewer):
+    host = make(client, h, name="pve1")
+    doc = make(client, h, "document", name="Restore <the> NAS", status="draft", tags="runbooks",
+               **{"f.body": "# Before\n\n## Check\n\n## Stop\n\nOn [[pve1]].\n\n```bash\nzfs list\n```"})
+    sheet = client.get(f"/e/{doc['id']}/sheet").data.decode()
+    assert f'data-printed="/documents/{doc["id"]}/print"' in sheet
+    assert "data-printed" not in client.get(f"/e/{host['id']}/sheet").data.decode()   # only documents
+
+    other, _ = viewer                                       # a viewer may print it
+    page = other.get(f"/documents/{doc['id']}/print").data.decode()
+    assert "<title>Restore &lt;the&gt; NAS</title>" in page          # the PDF's file name
+    assert 'class="printdoc-title">Restore &lt;the&gt; NAS</h1>' in page
+    assert ">Draft</dd>" in page and ">runbooks</dd>" in page and f"/e/{doc['id']}</a>" in page
+    # Its own contents list, with no info button; the anchors are the page's own.
+    assert 'class="printdoc-contents"' in page and "infotip" not in page
+    assert f'<a href="#d{doc["id"]}-h-check">Check</a>' in page and f'id="d{doc["id"]}-h-check"' in page
+    assert f'href="/e/{host["id"]}"' in page and 'class="hl-' in page
+    assert "With its" not in page                           # no pages to take in
+    assert client.get(f"/documents/{host['id']}/print").status_code == 404
+    assert client.get("/documents/99999/print").status_code == 404
+
+
+def test_a_manual_prints_whole_with_its_pages(client, h, admin):
+    top, (setup, overview, trouble) = manual(client, h)
+    deep = make(client, h, "document", name="Logs", **{"f.parent": trouble["id"], "f.body": "Read [[setup]]."})
+    one = client.get(f"/documents/{top['id']}/print").data.decode()
+    assert "With its 4 pages" in one and ">Setup</h2>" not in one
+    whole = client.get(f"/documents/{top['id']}/print?pages=1").data.decode()
+    order = [whole.index(f'id="doc-{d["id"]}"') for d in (top, overview, setup, trouble, deep)]
+    assert order == sorted(order)
+    assert f'<li class="printdoc-toc-page" style="--depth: 2">\n          <a href="#doc-{deep["id"]}">Logs</a>' in whole
+    # A link to a page in the same copy leads there.
+    assert f'href="#doc-{setup["id"]}"' in whole.split(f'id="doc-{deep["id"]}"')[1]
+    # Asked of a page with none under it, the whole is the page alone.
+    alone = client.get(f"/documents/{deep['id']}/print?pages=1").data.decode()
+    assert "printdoc-contents" not in alone and alone.count('class="printdoc-sheet"') == 1

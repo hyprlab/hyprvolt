@@ -114,6 +114,8 @@ class EntityType:
     inactive: tuple = ("retired",)   # statuses that need no reminders
     check: Callable | None = None    # check(entity, detail): rules across fields
     overview: Callable | None = None # overview(entity) -> (html above, html below) the Overview
+    printed: Callable | None = None  # printed(entity) -> the URL of a page laid out to print it or
+                                     # save it as a PDF, opened from the sheet's bar (a document)
     restrictable: bool = False       # can be hidden from viewers (core/access.py)
     becomes: tuple = ()              # types a record can be changed into: same module, same detail
     named_with: str = ""             # "location_id", or a ref field (a column), whose record's name

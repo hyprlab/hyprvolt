@@ -1,0 +1,74 @@
+{# A document laid out as paper (printed.py): the tools to print it, which
+   the printout leaves out, then a sheet for the document and one for each
+   of its pages taken in. The page's title names the PDF a browser saves. #}
+{% extends "base.html" %}
+{% block title %}{{ doc.name }}{% endblock %}
+{% block bodyclass %}printdoc-page{% endblock %}
+{% macro heading_list(items) -%}
+<ol>{% for t in items %}<li><a href="#{{ t.id }}">{{ t.name }}</a>{% if t.children %}{{ heading_list(t.children) }}{% endif %}</li>{% endfor %}</ol>
+{%- endmacro %}
+{% block body %}
+<header class="printdoc-tools">
+  <a class="btn btn--ghost" href="/e/{{ doc.id }}">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Back to the document</a>
+  {% if under %}
+  <div class="seg seg--links" role="group" aria-label="What to print">
+    <a class="{{ 'is-active' if not whole }}" href="{{ this_url }}" {{ 'aria-current=true' if not whole }}>This page</a>
+    <a class="{{ 'is-active' if whole }}" href="{{ whole_url }}" {{ 'aria-current=true' if whole }}>With its {{ under }} {{ 'page' if under == 1 else 'pages' }}</a>
+  </div>
+  {% endif %}
+  <p class="hint printdoc-tools-hint">For a PDF, choose Save as PDF as the printer. Paper size follows the print dialog.</p>
+  <button type="button" class="btn btn--primary" data-print>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8.5V4h10v4.5M7 17H5a1 1 0 0 1-1-1v-6.5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v6H7Z"/></svg>Print or save as PDF</button>
+</header>
+
+<main class="printdoc">
+  {% for p in parts %}
+  <article class="printdoc-sheet" id="doc-{{ p.entity.id }}" aria-label="{{ p.entity.name }}">
+    {% if loop.first %}
+    <header class="printdoc-head">
+      <p class="printdoc-kicker">{% if trail %}{{ trail|join(' › ') }}{% else %}Knowledge base{% endif %}</p>
+      <h1 class="printdoc-title">{{ doc.name }}</h1>
+      <dl class="printdoc-meta">
+        <div><dt>Status</dt><dd{% if doc.status != 'current' %} class="is-flagged"{% endif %}>{{ p.status }}</dd></div>
+        <div><dt>Updated</dt><dd>{{ updated }}{% if doc.updated_by %} by {{ doc.updated_by.display_name }}{% endif %}</dd></div>
+        {% if p.access %}<div><dt>Visible to</dt><dd class="is-flagged">{{ p.access }}</dd></div>{% endif %}
+        {% if doc.tag_names %}<div><dt>Tags</dt><dd>{{ doc.tag_names|join(', ') }}</dd></div>{% endif %}
+        <div><dt>Printed</dt><dd>{{ printed }}</dd></div>
+        <div class="printdoc-meta-source"><dt>Source</dt><dd><a href="{{ source }}">{{ source.split('://', 1)[-1] }}</a></dd></div>
+      </dl>
+    </header>
+    {% if contents %}
+    <nav class="printdoc-contents" aria-label="Contents">
+      <p class="printdoc-contents-head">Contents</p>
+      {% if whole %}
+      <ol class="printdoc-toc">
+        {% for q in parts %}
+        <li class="printdoc-toc-page" style="--depth: {{ q.depth }}">
+          <a href="#doc-{{ q.entity.id }}">{{ q.entity.name }}</a>
+          {%- if q.headings %}<ol class="printdoc-toc-headings">{% for t in q.headings %}<li><a href="#{{ t.id }}">{{ t.name }}</a></li>{% endfor %}</ol>{% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      {{ heading_list(p.headings) }}
+      {% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <header class="printdoc-head printdoc-head--page">
+      <p class="printdoc-kicker">{{ doc.name }}</p>
+      <h2 class="printdoc-title">{{ p.entity.name }}</h2>
+      {% if p.entity.status != 'current' or p.access %}
+      <p class="printdoc-flags">{% if p.entity.status != 'current' %}<span class="is-flagged">{{ p.status }}</span>{% endif %}
+        {%- if p.entity.status != 'current' and p.access %} · {% endif %}{% if p.access %}<span class="is-flagged">{{ p.access }}</span>{% endif %}</p>
+      {% endif %}
+    </header>
+    {% endif %}
+    <div class="prose printdoc-body">
+      {%- if p.html %}{{ p.html }}{% else %}<p class="printdoc-empty">Nothing written yet.</p>{% endif -%}
+    </div>
+  </article>
+  {% endfor %}
+</main>
+{% endblock %}
