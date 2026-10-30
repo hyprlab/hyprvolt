@@ -189,9 +189,11 @@ def hypervisors_on(server) -> list[Entity]:
     return [e for e in relations.linked("runs_on", server, "target") if e.type == "hypervisor"]
 
 
-def _addresses(entity) -> str:
+def _addresses(entity, key: str = "list") -> str:
+    """What Network's IP addresses section holds for it: the addresses, or
+    (``mac``) the MAC address of its one address."""
     section = next((s for s in registry().form_sections(registry().type(entity.type)) if s.key == "addresses"), None)
-    return (section.values(entity) or {}).get("list", "") if section and section.values else ""
+    return (section.values(entity) or {}).get(key, "") if section and section.values else ""
 
 
 def hypervisor_choices(name) -> list[tuple[str, str]] | None:
@@ -221,14 +223,15 @@ def hypervisor_values(server) -> dict:
     """What the section holds, and ``on_blocked``: why it can't be unticked."""
     hyp = next(iter(hypervisors_on(server)), None)
     if hyp is None:
-        return {"on": False, "platform": "", "address": ""}
+        return {"on": False, "platform": "", "address": "", "mac": ""}
     return {"on": True, "platform": records.own_values(hyp).get("platform") or "", "address": _addresses(hyp),
-            "on_blocked": _blocked(hyp)}
+            "mac": _addresses(hyp, "mac"), "on_blocked": _blocked(hyp)}
 
 
 def hypervisor_form(etype, server) -> str:
     from . import PLATFORMS
-    values = hypervisor_values(server) if server is not None else {"on": False, "platform": "", "address": ""}
+    values = (hypervisor_values(server) if server is not None
+              else {"on": False, "platform": "", "address": "", "mac": ""})
     return render_template("virtual/hypervisor_form.html", v=values, platforms=PLATFORMS, kind=etype.text(),
                            name=hypervisors_on(server)[0].name if values["on"] else "")
 
@@ -240,7 +243,8 @@ def _listed(entities) -> str:
 
 def hypervisor_save(server, values, user) -> list[dict]:
     """Runs a hypervisor, ticked: a hypervisor record running on the server
-    (or NAS), by its name, with its platform and management address. Unticked:
+    (or NAS), by its name, with its platform, management address and that
+    address's MAC address (kept on its IP address record, by Network). Unticked:
     that record deleted (Undo in Recently deleted), unless guests run on it."""
     current = next(iter(hypervisors_on(server)), None)
     on = values.get("on") in (True, "1", "on", "true") if "on" in values else current is not None
@@ -249,6 +253,8 @@ def hypervisor_save(server, values, user) -> list[dict]:
         data["f.platform"] = values["platform"]
     if "address" in values and (values["address"] or current is not None):
         data["s.addresses.list"] = values["address"] or ""
+    if "mac" in values and (values["mac"] or current is not None):
+        data["s.addresses.mac"] = values["mac"] or ""
     if on and current is None:
         data.update({"name": server.name, "f.host": server.id})
         made = records.create("hypervisor", data, user)

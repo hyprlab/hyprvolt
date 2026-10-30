@@ -160,3 +160,21 @@ def test_operating_systems_are_offered_as_they_are_typed(client, h, admin):
     assert 'data-suggest="os" role="combobox"' in form
     vm = make(client, h, "vm", name="vm1", **{"f.os": "My own build 1.0"})
     assert vm["fields"]["os"] == "My own build 1.0"
+
+
+def test_a_hypervisors_mac_address_is_kept_with_its_management_ip(client, h, admin):
+    srv = make(client, h, "server", name="vmsvr1", **{"s.hypervisor.on": True, "s.hypervisor.platform": "vmware",
+                                                      "s.hypervisor.address": "172.16.128.20",
+                                                      "s.hypervisor.mac": "00:1A:2B:3C:4D:5E"})
+    form = client.get(f"/e/{srv['id']}/sheet").data.decode()
+    assert 'name="s.hypervisor.mac" value="00:1a:2b:3c:4d:5e"' in form
+    hyp = next(e for e in client.get("/api/entities?type=hypervisor").get_json()["entities"])
+    sheet = client.get(f"/e/{hyp['id']}/sheet").data.decode()
+    assert 'value="00:1a:2b:3c:4d:5e"' in sheet                          # on its IP address record
+    # Changed with the rest of the section, and with a new address.
+    body = {"s.hypervisor.on": True, "s.hypervisor.platform": "vmware", "s.hypervisor.address": "172.16.128.21",
+            "s.hypervisor.mac": "00:1a:2b:3c:4d:5f"}
+    assert client.post(f"/api/entities/{srv['id']}", json=body, headers=h).status_code == 200
+    assert 'name="s.hypervisor.mac" value="00:1a:2b:3c:4d:5f"' in client.get(f"/e/{srv['id']}/sheet").data.decode()
+    tag = client.get(f"/p/labels/print?id={srv['id']}").data.decode()
+    assert "172.16.128.21" in tag and "00:1A:2B:3C:4D:5F" in tag

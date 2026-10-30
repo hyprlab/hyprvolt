@@ -1,8 +1,19 @@
-{# The IP addresses section in the form of anything addressable. #}
+{# The IP addresses section in the form of anything addressable: the
+   addresses, then the MAC address of each one saved, kept on its IP
+   address record. The MACs are redrawn (data-live) after a save: one for a
+   new address, and each written as it is kept. #}
 <div class="form-grid">
   <label class="field form-wide">
     <span class="field-label">IP addresses</span>
     <input name="s.addresses.list" value="{{ current }}" spellcheck="false" autocomplete="off" placeholder="10.0.20.11, fd00::11">
-    <span class="hint">Separated by commas. Each is an IP address record, found in its subnet; one taken off the list is deleted.</span>
+    <span class="hint">Separated by commas. Each is an IP address record, found in its subnet; one taken off the list is deleted. Once it is saved, its MAC address goes beside it.</span>
   </label>
+  <div class="form-grid-part" data-live="ip-macs">
+  {% for ip, d in rows %}
+  <label class="field">
+    <span class="field-label">MAC address{% if rows|length > 1 %} of {{ d.address }}{% endif %}</span>
+    <input name="s.addresses.mac_{{ ip.id }}" value="{{ d.mac or '' }}" spellcheck="false" autocomplete="off" placeholder="aa:bb:cc:dd:ee:ff">
+  </label>
+  {% endfor %}
+  </div>
 </div>

@@ -9,6 +9,7 @@ then the site), else one placed nowhere. So two buildings can both use
 192.168.1.0/24, and the same address in each. An address with no device
 goes to a subnet placed nowhere before another building's."""
 import ipaddress
+import re
 
 from flask import g, render_template
 
@@ -355,17 +356,38 @@ def addresses_of(entity) -> list[tuple[Entity, NetworkDetail]]:
     return sorted(rows, key=lambda r: ip_key(r[1].address or ""))
 
 
+MAC_DIGITS = re.compile(r"[0-9a-f]{12}")
+
+
+def mac_text(raw) -> str:
+    """aa:bb:cc:dd:ee:ff, from any common way of writing it (dashes, dots,
+    capitals, none); "" for none."""
+    raw = str(raw or "").strip()
+    if not raw:
+        return ""
+    digits = re.sub(r"[\s:.\-]", "", raw).lower()
+    if not MAC_DIGITS.fullmatch(digits):
+        raise Invalid(f"{raw} is not a MAC address. Write it as aa:bb:cc:dd:ee:ff.")
+    return ":".join(digits[i:i + 2] for i in range(0, 12, 2))
+
+
 def section_form(etype, entity) -> str:
-    current = ", ".join(d.address for _, d in addresses_of(entity)) if entity is not None else ""
-    return render_template("network/addresses_form.html", current=current)
+    rows = addresses_of(entity) if entity is not None else []
+    return render_template("network/addresses_form.html", current=", ".join(d.address for _, d in rows), rows=rows)
 
 
 def section_values(entity) -> dict:
-    return {"list": ", ".join(d.address for _, d in addresses_of(entity))}
+    """The addresses, and ``mac``: the MAC address of the one address, when
+    it has just one (a hypervisor's Management IP)."""
+    rows = addresses_of(entity)
+    return {"list": ", ".join(d.address for _, d in rows), "mac": (rows[0][1].mac or "") if len(rows) == 1 else ""}
 
 
 def section_peek(entity) -> list[tuple[str, str]]:
-    return [("IP addresses", section_values(entity)["list"])]
+    rows = addresses_of(entity)
+    out = [("IP addresses", ", ".join(d.address for _, d in rows))]
+    macs = [f"{d.mac} ({d.address})" if len(rows) > 1 else d.mac for _, d in rows if d.mac]
+    return out + ([("MAC addresses", ", ".join(macs))] if macs else [])
 
 
 def _takes_from(entity, holder) -> bool:
@@ -381,6 +403,46 @@ def _takes_from(entity, holder) -> bool:
 
 
 def section_save(entity, values, user) -> list[dict]:
+    """``list``: make the record's addresses the ones listed. ``mac_<id>``:
+    the MAC address of that address record of its; ``mac``: of its one
+    address, when it has just one (the API's, a hypervisor's)."""
+    changes = _save_list(entity, values, user) if "list" in values else []
+    return changes + _save_macs(entity, values, user)
+
+
+def _save_macs(entity, values, user) -> list[dict]:
+    """Each MAC address on its address record, where the IP addresses
+    section shows it beside the address."""
+    given = {k[4:]: v for k, v in values.items() if k.startswith("mac_")}
+    mine = addresses_of(entity)
+    if "mac" in values:
+        if len(mine) == 1:
+            given[str(mine[0][0].id)] = values["mac"]
+        elif str(values["mac"] or "").strip():
+            raise Invalid("Add the IP address first: its MAC address goes with it." if not mine else
+                          "It has more than one IP address: give each its MAC address beside it.")
+    changes = []
+    for ip, d in mine:
+        if str(ip.id) not in given:
+            continue
+        new = mac_text(given[str(ip.id)])
+        if new != mac_text_or_raw(d.mac):
+            old = d.mac or ""
+            records.update(ip, {"fields": {"mac": new}}, user)
+            changes.append({"field": f"mac_{ip.id}", "label": f"MAC address of {d.address}", "old": old, "new": new})
+    return changes
+
+
+def mac_text_or_raw(raw) -> str:
+    """A MAC address recorded before they were checked, as it would be
+    written now, or as it was if it can't be read."""
+    try:
+        return mac_text(raw)
+    except Invalid:
+        return str(raw or "")
+
+
+def _save_list(entity, values, user) -> list[dict]:
     """Make the record's addresses the ones listed: new ones become IP
     address records assigned to it, and one taken off the list is deleted
     (Undo in Recently deleted), or only unassigned if it has notes or tags."""

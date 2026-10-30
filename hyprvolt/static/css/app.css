@@ -592,6 +592,8 @@ dialog.is-restoring, dialog.is-restoring::backdrop { animation: none !important;
 .form-wide { grid-column: 1 / -1; }
 .form-check { padding-top: 26px; }
 .form-grid .hint { display: block; margin-top: 5px; font-size: 12px; }
+/* Fields of a grid in a part of their own (a data-live part redrawn after a save), laid out with the rest. */
+.form-grid-part { display: contents; }
 .entity-form .setting-label { margin-bottom: -2px; }
 .field textarea.mono { font-family: var(--mono); font-size: 13.5px; }
 .req { color: var(--danger); }

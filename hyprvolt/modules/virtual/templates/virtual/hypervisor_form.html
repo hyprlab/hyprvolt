@@ -17,5 +17,9 @@
     <span class="field-label">Management IP</span>
     <input name="s.hypervisor.address" value="{{ v.address }}" spellcheck="false" autocomplete="off" placeholder="10.0.20.21">
   </label>
-  <span class="hint form-wide">A hypervisor record of the same name, running on this {{ kind }}, in Hypervisors, which virtual machines can choose as their host. Its management address is where its web interface is; this {{ kind }}'s own IP addresses are then its iDRAC, iLO or IPMI, if it has one.</span>
+  <label class="field" data-when="s.hypervisor.on" data-when-is="1"{{ ' hidden' if not v.on }} data-live="hypervisor-mac">
+    <span class="field-label">MAC address</span>
+    <input name="s.hypervisor.mac" value="{{ v.mac }}" spellcheck="false" autocomplete="off" placeholder="aa:bb:cc:dd:ee:ff">
+  </label>
+  <span class="hint form-wide">A hypervisor record of the same name, running on this {{ kind }}, in Hypervisors, which virtual machines can choose as their host. Its management address is where its web interface is, and the MAC address is that address's network card; this {{ kind }}'s own IP addresses are then its iDRAC, iLO or IPMI, if it has one.</span>
 </div>

@@ -756,3 +756,27 @@ def test_a_pair_of_moca_adapters_works_like_one_cable(client, h, admin):
     assert "den-pc to sw1 over the coax between moca-den and moca-office" in page \
         or "sw1 to den-pc over the coax between moca-office and moca-den" in page
     assert ">over coax</text>" in page and "and over pairs of MoCA adapters" in page
+
+
+def test_a_devices_mac_addresses_go_beside_its_ip_addresses(client, h, admin):
+    srv = make(client, h, "server", name="srv1", **{"s.addresses.list": "10.0.20.11"})
+    sheet = client.get(f"/e/{srv['id']}/sheet").data.decode()
+    ip_id = re.search(r'name="s\.addresses\.mac_(\d+)"', sheet).group(1)
+    url = f"/api/entities/{srv['id']}"
+    body = {"s.addresses.list": "10.0.20.11", f"s.addresses.mac_{ip_id}": "AA-BB-CC-00-11-22"}
+    assert client.post(url, json=body, headers=h).status_code == 200
+    ip = client.get(f"/api/entities/{ip_id}").get_json()["entity"]
+    assert ip["fields"]["mac"] == "aa:bb:cc:00:11:22"                     # written one way
+    history = client.get(f"/api/entities/{srv['id']}/history").get_json()["history"]
+    assert {"label": "MAC address of 10.0.20.11", "old": "", "new": "aa:bb:cc:00:11:22"}.items() <= \
+        history[0]["changes"][0].items()
+    bad = client.post(url, json={**body, f"s.addresses.mac_{ip_id}": "not-a-mac"}, headers=h)
+    assert bad.status_code == 400 and "aa:bb:cc:dd:ee:ff" in bad.get_json()["error"]
+    # The API's short way, for a record with one address; the list is left alone.
+    assert client.post(url, json={"s.addresses.mac": "aabb.cc00.1133"}, headers=h).status_code == 200
+    assert client.get(f"/api/entities/{ip_id}").get_json()["entity"]["fields"]["mac"] == "aa:bb:cc:00:11:33"
+    assert client.post(url, json={"s.addresses.list": "10.0.20.11, 10.0.20.12"}, headers=h).status_code == 200
+    two = client.post(url, json={"s.addresses.mac": "aa:bb:cc:00:11:44"}, headers=h)
+    assert two.status_code == 400 and "more than one" in two.get_json()["error"]
+    sheet = client.get(f"/e/{srv['id']}/sheet").data.decode()
+    assert "MAC address of 10.0.20.12" in sheet and 'value="aa:bb:cc:00:11:33"' in sheet

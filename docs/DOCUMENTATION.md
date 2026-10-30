@@ -135,14 +135,19 @@ on the server it runs on moves the address to it, and says so; any other
 address already assigned is refused. A server's or a NAS's Hypervisor section (also in
 the setup guide's Servers and storage step) has Runs a hypervisor: ticked,
 it adds a hypervisor of the same name running on the server, with its
-platform and management IP, and the server's IP address becomes its BMC's;
+platform, management IP and that address's MAC address, and the server's IP
+address becomes its BMC's;
 unticked, it deletes that hypervisor after asking, unless something runs on
 it.
 
 In Network, a device's or a VM's IP addresses are typed into its own form,
 separated by commas; each becomes an IP address record in the subnet that
 holds it, and one taken off the list is deleted (it can be restored from
-Recently deleted), or only unassigned if it has notes or tags. An address can
+Recently deleted), or only unassigned if it has notes or tags. Once an
+address is saved, a MAC address box for it appears under the list; the MAC
+is kept on the IP address record, written as aa:bb:cc:dd:ee:ff however it
+was typed. Through the API, `s.addresses.mac` sets the MAC of a record with
+one address. An address can
 belong to one record at a time. A subnet's range is typed as its network
 address with the subnet mask chosen beside it, and its DHCP range as its
 first and last address; a range the DHCP addresses don't fit in is refused.
