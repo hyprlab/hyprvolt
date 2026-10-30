@@ -6,9 +6,10 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+## [1.12.0] — 2026-10-30
+
 ### Added
 - A 4 × 1 in asset tag shows the equipment's MAC address, under its management IP: the one recorded on the management IP's address record, or else on the first of its ports that has one
-
 - A MAC address box beside each IP address in a device's form, and beside a hypervisor's Management IP in a server's Hypervisor section, so a MAC is typed on the device itself, without opening its IP address record. A MAC typed with dashes, dots or capitals is kept as aa:bb:cc:dd:ee:ff
 
 ### Changed
