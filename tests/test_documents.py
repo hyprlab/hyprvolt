@@ -269,7 +269,7 @@ def test_a_document_downloads_as_a_pdf(app, client, h, admin, viewer):
 def test_the_pdf_loads_only_the_apps_own_files(app):
     import pytest
 
-    from hyprvolt.modules.documents.printed import _local
+    from hyprvolt.core.pdf import _local
     with app.test_request_context(base_url="http://hv.local"):
         body, kind = _local("http://hv.local/static/css/app.css?v=1")
         assert b".printdoc" in body and kind == "text/css"
