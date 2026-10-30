@@ -6,6 +6,9 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Added
+- A 4 × 1 in asset tag also shows the equipment's management IP: its IP addresses, under its serial number
+
 ## [1.10.0] — 2026-10-30
 
 ### Added

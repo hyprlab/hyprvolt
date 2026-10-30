@@ -47,8 +47,9 @@ def test_an_asset_tag_carries_the_equipment_and_the_organization(client, h, admi
     rack = make(client, h, "room", name="Server room", location_id=site["id"])
     srv = make(client, h, "server", name="srv1", location_id=rack["id"],
                **{"f.asset_tag": "HV-0042", "f.serial": "8XK2LM3", "f.manufacturer": "Dell",
-                  "f.model": "PowerEdge R740"})
+                  "f.model": "PowerEdge R740", "s.addresses.list": "10.0.20.11"})
     page = client.get(f"/p/labels/print?id={srv['id']}").data.decode()
+    assert 'Mgmt IP <span class="tag-serial">10.0.20.11</span>' in page
     assert "labels--4x1" in page and page.count('class="label tag"') == 1
     assert '<span class="tag-id">HV-0042</span>' in page and ">srv1<" in page
     assert "Dell PowerEdge R740" in page and ">8XK2LM3<" in page and "Home › Server room" in page
@@ -72,13 +73,14 @@ def test_an_asset_tag_carries_the_equipment_and_the_organization(client, h, admi
     assert Image.open(io.BytesIO(logo.data)).size == (1200, 400)
     # Only on the asset tag: a sheet of Avery labels stays as it was.
     sheet = client.get("/p/labels/print?list=hardware").data.decode()
-    assert "labels--5160" in sheet and "tag-owner" not in sheet and 'class="tag-logo"' not in sheet
+    assert "labels--5160" in sheet and "Mgmt IP" not in sheet and "tag-owner" not in sheet and 'class="tag-logo"' not in sheet
 
 
 def test_a_record_with_no_asset_tag_is_tagged_by_its_name(client, h, admin):
     nas = make(client, h, "nas", name="nas1", **{"f.serial": "SN9"})
     page = client.get(f"/p/labels/print?id={nas['id']}").data.decode()
     assert '<span class="tag-id">nas1</span>' in page and "tag-name" not in page and ">SN9<" in page
+    assert "Mgmt IP" not in page
 
 
 def test_asset_tags_download_as_a_pdf_one_tag_a_page(client, h, admin):

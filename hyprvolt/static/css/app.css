@@ -2108,12 +2108,12 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 @page labels-4x1 { size: 4in 1in; margin: 0; }
 .tag { gap: .09in; padding: .07in .1in; }
 .tag-logo { flex: none; width: auto; height: auto; max-width: .95in; max-height: .72in; object-fit: contain; }
-.tag-text { line-height: 1.18; }
+.tag-text { line-height: 1.12; }
 .tag-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag-owner { font-size: 5.5pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.tag-id { font-family: var(--mono); font-size: 15pt; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
+.tag-id { font-family: var(--mono); font-size: 14pt; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
 .tag-name { font-size: 8pt; font-weight: 700; }
-.tag-line { font-size: 6.5pt; }
+.tag-line { font-size: 6pt; }
 .tag-serial { font-family: var(--mono); }
 /* Settings > Asset labels: the logo as it is, on white like the tag. */
 .tag-logo-preview { display: inline-flex; padding: 10px 14px; margin-bottom: 4px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }

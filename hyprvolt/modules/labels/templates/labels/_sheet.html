@@ -1,7 +1,7 @@
 {# The labels themselves, in real units (app.css, .labels): on the page,
    and in the PDF made from it. A 4 × 1 in asset tag carries the
    organization and its logo, the asset tag in large type (the name when
-   there is none), the make and model, serial and place; the others the
+   there is none), the make and model, serial, management IP and place; the others the
    name, kind, a code and the place. #}
 <div class="labels labels--{{ size }}">
   {% for l in labels %}
@@ -14,6 +14,7 @@
       {% if l.asset_tag %}<span class="tag-name">{{ l.view.name }}</span>{% endif %}
       {% if l.make %}<span class="tag-line">{{ l.make }}</span>{% endif %}
       {% if l.serial %}<span class="tag-line">S/N <span class="tag-serial">{{ l.serial }}</span></span>{% endif %}
+      {% if l.ip %}<span class="tag-line">Mgmt IP <span class="tag-serial">{{ l.ip }}</span></span>{% endif %}
       {% if l.where %}<span class="tag-line">{{ l.where }}</span>{% endif %}
     </div>
     {{ l.qr }}

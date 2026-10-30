@@ -1,7 +1,8 @@
 """Printable asset labels: one per record of a list, each with a QR code
 that opens the record (``/e/<id>``), its name, kind, asset tag or serial,
 and where it is. A 4 × 1 in asset tag adds the organization and its logo
-(brand.py), the asset tag in large type, the make and model, and the serial.
+(brand.py), the asset tag in large type, the make and model, the serial and
+the management IP (its IP addresses, from Network).
 
 The page is offered in every list's export menu, with the list's filters,
 so the labels are for exactly what the list shows; ``?id=`` makes the one
@@ -61,6 +62,18 @@ def _make(detail) -> str:
     return " ".join(p for p in (maker, model) if p)
 
 
+def _addresses(entity) -> str:
+    """Its IP addresses, from the IP addresses section Network adds to the
+    form (none with Network off): a device's is where it is managed."""
+    from hyprvolt.registry import current as registry
+    reg = registry()
+    etype = reg.type(entity.type)
+    for section in reg.form_sections(etype) if etype else ():
+        if section.key == "addresses" and section.values is not None:
+            return (section.values(entity) or {}).get("list") or ""
+    return ""
+
+
 def taggable(entity) -> str:
     """The record's Print asset tag page, for a kind of record with an asset
     tag (hardware); "" for any other."""
@@ -104,6 +117,7 @@ def _context() -> dict:
     default = TAG if request.args.get("id") else SIZES[0][0]
     size = request.args.get("size") if request.args.get("size") in dict(SIZES) else default
     details = present.details_for(rows)
+    entities = {e.id: e for e in rows}
     base = request.host_url.rstrip("/")
     labels = []
     for v in present.views(rows):
@@ -113,7 +127,8 @@ def _context() -> dict:
         where = " › ".join(v.path.split(" › ")[-2:]) if v.path else ""
         labels.append({"view": v, "code_label": code_label, "code": code, "where": where,
                        "asset_tag": _value(detail, "asset_tag"), "serial": _value(detail, "serial"),
-                       "make": _make(detail), "qr": qr(f"{base}/e/{v.id}")})
+                       "make": _make(detail), "qr": qr(f"{base}/e/{v.id}"),
+                       "ip": _addresses(entities[v.id]) if size == TAG else ""})
     return dict(labels=labels, more=more, limit=LIMIT, size=size, sizes=SIZES, roll=size in ROLLS, what=what,
                 sizes_url={key: _with(size=key) for key, _ in SIZES}, back=back, back_label=back_label,
                 pdf_url=_with("labels.pdf_copy", size=size),
