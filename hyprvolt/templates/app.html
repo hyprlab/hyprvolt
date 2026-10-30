@@ -800,9 +800,13 @@
       <button class="iconbtn" id="sheet-copy" aria-label="Copy link" title="Copy link">
         <svg viewBox="0 0 24 24"><path d="M10.5 13.5a4 4 0 0 0 6 .4l2.6-2.6a4 4 0 1 0-5.7-5.7l-1.3 1.3M13.5 10.5a4 4 0 0 0-6-.4l-2.6 2.6a4 4 0 1 0 5.7 5.7l1.3-1.3"/></svg>
       </button>
-      {# Shown for a record with a printed copy (EntityType.printed): a document. #}
-      <a class="iconbtn" id="sheet-print" href="#" hidden aria-label="Print or save as PDF" title="Print or save as PDF (p)">
+      {# Shown for a record with a printed copy (EntityType.printed) and a PDF
+         (EntityType.pdf): a document. The PDF downloads; the page stays. #}
+      <a class="iconbtn" id="sheet-print" href="#" hidden aria-label="Print" title="Print (p)">
         <svg viewBox="0 0 24 24"><path d="M7 8.5V4h10v4.5M7 17H5a1 1 0 0 1-1-1v-6.5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v6H7Z"/></svg>
+      </a>
+      <a class="iconbtn" id="sheet-pdf" href="#" hidden aria-label="Download as PDF" title="Download as PDF (d)">
+        <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg>
       </a>
       {% if current_user.can_edit %}
       <button class="iconbtn iconbtn--danger" id="sheet-delete" aria-label="Delete" title="Delete">

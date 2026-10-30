@@ -3,8 +3,9 @@ record ("documented by"), and link to records with ``[[slug]]``.
 
 A document can be a page of another ("Part of"), in an order of its own:
 the parent lists its pages, and each page shows its path and the pages
-either side of it (views.page_overview). Printed, or saved as a PDF, it
-is laid out as paper, with its pages if asked (printed.py). A document's Linked from tab lists
+either side of it (views.page_overview). Printed, or downloaded as a PDF
+the server makes, it is laid out as paper, with its pages if asked
+(printed.py). A document's Linked from tab lists
 the documents that mention it, and those cross-linked with it ("see also",
 ticked from a list of every document; the same link from both ends).
 
@@ -49,6 +50,7 @@ module = Module(
             check=lambda e, d: views.check_parent(e, d),
             overview=lambda e: views.page_overview(e),
             printed=lambda e: f"/documents/{e.id}/print",
+            pdf=lambda e: f"/documents/{e.id}/print.pdf",
             tabs=(Tab("linked", "Linked from", lambda e: views.linked_tab(e), count=lambda e: views.linked_count(e)),),
             fields=(Field("parent", "Part of", "ref", types=("document",), card=True, list=True,
                           help="The document this is a page of, such as a manual's front page. The parent lists "
@@ -79,4 +81,4 @@ module = Module(
 
 from . import demo, runbook, views  # noqa: E402  (after DocumentBody, which views imports)
 
-module.blueprint = views.bp      # /documents/choices, /documents/<id>/links, /documents/<id>/print
+module.blueprint = views.bp      # /documents/choices, /documents/<id>/links, /documents/<id>/print(.pdf)

@@ -158,9 +158,12 @@ EntityType("rack", "Rack", "Racks", detail=LocationDetail,
   above the Overview's fields and below its Markdown: a document's page
   path, and its pages with the ones either side.
 - `printed(entity)` returns the URL of a page of the module's own laid out to
-  print the record or save it as a PDF; the sheet's bar then shows a printer
-  button (and `p`) that opens it. Documents use it (`/documents/<id>/print`,
-  the `.printdoc` component).
+  print the record; the sheet's bar then shows a printer button (and `p`)
+  that opens it. `pdf(entity)` returns the URL that downloads it as a PDF,
+  shown as a download button (and `d`). Documents use both
+  (`/documents/<id>/print` and `print.pdf`, the `.printdoc` component; the
+  PDF is that page made by WeasyPrint, in `documents/printed.py`, with a URL
+  fetcher that loads only the app's own files).
 
 A `Field` has a `key` that must be a column of the detail table, a `label`,
 and a `kind`:

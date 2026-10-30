@@ -396,16 +396,24 @@ to the pages before and after it. The sidebar's Top-level pages filter
 hides the pages, leaving the documents they belong to. Pages nest eight deep
 at most, and a document can't be a page of itself or of one of its pages.
 
-The printer button at the top of a document (or `p`) opens it laid out as
-paper, to print or, with Save as PDF chosen as the printer, to keep as a PDF
-named after the document. The copy starts with the document's status, last
-update, tags, the date printed and its address in the app, then a contents
-list once there are three headings; page numbers go in the bottom margin.
-A document with pages offers "With its pages": every page under it, in
-order, each from the top of a new sheet, behind one contents list, and a
-link to one of those pages leads to it inside the PDF. Paper size comes from
-the print dialog; turning off the browser's own headers and footers there
-gives the cleanest copy.
+The download button at the top of a document (or `d`) downloads it as a
+PDF named after the document, made by the server. The copy starts with the
+document's status, last update, tags, the date printed and its address in
+the app, then a contents list with page numbers once there are three
+headings. The title and page number are at the foot of each page, and the
+PDF's bookmarks follow the headings. Pictures attached in the app are
+included; a picture from another site is left out, since the server never
+fetches other addresses.
+
+The printer button beside it (or `p`) opens the same layout as a page: Print
+sends it to a printer, and Download PDF there takes the choices made on it.
+Letter or A4 sets the paper for both. A document with pages offers "With
+its pages": every page under it, in order, each from the top of a new
+sheet, behind one contents list, and a link to one of those pages leads to
+it inside the PDF. A browser prints the footer's page number but not the
+title or the contents' page numbers, which only the downloaded PDF has;
+turning off the browser's own headers and footers in its print dialog gives
+the cleanest printout.
 
 A document's Linked from tab lists the documents cross-linked with it, then
 those that link to it in their text; another record's Documents tab lists

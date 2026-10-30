@@ -231,3 +231,50 @@ def test_a_manual_prints_whole_with_its_pages(client, h, admin):
     # Asked of a page with none under it, the whole is the page alone.
     alone = client.get(f"/documents/{deep['id']}/print?pages=1").data.decode()
     assert "printdoc-contents" not in alone and alone.count('class="printdoc-sheet"') == 1
+
+
+def test_a_document_downloads_as_a_pdf(app, client, h, admin, viewer):
+    import io
+
+    import pypdf
+
+    from .test_images import attach_picture
+    top, (setup, overview, trouble) = manual(client, h)
+    photo = attach_picture(client, h, top["id"], "rack.jpg", size=(400, 200))
+    client.post(f"/api/entities/{top['id']}", headers=h, json={
+        "f.body": f"# Rack\n\n![The rack](/attachments/{photo['id']}/rack.jpg)\n\n"
+                  "![Elsewhere](http://192.0.2.1/x.png)\n\nSee [[setup]]."})
+    sheet = client.get(f"/e/{top['id']}/sheet").data.decode()
+    assert f'data-pdf="/documents/{top["id"]}/print.pdf"' in sheet
+    page = client.get(f"/documents/{top['id']}/print?pages=1&paper=a4").data.decode()
+    assert f'href="/documents/{top["id"]}/print.pdf?pages=1&amp;paper=a4"' in page and "printdoc--a4" in page
+
+    other, _ = viewer
+    resp = other.get(f"/documents/{top['id']}/print.pdf?pages=1&paper=a4")
+    assert resp.status_code == 200 and resp.mimetype == "application/pdf"
+    assert 'attachment; filename="IMS Exporter.pdf"' in resp.headers["Content-Disposition"]
+    pdf = pypdf.PdfReader(io.BytesIO(resp.data))
+    assert len(pdf.pages) == 4 and round(float(pdf.pages[0].mediabox.width)) == 595          # A4, a page each
+    assert pdf.metadata.title == "IMS Exporter"
+    assert [o.title for o in pdf.outline if not isinstance(o, list)] == \
+        ["IMS Exporter", "Overview", "Setup", "Troubleshooting"]
+    assert "/XObject" in pdf.pages[0]["/Resources"]                  # the attached picture
+    first = pdf.pages[0].extract_text()
+    assert "IMS Exporter" in first and "1 / 4" in first
+    # Letter unless A4 is chosen.
+    one = pypdf.PdfReader(io.BytesIO(client.get(f"/documents/{setup['id']}/print.pdf").data))
+    assert len(one.pages) == 1 and round(float(one.pages[0].mediabox.width)) == 612
+
+
+def test_the_pdf_loads_only_the_apps_own_files(app):
+    import pytest
+
+    from hyprvolt.modules.documents.printed import _local
+    with app.test_request_context(base_url="http://hv.local"):
+        body, kind = _local("http://hv.local/static/css/app.css?v=1")
+        assert b".printdoc" in body and kind == "text/css"
+        for url in ("http://192.0.2.1/x.png", "http://hv.local.evil/static/css/app.css",
+                    "file:///etc/passwd", "http://hv.local/static/../config.py", "http://hv.local/api/entities",
+                    "http://hv.local/attachments/99999/x.png", "data:image/png;base64,AAAA"):
+            with pytest.raises(ValueError):
+                _local(url)

@@ -254,3 +254,11 @@ def print_copy(entity_id):
     ``pages=1``, every page under it too (printed.py)."""
     from . import printed
     return printed.page(entity_id)
+
+
+@bp.route("/<int:entity_id>/print.pdf")
+@role("viewer")
+def pdf_copy(entity_id):
+    """The same, made into a PDF by the server and downloaded."""
+    from . import printed
+    return printed.pdf(entity_id)

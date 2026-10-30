@@ -10,3 +10,4 @@ Pygments==2.21.0
 pypdf==6.19.0
 Pillow==12.3.0
 PyYAML==6.0.2
+weasyprint==70.0

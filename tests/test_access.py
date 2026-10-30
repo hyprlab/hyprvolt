@@ -35,7 +35,7 @@ def test_a_private_document_is_hidden_from_a_viewer_everywhere(client, h, admin,
                 "/api/entities/by-slug/private-manual", f"/api/entities/{private['id']}/history",
                 f"/api/entities/{private['id']}/attachments", f"/attachments/{att['id']}",
                 f"/api/entities/{private['id']}/relationships", f"/api/entities/{editors['id']}",
-                f"/documents/{private['id']}/print"):
+                f"/documents/{private['id']}/print", f"/documents/{private['id']}/print.pdf"):
         assert other.get(url).status_code == 404, url
     for url in ("/api/entities?limit=500", "/api/entities?slug=private-manual", "/api/entities?q=" + SECRET_WORD,
                 "/documents?view=list", "/all?view=list", "/search?q=manual", "/search?q=" + SECRET_WORD,

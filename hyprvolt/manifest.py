@@ -116,6 +116,7 @@ class EntityType:
     overview: Callable | None = None # overview(entity) -> (html above, html below) the Overview
     printed: Callable | None = None  # printed(entity) -> the URL of a page laid out to print it or
                                      # save it as a PDF, opened from the sheet's bar (a document)
+    pdf: Callable | None = None      # pdf(entity) -> the URL that downloads it as a PDF, from the bar
     restrictable: bool = False       # can be hidden from viewers (core/access.py)
     becomes: tuple = ()              # types a record can be changed into: same module, same detail
     named_with: str = ""             # "location_id", or a ref field (a column), whose record's name

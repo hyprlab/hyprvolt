@@ -1,5 +1,8 @@
-"""A document as a printed copy, or a PDF saved from the browser's print
-dialog: a page of its own, laid out as paper, with no app around it.
+"""A document as a printed copy, or a PDF: a page of its own, laid out as
+paper, with no app around it. The browser prints it, or saves it from its
+print dialog; Download PDF has the server make the PDF from the same page
+with WeasyPrint (``pdf()``), which also fills in what browsers can't yet:
+the title in the margin, page numbers in the contents, and bookmarks.
 
 ``?pages=1`` takes in every page under the document as well, in their
 order, each starting on a new sheet, behind one contents list: a manual
@@ -10,11 +13,18 @@ two pages with the same heading keep their own anchors.
 The layout is a shared component in app.css (``.printdoc``): real units,
 ``@page`` margins and the page numbers in the margin.
 """
+import logging
+import mimetypes
 import re
 from html import unescape
+from io import BytesIO
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
-from flask import abort, render_template, request, url_for
+from flask import abort, current_app, render_template, request, send_file, url_for
 from markupsafe import Markup
+from werkzeug.exceptions import HTTPException
+from werkzeug.security import safe_join
 
 from hyprvolt.core import access, clock, markdown, records
 from hyprvolt.models import utcnow
@@ -23,6 +33,14 @@ from . import views
 
 #: The most documents one copy takes in.
 LIMIT = 200
+#: The paper it is laid out for (``?paper=``), the first unless another is
+#: chosen: each a named @page in app.css, so a browser prints on it too.
+PAPERS = (("letter", "Letter"), ("a4", "A4"))
+
+# WeasyPrint reports each CSS property of app.css it doesn't know, on every
+# PDF: problems with the PDF itself are still logged.
+logging.getLogger("weasyprint").setLevel(logging.ERROR)
+logging.getLogger("fontTools").setLevel(logging.ERROR)
 
 HEADING_REF = re.compile(r'(id="|href="#)h-')
 RECORD_REF = re.compile(r'href="/e/([0-9]+)"')
@@ -67,7 +85,7 @@ def _date(dt) -> str:
     return clock.to_local(dt).strftime("%B %-d, %Y")
 
 
-def page(entity_id) -> str:
+def _context(entity_id) -> dict:
     doc = records.live(entity_id)
     if doc is None or doc.type != "document":
         abort(404)
@@ -88,9 +106,72 @@ def page(entity_id) -> str:
     # screen. A manual: every page, each with its own top headings.
     contents = whole or first["count"] >= markdown.CONTENTS_AT
     trail = views.path(doc)
-    return render_template(
-        "documents/print.html", doc=doc, parts=parts, whole=whole, under=under, contents=contents,
+    paper = request.args.get("paper") if request.args.get("paper") in dict(PAPERS) else PAPERS[0][0]
+
+    def url(endpoint="documents.print_copy", **changes):
+        args = {"pages": 1 if whole else None, "paper": paper if paper != PAPERS[0][0] else None} | changes
+        return url_for(endpoint, entity_id=doc.id, **{k: v for k, v in args.items() if v is not None})
+    return dict(
+        doc=doc, parts=parts, whole=whole, under=under, contents=contents, paper=paper, papers=PAPERS,
         trail=[e.name for e in trail], updated=_date(doc.updated_at), printed=_date(utcnow()),
         source=request.host_url.rstrip("/") + f"/e/{doc.id}",
-        this_url=url_for("documents.print_copy", entity_id=doc.id),
-        whole_url=url_for("documents.print_copy", entity_id=doc.id, pages=1))
+        this_url=url(pages=None), whole_url=url(pages=1),
+        paper_urls={key: url(paper=key if key != PAPERS[0][0] else None) for key, _ in PAPERS},
+        pdf_url=url("documents.pdf_copy"))
+
+
+def page(entity_id) -> str:
+    return render_template("documents/print.html", **_context(entity_id))
+
+
+# ———— The PDF ————
+
+STATIC = re.compile(r"/static/([A-Za-z0-9_./-]{1,200})")
+ATTACHMENT = re.compile(r"/attachments/([0-9]{1,12})(?:/.*)?")
+
+
+def _local(url: str) -> tuple[bytes, str]:
+    """A file the PDF asks for, and its type: the app's own stylesheet and
+    fonts, or a file attached to a record the reader may see. Anything else,
+    another server above all, is refused (ValueError, which WeasyPrint
+    reports and leaves out): a document's text must never make the server
+    fetch an address on its network."""
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https") or parts.netloc != request.host:
+        raise ValueError(f"Not this app's: {url}")
+    path = unquote(parts.path)
+    if m := STATIC.fullmatch(path):
+        found = safe_join(current_app.static_folder, m.group(1))
+        if found is None or not Path(found).is_file():
+            raise ValueError(f"No such file: {url}")
+        return Path(found).read_bytes(), mimetypes.guess_type(found)[0] or "application/octet-stream"
+    if m := ATTACHMENT.fullmatch(path):
+        from hyprvolt.core.api import attachment_or_404
+        from hyprvolt.core.attachments import path_for
+        try:
+            att = attachment_or_404(int(m.group(1)))
+        except HTTPException:
+            raise ValueError(f"No such file: {url}") from None
+        found = path_for(att)
+        if not att.is_image or not found.is_file():
+            raise ValueError(f"Not a picture: {url}")
+        return found.read_bytes(), att.content_type
+    raise ValueError(f"Not a file the PDF may use: {url}")
+
+
+def pdf(entity_id):
+    """The printed copy as a PDF file, named after the document."""
+    from weasyprint import HTML
+    from weasyprint.urls import URLFetcher, URLFetcherResponse
+
+    class Fetcher(URLFetcher):
+        def fetch(self, url, headers=None):
+            body, kind = _local(url)
+            return URLFetcherResponse(url, body=body, headers={"Content-Type": kind})
+
+    context = _context(entity_id)
+    html = render_template("documents/print.html", pdf=True, **context)
+    data = HTML(string=html, base_url=request.host_url, url_fetcher=Fetcher()).write_pdf()
+    name = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', " ", context["doc"].name).strip() or "Document"
+    return send_file(BytesIO(data), mimetype="application/pdf", as_attachment=True,
+                     download_name=f"{name}.pdf", max_age=0)

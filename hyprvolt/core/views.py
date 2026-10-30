@@ -66,6 +66,7 @@ def sheet(entity_id):
         status=records.status_label(entity), icon=present.icon(etype),
         purge_days=int_setting("purge_days", 30), editable=etype is not None and can_edit_here(entity),
         printed=etype.printed(entity) if etype and etype.printed and not entity.deleted_at else "",
+        pdf=etype.pdf(entity) if etype and etype.pdf and not entity.deleted_at else "",
     )
 
 

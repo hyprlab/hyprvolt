@@ -1,28 +1,42 @@
 {# A document laid out as paper (printed.py): the tools to print it, which
    the printout leaves out, then a sheet for the document and one for each
-   of its pages taken in. The page's title names the PDF a browser saves. #}
+   of its pages taken in. The page's title names the PDF a browser saves.
+   With ``pdf``, the page the server makes its PDF from: no tools, and the
+   title, tags and app for the PDF's own details. #}
 {% extends "base.html" %}
 {% block title %}{{ doc.name }}{% endblock %}
+{% block head %}{% if pdf %}
+  <meta name="generator" content="{{ app_name }}">
+  {% if doc.tag_names %}<meta name="keywords" content="{{ doc.tag_names|join(', ') }}">{% endif %}
+  {% if doc.updated_by %}<meta name="author" content="{{ doc.updated_by.display_name }}">{% endif %}
+{% endif %}{% endblock %}
 {% block bodyclass %}printdoc-page{% endblock %}
 {% macro heading_list(items) -%}
 <ol>{% for t in items %}<li><a href="#{{ t.id }}">{{ t.name }}</a>{% if t.children %}{{ heading_list(t.children) }}{% endif %}</li>{% endfor %}</ol>
 {%- endmacro %}
 {% block body %}
+{% if not pdf %}
 <header class="printdoc-tools">
-  <a class="btn btn--ghost" href="/e/{{ doc.id }}">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Back to the document</a>
+  <a class="btn btn--ghost" href="/e/{{ doc.id }}" aria-label="Back to the document" title="Back to the document">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Back</a>
   {% if under %}
   <div class="seg seg--links" role="group" aria-label="What to print">
     <a class="{{ 'is-active' if not whole }}" href="{{ this_url }}" {{ 'aria-current=true' if not whole }}>This page</a>
     <a class="{{ 'is-active' if whole }}" href="{{ whole_url }}" {{ 'aria-current=true' if whole }}>With its {{ under }} {{ 'page' if under == 1 else 'pages' }}</a>
   </div>
   {% endif %}
-  <p class="hint printdoc-tools-hint">For a PDF, choose Save as PDF as the printer. Paper size follows the print dialog.</p>
-  <button type="button" class="btn btn--primary" data-print>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8.5V4h10v4.5M7 17H5a1 1 0 0 1-1-1v-6.5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v6H7Z"/></svg>Print or save as PDF</button>
+  <div class="seg seg--links" role="group" aria-label="Paper">
+    {% for key, label in papers %}<a class="{{ 'is-active' if key == paper }}" href="{{ paper_urls[key] }}" {{ 'aria-current=true' if key == paper }}>{{ label }}</a>{% endfor %}
+  </div>
+  <span class="printdoc-tools-gap"></span>
+  <button type="button" class="btn btn--ghost" data-print>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8.5V4h10v4.5M7 17H5a1 1 0 0 1-1-1v-6.5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v6H7Z"/></svg>Print</button>
+  <a class="btn btn--primary" href="{{ pdf_url }}">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg>Download PDF</a>
 </header>
+{% endif %}
 
-<main class="printdoc">
+<main class="printdoc printdoc--{{ paper }}">
   {% for p in parts %}
   <article class="printdoc-sheet" id="doc-{{ p.entity.id }}" aria-label="{{ p.entity.name }}">
     {% if loop.first %}

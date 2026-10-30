@@ -4030,7 +4030,8 @@
         name: root.getAttribute("data-name"),
         archived: root.getAttribute("data-archived") === "1",
         deleted: root.getAttribute("data-deleted") === "1",
-        printed: root.getAttribute("data-printed") || ""
+        printed: root.getAttribute("data-printed") || "",
+        pdf: root.getAttribute("data-pdf") || ""
       };
       updateSheetBar();
       if (!sheet.open) {
@@ -4106,6 +4107,9 @@
     var printed = document.getElementById("sheet-print");
     printed.hidden = !current.printed;
     printed.setAttribute("href", current.printed || "#");
+    var pdf = document.getElementById("sheet-pdf");
+    pdf.hidden = !current.pdf;
+    pdf.setAttribute("href", current.pdf || "#");
   }
 
   function openSibling(step) {
@@ -4660,6 +4664,7 @@
       else if (e.key === "a") { e.preventDefault(); toggleArchive(); }
       else if (e.key === "c") { e.preventDefault(); copyLink(); }
       else if (e.key === "p" && current && current.printed) { e.preventDefault(); location.href = current.printed; }
+      else if (e.key === "d" && current && current.pdf) { e.preventDefault(); location.href = current.pdf; }
       else if (/^[1-9]$/.test(e.key)) {
         var tabs = sheetArticle.querySelectorAll(".tab[data-tab]");
         var tab = tabs[parseInt(e.key, 10) - 1];
