@@ -334,7 +334,8 @@ time.
 A 4 × 1 in asset tag is the label printer size for equipment: the
 organization's logo, "Property of" and its name, the asset tag in large
 type (the record's name when it has none), then its name, make and model,
-serial number, management IP (its IP addresses, with Network on) and place,
+serial number, management IP (the Management IP of the hypervisor a server
+runs, or else its own IP addresses) and place,
 with the QR code at the end. An admin sets the
 name and logo in Settings > Asset labels: SVG, PNG, JPEG or WebP, and a
 black logo prints best on a thermal printer. The tag button at the top of

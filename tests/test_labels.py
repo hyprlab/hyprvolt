@@ -76,6 +76,19 @@ def test_an_asset_tag_carries_the_equipment_and_the_organization(client, h, admi
     assert "labels--5160" in sheet and "Mgmt IP" not in sheet and "tag-owner" not in sheet and 'class="tag-logo"' not in sheet
 
 
+def test_a_server_running_a_hypervisor_is_tagged_with_the_hypervisors_management_ip(client, h, admin):
+    srv = make(client, h, "server", name="vmsvr1", **{"f.asset_tag": "HV-0007", "s.hypervisor.on": True,
+                                                      "s.hypervisor.platform": "vmware",
+                                                      "s.hypervisor.address": "172.16.128.20"})
+    page = client.get(f"/p/labels/print?id={srv['id']}").data.decode()
+    assert 'Mgmt IP <span class="tag-serial">172.16.128.20</span>' in page
+    # Its own addresses (an iDRAC) come second to the hypervisor's.
+    resp = client.post(f"/api/entities/{srv['id']}", json={"s.addresses.list": "10.0.20.11"}, headers=h)
+    assert resp.status_code == 200
+    page = client.get(f"/p/labels/print?id={srv['id']}").data.decode()
+    assert "172.16.128.20" in page and "10.0.20.11" not in page
+
+
 def test_a_record_with_no_asset_tag_is_tagged_by_its_name(client, h, admin):
     nas = make(client, h, "nas", name="nas1", **{"f.serial": "SN9"})
     page = client.get(f"/p/labels/print?id={nas['id']}").data.decode()

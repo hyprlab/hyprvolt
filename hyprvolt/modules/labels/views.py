@@ -2,7 +2,7 @@
 that opens the record (``/e/<id>``), its name, kind, asset tag or serial,
 and where it is. A 4 × 1 in asset tag adds the organization and its logo
 (brand.py), the asset tag in large type, the make and model, the serial and
-the management IP (its IP addresses, from Network).
+the management IP (its hypervisor's, or its own IP addresses).
 
 The page is offered in every list's export menu, with the list's filters,
 so the labels are for exactly what the list shows; ``?id=`` makes the one
@@ -62,15 +62,21 @@ def _make(detail) -> str:
     return " ".join(p for p in (maker, model) if p)
 
 
-def _addresses(entity) -> str:
-    """Its IP addresses, from the IP addresses section Network adds to the
-    form (none with Network off): a device's is where it is managed."""
+#: Where a form section other modules add holds the management IP, first
+#: found first: the Management IP of the hypervisor a server runs (Virtual),
+#: then the record's own IP addresses (Network), which are a device's
+#: management address, or a server's iDRAC or iLO.
+MANAGEMENT = (("hypervisor", "address"), ("addresses", "list"))
+
+
+def _management_ip(entity) -> str:
     from hyprvolt.registry import current as registry
     reg = registry()
     etype = reg.type(entity.type)
-    for section in reg.form_sections(etype) if etype else ():
-        if section.key == "addresses" and section.values is not None:
-            return (section.values(entity) or {}).get("list") or ""
+    sections = {s.key: s for s in reg.form_sections(etype) if s.values is not None} if etype else {}
+    for key, value in MANAGEMENT:
+        if key in sections and (found := (sections[key].values(entity) or {}).get(value)):
+            return str(found)
     return ""
 
 
@@ -128,7 +134,7 @@ def _context() -> dict:
         labels.append({"view": v, "code_label": code_label, "code": code, "where": where,
                        "asset_tag": _value(detail, "asset_tag"), "serial": _value(detail, "serial"),
                        "make": _make(detail), "qr": qr(f"{base}/e/{v.id}"),
-                       "ip": _addresses(entities[v.id]) if size == TAG else ""})
+                       "ip": _management_ip(entities[v.id]) if size == TAG else ""})
     return dict(labels=labels, more=more, limit=LIMIT, size=size, sizes=SIZES, roll=size in ROLLS, what=what,
                 sizes_url={key: _with(size=key) for key, _ in SIZES}, back=back, back_label=back_label,
                 pdf_url=_with("labels.pdf_copy", size=size),
