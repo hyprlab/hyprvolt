@@ -6,6 +6,9 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Changed
+- The small text on a 4 × 1 in asset tag is 2 pt larger, as thermal label printers broke it up. The tag no longer shows the place, which goes out of date when the equipment moves; its QR code opens the record with the place as it is now
+
 ## [1.11.0] — 2026-10-30
 
 ### Added

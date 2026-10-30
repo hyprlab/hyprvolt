@@ -2,7 +2,8 @@
 that opens the record (``/e/<id>``), its name, kind, asset tag or serial,
 and where it is. A 4 × 1 in asset tag adds the organization and its logo
 (brand.py), the asset tag in large type, the make and model, the serial and
-the management IP (its hypervisor's, or its own IP addresses).
+the management IP (its hypervisor's, or its own IP addresses), in type
+large enough for a thermal printer, so without the place.
 
 The page is offered in every list's export menu, with the list's filters,
 so the labels are for exactly what the list shows; ``?id=`` makes the one

@@ -2103,17 +2103,18 @@ html[data-theme="dark"] .toast--error { background: #4E2320; color: #FFE1DD; box
 @page labels-l7160 { size: A4; margin: 15.1mm 7.2mm; }
 @page labels-62x29 { size: 62mm 29mm; margin: 0; }
 /* A 4 × 1 in asset tag, one a page: the organization's logo, the asset tag
-   in large type over what the equipment is, and the QR code at the end. */
+   in large type over what the equipment is, and the QR code at the end.
+   Nothing under 7.5pt: a 203 dpi thermal printer breaks up smaller type. */
 .labels--4x1 { --qr: .86in; page: labels-4x1; grid-template-columns: 4in; grid-auto-rows: 1in; row-gap: 4mm; }
 @page labels-4x1 { size: 4in 1in; margin: 0; }
 .tag { gap: .09in; padding: .07in .1in; }
 .tag-logo { flex: none; width: auto; height: auto; max-width: .95in; max-height: .72in; object-fit: contain; }
-.tag-text { line-height: 1.12; }
+.tag-text { line-height: 1.08; }
 .tag-text > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tag-owner { font-size: 5.5pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.tag-owner { font-size: 7.5pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .tag-id { font-family: var(--mono); font-size: 14pt; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
-.tag-name { font-size: 8pt; font-weight: 700; }
-.tag-line { font-size: 6pt; }
+.tag-name { font-size: 9pt; font-weight: 700; }
+.tag-line { font-size: 8pt; }
 .tag-serial { font-family: var(--mono); }
 /* Settings > Asset labels: the logo as it is, on white like the tag. */
 .tag-logo-preview { display: inline-flex; padding: 10px 14px; margin-bottom: 4px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }

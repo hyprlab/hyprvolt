@@ -52,7 +52,8 @@ def test_an_asset_tag_carries_the_equipment_and_the_organization(client, h, admi
     assert 'Mgmt IP <span class="tag-serial">10.0.20.11</span>' in page
     assert "labels--4x1" in page and page.count('class="label tag"') == 1
     assert '<span class="tag-id">HV-0042</span>' in page and ">srv1<" in page
-    assert "Dell PowerEdge R740" in page and ">8XK2LM3<" in page and "Home › Server room" in page
+    assert "Dell PowerEdge R740" in page and ">8XK2LM3<" in page
+    assert "Home › Server room" not in page                # out of date once it moves
     assert "tag-owner" not in page and 'class="tag-logo"' not in page and "logo in Settings > Asset labels" in page
     assert f'href="/e/{srv["id"]}"' in page and "Back to the record" in page
     assert f"/labels/print.pdf?id={srv['id']}&amp;size=4x1" in page
