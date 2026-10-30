@@ -1,0 +1,38 @@
+{# Settings > Asset labels, for admins: the organization and the logo a
+   4 × 1 in asset tag is branded with (brand.py). #}
+<form class="stack" data-api="/labels/brand" data-done="Organization saved">
+  <label class="field">
+    <span class="field-label">Organization</span>
+    <input name="owner" value="{{ owner }}" maxlength="{{ owner_max }}" placeholder="Acme Corp" autocomplete="organization">
+  </label>
+  <p class="hint">Printed on each tag as "Property of Acme Corp". Leave it empty to leave the line off.</p>
+  <div><button class="btn btn--primary" type="submit">Save</button></div>
+  <p class="form-error" hidden></p>
+</form>
+
+<p class="setting-label setting-label--spaced">Logo</p>
+{% if logo %}
+<div class="tag-logo-preview"><img src="{{ logo }}" alt="The asset tag logo"></div>
+{% else %}
+<form class="dropzone dropzone--slim" data-api="/labels/logo" data-then="reload" data-done="Logo added" enctype="multipart/form-data">
+  <input type="file" name="file" id="labels-logo" accept="{{ types }}" data-autosubmit>
+  <label for="labels-logo">
+    <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4 17 5-4.5 4 3.5 2.5-2 4.5 3.5"/></svg>
+    <span>Add a logo: drop it here, or <strong>choose one</strong></span>
+  </label>
+  <p class="form-error" hidden></p>
+</form>
+{% endif %}
+<p class="hint">SVG, PNG, JPEG or WebP, up to 2 MB. Label printers print in black: a logo in black on white, or on a clear background, prints best.</p>
+{% if logo %}
+<form class="doc-actions tag-logo-actions" data-api="/labels/logo" data-then="reload" data-done="Logo replaced" enctype="multipart/form-data">
+  <input type="file" name="file" id="labels-logo" accept="{{ types }}" data-autosubmit>
+  <label class="btn btn--ghost" for="labels-logo">Replace</label>
+  <button type="button" class="btn btn--ghost" data-api-post="/labels/logo/remove" data-then="reload" data-done="Logo removed"
+          data-confirm="Remove the logo?" data-confirm-text="Asset tags print without it until another is added." data-confirm-go="Remove">Remove</button>
+  <p class="form-error" hidden></p>
+</form>
+{% endif %}
+
+<p class="setting-label setting-label--spaced">Printing</p>
+<p class="hint">The 4 × 1 in asset tag is a size on the Print labels page of any list, in its export menu. The tag button at the top of a hardware record opens that record's own tag.</p>

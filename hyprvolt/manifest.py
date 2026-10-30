@@ -306,6 +306,17 @@ class Page:
 
 
 @dataclass(frozen=True)
+class SheetLink:
+    """A button in the bar of any record's sheet, beside Print: a page the
+    module has for that record. ``url(entity)`` is where it goes, or "" for
+    a record it has nothing for."""
+    key: str
+    label: str
+    icon: str                        # SVG paths, 24x24, stroked
+    url: Callable
+
+
+@dataclass(frozen=True)
 class Job:
     """Periodic work, run by the worker thread every ``minutes`` at most.
     ``run()`` returns the number of rows it touched, for the log."""
@@ -374,6 +385,7 @@ class Module:
     impact_edges: Callable | None = None   # impact_edges() -> [(needs id, needed id, label, reverse)]: dependencies worked out, not recorded
     derived_links: Callable | None = None  # derived_links(entity) -> [{"other", "label", "sub", "note"}]: read-only, in Relationships
     sheet_tabs: tuple = ()           # tabs on any module's entities; use Tab.when
+    sheet_links: tuple = ()          # SheetLinks: buttons in the bar of any module's records
     form_sections: tuple = ()        # form sections on any module's types
     before_retype: Callable | None = None  # before_retype(entity, old, new) on any type change; raise Invalid to refuse
     setup: tuple = ()                # SetupSteps of the site setup guide

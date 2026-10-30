@@ -4110,6 +4110,10 @@
     var pdf = document.getElementById("sheet-pdf");
     pdf.hidden = !current.pdf;
     pdf.setAttribute("href", current.pdf || "#");
+    // The buttons modules add for this record, drawn in the sheet's article.
+    var links = document.getElementById("sheet-links");
+    var src = sheetArticle.querySelector(".sheet-links-src");
+    links.replaceChildren.apply(links, src ? Array.prototype.slice.call(src.children) : []);
   }
 
   function openSibling(step) {

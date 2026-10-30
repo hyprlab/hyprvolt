@@ -1,0 +1,33 @@
+{# The labels themselves, in real units (app.css, .labels): on the page,
+   and in the PDF made from it. A 4 × 1 in asset tag carries the
+   organization and its logo, the asset tag in large type (the name when
+   there is none), the make and model, serial and place; the others the
+   name, kind, a code and the place. #}
+<div class="labels labels--{{ size }}">
+  {% for l in labels %}
+  {% if size == '4x1' %}
+  <div class="label tag">
+    {% if logo %}<img class="tag-logo" src="{{ logo }}" alt="">{% endif %}
+    <div class="label-text tag-text">
+      {% if owner %}<span class="tag-owner">Property of {{ owner }}</span>{% endif %}
+      <span class="tag-id">{{ l.asset_tag or l.view.name }}</span>
+      {% if l.asset_tag %}<span class="tag-name">{{ l.view.name }}</span>{% endif %}
+      {% if l.make %}<span class="tag-line">{{ l.make }}</span>{% endif %}
+      {% if l.serial %}<span class="tag-line">S/N <span class="tag-serial">{{ l.serial }}</span></span>{% endif %}
+      {% if l.where %}<span class="tag-line">{{ l.where }}</span>{% endif %}
+    </div>
+    {{ l.qr }}
+  </div>
+  {% else %}
+  <div class="label">
+    {{ l.qr }}
+    <div class="label-text">
+      <span class="label-name">{{ l.view.name }}</span>
+      <span class="label-meta">{{ l.view.type_label }}</span>
+      {% if l.code %}<span class="label-code">{{ l.code_label }} {{ l.code }}</span>{% endif %}
+      {% if l.where %}<span class="label-meta">{{ l.where }}</span>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>

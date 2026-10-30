@@ -1,26 +1,27 @@
-{# A sheet of labels for the records of a list, and what to print it on. #}
+{# A sheet of labels for the records of a list, or a record's asset tag,
+   and what to print it on. #}
 <div class="labels-tools">
-  <p class="hint">{{ labels|length }} {{ 'label' if labels|length == 1 else 'labels' }} for {{ what|lower if what != 'All records' else 'all records' }}{% if more %}, the first {{ limit }}: narrow the list to print the rest{% endif %}. <a class="link" href="{{ back }}">Back to the list</a></p>
+  <p class="hint">{{ labels|length }} {{ 'label' if labels|length == 1 else 'labels' }} for {{ what }}{% if more %}, the first {{ limit }}: narrow the list to print the rest{% endif %}. <a class="link" href="{{ back }}">{{ back_label }}</a></p>
   <div class="seg seg--links" role="group" aria-label="Label size">
     {% for key, label in sizes %}<a class="{{ 'is-active' if key == size }}" href="{{ sizes_url[key] }}" {{ 'aria-current=true' if key == size }}>{{ label }}</a>{% endfor %}
   </div>
+  {% if roll %}
+  <p class="hint">Download the PDF and print it at actual size: each page is one label. To print from here instead, choose the printer's {{ '4 × 1 in' if size == '4x1' else '62 × 29 mm' }} label size, 100% scale and no margins. Each code opens the record in the app, for anyone signed in.</p>
+  {% else %}
   <p class="hint">Print at 100% scale with the default margins. Each code opens the record in the app, for anyone signed in.</p>
-  {% if labels %}<button type="button" class="btn btn--primary" data-print>Print</button>{% endif %}
+  {% endif %}
+  {% if size == '4x1' and not (owner and logo) %}
+  <p class="hint">{{ 'An admin adds' if not current_user.is_admin else 'Add' }} the organization's {{ 'name' if logo else 'logo' if owner else 'name and logo' }} in Settings > Asset labels.</p>
+  {% endif %}
+  {% if labels %}
+  <div class="doc-actions">
+    <button type="button" class="btn btn--ghost" data-print>Print</button>
+    <a class="btn btn--primary" href="{{ pdf_url }}">Download PDF</a>
+  </div>
+  {% endif %}
 </div>
 {% if labels %}
-<div class="labels labels--{{ size }}">
-  {% for l in labels %}
-  <div class="label">
-    {{ l.qr }}
-    <div class="label-text">
-      <span class="label-name">{{ l.view.name }}</span>
-      <span class="label-meta">{{ l.view.type_label }}</span>
-      {% if l.code %}<span class="label-code">{{ l.code_label }} {{ l.code }}</span>{% endif %}
-      {% if l.where %}<span class="label-meta">{{ l.where }}</span>{% endif %}
-    </div>
-  </div>
-  {% endfor %}
-</div>
+{% include "labels/_sheet.html" %}
 {% else %}
 <div class="empty"><p class="empty-title">Nothing to label</p><p class="hint">The list is empty. Go back and change its filters.</p></div>
 {% endif %}

@@ -331,6 +331,16 @@ L7160), and single 62 × 29 mm labels for a label printer, print at their
 real size at 100% scale with the default margins. Up to 300 labels at a
 time.
 
+A 4 × 1 in asset tag is the label printer size for equipment: the
+organization's logo, "Property of" and its name, the asset tag in large
+type (the record's name when it has none), then its name, make and model,
+serial number and place, with the QR code at the end. An admin sets the
+name and logo in Settings > Asset labels: SVG, PNG, JPEG or WebP, and a
+black logo prints best on a thermal printer. The tag button at the top of
+a hardware record opens its own tag. Download PDF makes the labels a PDF at
+their real size, one page a label for a label printer: print it at actual
+size, with nothing to set in the browser's print dialog.
+
 Times, such as a window's start, are typed and shown in the instance's time
 zone, set in Settings > Admin (it starts as the `TZ` environment variable, or
 UTC). They are stored in UTC, so changing the zone moves nothing; a time sent

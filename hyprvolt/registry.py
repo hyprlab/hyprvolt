@@ -32,7 +32,7 @@ from werkzeug.routing import BaseConverter
 from .core.catalogs import CATALOGS
 from .core.relations import CORE_KINDS
 from .manifest import (FIELD_KINDS, IMPACTS, EntityType, Field, FormSection, Job, ListFilter, Module, Page,
-                       Pane, RelationKind, SetupField, SetupFinish, SetupKind, SetupStep, Step, Tab, Widget)
+                       Pane, RelationKind, SetupField, SetupFinish, SetupKind, SetupStep, SheetLink, Step, Tab, Widget)
 
 log = logging.getLogger(__name__)
 
@@ -384,6 +384,10 @@ def validate(m: Module, reg: Registry) -> list[str]:
     for job in m.jobs:
         if isinstance(job, Job) and job.minutes < 1:
             p.append(f"the job {job.key!r} must run at most every minute")
+    for link in m.sheet_links:
+        if not isinstance(link, SheetLink) or not ID_RE.match(link.key or "") or not callable(link.url):
+            p.append(f"the sheet link {getattr(link, 'key', link)!r} needs to be a SheetLink with a lower-case "
+                     "key and a url function")
     if m.settings_pane is not None and not isinstance(m.settings_pane, Pane):
         p.append("settings_pane is not a Pane")
     if m.search is not None and not callable(m.search):

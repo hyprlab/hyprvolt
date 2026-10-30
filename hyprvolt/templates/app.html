@@ -808,6 +808,8 @@
       <a class="iconbtn" id="sheet-pdf" href="#" hidden aria-label="Download as PDF" title="Download as PDF (d)">
         <svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14"/></svg>
       </a>
+      {# What modules add for the record (SheetLink): an asset tag to print. #}
+      <span class="sheet-links" id="sheet-links"></span>
       {% if current_user.can_edit %}
       <button class="iconbtn iconbtn--danger" id="sheet-delete" aria-label="Delete" title="Delete">
         <svg viewBox="0 0 24 24"><path d="M5.5 7.5h13M9.5 7V5h5v2M7 7.5l.8 12a1 1 0 0 0 1 .9h6.4a1 1 0 0 0 1-.9l.8-12M10.2 11v6M13.8 11v6"/></svg>

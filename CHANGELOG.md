@@ -6,6 +6,11 @@ All notable changes to Hyprvolt are documented here. The format follows
 
 ## Unreleased
 
+### Added
+- 4 × 1 in asset tags for a label printer, one tag a page: the organization's logo and "Property of" name, the asset tag in large type, the record's name, make and model, serial number and place, and a QR code that opens the record. Choose the size on the Print labels page of any list, or use the tag button at the top of a hardware record for its own tag
+- Download PDF on the Print labels page makes a PDF of the labels at their real size, for every label size, to print at actual size without the browser's print settings
+- Settings > Asset labels, for admins: the organization's name and logo for the asset tags
+
 ## [1.9.0] — 2026-10-30
 
 ### Added

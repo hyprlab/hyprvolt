@@ -1,0 +1,7 @@
+{# The labels as the server makes them a PDF (views.pdf_copy): the same
+   sheet as the page, with no tools and no app around it. #}
+{% extends "base.html" %}
+{% block title %}{{ 'Asset tags' if size == '4x1' else 'Labels' }} for {{ what }}{% endblock %}
+{% block head %}<meta name="generator" content="{{ app_name }}">{% endblock %}
+{% block bodyclass %}labels-pdf{% endblock %}
+{% block body %}{% include "labels/_sheet.html" %}{% endblock %}

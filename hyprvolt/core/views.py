@@ -67,7 +67,16 @@ def sheet(entity_id):
         purge_days=int_setting("purge_days", 30), editable=etype is not None and can_edit_here(entity),
         printed=etype.printed(entity) if etype and etype.printed and not entity.deleted_at else "",
         pdf=etype.pdf(entity) if etype and etype.pdf and not entity.deleted_at else "",
+        links=_links(entity),
     )
+
+
+def _links(entity) -> list[tuple]:
+    """(SheetLink, url) for the buttons modules add to the record's bar."""
+    if entity.deleted_at:
+        return []
+    found = ((link, link.url(entity)) for m in registry().enabled_modules() for link in m.sheet_links)
+    return [(link, url) for link, url in found if url]
 
 
 @bp.route("/e/<int:entity_id>/card")

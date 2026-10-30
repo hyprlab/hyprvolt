@@ -11,6 +11,13 @@
      {%- if editable %} data-autosave="/api/entities/{{ entity.id }}"{% endif %}
      {%- if printed %} data-printed="{{ printed }}"{% endif %}
      {%- if pdf %} data-pdf="{{ pdf }}"{% endif %}>
+  {% if links %}
+  {# Buttons modules add to the bar (SheetLink): app.js moves them into #sheet-links. #}
+  <div class="sheet-links-src" hidden>
+    {% for link, url in links %}<a class="iconbtn" href="{{ url }}" aria-label="{{ link.label }}" title="{{ link.label }}">
+      <svg viewBox="0 0 24 24" aria-hidden="true">{{ link.icon|safe }}</svg></a>{% endfor %}
+  </div>
+  {% endif %}
   <div class="sheet-head">
   {% if entity.deleted_at %}
   <div class="banner banner--danger">
